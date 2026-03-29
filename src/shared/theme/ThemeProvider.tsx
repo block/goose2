@@ -12,10 +12,7 @@ type ThemeProviderState = {
   setTheme: (theme: Theme) => void;
 };
 
-const ThemeProviderContext = React.createContext<ThemeProviderState>({
-  theme: "system",
-  setTheme: () => {},
-});
+const ThemeProviderContext = React.createContext<ThemeProviderState | undefined>(undefined);
 
 export function ThemeProvider({
   children,
@@ -28,14 +25,17 @@ export function ThemeProvider({
     root.classList.remove("light", "dark");
 
     if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-        .matches
-        ? "dark"
-        : "light";
-      root.classList.add(systemTheme);
-    } else {
-      root.classList.add(theme);
+      const mq = window.matchMedia("(prefers-color-scheme: dark)");
+      const apply = () => {
+        root.classList.remove("light", "dark");
+        root.classList.add(mq.matches ? "dark" : "light");
+      };
+      apply();
+      mq.addEventListener("change", apply);
+      return () => mq.removeEventListener("change", apply);
     }
+
+    root.classList.add(theme);
   }, [theme]);
 
   const value = React.useMemo(() => ({ theme, setTheme }), [theme]);

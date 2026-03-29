@@ -1,10 +1,6 @@
 import { Home, PanelLeft, Plus, X } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
-
-interface Tab {
-  id: string;
-  title: string;
-}
+import type { Tab } from "@/features/tabs/types";
 
 interface TabBarProps {
   tabs: Tab[];
@@ -43,15 +39,18 @@ export function TabBar({
         type="button"
         onClick={onHomeClick}
         className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+        aria-label="Home"
       >
         <Home className="h-4 w-4" />
       </button>
 
-      <div className="flex items-center gap-0.5 overflow-x-auto px-1">
+      <div role="tablist" className="flex items-center gap-0.5 overflow-x-auto px-1">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
+            role="tab"
+            aria-selected={tab.id === activeTabId}
             onClick={() => onTabSelect(tab.id)}
             className={cn(
               "group flex h-7 items-center gap-1.5 rounded-md px-3 text-xs transition-colors",
@@ -86,6 +85,7 @@ export function TabBar({
         type="button"
         onClick={onNewTab}
         className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+        aria-label="New tab"
       >
         <Plus className="h-4 w-4" />
       </button>
