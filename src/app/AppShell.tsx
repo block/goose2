@@ -62,7 +62,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         onTabClose={handleTabClose}
         onNewTab={handleNewTab}
         onHomeClick={() => setActiveTabId(null)}
-        onSidebarToggle={toggleSidebar}
       />
 
       {/* Main content area — sidebar + content as flex row */}
