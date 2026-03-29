@@ -74,7 +74,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                 key={item.id}
                 onClick={() => setActiveSection(item.id)}
                 className={cn(
-                  "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-all duration-[600ms] ease-out",
+                  "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-all duration-600 ease-out",
                   activeSection === item.id
                     ? "bg-background text-foreground shadow-sm"
                     : "text-foreground-secondary hover:bg-background-secondary/50 hover:text-foreground duration-300",
@@ -106,7 +106,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 
           <div
             className={cn(
-              "px-6 py-4 transition-all duration-[400ms] ease-out",
+              "px-6 py-4 transition-all duration-400 ease-out",
               isTransitioning
                 ? "opacity-0 translate-y-2"
                 : "opacity-100 translate-y-0",
@@ -114,7 +114,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
           >
             <div
               className={cn(
-                "transition-all duration-[600ms] ease-out",
+                "transition-all duration-600 ease-out",
                 isLoaded
                   ? "opacity-100 translate-y-0"
                   : "opacity-0 translate-y-4",

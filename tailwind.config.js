@@ -83,6 +83,10 @@ export default {
         red: { 500: "#f94b4b" },
         yellow: { 500: "#fbcd44" },
       },
+      transitionDuration: {
+        '400': '400ms',
+        '600': '600ms',
+      },
     },
   },
   plugins: [tailwindcssAnimate],
