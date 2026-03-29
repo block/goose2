@@ -1,12 +1,17 @@
-# Build artifacts
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Rust/Tauri build artifacts
 /target/
 src-tauri/target/
-/dist/
 
 # Environment files
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 
 # Editor / IDE
 .idea/
@@ -27,8 +32,11 @@ Thumbs.db
 playwright-report/
 test-results/
 
+# Testing coverage
+coverage/
+
+# Logs
+*.log
+
 # Hermit (toolchain manager cache)
 .hermit/
-
-# Node
-node_modules/
