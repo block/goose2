@@ -7,8 +7,11 @@ import { ChatView } from "@/features/chat/ui/ChatView";
 import { SettingsModal } from "@/features/settings/ui/SettingsModal";
 import type { Tab } from "@/features/tabs/types";
 
+const SIDEBAR_WIDTH = 240;
+const SIDEBAR_COLLAPSED_WIDTH = 48;
+
 export function AppShell({ children }: { children?: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
@@ -30,11 +33,19 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     });
   };
 
+  const toggleSidebar = () => setSidebarCollapsed((prev) => !prev);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // Cmd+, for settings
       if (e.key === "," && e.metaKey) {
         e.preventDefault();
         setSettingsOpen((prev) => !prev);
+      }
+      // Cmd+B for sidebar toggle
+      if (e.key === "b" && e.metaKey) {
+        e.preventDefault();
+        setSidebarCollapsed((prev) => !prev);
       }
     };
     window.addEventListener("keydown", handler);
@@ -43,6 +54,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
+      {/* Tab bar — full width across the top */}
       <TabBar
         tabs={tabs}
         activeTabId={activeTabId}
@@ -50,17 +62,37 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         onTabClose={handleTabClose}
         onNewTab={handleNewTab}
         onHomeClick={() => setActiveTabId(null)}
-        onSidebarToggle={() => setSidebarOpen((prev) => !prev)}
+        onSidebarToggle={toggleSidebar}
       />
-      <div className="flex min-h-0 flex-1">
-        <Sidebar
-          isOpen={sidebarOpen}
-          onSettingsClick={() => setSettingsOpen(true)}
-        />
+
+      {/* Main content area — sidebar + content as flex row */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* Sidebar wrapper — padding creates the floating effect */}
+        <div
+          className="flex-shrink-0 h-full py-3 pl-3"
+          style={{
+            width: sidebarCollapsed
+              ? SIDEBAR_COLLAPSED_WIDTH + 12
+              : SIDEBAR_WIDTH + 12,
+            transition: "width 200ms ease-out",
+          }}
+        >
+          <Sidebar
+            collapsed={sidebarCollapsed}
+            width={SIDEBAR_WIDTH}
+            onCollapse={toggleSidebar}
+            onSettingsClick={() => setSettingsOpen(true)}
+            className="h-full shadow-xl rounded-xl"
+          />
+        </div>
+
+        {/* Content area */}
         <main className="min-h-0 min-w-0 flex-1">
           {children ?? (isHome ? <HomeScreen /> : <ChatView />)}
         </main>
       </div>
+
+      {/* Status bar — conditional with animation */}
       <div
         className={`overflow-hidden transition-all duration-300 ease-in-out ${
           isHome ? "max-h-0 opacity-0" : "max-h-8 opacity-100"
@@ -72,6 +104,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           status="connected"
         />
       </div>
+
+      {/* Settings modal */}
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
     </div>
   );
