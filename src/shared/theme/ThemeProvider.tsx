@@ -1,44 +1,73 @@
 import * as React from "react";
 
-type Theme = "dark" | "light" | "system";
+type ThemePreference = "light" | "dark" | "system";
+type ResolvedTheme = "light" | "dark";
 
 type ThemeProviderProps = {
   children: React.ReactNode;
-  defaultTheme?: Theme;
+  defaultTheme?: ThemePreference;
 };
 
 type ThemeProviderState = {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
+  theme: ThemePreference;
+  resolvedTheme: ResolvedTheme;
+  setTheme: (theme: ThemePreference) => void;
 };
 
 const ThemeProviderContext = React.createContext<ThemeProviderState | undefined>(undefined);
+
+function resolveTheme(preference: ThemePreference): ResolvedTheme {
+  if (preference === "system") {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+  return preference;
+}
 
 export function ThemeProvider({
   children,
   defaultTheme = "system",
 }: ThemeProviderProps) {
-  const [theme, setTheme] = React.useState<Theme>(defaultTheme);
+  const [theme, setThemeState] = React.useState<ThemePreference>(() => {
+    const stored = localStorage.getItem("goose-theme") as ThemePreference | null;
+    return stored ?? defaultTheme;
+  });
+
+  const [resolvedTheme, setResolvedTheme] = React.useState<ResolvedTheme>(() =>
+    resolveTheme(theme),
+  );
+
+  const setTheme = React.useCallback((newTheme: ThemePreference) => {
+    localStorage.setItem("goose-theme", newTheme);
+    setThemeState(newTheme);
+  }, []);
 
   React.useEffect(() => {
     const root = window.document.documentElement;
+    const resolved = resolveTheme(theme);
+    setResolvedTheme(resolved);
+
     root.classList.remove("light", "dark");
+    root.classList.add(resolved);
+    root.style.colorScheme = resolved;
 
     if (theme === "system") {
       const mq = window.matchMedia("(prefers-color-scheme: dark)");
-      const apply = () => {
+      const onChange = () => {
+        const updated = mq.matches ? "dark" : "light";
+        setResolvedTheme(updated);
         root.classList.remove("light", "dark");
-        root.classList.add(mq.matches ? "dark" : "light");
+        root.classList.add(updated);
+        root.style.colorScheme = updated;
       };
-      apply();
-      mq.addEventListener("change", apply);
-      return () => mq.removeEventListener("change", apply);
+      mq.addEventListener("change", onChange);
+      return () => mq.removeEventListener("change", onChange);
     }
-
-    root.classList.add(theme);
   }, [theme]);
 
-  const value = React.useMemo(() => ({ theme, setTheme }), [theme]);
+  const value = React.useMemo(
+    () => ({ theme, resolvedTheme, setTheme }),
+    [theme, resolvedTheme, setTheme],
+  );
 
   return (
     <ThemeProviderContext.Provider value={value}>
