@@ -1,0 +1,33 @@
+# Build artifacts
+/target/
+/dist/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.*.sw?
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Scratch / working files
+.scratch/
+
+# Playwright artifacts
+playwright-report/
+test-results/
+
+# Hermit (toolchain manager cache)
+.hermit/
+
+# Node
+node_modules/

@@ -1,0 +1,20 @@
+pre-commit:
+  commands:
+    fmt-check:
+      run: just fmt-check
+    check:
+      run: just check
+
+pre-push:
+  parallel: true
+  commands:
+    fmt-check:
+      run: just fmt-check
+    clippy:
+      run: just clippy
+    check:
+      run: just check
+    build:
+      run: just build
+    tauri-check:
+      run: just tauri-check

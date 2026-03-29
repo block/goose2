@@ -1,0 +1,16 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capability for the main window",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-start-dragging",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-show",
+    "core:window:allow-close",
+    "opener:default",
+    "window-state:allow-restore-state",
+    "window-state:allow-save-window-state"
+  ]
+}
