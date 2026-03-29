@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { TabBar } from "@/features/tabs/ui/TabBar";
 import { Sidebar } from "@/features/sidebar/ui/Sidebar";
 import { StatusBar } from "@/features/status/ui/StatusBar";
+import { HomeScreen } from "@/features/home/ui/HomeScreen";
 import { SettingsModal } from "@/features/settings/ui/SettingsModal";
 import type { Tab } from "@/features/tabs/types";
 
@@ -12,6 +13,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     { id: "1", title: "New Chat" },
   ]);
   const [activeTabId, setActiveTabId] = useState<string | null>("1");
+  const isHome = activeTabId === null;
 
   const handleNewTab = () => {
     const id = String(Date.now());
@@ -53,16 +55,13 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       />
       <div className="flex min-h-0 flex-1">
         <Sidebar isOpen={sidebarOpen} onSettingsClick={() => setSettingsOpen(true)} />
-        <main className="flex min-h-0 min-w-0 flex-1 items-center justify-center">
-          {children ?? (
-            <div className="text-center space-y-4">
-              <h1 className="text-4xl font-bold">Goose</h1>
-              <p className="text-foreground-secondary">Your app shell is ready.</p>
-            </div>
-          )}
+        <main className="flex min-h-0 min-w-0 flex-1">
+          {children ?? <HomeScreen />}
         </main>
       </div>
-      <StatusBar modelName="Claude Sonnet 4" tokenCount={0} status="connected" />
+      {!isHome && (
+        <StatusBar modelName="Claude Sonnet 4" tokenCount={0} status="connected" />
+      )}
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
     </div>
   );
