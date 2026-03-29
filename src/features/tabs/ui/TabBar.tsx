@@ -29,7 +29,7 @@ export function TabBar({
       <button
         type="button"
         onClick={onSidebarToggle}
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-foreground-secondary transition-colors hover:bg-background-secondary/50 hover:text-foreground"
         aria-label="Toggle sidebar"
       >
         <PanelLeft className="h-4 w-4" />
@@ -38,7 +38,7 @@ export function TabBar({
       <button
         type="button"
         onClick={onHomeClick}
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-foreground-secondary transition-colors hover:bg-background-secondary/50 hover:text-foreground"
         aria-label="Home"
       >
         <Home className="h-4 w-4" />
@@ -55,8 +55,8 @@ export function TabBar({
             className={cn(
               "group flex h-7 items-center gap-1.5 rounded-md px-3 text-xs transition-colors",
               tab.id === activeTabId
-                ? "bg-muted text-foreground"
-                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                ? "bg-background-secondary text-foreground"
+                : "text-foreground-secondary hover:bg-background-secondary/50 hover:text-foreground",
             )}
           >
             <span className="truncate">{tab.title}</span>
@@ -73,7 +73,7 @@ export function TabBar({
                   onTabClose(tab.id);
                 }
               }}
-              className="flex h-4 w-4 shrink-0 items-center justify-center rounded opacity-0 transition-opacity hover:bg-muted group-hover:opacity-100"
+              className="flex h-4 w-4 shrink-0 items-center justify-center rounded opacity-0 transition-opacity hover:bg-background-secondary group-hover:opacity-100"
             >
               <X className="h-3 w-3" />
             </span>
@@ -84,7 +84,7 @@ export function TabBar({
       <button
         type="button"
         onClick={onNewTab}
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-foreground-secondary transition-colors hover:bg-background-secondary/50 hover:text-foreground"
         aria-label="New tab"
       >
         <Plus className="h-4 w-4" />

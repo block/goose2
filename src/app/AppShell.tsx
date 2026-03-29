@@ -57,7 +57,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           {children ?? (
             <div className="text-center space-y-4">
               <h1 className="text-4xl font-bold">Goose</h1>
-              <p className="text-muted-foreground">Your app shell is ready.</p>
+              <p className="text-foreground-secondary">Your app shell is ready.</p>
             </div>
           )}
         </main>

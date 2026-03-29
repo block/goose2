@@ -18,7 +18,7 @@ export function Sidebar({ isOpen, onSettingsClick }: SidebarProps) {
     <aside
       aria-hidden={!isOpen}
       className={cn(
-        "h-full flex-shrink-0 bg-card/90 backdrop-blur-xl transition-[width] duration-300 ease-in-out overflow-hidden",
+        "h-full flex-shrink-0 bg-background-secondary/90 backdrop-blur-xl transition-[width] duration-300 ease-in-out overflow-hidden",
         isOpen ? "border-r border-border/50" : "w-0"
       )}
       style={{ width: isOpen ? "12.5rem" : "0" }}
@@ -26,7 +26,7 @@ export function Sidebar({ isOpen, onSettingsClick }: SidebarProps) {
       <div className="flex flex-col h-full w-[12.5rem]">
         {/* New Chat button */}
         <div className="px-3 py-2">
-          <button type="button" className="flex items-center gap-2 w-full px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 cursor-pointer transition-colors">
+          <button type="button" className="flex items-center gap-2 w-full px-3 py-1.5 rounded-md text-sm text-foreground-secondary hover:text-foreground hover:bg-background-secondary/50 cursor-pointer transition-colors">
             <Plus className="h-4 w-4" />
             <span>New Chat</span>
           </button>
@@ -34,7 +34,7 @@ export function Sidebar({ isOpen, onSettingsClick }: SidebarProps) {
 
         {/* Recent section */}
         <div className="mt-4 flex flex-col gap-0.5">
-          <span className="px-3 py-1.5 text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">
+          <span className="px-3 py-1.5 text-xs font-medium text-foreground-tertiary uppercase tracking-wider">
             Recent
           </span>
           <nav className="flex flex-col gap-0.5 px-1.5">
@@ -42,7 +42,7 @@ export function Sidebar({ isOpen, onSettingsClick }: SidebarProps) {
               <button
                 type="button"
                 key={item.id}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 cursor-pointer transition-colors"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-foreground-secondary hover:text-foreground hover:bg-background-secondary/50 cursor-pointer transition-colors"
               >
                 <item.icon className="h-4 w-4 flex-shrink-0" />
                 <span className="truncate">{item.label}</span>
@@ -55,7 +55,7 @@ export function Sidebar({ isOpen, onSettingsClick }: SidebarProps) {
           <button
             type="button"
             onClick={onSettingsClick}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 w-full transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-foreground-secondary hover:text-foreground hover:bg-background-secondary/50 w-full transition-colors"
           >
             <Settings2 className="h-4 w-4" />
             <span>Settings</span>

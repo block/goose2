@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { cn } from "@/shared/lib/cn";
 import { useTheme } from "@/shared/theme/ThemeProvider";
 import { Sun, Moon, Monitor, Check } from "lucide-react";
@@ -26,8 +25,6 @@ const DENSITY_OPTIONS = [
   { value: "spacious", label: "Spacious" },
 ] as const;
 
-type Density = (typeof DENSITY_OPTIONS)[number]["value"];
-
 function SettingRow({
   label,
   description,
@@ -42,7 +39,7 @@ function SettingRow({
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium">{label}</p>
         {description && (
-          <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
+          <p className="mt-0.5 text-xs text-foreground-secondary">{description}</p>
         )}
       </div>
       <div className="flex-shrink-0">{children}</div>
@@ -51,21 +48,19 @@ function SettingRow({
 }
 
 export function AppearanceSettings() {
-  const { theme, setTheme } = useTheme();
-  const [accentColor, setAccentColor] = useState("#3b82f6");
-  const [density, setDensity] = useState<Density>("comfortable");
+  const { theme, setTheme, accentColor, setAccentColor, density, setDensity } = useTheme();
 
   return (
     <div>
       <h3 className="text-lg font-semibold">Appearance</h3>
-      <p className="mt-1 text-sm text-muted-foreground">
+      <p className="mt-1 text-sm text-foreground-secondary">
         Customize the look and feel of Goose
       </p>
 
       <div className="my-4 border-t" />
 
       <SettingRow label="Theme" description="Choose your preferred color scheme">
-        <div className="flex gap-1 rounded-lg bg-muted p-1">
+        <div className="flex gap-1 rounded-lg bg-background-secondary p-1">
           {THEME_OPTIONS.map((option) => (
             <button
               key={option.value}
@@ -74,7 +69,7 @@ export function AppearanceSettings() {
                 "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors",
                 theme === option.value
                   ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
+                  : "text-foreground-secondary hover:text-foreground",
               )}
             >
               <option.icon className="h-3.5 w-3.5" />
@@ -96,7 +91,7 @@ export function AppearanceSettings() {
               className={cn(
                 "flex h-7 w-7 items-center justify-center rounded-full transition-transform hover:scale-110",
                 accentColor === color.value &&
-                  "ring-2 ring-foreground ring-offset-2 ring-offset-background",
+                  "ring-2 ring-ring ring-offset-2 ring-offset-background",
               )}
               style={{ backgroundColor: color.value }}
             >
@@ -114,7 +109,7 @@ export function AppearanceSettings() {
         label="Interface Density"
         description="Adjust the spacing of UI elements"
       >
-        <div className="flex gap-1 rounded-lg bg-muted p-1">
+        <div className="flex gap-1 rounded-lg bg-background-secondary p-1">
           {DENSITY_OPTIONS.map((option) => (
             <button
               key={option.value}
@@ -123,7 +118,7 @@ export function AppearanceSettings() {
                 "rounded-md px-3 py-1.5 text-sm transition-colors",
                 density === option.value
                   ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
+                  : "text-foreground-secondary hover:text-foreground",
               )}
             >
               {option.label}
