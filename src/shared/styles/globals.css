@@ -103,45 +103,45 @@
   }
 
   .dark {
-    /* Backgrounds */
-    --color-background-primary: #22252a;
-    --color-background-secondary: #3f434b;
-    --color-background-tertiary: #474e57;
-    --color-background-inverse: #cbd1d6;
+    /* Backgrounds — matched to goose2.0 dark mode */
+    --color-background-primary: #0c0c0c;
+    --color-background-secondary: #141414;
+    --color-background-tertiary: #252525;
+    --color-background-inverse: #f9f9f9;
     --color-background-ghost: transparent;
     --color-background-info: #7cacff;
     --color-background-danger: #ff6b6b;
     --color-background-success: #a3d795;
     --color-background-warning: #ffd966;
-    --color-background-disabled: #474e57;
+    --color-background-disabled: #252525;
 
     /* Text */
-    --color-text-primary: #ffffff;
-    --color-text-secondary: #878787;
-    --color-text-tertiary: #606c7a;
+    --color-text-primary: #f9f9f9;
+    --color-text-secondary: #a2a2a2;
+    --color-text-tertiary: #666666;
     --color-text-inverse: #000000;
-    --color-text-ghost: #878787;
+    --color-text-ghost: #a2a2a2;
     --color-text-info: #7cacff;
     --color-text-danger: #ff6b6b;
     --color-text-success: #a3d795;
     --color-text-warning: #ffd966;
-    --color-text-disabled: #525b68;
+    --color-text-disabled: #444444;
 
     /* Borders */
-    --color-border-primary: #3f434b;
-    --color-border-secondary: #525b68;
-    --color-border-tertiary: #474e57;
+    --color-border-primary: #252525;
+    --color-border-secondary: #333333;
+    --color-border-tertiary: #2a2a2a;
     --color-border-inverse: #ffffff;
     --color-border-ghost: transparent;
     --color-border-info: #7cacff;
     --color-border-danger: #ff6b6b;
     --color-border-success: #a3d795;
     --color-border-warning: #ffd966;
-    --color-border-disabled: #3f434b;
+    --color-border-disabled: #252525;
 
     /* Rings */
-    --color-ring-primary: #525b68;
-    --color-ring-secondary: #474e57;
+    --color-ring-primary: #333333;
+    --color-ring-secondary: #2a2a2a;
     --color-ring-inverse: #000000;
     --color-ring-info: #7cacff;
     --color-ring-danger: #ff6b6b;
@@ -149,12 +149,12 @@
     --color-ring-warning: #ffd966;
 
     /* Shadows */
-    --shadow-hairline: 0 0 0 1px rgba(0, 0, 0, 0.2);
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+    --shadow-hairline: 0 0 0 1px rgba(255, 255, 255, 0.06);
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
     --shadow-md:
-      0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+      0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
     --shadow-lg:
-      0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
+      0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
 
     --color-accent: #3b82f6;
     --color-accent-foreground: #ffffff;

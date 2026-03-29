@@ -1,4 +1,4 @@
-import { Home, PanelLeft, Plus, X } from "lucide-react";
+import { Home, Plus, X } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import type { Tab } from "@/features/tabs/types";
 
@@ -9,7 +9,6 @@ interface TabBarProps {
   onTabClose: (id: string) => void;
   onNewTab: () => void;
   onHomeClick: () => void;
-  onSidebarToggle: () => void;
 }
 
 export function TabBar({
@@ -19,22 +18,12 @@ export function TabBar({
   onTabClose,
   onNewTab,
   onHomeClick,
-  onSidebarToggle,
 }: TabBarProps) {
   return (
     <div
       data-tauri-drag-region
-      className="flex h-10 w-full items-center border-b border-border bg-background/80 pl-20 backdrop-blur-sm"
+      className="flex h-10 w-full items-center border-b border-border bg-background pl-20"
     >
-      <button
-        type="button"
-        onClick={onSidebarToggle}
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-foreground-secondary transition-colors hover:bg-background-secondary/50 hover:text-foreground"
-        aria-label="Toggle sidebar"
-      >
-        <PanelLeft className="h-4 w-4" />
-      </button>
-
       <button
         type="button"
         onClick={onHomeClick}
