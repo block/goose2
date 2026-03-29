@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import {
   BookOpen,
-  FileText,
+  Bot,
   MessageSquare,
-  Package,
   PanelLeft,
   PanelLeftClose,
   Plus,
   Search,
-  Zap,
 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { GooseIcon } from "@/shared/ui/icons/GooseIcon";
@@ -24,10 +22,8 @@ interface SidebarProps {
 }
 
 const NAV_ITEMS = [
-  { id: "tasks", label: "Tasks", icon: Zap },
+  { id: "agents", label: "Agents", icon: Bot },
   { id: "skills", label: "Skills", icon: BookOpen },
-  { id: "artifacts", label: "Artifacts", icon: FileText },
-  { id: "apps", label: "Apps", icon: Package },
 ] as const;
 
 const RECENT_CHATS = [

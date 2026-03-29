@@ -22,13 +22,8 @@ export function TabBar({
   return (
     <div
       data-tauri-drag-region
-      className="relative flex h-10 w-full items-center border-b border-border bg-background/80 pl-20 backdrop-blur-sm"
+      className="relative flex h-10 w-full items-center border-b border-border bg-background pl-20"
     >
-      {/* Solid background behind macOS traffic lights so they stay visible on blur */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 left-0 w-20 bg-background"
-      />
       <button
         type="button"
         onClick={onHomeClick}
