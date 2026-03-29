@@ -1,0 +1,112 @@
+# AGENTS.md
+
+Guidelines for AI agents (and developers) working on this codebase.
+
+## Project Overview
+
+Goose2 is a Tauri 2 + React 19 desktop app. It uses TypeScript strict mode, Vite, and Tailwind CSS 3. The codebase follows a feature-sliced architecture organized under `src/app/`, `src/features/`, and `src/shared/`.
+
+## Architecture & File Structure
+
+```
+src/
+  app/           — App shell, entry point, top-level providers
+  features/      — Feature modules (tabs, sidebar, settings, status)
+    <feature>/
+      ui/        — React components
+      types.ts   — Shared types for the feature
+  shared/
+    ui/          — Reusable UI components (button, etc.)
+    lib/         — Utilities (cn.ts for class merging)
+    theme/       — Theme provider, appearance settings
+    styles/      — Global CSS, design tokens
+    hooks/       — Shared hooks
+    api/         — API integration
+    constants/   — Shared constants
+    context/     — Shared contexts
+```
+
+## Coding Conventions
+
+- Use `cn()` from `@/shared/lib/cn` for Tailwind class merging.
+- Import paths use the `@/` alias (maps to `./src`).
+- Components are controlled where possible (state lifted to parent).
+- Use `lucide-react` for icons.
+- All `<button>` elements must have `type="button"` to prevent form submission.
+- Use semantic HTML (`<aside>`, `<nav>`, `<header>`, `<main>`).
+
+## Theming System
+
+ThemeProvider manages three axes:
+
+| Axis         | Values                          | Persistence     | Mechanism                                    |
+|--------------|---------------------------------|-----------------|----------------------------------------------|
+| Theme mode   | `light`, `dark`, `system`       | localStorage    | `.dark` class on `<html>`                    |
+| Accent color | Any hex value                   | localStorage    | `--color-accent` CSS variable                |
+| Density      | `compact`, `comfortable`, `spacious` | localStorage | `--density-spacing` CSS variable (0.75/1/1.25) |
+
+- CSS variables are defined in `globals.css` with light/dark variants.
+- Tailwind config maps CSS variables to semantic color names.
+- Color palette tokens: `background` (primary/secondary/tertiary), `foreground` (primary/secondary/tertiary), `border`, `ring`, plus semantic variants (`info`, `danger`, `success`, `warning`).
+
+## Component Patterns
+
+- Small, focused components — aim for under 200 lines.
+- Props interfaces live in the component file, or in `types.ts` for shared types.
+- Use `forwardRef` for components that need ref forwarding (React 19 makes this optional, but the pattern is still used).
+- Animations: CSS transitions via Tailwind classes; respect `prefers-reduced-motion`.
+- Entrance animations: use the `isLoaded` state pattern with `useEffect` + short timeout.
+
+## Accessibility
+
+- ARIA roles on interactive elements (`role="tab"`, `role="tablist"`, `role="status"`).
+- `aria-label` on icon-only buttons.
+- `aria-hidden` on visually hidden content.
+- `aria-selected` on selectable items.
+- Color-only indicators must have text alternatives.
+- `prefers-reduced-motion` is respected globally.
+
+## Tauri Integration
+
+- The window starts hidden and is shown via `getCurrentWindow().show()` after React mounts.
+- Use `data-tauri-drag-region` on header areas for window dragging.
+- Title bar uses `titleBarStyle: "Overlay"` with `hiddenTitle: true` for a custom titlebar.
+- `tauri-plugin-window-state` persists window size and position.
+- Traffic light offset: `pl-20` (80px) to accommodate macOS window controls.
+
+## Tooling
+
+| Tool        | Purpose                                        |
+|-------------|-------------------------------------------------|
+| **Hermit**  | Manages toolchain (node, pnpm, biome, just, lefthook) |
+| **Just**    | Task runner (`just dev`, `just build`, `just check`) |
+| **Lefthook**| Git hooks (pre-commit, pre-push)               |
+| **Biome**   | Linting and formatting                          |
+| **pnpm**    | Package manager                                 |
+
+## Testing (Planned)
+
+- E2E tests with Playwright or similar.
+- Component tests with Vitest + React Testing Library.
+- File size enforcement via `scripts/check-file-sizes.mjs`.
+
+## Key Dependencies
+
+- `react` 19.1, `react-dom` 19.1
+- `@tauri-apps/api` 2.x
+- `@tanstack/react-query` 5.x
+- `tailwindcss` 3.x with `tailwindcss-animate`
+- `lucide-react` for icons
+- `class-variance-authority` for component variants
+- `clsx` + `tailwind-merge` for class merging
+- `@radix-ui/react-slot` for polymorphic components
+
+## Don'ts
+
+- Don't import from `../` across feature boundaries — use `@/` paths.
+- Don't put business logic in UI components — extract to hooks or utilities.
+- Don't use inline styles except for dynamic values (like animation delays).
+- Don't add dependencies without checking if an existing one covers the need.
+- Don't skip `type="button"` on buttons.
+- Don't use color-only indicators without text alternatives.
+- Never use `--no-verify` when pushing — fix the underlying lint/hook issues.
