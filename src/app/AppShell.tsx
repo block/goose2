@@ -61,13 +61,17 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           {children ?? (isHome ? <HomeScreen /> : <ChatView />)}
         </main>
       </div>
-      {!isHome && (
+      <div
+        className={`overflow-hidden transition-all duration-300 ease-in-out ${
+          isHome ? "max-h-0 opacity-0" : "max-h-8 opacity-100"
+        }`}
+      >
         <StatusBar
           modelName="Claude Sonnet 4"
           tokenCount={0}
           status="connected"
         />
-      )}
+      </div>
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
     </div>
   );
