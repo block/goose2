@@ -5,9 +5,11 @@ import { AppShell } from "@/app/AppShell";
 
 export function App() {
   useEffect(() => {
-    getCurrentWindow()
-      .show()
-      .catch(() => {});
+    if (window.__TAURI_INTERNALS__) {
+      getCurrentWindow()
+        .show()
+        .catch(() => {});
+    }
   }, []);
 
   return <AppShell />;
