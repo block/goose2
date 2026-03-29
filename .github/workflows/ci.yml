@@ -88,11 +88,11 @@ jobs:
       - name: Format check
         run: cd src-tauri && cargo fmt --check
 
-      - name: Install Playwright
-        run: npx playwright install chromium --with-deps
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: Run E2E smoke tests
-        run: npx playwright test --project=smoke
+        run: pnpm exec playwright test --project=smoke
 
       - name: Upload test artifacts
         if: failure()
