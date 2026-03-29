@@ -3,6 +3,7 @@ import { TabBar } from "@/features/tabs/ui/TabBar";
 import { Sidebar } from "@/features/sidebar/ui/Sidebar";
 import { StatusBar } from "@/features/status/ui/StatusBar";
 import { HomeScreen } from "@/features/home/ui/HomeScreen";
+import { ChatView } from "@/features/chat/ui/ChatView";
 import { SettingsModal } from "@/features/settings/ui/SettingsModal";
 import type { Tab } from "@/features/tabs/types";
 
@@ -56,7 +57,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       <div className="flex min-h-0 flex-1">
         <Sidebar isOpen={sidebarOpen} onSettingsClick={() => setSettingsOpen(true)} />
         <main className="flex min-h-0 min-w-0 flex-1">
-          {children ?? <HomeScreen />}
+          {children ?? (isHome ? <HomeScreen /> : <ChatView />)}
         </main>
       </div>
       {!isHome && (
