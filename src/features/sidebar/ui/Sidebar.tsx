@@ -16,49 +16,69 @@ const recentItems = [
 export function Sidebar({ isOpen, onSettingsClick }: SidebarProps) {
   return (
     <aside
-      aria-hidden={!isOpen}
       className={cn(
-        "h-full flex-shrink-0 bg-background-secondary/90 backdrop-blur-xl transition-[width] duration-300 ease-in-out overflow-hidden",
-        isOpen ? "border-r border-border/50" : "w-0"
+        "h-full flex-shrink-0 bg-background-secondary/90 backdrop-blur-xl border-r border-border/50 transition-[width] duration-300 ease-in-out overflow-hidden",
+        isOpen ? "w-56" : "w-12"
       )}
-      style={{ width: isOpen ? "12.5rem" : "0" }}
     >
-      <div className="flex flex-col h-full w-[12.5rem]">
+      <div
+        className={cn(
+          "flex flex-col h-full",
+          isOpen ? "w-56" : "w-12"
+        )}
+      >
         {/* New Chat button */}
-        <div className="px-3 py-2">
-          <button type="button" className="flex items-center gap-2 w-full px-3 py-1.5 rounded-md text-sm text-foreground-secondary hover:text-foreground hover:bg-background-secondary/50 cursor-pointer transition-colors">
-            <Plus className="h-4 w-4" />
-            <span>New Chat</span>
+        <div className={cn("py-2", isOpen ? "px-3" : "px-1")}>
+          <button
+            type="button"
+            title="New Chat"
+            className={cn(
+              "flex items-center rounded-md text-sm text-foreground-secondary hover:text-foreground hover:bg-background-secondary/50 cursor-pointer transition-colors w-full",
+              isOpen ? "gap-2 px-3 py-1.5" : "justify-center px-0 py-1.5"
+            )}
+          >
+            <Plus className="h-4 w-4 shrink-0" />
+            {isOpen && <span>New Chat</span>}
           </button>
         </div>
 
         {/* Recent section */}
         <div className="mt-4 flex flex-col gap-0.5">
-          <span className="px-3 py-1.5 text-xs font-medium text-foreground-tertiary uppercase tracking-wider">
-            Recent
-          </span>
-          <nav className="flex flex-col gap-0.5 px-1.5">
+          {isOpen && (
+            <span className="px-3 py-1.5 text-xs font-medium text-foreground-tertiary uppercase tracking-wider">
+              Recent
+            </span>
+          )}
+          <nav className={cn("flex flex-col gap-0.5", isOpen ? "px-1.5" : "px-1")}>
             {recentItems.map((item) => (
               <button
                 type="button"
                 key={item.id}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-foreground-secondary hover:text-foreground hover:bg-background-secondary/50 cursor-pointer transition-colors"
+                title={item.label}
+                className={cn(
+                  "flex items-center rounded-md text-sm text-foreground-secondary hover:text-foreground hover:bg-background-secondary/50 cursor-pointer transition-colors",
+                  isOpen ? "gap-2 px-3 py-1.5" : "justify-center px-0 py-1.5"
+                )}
               >
                 <item.icon className="h-4 w-4 flex-shrink-0" />
-                <span className="truncate">{item.label}</span>
+                {isOpen && <span className="truncate">{item.label}</span>}
               </button>
             ))}
           </nav>
         </div>
 
-        <div className="mt-auto pt-2 border-t border-border/50">
+        <div className={cn("mt-auto pt-2 border-t border-border/50", isOpen ? "" : "px-1")}>
           <button
             type="button"
             onClick={onSettingsClick}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-foreground-secondary hover:text-foreground hover:bg-background-secondary/50 w-full transition-colors"
+            title="Settings"
+            className={cn(
+              "flex items-center rounded-md text-sm text-foreground-secondary hover:text-foreground hover:bg-background-secondary/50 w-full transition-colors",
+              isOpen ? "gap-2 px-3 py-1.5" : "justify-center px-0 py-1.5"
+            )}
           >
-            <Settings2 className="h-4 w-4" />
-            <span>Settings</span>
+            <Settings2 className="h-4 w-4 shrink-0" />
+            {isOpen && <span>Settings</span>}
           </button>
         </div>
       </div>
