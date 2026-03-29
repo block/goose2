@@ -10,8 +10,8 @@ import type { Tab } from "@/features/tabs/types";
 export function AppShell({ children }: { children?: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [tabs, setTabs] = useState<Tab[]>([{ id: "1", title: "New Chat" }]);
-  const [activeTabId, setActiveTabId] = useState<string | null>("1");
+  const [tabs, setTabs] = useState<Tab[]>([]);
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const isHome = activeTabId === null;
 
   const handleNewTab = () => {

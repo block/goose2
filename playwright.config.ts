@@ -25,7 +25,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npx vite preview --port 4173 --strictPort --host 127.0.0.1",
+    command: "python3 -m http.server 4173 -d dist -b 127.0.0.1",
     port: 4173,
     reuseExistingServer: !process.env.CI,
   },
