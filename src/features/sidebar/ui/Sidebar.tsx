@@ -63,7 +63,7 @@ export function Sidebar({
   return (
     <div
       className={cn(
-        "relative h-full overflow-hidden bg-background-secondary border border-border/50",
+        "relative h-full overflow-hidden bg-background-secondary border border-border-secondary/50",
         "transition-[width] duration-300 ease-in-out",
         className,
       )}
@@ -72,7 +72,7 @@ export function Sidebar({
       <div className="flex flex-col h-full">
         {/* Header */}
         <div
-          className="flex items-center justify-between px-3 py-3 border-b border-border flex-shrink-0"
+          className="flex items-center justify-between px-3 py-3 border-b border-border-secondary flex-shrink-0"
           data-tauri-drag-region
         >
           <button
@@ -134,7 +134,7 @@ export function Sidebar({
               "flex items-center rounded-md transition-all duration-300 ease-out",
               collapsed
                 ? "justify-center w-7 h-7 mx-auto text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50"
-                : "gap-2 w-full px-2.5 py-1.5 border border-border text-xs text-foreground-secondary hover:text-foreground hover:border-foreground-secondary/30",
+                : "gap-2 w-full px-2.5 py-1.5 border border-border-secondary text-xs text-foreground-secondary hover:text-foreground hover:border-foreground-secondary/30",
             )}
             title={collapsed ? "Search ⌘K" : undefined}
           >
@@ -151,7 +151,7 @@ export function Sidebar({
             </span>
             <kbd
               className={cn(
-                "text-[10px] text-foreground-secondary/40 px-1 py-0.5 rounded font-mono flex-shrink-0",
+                "text-[10px] text-foreground-tertiary px-1 py-0.5 rounded font-mono flex-shrink-0",
                 labelTransition,
                 labelVisible
                   ? "opacity-100 w-auto"
@@ -235,7 +235,7 @@ export function Sidebar({
           {/* Divider */}
           <div
             className={cn(
-              "my-2 mx-auto bg-border transition-all duration-300",
+              "my-2 mx-auto bg-border-secondary transition-all duration-300",
               collapsed ? "w-5 h-px" : "w-full h-px mx-1.5",
             )}
           />
@@ -322,7 +322,7 @@ export function Sidebar({
         {/* Footer */}
         <div
           className={cn(
-            "flex items-center border-t border-border flex-shrink-0 transition-all duration-300",
+            "flex items-center border-t border-border-secondary flex-shrink-0 transition-all duration-300",
             collapsed ? "justify-center px-0 py-2" : "px-3 py-2",
           )}
         >
