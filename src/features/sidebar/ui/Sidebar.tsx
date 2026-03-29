@@ -67,14 +67,18 @@ export function Sidebar({ isOpen, onSettingsClick }: SidebarProps) {
           </nav>
         </div>
 
-        <div className={cn("mt-auto pt-2 border-t border-border/50", isOpen ? "" : "px-1")}>
+        {/* Footer — pinned to bottom */}
+        <div className={cn(
+          "mt-auto flex items-center border-t border-border flex-shrink-0 transition-all duration-300",
+          isOpen ? "px-3 py-2" : "justify-center px-0 py-2"
+        )}>
           <button
             type="button"
             onClick={onSettingsClick}
             title="Settings"
             className={cn(
-              "flex items-center rounded-md text-sm text-foreground-secondary hover:text-foreground hover:bg-background-secondary/50 w-full transition-colors",
-              isOpen ? "gap-2 px-3 py-1.5" : "justify-center px-0 py-1.5"
+              "flex items-center rounded-md text-sm text-foreground-secondary hover:text-foreground hover:bg-background-secondary/50 w-full transition-colors cursor-pointer",
+              isOpen ? "gap-2 px-2 py-1.5" : "justify-center px-0 py-1.5"
             )}
           >
             <Settings2 className="h-4 w-4 shrink-0" />
