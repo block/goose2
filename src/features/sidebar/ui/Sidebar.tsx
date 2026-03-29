@@ -63,7 +63,7 @@ export function Sidebar({
   return (
     <div
       className={cn(
-        "relative h-full overflow-hidden bg-background-secondary/90 backdrop-blur-xl border border-border/50",
+        "relative h-full overflow-hidden bg-background-secondary border border-border/50",
         "transition-[width] duration-300 ease-in-out",
         className,
       )}
@@ -151,7 +151,7 @@ export function Sidebar({
             </span>
             <kbd
               className={cn(
-                "text-[10px] bg-background-tertiary px-1.5 py-0.5 rounded font-mono flex-shrink-0",
+                "text-[10px] text-foreground-secondary/40 px-1 py-0.5 rounded font-mono flex-shrink-0",
                 labelTransition,
                 labelVisible
                   ? "opacity-100 w-auto"

@@ -22,7 +22,7 @@ export function TabBar({
   return (
     <div
       data-tauri-drag-region
-      className="relative flex h-10 w-full items-center border-b border-border bg-background pl-20"
+      className="flex h-10 w-full items-center border-b border-border bg-background pl-20"
     >
       <button
         type="button"
