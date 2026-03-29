@@ -84,8 +84,8 @@ export default {
         yellow: { 500: "#fbcd44" },
       },
       transitionDuration: {
-        '400': '400ms',
-        '600': '600ms',
+        400: "400ms",
+        600: "600ms",
       },
     },
   },

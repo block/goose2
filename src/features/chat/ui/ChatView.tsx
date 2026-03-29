@@ -21,7 +21,9 @@ export function ChatView() {
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1 text-xs text-foreground-tertiary">
-                <span className="rounded-md border border-border px-2 py-0.5">Claude Sonnet 4</span>
+                <span className="rounded-md border border-border px-2 py-0.5">
+                  Claude Sonnet 4
+                </span>
               </div>
               <button
                 type="button"

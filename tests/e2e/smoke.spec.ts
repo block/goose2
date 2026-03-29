@@ -6,7 +6,7 @@ test.describe("Smoke tests", () => {
 
     // Should show the greeting
     await expect(
-      page.getByText(/Good (morning|afternoon|evening)/)
+      page.getByText(/Good (morning|afternoon|evening)/),
     ).toBeVisible();
   });
 

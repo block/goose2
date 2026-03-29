@@ -5,7 +5,9 @@ import { AppShell } from "@/app/AppShell";
 
 export function App() {
   useEffect(() => {
-    getCurrentWindow().show().catch(() => {});
+    getCurrentWindow()
+      .show()
+      .catch(() => {});
   }, []);
 
   return <AppShell />;

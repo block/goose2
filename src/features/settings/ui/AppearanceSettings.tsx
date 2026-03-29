@@ -39,7 +39,9 @@ function SettingRow({
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium">{label}</p>
         {description && (
-          <p className="mt-0.5 text-xs text-foreground-secondary">{description}</p>
+          <p className="mt-0.5 text-xs text-foreground-secondary">
+            {description}
+          </p>
         )}
       </div>
       <div className="flex-shrink-0">{children}</div>
@@ -48,7 +50,8 @@ function SettingRow({
 }
 
 export function AppearanceSettings() {
-  const { theme, setTheme, accentColor, setAccentColor, density, setDensity } = useTheme();
+  const { theme, setTheme, accentColor, setAccentColor, density, setDensity } =
+    useTheme();
 
   return (
     <div>
@@ -59,10 +62,14 @@ export function AppearanceSettings() {
 
       <div className="my-4 border-t" />
 
-      <SettingRow label="Theme" description="Choose your preferred color scheme">
+      <SettingRow
+        label="Theme"
+        description="Choose your preferred color scheme"
+      >
         <div className="flex gap-1 rounded-lg bg-background-secondary p-1">
           {THEME_OPTIONS.map((option) => (
             <button
+              type="button"
               key={option.value}
               onClick={() => setTheme(option.value)}
               className={cn(
@@ -85,6 +92,7 @@ export function AppearanceSettings() {
         <div className="grid grid-cols-4 gap-2">
           {ACCENT_COLORS.map((color) => (
             <button
+              type="button"
               key={color.value}
               title={color.name}
               onClick={() => setAccentColor(color.value)}
@@ -112,6 +120,7 @@ export function AppearanceSettings() {
         <div className="flex gap-1 rounded-lg bg-background-secondary p-1">
           {DENSITY_OPTIONS.map((option) => (
             <button
+              type="button"
               key={option.value}
               onClick={() => setDensity(option.value)}
               className={cn(

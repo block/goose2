@@ -19,11 +19,15 @@ type ThemeProviderState = {
   setDensity: (d: Density) => void;
 };
 
-const ThemeProviderContext = React.createContext<ThemeProviderState | undefined>(undefined);
+const ThemeProviderContext = React.createContext<
+  ThemeProviderState | undefined
+>(undefined);
 
 function resolveTheme(preference: ThemePreference): ResolvedTheme {
   if (preference === "system") {
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
   }
   return preference;
 }
@@ -33,7 +37,9 @@ export function ThemeProvider({
   defaultTheme = "system",
 }: ThemeProviderProps) {
   const [theme, setThemeState] = React.useState<ThemePreference>(() => {
-    const stored = localStorage.getItem("goose-theme") as ThemePreference | null;
+    const stored = localStorage.getItem(
+      "goose-theme",
+    ) as ThemePreference | null;
     return stored ?? defaultTheme;
   });
 
@@ -111,7 +117,15 @@ export function ThemeProvider({
       density,
       setDensity,
     }),
-    [theme, resolvedTheme, setTheme, accentColor, setAccentColor, density, setDensity],
+    [
+      theme,
+      resolvedTheme,
+      setTheme,
+      accentColor,
+      setAccentColor,
+      density,
+      setDensity,
+    ],
   );
 
   return (

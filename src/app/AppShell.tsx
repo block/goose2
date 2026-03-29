@@ -10,9 +10,7 @@ import type { Tab } from "@/features/tabs/types";
 export function AppShell({ children }: { children?: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [tabs, setTabs] = useState<Tab[]>([
-    { id: "1", title: "New Chat" },
-  ]);
+  const [tabs, setTabs] = useState<Tab[]>([{ id: "1", title: "New Chat" }]);
   const [activeTabId, setActiveTabId] = useState<string | null>("1");
   const isHome = activeTabId === null;
 
@@ -36,7 +34,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "," && e.metaKey) {
         e.preventDefault();
-        setSettingsOpen(prev => !prev);
+        setSettingsOpen((prev) => !prev);
       }
     };
     window.addEventListener("keydown", handler);
@@ -52,16 +50,23 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         onTabClose={handleTabClose}
         onNewTab={handleNewTab}
         onHomeClick={() => setActiveTabId(null)}
-        onSidebarToggle={() => setSidebarOpen(prev => !prev)}
+        onSidebarToggle={() => setSidebarOpen((prev) => !prev)}
       />
       <div className="flex min-h-0 flex-1">
-        <Sidebar isOpen={sidebarOpen} onSettingsClick={() => setSettingsOpen(true)} />
+        <Sidebar
+          isOpen={sidebarOpen}
+          onSettingsClick={() => setSettingsOpen(true)}
+        />
         <main className="min-h-0 min-w-0 flex-1">
           {children ?? (isHome ? <HomeScreen /> : <ChatView />)}
         </main>
       </div>
       {!isHome && (
-        <StatusBar modelName="Claude Sonnet 4" tokenCount={0} status="connected" />
+        <StatusBar
+          modelName="Claude Sonnet 4"
+          tokenCount={0}
+          status="connected"
+        />
       )}
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
     </div>

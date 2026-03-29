@@ -10,8 +10,12 @@ function ThemeConsumer() {
       <span data-testid="theme">{theme}</span>
       <span data-testid="accent">{accentColor}</span>
       <span data-testid="density">{density}</span>
-      <button type="button" onClick={() => setTheme("dark")}>Set Dark</button>
-      <button type="button" onClick={() => setTheme("light")}>Set Light</button>
+      <button type="button" onClick={() => setTheme("dark")}>
+        Set Dark
+      </button>
+      <button type="button" onClick={() => setTheme("light")}>
+        Set Light
+      </button>
     </div>
   );
 }
@@ -26,7 +30,7 @@ describe("ThemeProvider", () => {
     render(
       <ThemeProvider>
         <ThemeConsumer />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
     expect(screen.getByTestId("theme")).toHaveTextContent("system");
   });
@@ -36,7 +40,7 @@ describe("ThemeProvider", () => {
     render(
       <ThemeProvider>
         <ThemeConsumer />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
     await user.click(screen.getByText("Set Dark"));
     expect(screen.getByTestId("theme")).toHaveTextContent("dark");
@@ -48,7 +52,7 @@ describe("ThemeProvider", () => {
     render(
       <ThemeProvider>
         <ThemeConsumer />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
     await user.click(screen.getByText("Set Light"));
     expect(localStorage.getItem("goose-theme")).toBe("light");
@@ -58,7 +62,7 @@ describe("ThemeProvider", () => {
     render(
       <ThemeProvider>
         <ThemeConsumer />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
     expect(screen.getByTestId("accent")).toHaveTextContent("#3b82f6");
   });
@@ -67,7 +71,7 @@ describe("ThemeProvider", () => {
     render(
       <ThemeProvider>
         <ThemeConsumer />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
     expect(screen.getByTestId("density")).toHaveTextContent("comfortable");
   });

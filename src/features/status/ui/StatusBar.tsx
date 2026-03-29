@@ -28,7 +28,11 @@ export function StatusBar({
 
       <div className="flex items-center gap-2">
         <span>{tokenCount.toLocaleString()} tokens</span>
-        <div role="status" aria-label={status} className={cn("h-1.5 w-1.5 rounded-full", statusColor[status])} />
+        <div
+          role="status"
+          aria-label={status}
+          className={cn("h-1.5 w-1.5 rounded-full", statusColor[status])}
+        />
       </div>
     </div>
   );

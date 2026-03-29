@@ -44,7 +44,10 @@ export function TabBar({
         <Home className="h-4 w-4" />
       </button>
 
-      <div role="tablist" className="flex items-center gap-0.5 overflow-x-auto px-1">
+      <div
+        role="tablist"
+        className="flex items-center gap-0.5 overflow-x-auto px-1"
+      >
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -60,23 +63,17 @@ export function TabBar({
             )}
           >
             <span className="truncate">{tab.title}</span>
-            <span
-              role="button"
+            <button
+              type="button"
               tabIndex={-1}
               onClick={(e) => {
                 e.stopPropagation();
                 onTabClose(tab.id);
               }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.stopPropagation();
-                  onTabClose(tab.id);
-                }
-              }}
               className="flex h-4 w-4 shrink-0 items-center justify-center rounded opacity-0 transition-opacity hover:bg-background-secondary group-hover:opacity-100"
             >
               <X className="h-3 w-3" />
-            </span>
+            </button>
           </button>
         ))}
       </div>
