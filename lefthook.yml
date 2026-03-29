@@ -1,7 +1,7 @@
 pre-commit:
   commands:
-    fmt-check:
-      run: just fmt-check
+    format:
+      run: biome format --write . && biome check --fix . && git add -u
     check:
       run: just check
 
