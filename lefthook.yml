@@ -14,6 +14,8 @@ pre-push:
       run: just clippy
     check:
       run: just check
+    test:
+      run: just test
     build:
       run: just build
     tauri-check:

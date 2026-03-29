@@ -43,7 +43,29 @@ tauri-check:
     cd src-tauri && cargo check
 
 # Full CI gate
-ci: check clippy build tauri-check
+ci: check clippy test build tauri-check
+
+# ── Test ─────────────────────────────────────────────────────
+
+# Run unit/component tests
+test:
+    pnpm test
+
+# Run tests in watch mode
+test-watch:
+    pnpm test:watch
+
+# Run tests with coverage
+test-coverage:
+    pnpm test:coverage
+
+# Run E2E smoke tests (builds first)
+test-e2e:
+    pnpm test:e2e:smoke
+
+# Run all E2E tests (builds first)
+test-e2e-all:
+    pnpm test:e2e
 
 # ── Run ──────────────────────────────────────────────────────
 
