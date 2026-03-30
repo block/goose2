@@ -7,6 +7,7 @@ import { ChatView } from "@/features/chat/ui/ChatView";
 import { SkillsView } from "@/features/skills/ui/SkillsView";
 import { AgentsView } from "@/features/agents/ui/AgentsView";
 import { ProjectsView } from "@/features/projects/ui/ProjectsView";
+import { CreateProjectDialog } from "@/features/projects/ui/CreateProjectDialog";
 import type { ProjectInfo } from "@/features/projects/api/projects";
 import { SettingsModal } from "@/features/settings/ui/SettingsModal";
 import { useChatStore } from "@/features/chat/stores/chatStore";
@@ -22,6 +23,7 @@ const SIDEBAR_COLLAPSED_WIDTH = 48;
 export function AppShell({ children }: { children?: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [createProjectOpen, setCreateProjectOpen] = useState(false);
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<AppView>("home");
@@ -235,6 +237,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             onNavigate={handleNavigate}
             onNewChat={handleNewTab}
             onNewChatInProject={handleNewChatInProject}
+            onCreateProject={() => setCreateProjectOpen(true)}
             onSelectTab={handleTabSelect}
             activeView={activeView}
             activeTabId={activeTabId}
@@ -265,6 +268,15 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
       {/* Settings modal */}
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
+
+      {/* Create project dialog */}
+      <CreateProjectDialog
+        isOpen={createProjectOpen}
+        onClose={() => setCreateProjectOpen(false)}
+        onCreated={() => {
+          projectStore.fetchProjects();
+        }}
+      />
     </div>
   );
 }
