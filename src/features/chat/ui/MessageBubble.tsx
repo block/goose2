@@ -37,7 +37,7 @@ function CopyButton({ text }: { text: string }) {
     <button
       type="button"
       onClick={handleCopy}
-      className="rounded p-1 text-foreground-tertiary opacity-0 transition-opacity hover:text-foreground-primary group-hover:opacity-100"
+      className="rounded p-1 text-foreground-tertiary opacity-0 transition-opacity duration-150 hover:text-foreground-primary group-hover:opacity-100"
       aria-label={copied ? "Copied" : "Copy message"}
     >
       {copied ? <Check size={14} /> : <Copy size={14} />}
@@ -159,22 +159,22 @@ export function MessageBubble({
     <div
       className={cn(
         "group flex gap-3 px-4 py-3",
-        "animate-in fade-in slide-in-from-bottom-2 duration-300 motion-reduce:animate-none",
-        isUser ? "flex-row-reverse" : "flex-row",
+        "animate-in fade-in duration-200 motion-reduce:animate-none",
+        isUser ? "flex-row-reverse ml-auto" : "flex-row",
       )}
       data-role={isUser ? "user-message" : "assistant-message"}
     >
       {/* Avatar */}
       {isUser ? (
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/20">
-          <User size={16} className="text-accent" />
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-background-tertiary">
+          <User size={14} className="text-foreground-secondary" />
         </div>
       ) : (
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/10">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-background-tertiary">
           {agentAvatarUrl ? (
-            <img src={agentAvatarUrl} alt="" className="h-8 w-8 rounded-full" />
+            <img src={agentAvatarUrl} alt="" className="h-7 w-7 rounded-full" />
           ) : (
-            <Bot size={16} className="text-accent" />
+            <Bot size={14} className="text-foreground-secondary" />
           )}
         </div>
       )}
@@ -182,8 +182,8 @@ export function MessageBubble({
       {/* Message content */}
       <div
         className={cn(
-          "flex max-w-[80%] flex-col gap-1",
-          isUser ? "items-end" : "items-start",
+          "flex flex-col gap-1",
+          isUser ? "max-w-[80%] items-end" : "max-w-[85%] items-start",
         )}
       >
         {/* Agent name */}
@@ -195,10 +195,8 @@ export function MessageBubble({
 
         <div
           className={cn(
-            "rounded-2xl px-4 py-2.5",
-            isUser
-              ? "bg-accent text-accent-foreground"
-              : "bg-background-secondary text-foreground-primary",
+            "text-[13px] leading-relaxed",
+            isUser ? "text-foreground-primary" : "text-foreground-secondary",
           )}
         >
           {content.map((c, i) => {
@@ -216,7 +214,7 @@ export function MessageBubble({
         </div>
 
         {/* Hover actions + timestamp */}
-        <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
           {textContent && <CopyButton text={textContent} />}
           {!isUser && onRetry && (
             <button
@@ -238,7 +236,7 @@ export function MessageBubble({
               <Pencil size={14} />
             </button>
           )}
-          <span className="px-1 text-[10px] text-foreground-tertiary">
+          <span className="px-1 text-[10px] text-foreground-secondary">
             {new Date(created).toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",

@@ -1,11 +1,5 @@
-import { useState } from "react";
-import {
-  Wrench,
-  Loader2,
-  CheckCircle2,
-  XCircle,
-  ChevronRight,
-} from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Wrench, Loader2, Check, XCircle, ChevronRight } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import type { ToolCallStatus } from "@/shared/types/messages";
 
@@ -17,42 +11,50 @@ interface ToolCallCardProps {
   isError?: boolean;
 }
 
-const statusConfig: Record<
-  ToolCallStatus,
-  {
-    icon: typeof CheckCircle2 | typeof Loader2 | typeof XCircle | typeof Wrench;
-    color: string;
-    borderColor: string;
-    spin?: boolean;
+const pillColors: Record<ToolCallStatus, string> = {
+  pending: "bg-background-tertiary text-foreground-secondary border-border",
+  idle: "bg-background-tertiary text-foreground-secondary border-border",
+  executing: "bg-amber-500/[0.08] text-foreground-primary border-amber-500/20",
+  completed: "bg-background-tertiary text-foreground-secondary border-border",
+  error: "bg-red-500/[0.08] text-foreground-primary border-red-500/20",
+  stopped: "bg-background-tertiary text-foreground-secondary border-border",
+} as Record<string, string>;
+
+function StatusIndicator({ status }: { status: ToolCallStatus }) {
+  switch (status) {
+    case "executing":
+      return (
+        <Loader2 className="w-3 h-3 shrink-0 animate-spin text-amber-500" />
+      );
+    case "completed":
+      return <Check className="w-3 h-3 shrink-0 text-green-500" />;
+    case "error":
+      return <XCircle className="w-3 h-3 shrink-0 text-red-500" />;
+    default:
+      return null;
   }
-> = {
-  pending: {
-    icon: Wrench,
-    color: "text-foreground-tertiary",
-    borderColor: "border-border-primary",
-  },
-  executing: {
-    icon: Loader2,
-    color: "text-foreground-warning",
-    borderColor: "border-border-warning",
-    spin: true,
-  },
-  completed: {
-    icon: CheckCircle2,
-    color: "text-foreground-success",
-    borderColor: "border-border-success",
-  },
-  error: {
-    icon: XCircle,
-    color: "text-foreground-danger",
-    borderColor: "border-border-danger",
-  },
-  stopped: {
-    icon: XCircle,
-    color: "text-foreground-tertiary",
-    borderColor: "border-border-primary",
-  },
-};
+}
+
+function useElapsedTime(status: ToolCallStatus) {
+  const [elapsed, setElapsed] = useState(0);
+  const startRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (status === "executing") {
+      startRef.current = Date.now();
+      setElapsed(0);
+      const interval = setInterval(() => {
+        if (startRef.current) {
+          setElapsed(Math.floor((Date.now() - startRef.current) / 1000));
+        }
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+    startRef.current = null;
+  }, [status]);
+
+  return elapsed;
+}
 
 export function ToolCallCard({
   name,
@@ -61,92 +63,72 @@ export function ToolCallCard({
   result,
   isError,
 }: ToolCallCardProps) {
-  const [argsExpanded, setArgsExpanded] = useState(false);
-  const [resultExpanded, setResultExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const elapsed = useElapsedTime(status);
 
-  const config = statusConfig[status];
-  const StatusIcon = config.icon;
+  const hasContent = Object.keys(args).length > 0 || result != null;
 
   return (
-    <div
-      className={cn(
-        "my-1.5 overflow-hidden rounded-lg border bg-background-secondary",
-        config.borderColor,
-      )}
-    >
-      {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-2">
-        <Wrench size={14} className="shrink-0 text-foreground-tertiary" />
-        <span className="font-mono text-xs font-medium text-foreground-secondary">
-          {name}
-        </span>
-        <StatusIcon
-          size={14}
-          className={cn(
-            "ml-auto shrink-0",
-            config.color,
-            config.spin && "animate-spin motion-reduce:animate-none",
-          )}
-          aria-label={status}
-        />
-      </div>
-
-      {/* Collapsible arguments */}
-      {Object.keys(args).length > 0 && (
-        <div className="border-t border-border-secondary">
-          <button
-            type="button"
-            onClick={() => setArgsExpanded(!argsExpanded)}
-            className="flex w-full items-center gap-1.5 px-3 py-1.5 text-left text-[11px] text-foreground-tertiary transition-colors hover:text-foreground-secondary"
-            aria-expanded={argsExpanded}
-          >
-            <ChevronRight
-              size={10}
-              className={cn(
-                "shrink-0 transition-transform duration-150 motion-reduce:transition-none",
-                argsExpanded && "rotate-90",
-              )}
-            />
-            Arguments
-          </button>
-          {argsExpanded && (
-            <pre className="overflow-x-auto px-3 pb-2 text-[11px] leading-relaxed text-foreground-tertiary">
-              {JSON.stringify(args, null, 2)}
-            </pre>
-          )}
-        </div>
-      )}
-
-      {/* Collapsible result */}
-      {result != null && (
-        <div className="border-t border-border-secondary">
-          <button
-            type="button"
-            onClick={() => setResultExpanded(!resultExpanded)}
+    <div className="my-1">
+      <button
+        type="button"
+        onClick={() => hasContent && setExpanded(!expanded)}
+        className={cn(
+          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs border transition-all duration-150",
+          hasContent && "cursor-pointer",
+          !hasContent && "cursor-default",
+          pillColors[status] ?? pillColors.pending,
+        )}
+      >
+        <Wrench className="w-3 h-3 shrink-0" />
+        <span className="text-xs font-medium">{name}</span>
+        <StatusIndicator status={status} />
+        {status === "executing" && elapsed >= 3 && (
+          <span className="text-[10px] tabular-nums text-foreground-tertiary">
+            {elapsed}s
+          </span>
+        )}
+        {hasContent && (
+          <ChevronRight
             className={cn(
-              "flex w-full items-center gap-1.5 px-3 py-1.5 text-left text-[11px] transition-colors hover:text-foreground-secondary",
-              isError ? "text-foreground-danger" : "text-foreground-tertiary",
+              "w-3 h-3 shrink-0 transition-transform duration-150",
+              expanded && "rotate-90",
             )}
-            aria-expanded={resultExpanded}
-          >
-            <ChevronRight
-              size={10}
-              className={cn(
-                "shrink-0 transition-transform duration-150 motion-reduce:transition-none",
-                resultExpanded && "rotate-90",
-              )}
-            />
-            {isError ? "Error" : "Result"}
-          </button>
-          {resultExpanded && (
-            <pre
-              className={cn(
-                "max-h-48 overflow-auto px-3 pb-2 text-[11px] leading-relaxed",
-                isError ? "text-foreground-danger" : "text-foreground-tertiary",
-              )}
-            >
-              {result}
-            </pre>
+          />
+        )}
+      </button>
+
+      {expanded && hasContent && (
+        <div className="mt-1.5 p-3 rounded-md bg-background-tertiary border border-border">
+          {Object.keys(args).length > 0 && (
+            <div>
+              <span className="text-[10px] font-medium uppercase tracking-wide text-foreground-tertiary">
+                Arguments
+              </span>
+              <pre className="mt-1 text-xs font-mono text-foreground-secondary whitespace-pre-wrap break-all">
+                {JSON.stringify(args, null, 2)}
+              </pre>
+            </div>
+          )}
+          {result != null && (
+            <div className={Object.keys(args).length > 0 ? "mt-2" : ""}>
+              <span
+                className={cn(
+                  "text-[10px] font-medium uppercase tracking-wide",
+                  isError ? "text-red-500" : "text-foreground-tertiary",
+                )}
+              >
+                {isError ? "Error" : "Result"}
+              </span>
+              <pre
+                className={cn(
+                  "mt-1 max-h-48 overflow-auto text-xs font-mono whitespace-pre-wrap break-all",
+                  isError ? "text-red-500" : "text-foreground-secondary",
+                )}
+              >
+                {result}
+              </pre>
+            </div>
           )}
         </div>
       )}

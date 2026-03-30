@@ -45,7 +45,7 @@ export function TabBar({
             aria-selected={tab.id === activeTabId}
             onClick={() => onTabSelect(tab.id)}
             className={cn(
-              "group flex h-7 items-center gap-1.5 rounded-md px-3 text-xs transition-colors",
+              "group flex h-7 items-center gap-1.5 rounded-md pl-3 pr-1.5 text-xs transition-colors",
               tab.id === activeTabId
                 ? "bg-background-secondary text-foreground"
                 : "text-foreground-secondary hover:bg-background-secondary/50 hover:text-foreground",

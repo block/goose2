@@ -7,6 +7,7 @@ import {
   PanelLeftClose,
   Plus,
   Search,
+  User,
 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { GooseIcon } from "@/shared/ui/icons/GooseIcon";
@@ -343,7 +344,7 @@ export function Sidebar({
             className="w-7 h-7 rounded-full bg-background-tertiary flex items-center justify-center overflow-hidden hover:bg-background-tertiary/80 transition-colors cursor-pointer"
             title="Settings"
           >
-            <span className="text-[10px] font-medium">WB</span>
+            <User className="w-3.5 h-3.5 text-foreground-secondary" />
           </button>
         </div>
       </div>
