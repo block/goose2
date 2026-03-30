@@ -102,10 +102,7 @@ pub fn slugify(name: &str) -> String {
 /// Export a persona as sprout-compatible JSON (version 1).
 /// Returns the JSON string and a suggested filename.
 #[tauri::command]
-pub fn export_persona(
-    store: State<'_, PersonaStore>,
-    id: String,
-) -> Result<ExportResult, String> {
+pub fn export_persona(store: State<'_, PersonaStore>, id: String) -> Result<ExportResult, String> {
     let persona = store
         .get(&id)
         .ok_or_else(|| format!("Persona '{}' not found", id))?;
@@ -146,12 +143,12 @@ pub fn import_personas(
     }
 
     // Parse the bytes as UTF-8
-    let content = String::from_utf8(file_bytes)
-        .map_err(|_| "File is not valid UTF-8 text".to_string())?;
+    let content =
+        String::from_utf8(file_bytes).map_err(|_| "File is not valid UTF-8 text".to_string())?;
 
     // Parse as JSON
-    let export: PersonaExportV1 = serde_json::from_str(&content)
-        .map_err(|e| format!("Invalid persona JSON: {}", e))?;
+    let export: PersonaExportV1 =
+        serde_json::from_str(&content).map_err(|e| format!("Invalid persona JSON: {}", e))?;
 
     // Validate version
     if export.version != 1 {

@@ -40,10 +40,7 @@ fn build_skill_md(name: &str, description: &str, instructions: &str) -> String {
     // Escape embedded single quotes by doubling them, then wrap in single quotes
     // to prevent YAML injection in the description field.
     let safe_desc = description.replace('\'', "''");
-    let mut md = format!(
-        "---\nname: {}\ndescription: '{}'\n---\n",
-        name, safe_desc
-    );
+    let mut md = format!("---\nname: {}\ndescription: '{}'\n---\n", name, safe_desc);
     if !instructions.is_empty() {
         md.push('\n');
         md.push_str(instructions);
@@ -66,8 +63,7 @@ pub fn create_skill(name: String, description: String, instructions: String) -> 
     let skill_path = dir.join("SKILL.md");
     let content = build_skill_md(&name, &description, &instructions);
 
-    fs::write(&skill_path, content)
-        .map_err(|e| format!("Failed to write SKILL.md: {}", e))?;
+    fs::write(&skill_path, content).map_err(|e| format!("Failed to write SKILL.md: {}", e))?;
 
     Ok(())
 }
@@ -138,12 +134,12 @@ fn parse_frontmatter(raw: &str) -> (String, String) {
         let mut description = String::new();
         for line in front.lines() {
             let line = line.trim();
-            if line.starts_with("description:") {
-                let val = line["description:".len()..].trim();
+            if let Some(rest) = line.strip_prefix("description:") {
+                let val = rest.trim();
                 // Strip surrounding quotes (single or double)
                 let unquoted = val
-                    .trim_start_matches(|c| c == '\'' || c == '"')
-                    .trim_end_matches(|c| c == '\'' || c == '"');
+                    .trim_start_matches(['\'', '"'])
+                    .trim_end_matches(['\'', '"']);
                 description = if val.starts_with('\'') {
                     // Un-escape doubled single quotes
                     unquoted.replace("''", "'")
@@ -187,7 +183,11 @@ pub struct ExportSkillResult {
 }
 
 #[tauri::command]
-pub fn update_skill(name: String, description: String, instructions: String) -> Result<SkillInfo, String> {
+pub fn update_skill(
+    name: String,
+    description: String,
+    instructions: String,
+) -> Result<SkillInfo, String> {
     validate_skill_name(&name)?;
     let dir = skills_dir()?.join(&name);
 
@@ -198,8 +198,7 @@ pub fn update_skill(name: String, description: String, instructions: String) -> 
     let skill_path = dir.join("SKILL.md");
     let content = build_skill_md(&name, &description, &instructions);
 
-    fs::write(&skill_path, content)
-        .map_err(|e| format!("Failed to write SKILL.md: {}", e))?;
+    fs::write(&skill_path, content).map_err(|e| format!("Failed to write SKILL.md: {}", e))?;
 
     Ok(SkillInfo {
         name: name.clone(),
@@ -219,8 +218,8 @@ pub fn export_skill(name: String) -> Result<ExportSkillResult, String> {
     }
 
     let skill_md = dir.join("SKILL.md");
-    let raw = fs::read_to_string(&skill_md)
-        .map_err(|e| format!("Failed to read SKILL.md: {}", e))?;
+    let raw =
+        fs::read_to_string(&skill_md).map_err(|e| format!("Failed to read SKILL.md: {}", e))?;
     let (description, instructions) = parse_frontmatter(&raw);
 
     let export = SkillExportV1 {
@@ -246,15 +245,16 @@ pub fn import_skills(file_bytes: Vec<u8>, file_name: String) -> Result<Vec<Skill
     }
 
     // Parse bytes as UTF-8
-    let text = String::from_utf8(file_bytes)
-        .map_err(|e| format!("File is not valid UTF-8: {}", e))?;
+    let text =
+        String::from_utf8(file_bytes).map_err(|e| format!("File is not valid UTF-8: {}", e))?;
 
     // Parse as JSON
-    let value: serde_json::Value = serde_json::from_str(&text)
-        .map_err(|e| format!("Invalid JSON: {}", e))?;
+    let value: serde_json::Value =
+        serde_json::from_str(&text).map_err(|e| format!("Invalid JSON: {}", e))?;
 
     // Validate version
-    let version = value.get("version")
+    let version = value
+        .get("version")
         .and_then(|v| v.as_u64())
         .ok_or("Missing or invalid \"version\" field")?;
     if version != 1 {
@@ -262,7 +262,8 @@ pub fn import_skills(file_bytes: Vec<u8>, file_name: String) -> Result<Vec<Skill
     }
 
     // Extract fields
-    let name = value.get("name")
+    let name = value
+        .get("name")
         .and_then(|v| v.as_str())
         .ok_or("Missing or invalid \"name\" field")?
         .to_string();
@@ -270,7 +271,8 @@ pub fn import_skills(file_bytes: Vec<u8>, file_name: String) -> Result<Vec<Skill
         return Err("Skill name must not be empty".to_string());
     }
 
-    let description = value.get("description")
+    let description = value
+        .get("description")
         .and_then(|v| v.as_str())
         .ok_or("Missing or invalid \"description\" field")?
         .to_string();
@@ -278,7 +280,8 @@ pub fn import_skills(file_bytes: Vec<u8>, file_name: String) -> Result<Vec<Skill
         return Err("Skill description must not be empty".to_string());
     }
 
-    let instructions = value.get("instructions")
+    let instructions = value
+        .get("instructions")
         .and_then(|v| v.as_str())
         .unwrap_or("")
         .to_string();
@@ -305,8 +308,7 @@ pub fn import_skills(file_bytes: Vec<u8>, file_name: String) -> Result<Vec<Skill
 
     let skill_path = dir.join("SKILL.md");
     let content = build_skill_md(&final_name, &description, &instructions);
-    fs::write(&skill_path, content)
-        .map_err(|e| format!("Failed to write SKILL.md: {}", e))?;
+    fs::write(&skill_path, content).map_err(|e| format!("Failed to write SKILL.md: {}", e))?;
 
     Ok(vec![SkillInfo {
         name: final_name,

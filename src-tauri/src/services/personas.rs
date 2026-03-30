@@ -120,8 +120,8 @@ impl PersonaStore {
 
     /// Parse a single markdown file with YAML frontmatter into a Persona.
     fn parse_markdown_persona(path: &std::path::Path) -> Result<Persona, String> {
-        let content = std::fs::read_to_string(path)
-            .map_err(|e| format!("Failed to read file: {}", e))?;
+        let content =
+            std::fs::read_to_string(path).map_err(|e| format!("Failed to read file: {}", e))?;
 
         // Expect file to start with "---"
         let trimmed = content.trim_start();
