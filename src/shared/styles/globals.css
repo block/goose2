@@ -187,6 +187,38 @@
   padding-right: calc(0.5rem * var(--density-spacing));
 }
 
+/* ═══════════════════════════════════════════════════════════
+   Page-transition animation (matches goose2.0)
+   ═══════════════════════════════════════════════════════════ */
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.page-transition {
+  opacity: 0;
+  animation: page-fade-in 0.08s ease-out forwards;
+  pointer-events: auto;
+}
+
+/* Content fade-in (used for list areas after loading) */
+@keyframes content-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.content-fade-in {
+  animation: content-fade-in 0.3s ease-out forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -195,5 +227,12 @@
     animation-duration: 0.01ms !important;
     /* biome-ignore lint/complexity/noImportantStyles: required to override all transitions for reduced-motion accessibility */
     transition-duration: 0.01ms !important;
+  }
+
+  .page-transition {
+    /* biome-ignore lint/complexity/noImportantStyles: required to override animation for reduced-motion accessibility */
+    animation: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: required to override opacity for reduced-motion accessibility */
+    opacity: 1 !important;
   }
 }

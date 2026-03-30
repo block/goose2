@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { GooseIcon } from "@/shared/ui/icons/GooseIcon";
+import type { AppView } from "@/app/AppShell";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -18,13 +19,15 @@ interface SidebarProps {
   onSettingsClick?: () => void;
   onSearchClick?: () => void;
   onNewChat?: () => void;
+  onNavigate?: (view: AppView) => void;
+  activeView?: AppView;
   className?: string;
 }
 
-const NAV_ITEMS = [
+const NAV_ITEMS: readonly { id: AppView; label: string; icon: typeof Bot }[] = [
   { id: "agents", label: "Agents", icon: Bot },
   { id: "skills", label: "Skills", icon: BookOpen },
-] as const;
+];
 
 const RECENT_CHATS = [
   { id: "1", name: "Debug login flow", time: "2m" },
@@ -40,6 +43,8 @@ export function Sidebar({
   onSettingsClick,
   onSearchClick,
   onNewChat,
+  onNavigate,
+  activeView,
   className,
 }: SidebarProps) {
   const [expanded, setExpanded] = useState(!collapsed);
@@ -77,6 +82,7 @@ export function Sidebar({
         >
           <button
             type="button"
+            onClick={() => onNavigate?.("home")}
             className="hover:opacity-70 transition-opacity flex-shrink-0"
             title="Home"
           >
@@ -194,18 +200,23 @@ export function Sidebar({
             {/* Nav items */}
             {NAV_ITEMS.map((item, index) => {
               const Icon = item.icon;
+              const isActive = activeView === item.id;
               return (
                 <button
                   key={item.id}
                   type="button"
+                  onClick={() => onNavigate?.(item.id)}
                   title={collapsed ? item.label : undefined}
                   className={cn(
                     "flex items-center w-full rounded-md text-[13px] transition-all duration-200",
                     collapsed
                       ? "justify-center px-0 py-1.5"
                       : "gap-2.5 px-3 py-1.5",
-                    "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
+                    isActive
+                      ? "bg-background-secondary text-foreground"
+                      : "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
                   )}
+                  aria-current={isActive ? "page" : undefined}
                   style={{
                     transitionDelay:
                       !collapsed && expanded ? `${index * 30}ms` : "0ms",

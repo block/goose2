@@ -4,8 +4,12 @@ import { Sidebar } from "@/features/sidebar/ui/Sidebar";
 import { StatusBar } from "@/features/status/ui/StatusBar";
 import { HomeScreen } from "@/features/home/ui/HomeScreen";
 import { ChatView } from "@/features/chat/ui/ChatView";
+import { SkillsView } from "@/features/skills/ui/SkillsView";
+import { AgentsView } from "@/features/agents/ui/AgentsView";
 import { SettingsModal } from "@/features/settings/ui/SettingsModal";
 import type { Tab } from "@/features/tabs/types";
+
+export type AppView = "home" | "chat" | "skills" | "agents";
 
 const SIDEBAR_WIDTH = 240;
 const SIDEBAR_COLLAPSED_WIDTH = 48;
@@ -15,22 +19,33 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
-  const isHome = activeTabId === null;
+  const [activeView, setActiveView] = useState<AppView>("home");
+  const isHome = activeTabId === null && activeView === "home";
 
   const handleNewTab = () => {
     const id = String(Date.now());
     setTabs((prev) => [...prev, { id, title: "New Chat" }]);
     setActiveTabId(id);
+    setActiveView("chat");
   };
 
   const handleTabClose = (id: string) => {
     setTabs((prev) => {
       const next = prev.filter((t) => t.id !== id);
       if (activeTabId === id) {
-        setActiveTabId(next[0]?.id ?? null);
+        const nextId = next[0]?.id ?? null;
+        setActiveTabId(nextId);
+        if (!nextId) setActiveView("home");
       }
       return next;
     });
+  };
+
+  const handleNavigate = (view: AppView) => {
+    setActiveView(view);
+    if (view !== "chat") {
+      setActiveTabId(null);
+    }
   };
 
   const toggleSidebar = () => setSidebarCollapsed((prev) => !prev);
@@ -52,6 +67,19 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  const renderContent = () => {
+    switch (activeView) {
+      case "skills":
+        return <SkillsView />;
+      case "agents":
+        return <AgentsView />;
+      case "chat":
+        return <ChatView />;
+      case "home":
+        return activeTabId ? <ChatView /> : <HomeScreen />;
+    }
+  };
+
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
       {/* Tab bar — full width across the top */}
@@ -61,7 +89,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         onTabSelect={setActiveTabId}
         onTabClose={handleTabClose}
         onNewTab={handleNewTab}
-        onHomeClick={() => setActiveTabId(null)}
+        onHomeClick={() => handleNavigate("home")}
       />
 
       {/* Main content area — sidebar + content as flex row */}
@@ -81,13 +109,16 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             width={SIDEBAR_WIDTH}
             onCollapse={toggleSidebar}
             onSettingsClick={() => setSettingsOpen(true)}
+            onNavigate={handleNavigate}
+            onNewChat={handleNewTab}
+            activeView={activeView}
             className="h-full shadow-xl rounded-xl"
           />
         </div>
 
         {/* Content area */}
         <main className="min-h-0 min-w-0 flex-1">
-          {children ?? (isHome ? <HomeScreen /> : <ChatView />)}
+          {children ?? renderContent()}
         </main>
       </div>
 
