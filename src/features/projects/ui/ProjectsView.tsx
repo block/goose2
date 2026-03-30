@@ -233,28 +233,20 @@ export function ProjectsView({ onStartChat }: ProjectsViewProps) {
                   className="flex items-start justify-between gap-3 rounded-lg border border-border px-4 py-3"
                 >
                   <div className="min-w-0 flex-1 flex items-start gap-3">
-                    <span className="text-lg leading-none mt-0.5 shrink-0">
-                      {project.icon}
-                    </span>
+                    <span
+                      className="inline-block w-2.5 h-2.5 rounded-full mt-1.5 shrink-0"
+                      style={{ backgroundColor: project.color }}
+                    />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium">{project.name}</p>
-                      {project.description && (
-                        <p className="text-xs text-foreground-secondary mt-0.5">
-                          {project.description}
+                      {project.prompt && (
+                        <p className="text-xs text-foreground-secondary mt-0.5 line-clamp-2">
+                          {project.prompt}
                         </p>
-                      )}
-                      {project.preferredModel && (
-                        <span className="inline-block mt-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-background-secondary text-foreground-secondary">
-                          {project.preferredModel}
-                        </span>
                       )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span
-                      className="inline-block h-1.5 w-1.5 rounded-full"
-                      style={{ backgroundColor: project.color }}
-                    />
                     <ProjectCardMenu
                       project={project}
                       onStartChat={onStartChat}

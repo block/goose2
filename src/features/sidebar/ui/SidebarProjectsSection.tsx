@@ -70,7 +70,10 @@ function ProjectSection({
           ) : (
             <ChevronRight className="w-3 h-3 flex-shrink-0" />
           )}
-          <span className="flex-shrink-0 text-sm">{project.icon}</span>
+          <span
+            className="inline-block w-2 h-2 rounded-full flex-shrink-0"
+            style={{ backgroundColor: project.color }}
+          />
           <span className="flex-1 min-w-0 truncate text-left">
             {project.name}
           </span>
@@ -207,7 +210,10 @@ export function SidebarProjectsSection({
                 "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
               )}
             >
-              <span className="text-sm">{project.icon}</span>
+              <span
+                className="inline-block w-2.5 h-2.5 rounded-full"
+                style={{ backgroundColor: project.color }}
+              />
             </button>
           ))}
         </div>

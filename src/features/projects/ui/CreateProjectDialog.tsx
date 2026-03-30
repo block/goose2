@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { X, FolderOpen } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
 import { createProject, updateProject } from "../api/projects";
+import { discoverAcpProviders, type AcpProvider } from "@/shared/api/acp";
 
 const COLOR_OPTIONS = [
   "#64748b",
@@ -46,41 +47,61 @@ export function CreateProjectDialog({
   editingProject,
 }: CreateProjectDialogProps) {
   const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
   const [prompt, setPrompt] = useState("");
-  const [icon, setIcon] = useState("\u{1F4C1}");
+  const icon = "\u{1F4C1}";
   const [color, setColor] = useState(COLOR_OPTIONS[0]);
-  const [preferredProvider, setPreferredProvider] = useState("");
-  const [preferredModel, setPreferredModel] = useState("");
-  const [workingDir, setWorkingDir] = useState("");
+  const [preferredProvider, setPreferredProvider] = useState<string | null>(
+    null,
+  );
+  const preferredModel: string | null = null;
+  const [workingDir, setWorkingDir] = useState<string | null>(null);
   const [useWorktrees, setUseWorktrees] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [acpProviders, setAcpProviders] = useState<AcpProvider[]>([]);
 
   const isEditing = !!editingProject;
+
+  useEffect(() => {
+    discoverAcpProviders()
+      .then(setAcpProviders)
+      .catch(() => setAcpProviders([]));
+  }, []);
+
+  const handleBrowseFolder = async () => {
+    try {
+      // Dynamic import — plugin may not be installed
+      const modulePath = "@tauri-apps/plugin-dialog";
+      const dialog = await import(/* @vite-ignore */ modulePath);
+      const selected = await dialog.open({
+        directory: true,
+        multiple: false,
+        title: "Select Working Directory",
+      });
+      if (selected && typeof selected === "string") {
+        setWorkingDir(selected);
+      }
+    } catch {
+      // Dialog plugin not available — user can type manually
+    }
+  };
 
   // Pre-fill fields when editing, reset to defaults for new
   useEffect(() => {
     if (isOpen && editingProject) {
       setName(editingProject.name);
-      setDescription(editingProject.description);
       setPrompt(editingProject.prompt);
-      setIcon(editingProject.icon);
       setColor(editingProject.color);
-      setPreferredProvider(editingProject.preferredProvider ?? "");
-      setPreferredModel(editingProject.preferredModel ?? "");
-      setWorkingDir(editingProject.workingDir ?? "");
+      setPreferredProvider(editingProject.preferredProvider ?? null);
+      setWorkingDir(editingProject.workingDir ?? null);
       setUseWorktrees(editingProject.useWorktrees);
       setError(null);
     } else if (isOpen) {
       setName("");
-      setDescription("");
       setPrompt("");
-      setIcon("\u{1F4C1}");
       setColor(COLOR_OPTIONS[0]);
-      setPreferredProvider("");
-      setPreferredModel("");
-      setWorkingDir("");
+      setPreferredProvider(null);
+      setWorkingDir(null);
       setUseWorktrees(false);
       setError(null);
     }
@@ -90,13 +111,10 @@ export function CreateProjectDialog({
 
   const handleClose = () => {
     setName("");
-    setDescription("");
     setPrompt("");
-    setIcon("\u{1F4C1}");
     setColor(COLOR_OPTIONS[0]);
-    setPreferredProvider("");
-    setPreferredModel("");
-    setWorkingDir("");
+    setPreferredProvider(null);
+    setWorkingDir(null);
     setUseWorktrees(false);
     setError(null);
     onClose();
@@ -112,25 +130,25 @@ export function CreateProjectDialog({
         await updateProject(
           editingProject.id,
           name.trim(),
-          description.trim(),
+          "",
           prompt,
           icon,
           color,
-          preferredProvider.trim() || null,
-          preferredModel.trim() || null,
-          workingDir.trim() || null,
+          preferredProvider || null,
+          preferredModel,
+          workingDir?.trim() || null,
           useWorktrees,
         );
       } else {
         await createProject(
           name.trim(),
-          description.trim(),
+          "",
           prompt,
           icon,
           color,
-          preferredProvider.trim() || null,
-          preferredModel.trim() || null,
-          workingDir.trim() || null,
+          preferredProvider || null,
+          preferredModel,
+          workingDir?.trim() || null,
           useWorktrees,
         );
       }
@@ -209,24 +227,6 @@ export function CreateProjectDialog({
             />
           </label>
 
-          {/* Description */}
-          <label className="block space-y-1">
-            <span className="text-xs font-medium text-foreground-secondary">
-              Description
-            </span>
-            <input
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="A brief description of this project..."
-              className={cn(
-                "w-full rounded-lg border border-border bg-background-secondary px-3 py-2 text-sm",
-                "placeholder:text-foreground-secondary/40",
-                "focus:outline-none focus:ring-1 focus:ring-ring transition-colors",
-              )}
-            />
-          </label>
-
           {/* Prompt */}
           <label className="block space-y-1">
             <span className="text-xs font-medium text-foreground-secondary">
@@ -245,101 +245,71 @@ export function CreateProjectDialog({
             />
           </label>
 
-          {/* Icon & Color row */}
-          <div className="flex gap-4">
-            {/* Icon */}
-            <label className="block space-y-1">
-              <span className="text-xs font-medium text-foreground-secondary">
-                Icon
-              </span>
-              <input
-                type="text"
-                value={icon}
-                onChange={(e) => setIcon(e.target.value)}
-                className={cn(
-                  "w-16 rounded-lg border border-border bg-background-secondary px-3 py-2 text-sm text-center",
-                  "focus:outline-none focus:ring-1 focus:ring-ring transition-colors",
-                )}
-              />
-            </label>
-
-            {/* Color */}
-            <div className="block space-y-1 flex-1">
-              <span className="text-xs font-medium text-foreground-secondary">
-                Color
-              </span>
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {COLOR_OPTIONS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setColor(c)}
-                    className={cn(
-                      "h-6 w-6 rounded-full border-2 transition-transform",
-                      color === c
-                        ? "border-foreground scale-110"
-                        : "border-transparent hover:scale-105",
-                    )}
-                    style={{ backgroundColor: c }}
-                    aria-label={`Color ${c}`}
-                  />
-                ))}
-              </div>
+          {/* Color */}
+          <div className="block space-y-1">
+            <span className="text-xs font-medium text-foreground-secondary">
+              Color
+            </span>
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {COLOR_OPTIONS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setColor(c)}
+                  className={cn(
+                    "h-6 w-6 rounded-full border-2 transition-transform",
+                    color === c
+                      ? "border-foreground scale-110"
+                      : "border-transparent hover:scale-105",
+                  )}
+                  style={{ backgroundColor: c }}
+                  aria-label={`Color ${c}`}
+                />
+              ))}
             </div>
           </div>
 
-          {/* Preferred Provider */}
-          <label className="block space-y-1">
+          {/* Provider */}
+          <label className="block space-y-1.5">
             <span className="text-xs font-medium text-foreground-secondary">
-              Preferred Provider
+              Provider
             </span>
-            <input
-              type="text"
-              value={preferredProvider}
-              onChange={(e) => setPreferredProvider(e.target.value)}
-              placeholder="e.g. anthropic, openai"
-              className={cn(
-                "w-full rounded-lg border border-border bg-background-secondary px-3 py-2 text-sm",
-                "placeholder:text-foreground-secondary/40",
-                "focus:outline-none focus:ring-1 focus:ring-ring transition-colors",
-              )}
-            />
-          </label>
-
-          {/* Preferred Model */}
-          <label className="block space-y-1">
-            <span className="text-xs font-medium text-foreground-secondary">
-              Preferred Model
-            </span>
-            <input
-              type="text"
-              value={preferredModel}
-              onChange={(e) => setPreferredModel(e.target.value)}
-              placeholder="e.g. claude-sonnet-4-20250514"
-              className={cn(
-                "w-full rounded-lg border border-border bg-background-secondary px-3 py-2 text-sm",
-                "placeholder:text-foreground-secondary/40",
-                "focus:outline-none focus:ring-1 focus:ring-ring transition-colors",
-              )}
-            />
+            <select
+              value={preferredProvider ?? ""}
+              onChange={(e) => setPreferredProvider(e.target.value || null)}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+            >
+              <option value="">None (use default)</option>
+              {acpProviders.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
           </label>
 
           {/* Working Directory */}
-          <label className="block space-y-1">
+          <label className="block space-y-1.5">
             <span className="text-xs font-medium text-foreground-secondary">
               Working Directory
             </span>
-            <input
-              type="text"
-              value={workingDir}
-              onChange={(e) => setWorkingDir(e.target.value)}
-              placeholder="/path/to/project"
-              className={cn(
-                "w-full rounded-lg border border-border bg-background-secondary px-3 py-2 text-sm font-mono",
-                "placeholder:text-foreground-secondary/40",
-                "focus:outline-none focus:ring-1 focus:ring-ring transition-colors",
-              )}
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={workingDir ?? ""}
+                onChange={(e) => setWorkingDir(e.target.value || null)}
+                placeholder="/path/to/project"
+                className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-foreground-tertiary focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+              <button
+                type="button"
+                onClick={handleBrowseFolder}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-md border border-border hover:bg-background-tertiary transition-colors"
+              >
+                <FolderOpen className="w-3.5 h-3.5" />
+                Browse
+              </button>
+            </div>
           </label>
 
           {/* Use Worktrees */}
