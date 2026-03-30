@@ -1,4 +1,6 @@
 use crate::types::agents::{builtin_personas, CreatePersonaRequest, Persona, UpdatePersonaRequest};
+use log::warn;
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
@@ -7,11 +9,19 @@ pub struct PersonaStore {
     store_path: PathBuf,
 }
 
+/// YAML frontmatter fields parsed from markdown persona files.
+#[derive(serde::Deserialize)]
+struct MarkdownFrontmatter {
+    name: String,
+    description: Option<String>,
+}
+
 impl PersonaStore {
     pub fn new() -> Self {
         let store_path = Self::store_path();
         let stored = Self::load_from_disk(&store_path);
-        let merged = Self::merge_with_builtins(stored);
+        let markdown = Self::load_markdown_personas();
+        let merged = Self::merge_all(stored, markdown);
         Self {
             personas: Mutex::new(merged),
             store_path,
@@ -30,16 +40,35 @@ impl PersonaStore {
         }
     }
 
-    fn merge_with_builtins(stored: Vec<Persona>) -> Vec<Persona> {
+    /// Merge builtins, JSON custom personas, and markdown personas.
+    /// Priority: builtins first, then JSON custom, then markdown.
+    /// Deduplication is by display_name (case-insensitive).
+    fn merge_all(stored: Vec<Persona>, markdown: Vec<Persona>) -> Vec<Persona> {
         let builtins = builtin_personas();
-        let builtin_ids: std::collections::HashSet<String> =
-            builtins.iter().map(|p| p.id.clone()).collect();
 
         let mut result = builtins;
+        let mut seen_names: HashSet<String> = result
+            .iter()
+            .map(|p| p.display_name.to_lowercase())
+            .collect();
+        let mut seen_ids: HashSet<String> = result.iter().map(|p| p.id.clone()).collect();
 
-        // Add custom (non-builtin) personas from disk
+        // Add custom (non-builtin) personas from JSON
         for persona in stored {
-            if !builtin_ids.contains(&persona.id) {
+            if !seen_ids.contains(&persona.id) {
+                seen_names.insert(persona.display_name.to_lowercase());
+                seen_ids.insert(persona.id.clone());
+                result.push(persona);
+            }
+        }
+
+        // Add markdown personas, skipping any whose name already exists
+        for persona in markdown {
+            if !seen_names.contains(&persona.display_name.to_lowercase())
+                && !seen_ids.contains(&persona.id)
+            {
+                seen_names.insert(persona.display_name.to_lowercase());
+                seen_ids.insert(persona.id.clone());
                 result.push(persona);
             }
         }
@@ -47,12 +76,138 @@ impl PersonaStore {
         result
     }
 
+    /// Directory containing markdown persona files.
+    fn agents_dir() -> PathBuf {
+        dirs::home_dir()
+            .expect("home dir")
+            .join(".goose")
+            .join("agents")
+    }
+
+    /// Scan `~/.goose/agents/*.md` and parse each into a Persona.
+    fn load_markdown_personas() -> Vec<Persona> {
+        let dir = Self::agents_dir();
+        if !dir.is_dir() {
+            return Vec::new();
+        }
+
+        let mut personas = Vec::new();
+
+        let entries = match std::fs::read_dir(&dir) {
+            Ok(e) => e,
+            Err(err) => {
+                warn!("Failed to read agents directory {:?}: {}", dir, err);
+                return Vec::new();
+            }
+        };
+
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("md") {
+                continue;
+            }
+
+            match Self::parse_markdown_persona(&path) {
+                Ok(persona) => personas.push(persona),
+                Err(err) => {
+                    warn!("Skipping {:?}: {}", path, err);
+                }
+            }
+        }
+
+        personas
+    }
+
+    /// Parse a single markdown file with YAML frontmatter into a Persona.
+    fn parse_markdown_persona(path: &std::path::Path) -> Result<Persona, String> {
+        let content = std::fs::read_to_string(path)
+            .map_err(|e| format!("Failed to read file: {}", e))?;
+
+        // Expect file to start with "---"
+        let trimmed = content.trim_start();
+        if !trimmed.starts_with("---") {
+            return Err("Missing frontmatter delimiter".to_string());
+        }
+
+        // Find the closing "---"
+        let after_first = &trimmed[3..];
+        let end_idx = after_first
+            .find("\n---")
+            .ok_or_else(|| "Missing closing frontmatter delimiter".to_string())?;
+
+        let yaml_str = &after_first[..end_idx];
+        let body = after_first[end_idx + 4..].trim().to_string();
+
+        let frontmatter: MarkdownFrontmatter = serde_yaml::from_str(yaml_str)
+            .map_err(|e| format!("Invalid frontmatter YAML: {}", e))?;
+
+        // Derive a stable ID from the filename (without extension)
+        let slug = path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("unknown")
+            .to_string();
+        let id = format!("md-{}", slug);
+
+        // Use the file modification time for timestamps, fall back to now
+        let mod_time = std::fs::metadata(path)
+            .and_then(|m| m.modified())
+            .ok()
+            .and_then(|t| {
+                let duration = t.duration_since(std::time::UNIX_EPOCH).ok()?;
+                let dt = chrono::DateTime::from_timestamp(
+                    duration.as_secs() as i64,
+                    duration.subsec_nanos(),
+                )?;
+                Some(dt.to_rfc3339())
+            })
+            .unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+
+        // Use the body as system prompt. If body is empty, use description or a fallback.
+        let system_prompt = if body.is_empty() {
+            frontmatter
+                .description
+                .clone()
+                .unwrap_or_else(|| format!("You are {}.", frontmatter.name))
+        } else {
+            body
+        };
+
+        Ok(Persona {
+            id,
+            display_name: frontmatter.name,
+            avatar_url: None,
+            system_prompt,
+            provider: None,
+            model: None,
+            is_builtin: false,
+            is_from_disk: true,
+            created_at: mod_time.clone(),
+            updated_at: mod_time,
+        })
+    }
+
+    /// Re-scan markdown personas and update the in-memory list.
+    /// Returns the full updated persona list.
+    pub fn refresh_markdown(&self) -> Vec<Persona> {
+        let stored = Self::load_from_disk(&self.store_path);
+        let markdown = Self::load_markdown_personas();
+        let merged = Self::merge_all(stored, markdown);
+
+        let mut personas = self.personas.lock().unwrap();
+        *personas = merged;
+        personas.clone()
+    }
+
     fn save_to_disk(&self, personas: &[Persona]) {
         if let Some(parent) = self.store_path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
-        // Only persist custom personas (not builtins)
-        let custom: Vec<&Persona> = personas.iter().filter(|p| !p.is_builtin).collect();
+        // Only persist custom personas (not builtins, not from markdown files)
+        let custom: Vec<&Persona> = personas
+            .iter()
+            .filter(|p| !p.is_builtin && !p.is_from_disk)
+            .collect();
         if let Ok(json) = serde_json::to_string_pretty(&custom) {
             let _ = std::fs::write(&self.store_path, json);
         }
@@ -79,6 +234,7 @@ impl PersonaStore {
             provider: req.provider,
             model: req.model,
             is_builtin: false,
+            is_from_disk: false,
             created_at: now.clone(),
             updated_at: now,
         };
@@ -98,6 +254,9 @@ impl PersonaStore {
 
         if persona.is_builtin {
             return Err("Cannot update a built-in persona".to_string());
+        }
+        if persona.is_from_disk {
+            return Err("Cannot update a markdown persona — edit the file directly".to_string());
         }
 
         if let Some(name) = req.display_name {
@@ -132,6 +291,9 @@ impl PersonaStore {
 
         if persona.is_builtin {
             return Err("Cannot delete a built-in persona".to_string());
+        }
+        if persona.is_from_disk {
+            return Err("Cannot delete a markdown persona — delete the file directly".to_string());
         }
 
         personas.retain(|p| p.id != id);

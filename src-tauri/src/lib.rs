@@ -29,11 +29,17 @@ pub fn run() {
             commands::agents::create_persona,
             commands::agents::update_persona,
             commands::agents::delete_persona,
+            commands::agents::refresh_personas,
+            commands::agents::export_persona,
+            commands::agents::import_personas,
             commands::sessions::create_session,
             commands::sessions::list_sessions,
             commands::sessions::get_session_messages,
             commands::sessions::delete_session,
             commands::chat::chat_send_message,
+            commands::skills::create_skill,
+            commands::skills::list_skills,
+            commands::skills::delete_skill,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

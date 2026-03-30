@@ -1,11 +1,13 @@
-import { useState, useMemo, useCallback } from "react";
-import { Bot, Plus, Circle } from "lucide-react";
+import { useState, useMemo, useCallback, useRef } from "react";
+import { Bot, Plus, Circle, Upload } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { SearchBar } from "@/shared/ui/SearchBar";
 import { Button } from "@/shared/ui/button";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { PersonaGallery } from "@/features/agents/ui/PersonaGallery";
 import { PersonaEditor } from "@/features/agents/ui/PersonaEditor";
+import { exportPersona, importPersonas } from "@/shared/api/agents";
+import { usePersonas } from "@/features/agents/hooks/usePersonas";
 import type {
   Persona,
   Agent,
@@ -60,8 +62,13 @@ export function AgentsView() {
   const openPersonaEditor = useAgentStore((s) => s.openPersonaEditor);
   const closePersonaEditor = useAgentStore((s) => s.closePersonaEditor);
   const addPersona = useAgentStore((s) => s.addPersona);
-  const updatePersona = useAgentStore((s) => s.updatePersona);
   const removePersona = useAgentStore((s) => s.removePersona);
+
+  const {
+    createPersona,
+    updatePersona: updatePersonaViaHook,
+    refreshFromDisk,
+  } = usePersonas();
 
   const lowerSearch = search.toLowerCase();
 
@@ -86,26 +93,18 @@ export function AgentsView() {
   );
 
   const handleSavePersona = useCallback(
-    (data: CreatePersonaRequest | UpdatePersonaRequest) => {
+    async (data: CreatePersonaRequest | UpdatePersonaRequest) => {
       if (editingPersona) {
-        updatePersona(editingPersona.id, data as Partial<Persona>);
+        await updatePersonaViaHook(
+          editingPersona.id,
+          data as UpdatePersonaRequest,
+        );
       } else {
-        const newPersona: Persona = {
-          id: crypto.randomUUID(),
-          displayName: (data as CreatePersonaRequest).displayName,
-          avatarUrl: data.avatarUrl,
-          systemPrompt: (data as CreatePersonaRequest).systemPrompt,
-          provider: data.provider,
-          model: data.model,
-          isBuiltin: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        addPersona(newPersona);
+        await createPersona(data as CreatePersonaRequest);
       }
       closePersonaEditor();
     },
-    [editingPersona, addPersona, updatePersona, closePersonaEditor],
+    [editingPersona, createPersona, updatePersonaViaHook, closePersonaEditor],
   );
 
   const handleDuplicatePersona = useCallback(
@@ -131,18 +130,76 @@ export function AgentsView() {
     [removePersona],
   );
 
+  const handleExportPersona = useCallback(async (persona: Persona) => {
+    try {
+      const result = await exportPersona(persona.id);
+      // Trigger a browser download with the JSON content
+      const blob = new Blob([result.json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = result.suggestedFilename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to export persona:", err);
+    }
+  }, []);
+
+  const importInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImportFile = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const bytes = Array.from(new Uint8Array(arrayBuffer));
+        await importPersonas(bytes, file.name);
+        await refreshFromDisk();
+      } catch (err) {
+        console.error("Failed to import persona:", err);
+      }
+
+      // Reset the input so the same file can be re-selected
+      if (importInputRef.current) {
+        importInputRef.current.value = "";
+      }
+    },
+    [refreshFromDisk],
+  );
+
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="max-w-5xl mx-auto w-full px-6 py-8 space-y-5 page-transition">
         {/* Header */}
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-lg font-semibold">Agents</h1>
+            <h1 className="text-lg font-semibold">Personas</h1>
             <p className="text-xs text-foreground-secondary">
-              Custom agent configurations for specific workflows
+              Custom persona configurations for specific workflows
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".persona.json,.json"
+              className="hidden"
+              onChange={handleImportFile}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => importInputRef.current?.click()}
+            >
+              <Upload className="w-3.5 h-3.5" />
+              Import
+            </Button>
             <Button
               type="button"
               variant="outline"
@@ -159,7 +216,7 @@ export function AgentsView() {
         <SearchBar
           value={search}
           onChange={setSearch}
-          placeholder="Search personas and agents..."
+          placeholder="Search personas..."
         />
 
         {/* Personas section */}
@@ -173,6 +230,7 @@ export function AgentsView() {
             onEditPersona={(p) => openPersonaEditor(p)}
             onDuplicatePersona={handleDuplicatePersona}
             onDeletePersona={handleDeletePersona}
+            onExportPersona={handleExportPersona}
             onCreatePersona={() => openPersonaEditor()}
             isLoading={personasLoading}
           />
