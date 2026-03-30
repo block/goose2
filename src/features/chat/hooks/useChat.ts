@@ -68,7 +68,6 @@ export function useChat(sessionId: string) {
           store.setError(errorMessage);
         }
       } finally {
-        store.setStreamingMessageId(null);
         abortRef.current = null;
       }
     },

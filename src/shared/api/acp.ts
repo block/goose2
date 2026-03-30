@@ -17,5 +17,9 @@ export async function acpSendMessage(
   providerId: string,
   prompt: string,
 ): Promise<void> {
-  return invoke("acp_send_message", { sessionId, providerId, prompt });
+  return invoke("acp_send_message", {
+    session_id: sessionId,
+    provider_id: providerId,
+    prompt,
+  });
 }
