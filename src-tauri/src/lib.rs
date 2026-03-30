@@ -40,6 +40,9 @@ pub fn run() {
             commands::skills::create_skill,
             commands::skills::list_skills,
             commands::skills::delete_skill,
+            commands::skills::update_skill,
+            commands::skills::export_skill,
+            commands::skills::import_skills,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

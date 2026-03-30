@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
-import { createSkill } from "../api/skills";
+import { createSkill, updateSkill } from "../api/skills";
 
 const KEBAB_CASE_REGEX = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
@@ -10,12 +10,14 @@ interface CreateSkillDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onCreated?: () => void;
+  editingSkill?: { name: string; description: string; instructions: string };
 }
 
 export function CreateSkillDialog({
   isOpen,
   onClose,
   onCreated,
+  editingSkill,
 }: CreateSkillDialogProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -23,10 +25,28 @@ export function CreateSkillDialog({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isEditing = !!editingSkill;
+
+  // Pre-fill fields when editing
+  useEffect(() => {
+    if (isOpen && editingSkill) {
+      setName(editingSkill.name);
+      setDescription(editingSkill.description);
+      setInstructions(editingSkill.instructions);
+      setError(null);
+    } else if (isOpen) {
+      setName("");
+      setDescription("");
+      setInstructions("");
+      setError(null);
+    }
+  }, [isOpen, editingSkill]);
+
   const nameValid = name.length > 0 && KEBAB_CASE_REGEX.test(name);
   const canSave = nameValid && description.trim().length > 0 && !saving;
 
   const handleNameChange = (raw: string) => {
+    if (isEditing) return; // name is read-only in edit mode
     const formatted = raw
       .toLowerCase()
       .replace(/[^a-z0-9-]/g, "-")
@@ -50,7 +70,11 @@ export function CreateSkillDialog({
     setSaving(true);
     setError(null);
     try {
-      await createSkill(name, description.trim(), instructions);
+      if (isEditing) {
+        await updateSkill(name, description.trim(), instructions);
+      } else {
+        await createSkill(name, description.trim(), instructions);
+      }
       setName("");
       setDescription("");
       setInstructions("");
@@ -69,7 +93,7 @@ export function CreateSkillDialog({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="New Skill"
+      aria-label={isEditing ? "Edit Skill" : "New Skill"}
       className="fixed inset-0 z-50 flex items-center justify-center"
     >
       {/* Backdrop */}
@@ -89,7 +113,9 @@ export function CreateSkillDialog({
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="text-sm font-semibold">New Skill</h2>
+          <h2 className="text-sm font-semibold">
+            {isEditing ? "Edit Skill" : "New Skill"}
+          </h2>
           <button
             type="button"
             aria-label="Close"
@@ -111,10 +137,12 @@ export function CreateSkillDialog({
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
               placeholder="my-skill-name"
+              readOnly={isEditing}
               className={cn(
                 "w-full rounded-lg border border-border bg-background-secondary px-3 py-2 text-sm font-mono",
                 "placeholder:text-foreground-secondary/40",
                 "focus:outline-none focus:ring-1 focus:ring-ring transition-colors",
+                isEditing && "opacity-60 cursor-not-allowed",
               )}
             />
             {name.length > 0 && !nameValid && (
@@ -178,7 +206,13 @@ export function CreateSkillDialog({
               Cancel
             </Button>
             <Button type="submit" size="sm" disabled={!canSave}>
-              {saving ? "Creating..." : "Create Skill"}
+              {saving
+                ? isEditing
+                  ? "Saving..."
+                  : "Creating..."
+                : isEditing
+                  ? "Save Changes"
+                  : "Create Skill"}
             </Button>
           </div>
         </form>

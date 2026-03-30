@@ -168,3 +168,150 @@ pub struct SkillInfo {
     pub instructions: String,
     pub path: String,
 }
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SkillExportV1 {
+    version: u32,
+    name: String,
+    description: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    instructions: String,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportSkillResult {
+    json: String,
+    filename: String,
+}
+
+#[tauri::command]
+pub fn update_skill(name: String, description: String, instructions: String) -> Result<SkillInfo, String> {
+    validate_skill_name(&name)?;
+    let dir = skills_dir()?.join(&name);
+
+    if !dir.exists() {
+        return Err(format!("Skill \"{}\" not found", name));
+    }
+
+    let skill_path = dir.join("SKILL.md");
+    let content = build_skill_md(&name, &description, &instructions);
+
+    fs::write(&skill_path, content)
+        .map_err(|e| format!("Failed to write SKILL.md: {}", e))?;
+
+    Ok(SkillInfo {
+        name: name.clone(),
+        description,
+        instructions,
+        path: skill_path.to_string_lossy().to_string(),
+    })
+}
+
+#[tauri::command]
+pub fn export_skill(name: String) -> Result<ExportSkillResult, String> {
+    validate_skill_name(&name)?;
+    let dir = skills_dir()?.join(&name);
+
+    if !dir.exists() {
+        return Err(format!("Skill \"{}\" not found", name));
+    }
+
+    let skill_md = dir.join("SKILL.md");
+    let raw = fs::read_to_string(&skill_md)
+        .map_err(|e| format!("Failed to read SKILL.md: {}", e))?;
+    let (description, instructions) = parse_frontmatter(&raw);
+
+    let export = SkillExportV1 {
+        version: 1,
+        name: name.clone(),
+        description,
+        instructions,
+    };
+
+    let json = serde_json::to_string_pretty(&export)
+        .map_err(|e| format!("Failed to serialize skill: {}", e))?;
+
+    let filename = format!("{}.skill.json", name);
+
+    Ok(ExportSkillResult { json, filename })
+}
+
+#[tauri::command]
+pub fn import_skills(file_bytes: Vec<u8>, file_name: String) -> Result<Vec<SkillInfo>, String> {
+    // Validate file extension
+    if !file_name.ends_with(".skill.json") && !file_name.ends_with(".json") {
+        return Err("File must have a .skill.json or .json extension".to_string());
+    }
+
+    // Parse bytes as UTF-8
+    let text = String::from_utf8(file_bytes)
+        .map_err(|e| format!("File is not valid UTF-8: {}", e))?;
+
+    // Parse as JSON
+    let value: serde_json::Value = serde_json::from_str(&text)
+        .map_err(|e| format!("Invalid JSON: {}", e))?;
+
+    // Validate version
+    let version = value.get("version")
+        .and_then(|v| v.as_u64())
+        .ok_or("Missing or invalid \"version\" field")?;
+    if version != 1 {
+        return Err(format!("Unsupported skill export version: {}", version));
+    }
+
+    // Extract fields
+    let name = value.get("name")
+        .and_then(|v| v.as_str())
+        .ok_or("Missing or invalid \"name\" field")?
+        .to_string();
+    if name.is_empty() {
+        return Err("Skill name must not be empty".to_string());
+    }
+
+    let description = value.get("description")
+        .and_then(|v| v.as_str())
+        .ok_or("Missing or invalid \"description\" field")?
+        .to_string();
+    if description.is_empty() {
+        return Err("Skill description must not be empty".to_string());
+    }
+
+    let instructions = value.get("instructions")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+
+    // Validate the name
+    validate_skill_name(&name)?;
+
+    // Determine final name, avoiding collisions
+    let base_dir = skills_dir()?;
+    let mut final_name = name.clone();
+    if base_dir.join(&final_name).exists() {
+        final_name = format!("{}-imported", name);
+        // If that also exists, append a number
+        let mut counter = 2u32;
+        while base_dir.join(&final_name).exists() {
+            final_name = format!("{}-imported-{}", name, counter);
+            counter += 1;
+        }
+    }
+
+    // Create the skill on disk
+    let dir = base_dir.join(&final_name);
+    fs::create_dir_all(&dir).map_err(|e| format!("Failed to create skill directory: {}", e))?;
+
+    let skill_path = dir.join("SKILL.md");
+    let content = build_skill_md(&final_name, &description, &instructions);
+    fs::write(&skill_path, content)
+        .map_err(|e| format!("Failed to write SKILL.md: {}", e))?;
+
+    Ok(vec![SkillInfo {
+        name: final_name,
+        description,
+        instructions,
+        path: skill_path.to_string_lossy().to_string(),
+    }])
+}
