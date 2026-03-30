@@ -23,7 +23,9 @@ describe("HomeScreen", () => {
 
   it("renders the chat input placeholder", () => {
     render(<HomeScreen />);
-    expect(screen.getByText("Ask Goose anything...")).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText("Ask Goose anything..."),
+    ).toBeInTheDocument();
   });
 
   it("renders the model badge", () => {
