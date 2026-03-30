@@ -183,6 +183,18 @@ export function AgentsView() {
     [refreshFromDisk],
   );
 
+  const handleImportFileBytes = useCallback(
+    async (fileBytes: number[], fileName: string) => {
+      try {
+        await importPersonas(fileBytes, fileName);
+        await refreshFromDisk();
+      } catch (err) {
+        console.error("Failed to import persona:", err);
+      }
+    },
+    [refreshFromDisk],
+  );
+
   return (
     <div className="flex flex-1 flex-col h-full min-h-0">
       <div className="flex-1 overflow-y-auto min-h-0">
@@ -244,6 +256,7 @@ export function AgentsView() {
               onDeletePersona={handleDeletePersona}
               onExportPersona={handleExportPersona}
               onCreatePersona={() => openPersonaEditor()}
+              onImportFile={handleImportFileBytes}
               isLoading={personasLoading}
             />
           </section>

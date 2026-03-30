@@ -112,12 +112,12 @@ export function PersonaEditor({
       <div
         className={cn(
           "relative z-10 w-full max-w-lg rounded-xl border border-border bg-background shadow-xl",
-          "max-h-[85vh] overflow-y-auto",
+          "max-h-[85vh] flex flex-col",
           "motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95",
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+        <div className="shrink-0 flex items-center justify-between border-b border-border px-5 py-4">
           <h2 className="text-sm font-semibold">
             {isReadOnly
               ? persona?.displayName
@@ -135,7 +135,11 @@ export function PersonaEditor({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 p-5">
+        <form
+          id="persona-form"
+          onSubmit={handleSubmit}
+          className="min-h-0 flex-1 overflow-y-auto space-y-4 p-5"
+        >
           {/* Avatar preview */}
           <div className="flex justify-center">
             {avatarUrl ? (
@@ -264,9 +268,11 @@ export function PersonaEditor({
               )}
             />
           </label>
+        </form>
 
-          {/* Actions */}
-          <div className="flex items-center justify-end gap-2 pt-2">
+        {/* Footer actions */}
+        <div className="shrink-0 border-t border-border px-5 py-4">
+          <div className="flex items-center justify-end gap-2">
             {isReadOnly && onDuplicate && persona ? (
               <Button
                 type="button"
@@ -289,6 +295,7 @@ export function PersonaEditor({
                 </Button>
                 <Button
                   type="submit"
+                  form="persona-form"
                   size="sm"
                   disabled={!isValid || isPending}
                 >
@@ -301,7 +308,7 @@ export function PersonaEditor({
               </>
             )}
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
