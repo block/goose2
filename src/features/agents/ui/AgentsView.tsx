@@ -1,11 +1,13 @@
-import { useState, useMemo, useCallback } from "react";
-import { Bot, Plus, Circle } from "lucide-react";
+import { useState, useMemo, useCallback, useRef } from "react";
+import { Bot, Plus, Circle, Upload } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { SearchBar } from "@/shared/ui/SearchBar";
 import { Button } from "@/shared/ui/button";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { PersonaGallery } from "@/features/agents/ui/PersonaGallery";
 import { PersonaEditor } from "@/features/agents/ui/PersonaEditor";
+import { exportPersona, importPersonas } from "@/shared/api/agents";
+import { usePersonas } from "@/features/agents/hooks/usePersonas";
 import type {
   Persona,
   Agent,
@@ -51,6 +53,8 @@ function AgentRow({ agent }: { agent: Agent }) {
 
 export function AgentsView() {
   const [search, setSearch] = useState("");
+  const [deletingPersona, setDeletingPersona] = useState<Persona | null>(null);
+  const [notification, setNotification] = useState<string | null>(null);
 
   const personas = useAgentStore((s) => s.personas);
   const personasLoading = useAgentStore((s) => s.personasLoading);
@@ -60,8 +64,13 @@ export function AgentsView() {
   const openPersonaEditor = useAgentStore((s) => s.openPersonaEditor);
   const closePersonaEditor = useAgentStore((s) => s.closePersonaEditor);
   const addPersona = useAgentStore((s) => s.addPersona);
-  const updatePersona = useAgentStore((s) => s.updatePersona);
-  const removePersona = useAgentStore((s) => s.removePersona);
+
+  const {
+    createPersona,
+    updatePersona: updatePersonaViaHook,
+    deletePersona,
+    refreshFromDisk,
+  } = usePersonas();
 
   const lowerSearch = search.toLowerCase();
 
@@ -86,26 +95,18 @@ export function AgentsView() {
   );
 
   const handleSavePersona = useCallback(
-    (data: CreatePersonaRequest | UpdatePersonaRequest) => {
+    async (data: CreatePersonaRequest | UpdatePersonaRequest) => {
       if (editingPersona) {
-        updatePersona(editingPersona.id, data as Partial<Persona>);
+        await updatePersonaViaHook(
+          editingPersona.id,
+          data as UpdatePersonaRequest,
+        );
       } else {
-        const newPersona: Persona = {
-          id: crypto.randomUUID(),
-          displayName: (data as CreatePersonaRequest).displayName,
-          avatarUrl: data.avatarUrl,
-          systemPrompt: (data as CreatePersonaRequest).systemPrompt,
-          provider: data.provider,
-          model: data.model,
-          isBuiltin: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        addPersona(newPersona);
+        await createPersona(data as CreatePersonaRequest);
       }
       closePersonaEditor();
     },
-    [editingPersona, addPersona, updatePersona, closePersonaEditor],
+    [editingPersona, createPersona, updatePersonaViaHook, closePersonaEditor],
   );
 
   const handleDuplicatePersona = useCallback(
@@ -123,84 +124,167 @@ export function AgentsView() {
     [addPersona],
   );
 
-  const handleDeletePersona = useCallback(
-    (persona: Persona) => {
-      if (persona.isBuiltin) return;
-      removePersona(persona.id);
+  const handleDeletePersona = useCallback((persona: Persona) => {
+    if (persona.isBuiltin) return;
+    setDeletingPersona(persona);
+  }, []);
+
+  const handleConfirmDeletePersona = useCallback(async () => {
+    if (!deletingPersona) return;
+    try {
+      await deletePersona(deletingPersona.id);
+    } catch (err) {
+      console.error("Failed to delete persona:", err);
+    }
+    setDeletingPersona(null);
+  }, [deletingPersona, deletePersona]);
+
+  const handleExportPersona = useCallback(async (persona: Persona) => {
+    try {
+      const result = await exportPersona(persona.id);
+      // Trigger a browser download with the JSON content
+      const blob = new Blob([result.json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = result.suggestedFilename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setNotification(`Exported to ${result.suggestedFilename}`);
+      setTimeout(() => setNotification(null), 3000);
+    } catch (err) {
+      console.error("Failed to export persona:", err);
+    }
+  }, []);
+
+  const importInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImportFile = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const bytes = Array.from(new Uint8Array(arrayBuffer));
+        await importPersonas(bytes, file.name);
+        await refreshFromDisk();
+      } catch (err) {
+        console.error("Failed to import persona:", err);
+      }
+
+      // Reset the input so the same file can be re-selected
+      if (importInputRef.current) {
+        importInputRef.current.value = "";
+      }
     },
-    [removePersona],
+    [refreshFromDisk],
+  );
+
+  const handleImportFileBytes = useCallback(
+    async (fileBytes: number[], fileName: string) => {
+      try {
+        await importPersonas(fileBytes, fileName);
+        await refreshFromDisk();
+      } catch (err) {
+        console.error("Failed to import persona:", err);
+      }
+    },
+    [refreshFromDisk],
   );
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      <div className="max-w-5xl mx-auto w-full px-6 py-8 space-y-5 page-transition">
-        {/* Header */}
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-lg font-semibold">Agents</h1>
-            <p className="text-xs text-foreground-secondary">
-              Custom agent configurations for specific workflows
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => openPersonaEditor()}
-            >
-              <Plus className="w-3.5 h-3.5" />
-              New Persona
-            </Button>
-          </div>
-        </div>
-
-        {/* Search */}
-        <SearchBar
-          value={search}
-          onChange={setSearch}
-          placeholder="Search personas and agents..."
-        />
-
-        {/* Personas section */}
-        <section aria-labelledby="personas-heading">
-          <h2 id="personas-heading" className="text-sm font-semibold mb-3">
-            Personas
-          </h2>
-          <PersonaGallery
-            personas={filteredPersonas}
-            onSelectPersona={(p) => openPersonaEditor(p)}
-            onEditPersona={(p) => openPersonaEditor(p)}
-            onDuplicatePersona={handleDuplicatePersona}
-            onDeletePersona={handleDeletePersona}
-            onCreatePersona={() => openPersonaEditor()}
-            isLoading={personasLoading}
-          />
-        </section>
-
-        {/* Active Agents section */}
-        <section aria-labelledby="agents-heading">
-          <h2 id="agents-heading" className="text-sm font-semibold mb-3">
-            Active Agents
-          </h2>
-          {filteredAgents.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-12 text-foreground-secondary">
-              <Bot className="h-10 w-10 opacity-30" />
-              <div className="text-center">
-                <p className="text-sm font-medium">No active agents</p>
-                <p className="text-xs text-foreground-secondary/60 mt-1">
-                  Create an agent from a persona to get started.
-                </p>
-              </div>
+    <div className="flex flex-1 flex-col h-full min-h-0">
+      <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="max-w-5xl mx-auto w-full px-6 py-8 space-y-5 page-transition">
+          {/* Header */}
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h1 className="text-lg font-semibold">Personas</h1>
+              <p className="text-xs text-foreground-secondary">
+                Custom persona configurations for specific workflows
+              </p>
             </div>
-          ) : (
-            <ul className="space-y-2" aria-label="Active agents">
-              {filteredAgents.map((agent) => (
-                <AgentRow key={agent.id} agent={agent} />
-              ))}
-            </ul>
-          )}
-        </section>
+            <div className="flex items-center gap-2">
+              <input
+                ref={importInputRef}
+                type="file"
+                accept=".persona.json,.json"
+                className="hidden"
+                onChange={handleImportFile}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => importInputRef.current?.click()}
+              >
+                <Upload className="w-3.5 h-3.5" />
+                Import
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => openPersonaEditor()}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                New Persona
+              </Button>
+            </div>
+          </div>
+
+          {/* Search */}
+          <SearchBar
+            value={search}
+            onChange={setSearch}
+            placeholder="Search personas..."
+          />
+
+          {/* Personas section */}
+          <section aria-labelledby="personas-heading">
+            <h2 id="personas-heading" className="text-sm font-semibold mb-3">
+              Personas
+            </h2>
+            <PersonaGallery
+              personas={filteredPersonas}
+              onSelectPersona={(p) => openPersonaEditor(p)}
+              onEditPersona={(p) => openPersonaEditor(p)}
+              onDuplicatePersona={handleDuplicatePersona}
+              onDeletePersona={handleDeletePersona}
+              onExportPersona={handleExportPersona}
+              onCreatePersona={() => openPersonaEditor()}
+              onImportFile={handleImportFileBytes}
+              isLoading={personasLoading}
+            />
+          </section>
+
+          {/* Active Agents section */}
+          <section aria-labelledby="agents-heading">
+            <h2 id="agents-heading" className="text-sm font-semibold mb-3">
+              Active Agents
+            </h2>
+            {filteredAgents.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-12 text-foreground-secondary">
+                <Bot className="h-10 w-10 opacity-30" />
+                <div className="text-center">
+                  <p className="text-sm font-medium">No active agents</p>
+                  <p className="text-xs text-foreground-secondary/60 mt-1">
+                    Create an agent from a persona to get started.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <ul className="space-y-2" aria-label="Active agents">
+                {filteredAgents.map((agent) => (
+                  <AgentRow key={agent.id} agent={agent} />
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
       </div>
 
       {/* Persona editor modal */}
@@ -211,6 +295,47 @@ export function AgentsView() {
         onSave={handleSavePersona}
         onDuplicate={handleDuplicatePersona}
       />
+
+      {/* Delete confirmation dialog */}
+      {deletingPersona && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setDeletingPersona(null)}
+            aria-hidden="true"
+          />
+          <div className="relative z-10 w-full max-w-sm rounded-xl border border-border bg-background p-6 shadow-xl space-y-4">
+            <h3 className="text-sm font-semibold">Delete persona?</h3>
+            <p className="text-sm text-foreground-secondary">
+              Are you sure you want to delete &quot;
+              {deletingPersona.displayName}&quot;? This cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setDeletingPersona(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleConfirmDeletePersona}
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export notification toast */}
+      {notification && (
+        <div className="fixed bottom-4 right-4 z-50 rounded-lg border border-border bg-background px-4 py-3 shadow-lg text-sm animate-in fade-in slide-in-from-bottom-2">
+          {notification}
+        </div>
+      )}
     </div>
   );
 }

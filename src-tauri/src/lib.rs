@@ -39,6 +39,9 @@ pub fn run() {
             commands::agents::create_persona,
             commands::agents::update_persona,
             commands::agents::delete_persona,
+            commands::agents::refresh_personas,
+            commands::agents::export_persona,
+            commands::agents::import_personas,
             commands::sessions::create_session,
             commands::sessions::list_sessions,
             commands::sessions::get_session_messages,
@@ -49,6 +52,12 @@ pub fn run() {
             commands::acp::acp_cancel_session,
             commands::acp::acp_list_running,
             commands::acp::acp_cancel_all,
+            commands::skills::create_skill,
+            commands::skills::list_skills,
+            commands::skills::delete_skill,
+            commands::skills::update_skill,
+            commands::skills::export_skill,
+            commands::skills::import_skills,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

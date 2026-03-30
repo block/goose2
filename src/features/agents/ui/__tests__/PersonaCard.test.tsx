@@ -88,7 +88,7 @@ describe("PersonaCard", () => {
     );
 
     await user.click(screen.getByRole("button", { name: /persona options/i }));
-    const deleteBtn = screen.getByRole("menuitem", { name: /delete/i });
-    expect(deleteBtn).toBeDisabled();
+    const deleteBtn = screen.queryByRole("menuitem", { name: /delete/i });
+    expect(deleteBtn).toBeNull();
   });
 });

@@ -13,6 +13,8 @@ pub struct Persona {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
     pub is_builtin: bool,
+    #[serde(default)]
+    pub is_from_disk: bool,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -92,6 +94,7 @@ pub fn builtin_personas() -> Vec<Persona> {
             provider: Some("goose".to_string()),
             model: Some("claude-sonnet-4-20250514".to_string()),
             is_builtin: true,
+            is_from_disk: false,
             created_at: now.clone(),
             updated_at: now.clone(),
         },
@@ -103,6 +106,7 @@ pub fn builtin_personas() -> Vec<Persona> {
             provider: Some("goose".to_string()),
             model: Some("claude-sonnet-4-20250514".to_string()),
             is_builtin: true,
+            is_from_disk: false,
             created_at: now.clone(),
             updated_at: now.clone(),
         },
@@ -114,6 +118,7 @@ pub fn builtin_personas() -> Vec<Persona> {
             provider: Some("goose".to_string()),
             model: Some("claude-sonnet-4-20250514".to_string()),
             is_builtin: true,
+            is_from_disk: false,
             created_at: now.clone(),
             updated_at: now.clone(),
         },
@@ -125,6 +130,7 @@ pub fn builtin_personas() -> Vec<Persona> {
             provider: Some("goose".to_string()),
             model: Some("claude-sonnet-4-20250514".to_string()),
             is_builtin: true,
+            is_from_disk: false,
             created_at: now.clone(),
             updated_at: now,
         },

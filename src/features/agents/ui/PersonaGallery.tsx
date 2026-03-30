@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import type { Persona } from "@/shared/types/agents";
 import { PersonaCard } from "@/features/agents/ui/PersonaCard";
+import { useFileImportZone } from "@/shared/hooks/useFileImportZone";
 
 interface PersonaGalleryProps {
   personas: Persona[];
@@ -11,7 +12,9 @@ interface PersonaGalleryProps {
   onEditPersona: (persona: Persona) => void;
   onDuplicatePersona: (persona: Persona) => void;
   onDeletePersona: (persona: Persona) => void;
+  onExportPersona?: (persona: Persona) => void;
   onCreatePersona: () => void;
+  onImportFile?: (fileBytes: number[], fileName: string) => void;
   isLoading?: boolean;
 }
 
@@ -36,9 +39,15 @@ export function PersonaGallery({
   onEditPersona,
   onDuplicatePersona,
   onDeletePersona,
+  onExportPersona,
   onCreatePersona,
+  onImportFile,
   isLoading = false,
 }: PersonaGalleryProps) {
+  const { fileInputRef, isDragOver, dropHandlers, handleFileChange } =
+    useFileImportZone({
+      onImportFile: onImportFile ?? (() => {}),
+    });
   const sorted = useMemo(() => {
     const builtins = personas
       .filter((p) => p.isBuiltin)
@@ -75,6 +84,7 @@ export function PersonaGallery({
           onEdit={onEditPersona}
           onDuplicate={onDuplicatePersona}
           onDelete={onDeletePersona}
+          onExport={onExportPersona}
         />
       ))}
 
@@ -83,15 +93,33 @@ export function PersonaGallery({
         type="button"
         onClick={onCreatePersona}
         aria-label="Create new persona"
+        {...dropHandlers}
         className={cn(
-          "flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border p-5",
+          "flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-5",
           "text-foreground-secondary/60 transition-colors",
           "hover:border-border-primary/50 hover:text-foreground-secondary hover:bg-background-secondary/50",
+          isDragOver
+            ? "border-border-primary bg-background-secondary/50 text-foreground-secondary"
+            : "border-border",
         )}
       >
         <Plus className="h-8 w-8" />
         <span className="text-sm font-medium">New Persona</span>
+        {onImportFile && (
+          <span className="text-[11px] text-foreground-secondary/40">
+            or drop a file
+          </span>
+        )}
       </button>
+      {onImportFile && (
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".persona.json,.json"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+      )}
     </div>
   );
 }

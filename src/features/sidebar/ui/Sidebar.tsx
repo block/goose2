@@ -26,7 +26,7 @@ interface SidebarProps {
 }
 
 const NAV_ITEMS: readonly { id: AppView; label: string; icon: typeof Bot }[] = [
-  { id: "agents", label: "Agents", icon: Bot },
+  { id: "agents", label: "Personas", icon: Bot },
   { id: "skills", label: "Skills", icon: BookOpen },
 ];
 

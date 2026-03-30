@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { MoreVertical, Copy, Pencil, Trash2 } from "lucide-react";
+import { MoreVertical, Copy, Pencil, Trash2, Download } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import type { Persona } from "@/shared/types/agents";
 
@@ -9,6 +9,7 @@ interface PersonaCardProps {
   onEdit?: (persona: Persona) => void;
   onDuplicate?: (persona: Persona) => void;
   onDelete?: (persona: Persona) => void;
+  onExport?: (persona: Persona) => void;
   isActive?: boolean;
 }
 
@@ -18,6 +19,7 @@ export function PersonaCard({
   onEdit,
   onDuplicate,
   onDelete,
+  onExport,
   isActive = false,
 }: PersonaCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -111,22 +113,31 @@ export function PersonaCard({
             <button
               type="button"
               role="menuitem"
-              disabled={persona.isBuiltin}
               onClick={(e) => {
                 e.stopPropagation();
                 setMenuOpen(false);
-                onDelete?.(persona);
+                onExport?.(persona);
               }}
-              className={cn(
-                "flex w-full items-center gap-2 px-3 py-1.5 text-xs transition-colors",
-                persona.isBuiltin
-                  ? "text-foreground-secondary/40 cursor-not-allowed"
-                  : "text-foreground-danger hover:bg-background-secondary",
-              )}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-background-secondary transition-colors"
             >
-              <Trash2 className="h-3.5 w-3.5" />
-              Delete
+              <Download className="h-3.5 w-3.5" />
+              Export
             </button>
+            {!persona.isBuiltin && !persona.isFromDisk && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  onDelete?.(persona);
+                }}
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-foreground-danger hover:bg-background-secondary transition-colors"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete
+              </button>
+            )}
           </div>
         )}
       </div>
