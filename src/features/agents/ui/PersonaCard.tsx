@@ -123,25 +123,21 @@ export function PersonaCard({
               <Download className="h-3.5 w-3.5" />
               Export
             </button>
-            <button
-              type="button"
-              role="menuitem"
-              disabled={persona.isBuiltin || persona.isFromDisk}
-              onClick={(e) => {
-                e.stopPropagation();
-                setMenuOpen(false);
-                onDelete?.(persona);
-              }}
-              className={cn(
-                "flex w-full items-center gap-2 px-3 py-1.5 text-xs transition-colors",
-                persona.isBuiltin || persona.isFromDisk
-                  ? "text-foreground-secondary/40 cursor-not-allowed"
-                  : "text-foreground-danger hover:bg-background-secondary",
-              )}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              Delete
-            </button>
+            {!persona.isBuiltin && !persona.isFromDisk && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  onDelete?.(persona);
+                }}
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-foreground-danger hover:bg-background-secondary transition-colors"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete
+              </button>
+            )}
           </div>
         )}
       </div>
