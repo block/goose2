@@ -173,92 +173,94 @@ export function AgentsView() {
   );
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      <div className="max-w-5xl mx-auto w-full px-6 py-8 space-y-5 page-transition">
-        {/* Header */}
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-lg font-semibold">Personas</h1>
-            <p className="text-xs text-foreground-secondary">
-              Custom persona configurations for specific workflows
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              ref={importInputRef}
-              type="file"
-              accept=".persona.json,.json"
-              className="hidden"
-              onChange={handleImportFile}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => importInputRef.current?.click()}
-            >
-              <Upload className="w-3.5 h-3.5" />
-              Import
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => openPersonaEditor()}
-            >
-              <Plus className="w-3.5 h-3.5" />
-              New Persona
-            </Button>
-          </div>
-        </div>
-
-        {/* Search */}
-        <SearchBar
-          value={search}
-          onChange={setSearch}
-          placeholder="Search personas..."
-        />
-
-        {/* Personas section */}
-        <section aria-labelledby="personas-heading">
-          <h2 id="personas-heading" className="text-sm font-semibold mb-3">
-            Personas
-          </h2>
-          <PersonaGallery
-            personas={filteredPersonas}
-            onSelectPersona={(p) => openPersonaEditor(p)}
-            onEditPersona={(p) => openPersonaEditor(p)}
-            onDuplicatePersona={handleDuplicatePersona}
-            onDeletePersona={handleDeletePersona}
-            onExportPersona={handleExportPersona}
-            onCreatePersona={() => openPersonaEditor()}
-            isLoading={personasLoading}
-          />
-        </section>
-
-        {/* Active Agents section */}
-        <section aria-labelledby="agents-heading">
-          <h2 id="agents-heading" className="text-sm font-semibold mb-3">
-            Active Agents
-          </h2>
-          {filteredAgents.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-12 text-foreground-secondary">
-              <Bot className="h-10 w-10 opacity-30" />
-              <div className="text-center">
-                <p className="text-sm font-medium">No active agents</p>
-                <p className="text-xs text-foreground-secondary/60 mt-1">
-                  Create an agent from a persona to get started.
-                </p>
-              </div>
+    <div className="flex flex-1 flex-col h-full min-h-0">
+      <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="max-w-5xl mx-auto w-full px-6 py-8 space-y-5 page-transition">
+          {/* Header */}
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h1 className="text-lg font-semibold">Personas</h1>
+              <p className="text-xs text-foreground-secondary">
+                Custom persona configurations for specific workflows
+              </p>
             </div>
-          ) : (
-            <ul className="space-y-2" aria-label="Active agents">
-              {filteredAgents.map((agent) => (
-                <AgentRow key={agent.id} agent={agent} />
-              ))}
-            </ul>
-          )}
-        </section>
+            <div className="flex items-center gap-2">
+              <input
+                ref={importInputRef}
+                type="file"
+                accept=".persona.json,.json"
+                className="hidden"
+                onChange={handleImportFile}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => importInputRef.current?.click()}
+              >
+                <Upload className="w-3.5 h-3.5" />
+                Import
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => openPersonaEditor()}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                New Persona
+              </Button>
+            </div>
+          </div>
+
+          {/* Search */}
+          <SearchBar
+            value={search}
+            onChange={setSearch}
+            placeholder="Search personas..."
+          />
+
+          {/* Personas section */}
+          <section aria-labelledby="personas-heading">
+            <h2 id="personas-heading" className="text-sm font-semibold mb-3">
+              Personas
+            </h2>
+            <PersonaGallery
+              personas={filteredPersonas}
+              onSelectPersona={(p) => openPersonaEditor(p)}
+              onEditPersona={(p) => openPersonaEditor(p)}
+              onDuplicatePersona={handleDuplicatePersona}
+              onDeletePersona={handleDeletePersona}
+              onExportPersona={handleExportPersona}
+              onCreatePersona={() => openPersonaEditor()}
+              isLoading={personasLoading}
+            />
+          </section>
+
+          {/* Active Agents section */}
+          <section aria-labelledby="agents-heading">
+            <h2 id="agents-heading" className="text-sm font-semibold mb-3">
+              Active Agents
+            </h2>
+            {filteredAgents.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-12 text-foreground-secondary">
+                <Bot className="h-10 w-10 opacity-30" />
+                <div className="text-center">
+                  <p className="text-sm font-medium">No active agents</p>
+                  <p className="text-xs text-foreground-secondary/60 mt-1">
+                    Create an agent from a persona to get started.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <ul className="space-y-2" aria-label="Active agents">
+                {filteredAgents.map((agent) => (
+                  <AgentRow key={agent.id} agent={agent} />
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
       </div>
 
       {/* Persona editor modal */}

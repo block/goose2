@@ -239,94 +239,98 @@ export function SkillsView() {
   );
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      <div className="max-w-5xl mx-auto w-full px-6 py-8 space-y-5 page-transition">
-        {/* Header */}
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-lg font-semibold">Skills</h1>
-            <p className="text-xs text-foreground-secondary">
-              Reusable instructions for your AI personas
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              ref={importInputRef}
-              type="file"
-              accept=".skill.json,.json"
-              className="hidden"
-              onChange={handleImportFile}
-            />
-            <button
-              type="button"
-              onClick={() => importInputRef.current?.click()}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-background-tertiary transition-colors"
-            >
-              <Upload className="w-3.5 h-3.5" />
-              Import
-            </button>
-            <button
-              type="button"
-              onClick={handleNewSkill}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-background-tertiary transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              New Skill
-            </button>
-          </div>
-        </div>
-
-        {/* Search */}
-        <SearchBar
-          value={search}
-          onChange={setSearch}
-          placeholder="Search skills by name or description..."
-        />
-
-        {/* Skills list */}
-        {!loading && filtered.length > 0 && (
-          <div className="space-y-2">
-            {filtered.map((skill) => (
-              <div
-                key={skill.name}
-                className="flex items-start justify-between gap-3 rounded-lg border border-border px-4 py-3"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium font-mono">{skill.name}</p>
-                  {skill.description && (
-                    <p className="text-xs text-foreground-secondary mt-0.5">
-                      {skill.description}
-                    </p>
-                  )}
-                </div>
-                <SkillCardMenu
-                  skill={skill}
-                  onEdit={handleEdit}
-                  onDuplicate={handleDuplicate}
-                  onExport={handleExport}
-                  onDelete={handleDelete}
-                />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Empty state */}
-        {!loading && filtered.length === 0 && (
-          <div className="flex flex-col items-center justify-center gap-3 py-16 text-foreground-secondary">
-            <AtSign className="h-10 w-10 opacity-30" />
-            <div className="text-center">
-              <p className="text-sm font-medium">
-                {skills.length === 0 ? "No skills yet" : "No matching skills"}
-              </p>
-              <p className="text-xs text-foreground-secondary/60 mt-1">
-                {skills.length === 0
-                  ? "Skills you add will appear here."
-                  : "Try a different search term."}
+    <div className="flex flex-1 flex-col h-full min-h-0">
+      <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="max-w-5xl mx-auto w-full px-6 py-8 space-y-5 page-transition">
+          {/* Header */}
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h1 className="text-lg font-semibold">Skills</h1>
+              <p className="text-xs text-foreground-secondary">
+                Reusable instructions for your AI personas
               </p>
             </div>
+            <div className="flex items-center gap-2">
+              <input
+                ref={importInputRef}
+                type="file"
+                accept=".skill.json,.json"
+                className="hidden"
+                onChange={handleImportFile}
+              />
+              <button
+                type="button"
+                onClick={() => importInputRef.current?.click()}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-background-tertiary transition-colors"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                Import
+              </button>
+              <button
+                type="button"
+                onClick={handleNewSkill}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-background-tertiary transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                New Skill
+              </button>
+            </div>
           </div>
-        )}
+
+          {/* Search */}
+          <SearchBar
+            value={search}
+            onChange={setSearch}
+            placeholder="Search skills by name or description..."
+          />
+
+          {/* Skills list */}
+          {!loading && filtered.length > 0 && (
+            <div className="space-y-2">
+              {filtered.map((skill) => (
+                <div
+                  key={skill.name}
+                  className="flex items-start justify-between gap-3 rounded-lg border border-border px-4 py-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium font-mono">
+                      {skill.name}
+                    </p>
+                    {skill.description && (
+                      <p className="text-xs text-foreground-secondary mt-0.5">
+                        {skill.description}
+                      </p>
+                    )}
+                  </div>
+                  <SkillCardMenu
+                    skill={skill}
+                    onEdit={handleEdit}
+                    onDuplicate={handleDuplicate}
+                    onExport={handleExport}
+                    onDelete={handleDelete}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!loading && filtered.length === 0 && (
+            <div className="flex flex-col items-center justify-center gap-3 py-16 text-foreground-secondary">
+              <AtSign className="h-10 w-10 opacity-30" />
+              <div className="text-center">
+                <p className="text-sm font-medium">
+                  {skills.length === 0 ? "No skills yet" : "No matching skills"}
+                </p>
+                <p className="text-xs text-foreground-secondary/60 mt-1">
+                  {skills.length === 0
+                    ? "Skills you add will appear here."
+                    : "Try a different search term."}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Create / Edit dialog */}
