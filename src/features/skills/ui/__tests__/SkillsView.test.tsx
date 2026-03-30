@@ -63,7 +63,7 @@ describe("SkillsView", () => {
         expect(screen.getByText("No skills yet")).toBeInTheDocument();
       });
       expect(
-        screen.getByText("Skills you add will appear here."),
+        screen.getByText("Create a skill or drop a .skill.json file here."),
       ).toBeInTheDocument();
     });
 
