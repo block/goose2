@@ -104,7 +104,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-4 top-4 rounded-md p-1 text-foreground-secondary transition-colors hover:text-foreground"
+            className="absolute right-4 top-4 z-10 rounded-md p-1 text-foreground-secondary transition-colors hover:text-foreground"
           >
             <X className="h-4 w-4" />
           </button>
