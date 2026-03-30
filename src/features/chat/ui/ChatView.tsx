@@ -3,6 +3,7 @@ import { MessageTimeline } from "./MessageTimeline";
 import { ChatInput } from "./ChatInput";
 import { StreamingIndicator } from "./StreamingIndicator";
 import { useChat } from "../hooks/useChat";
+import { useAcpStream } from "../hooks/useAcpStream";
 
 interface ChatViewProps {
   sessionId?: string;
@@ -23,6 +24,9 @@ export function ChatView({
     stopStreaming,
     streamingMessageId,
   } = useChat(activeSessionId);
+
+  // Listen for ACP streaming events
+  useAcpStream(activeSessionId, true);
 
   const isStreaming = chatState === "streaming";
   const showIndicator = chatState === "thinking" || chatState === "compacting";

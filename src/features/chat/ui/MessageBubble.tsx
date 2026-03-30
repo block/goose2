@@ -3,6 +3,7 @@ import { Copy, Check, RotateCcw, Pencil, Bot, User } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { ToolCallCard } from "./ToolCallCard";
 import { ThinkingBlock } from "./ThinkingBlock";
+import { MarkdownContent } from "./MarkdownContent";
 import type {
   Message,
   MessageContent,
@@ -50,12 +51,11 @@ function renderContentBlock(content: MessageContent, index: number) {
     case "text": {
       const tc = content as TextContent;
       return (
-        <div
+        <MarkdownContent
           key={`text-${index}`}
-          className="prose whitespace-pre-wrap break-words text-sm leading-relaxed"
-        >
-          {tc.text}
-        </div>
+          content={tc.text}
+          className="text-sm leading-relaxed"
+        />
       );
     }
     case "toolRequest": {
@@ -158,7 +158,7 @@ export function MessageBubble({
   return (
     <div
       className={cn(
-        "group flex gap-3 px-4 py-3",
+        "group flex gap-3 px-4 py-1",
         "animate-in fade-in duration-200 motion-reduce:animate-none",
         isUser ? "flex-row-reverse ml-auto" : "flex-row",
       )}
@@ -193,12 +193,7 @@ export function MessageBubble({
           </span>
         )}
 
-        <div
-          className={cn(
-            "text-[13px] leading-relaxed",
-            isUser ? "text-foreground-primary" : "text-foreground-secondary",
-          )}
-        >
+        <div className="text-[13px] leading-relaxed">
           {content.map((c, i) => {
             const key = `${c.type}-${message.id}-${"id" in c ? (c as unknown as Record<string, unknown>).id : i}`;
             return <div key={key}>{renderContentBlock(c, i)}</div>;

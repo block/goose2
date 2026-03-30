@@ -3,6 +3,9 @@ import { useChatStore } from "../stores/chatStore";
 import { createUserMessage } from "@/shared/types/messages";
 import type { Message } from "@/shared/types/messages";
 import type { ChatState, TokenState } from "@/shared/types/chat";
+import { acpSendMessage } from "@/shared/api/acp";
+import { useAgentStore } from "@/features/agents/stores/agentStore";
+import { findLastIndex } from "@/shared/lib/arrays";
 
 /**
  * Hook for managing a chat session -- sending messages, handling streaming,
@@ -19,7 +22,6 @@ export function useChat(sessionId: string) {
   const streamingMessageId = store.streamingMessageId;
   const isStreaming = streamingMessageId !== null;
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: store is stable and should not trigger re-creation
   const sendMessage = useCallback(
     async (text: string) => {
       if (!text.trim() || chatState === "streaming" || chatState === "thinking")
@@ -49,16 +51,15 @@ export function useChat(sessionId: string) {
       abortRef.current = abort;
 
       try {
-        // TODO: Replace mock with actual Tauri command `chat_send_message`
-        // via @tauri-apps/api/core invoke('chat_send_message', { ... })
-        // For now, simulate a streaming response.
-        await simulateStreamingResponse(
-          sessionId,
-          assistantMessage.id,
-          abort.signal,
-        );
+        const agent = useAgentStore.getState().getActiveAgent();
+        const providerId = agent?.provider ?? "goose";
 
-        store.setChatState("idle");
+        // Send via ACP — response streams back through Tauri events
+        // which are handled by useAcpStream in ChatView
+        store.setChatState("streaming");
+        store.appendToStreamingMessage(sessionId, { type: "text", text: "" });
+        await acpSendMessage(sessionId, providerId, text);
+        // Note: setChatState("idle") is handled by useAcpStream on "acp:done"
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") {
           store.setChatState("idle");
@@ -66,53 +67,14 @@ export function useChat(sessionId: string) {
           const errorMessage =
             err instanceof Error ? err.message : "Unknown error";
           store.setError(errorMessage);
+          store.setStreamingMessageId(null);
         }
       } finally {
-        store.setStreamingMessageId(null);
         abortRef.current = null;
       }
     },
     [sessionId, chatState, store],
   );
-
-  /**
-   * Mock streaming response simulator.
-   * Replaces with real SSE/Tauri integration later.
-   */
-  async function simulateStreamingResponse(
-    sid: string,
-    messageId: string,
-    signal: AbortSignal,
-  ): Promise<void> {
-    // TODO: Use useAgentStore.getState().getActiveAgent() to personalize responses
-    const mockText =
-      "Hello! I am here to help. What would you like to work on?";
-    const words = mockText.split(" ");
-
-    store.setChatState("streaming");
-
-    // Append initial empty text block
-    store.appendToStreamingMessage(sid, { type: "text", text: "" });
-
-    let accumulated = "";
-    for (const word of words) {
-      if (signal.aborted) throw new DOMException("Aborted", "AbortError");
-      accumulated += (accumulated ? " " : "") + word;
-      store.updateStreamingText(sid, accumulated);
-
-      // Also update the full message for final state
-      store.updateMessage(sid, messageId, (m) => ({
-        ...m,
-        content: m.content.map((c, i) =>
-          i === m.content.length - 1 && c.type === "text"
-            ? { ...c, text: accumulated }
-            : c,
-        ),
-      }));
-
-      await delay(50, signal);
-    }
-  }
 
   const stopGeneration = useCallback(() => {
     abortRef.current?.abort();
@@ -164,30 +126,4 @@ export function useChat(sessionId: string) {
     clearChat,
     isStreaming,
   };
-}
-
-/** Delay that respects an AbortSignal. */
-function delay(ms: number, signal: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(resolve, ms);
-    signal.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(timer);
-        reject(new DOMException("Aborted", "AbortError"));
-      },
-      { once: true },
-    );
-  });
-}
-
-/** Find the last index in an array matching a predicate. */
-function findLastIndex<T>(
-  arr: readonly T[],
-  predicate: (item: T) => boolean,
-): number {
-  for (let i = arr.length - 1; i >= 0; i--) {
-    if (predicate(arr[i])) return i;
-  }
-  return -1;
 }

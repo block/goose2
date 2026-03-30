@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { Message, MessageContent } from "@/shared/types/messages";
 import type { ChatState, TokenState } from "@/shared/types/chat";
 import { INITIAL_TOKEN_STATE } from "@/shared/types/chat";
+import { findLastIndex } from "@/shared/lib/arrays";
 
 interface ChatStoreState {
   // Per-session messages
@@ -241,14 +242,3 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       };
     }),
 }));
-
-/** Find the last index in an array matching a predicate. */
-function findLastIndex<T>(
-  arr: readonly T[],
-  predicate: (item: T) => boolean,
-): number {
-  for (let i = arr.length - 1; i >= 0; i--) {
-    if (predicate(arr[i])) return i;
-  }
-  return -1;
-}

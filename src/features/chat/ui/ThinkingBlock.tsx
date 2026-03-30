@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Brain, ChevronRight } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import { MarkdownContent } from "./MarkdownContent";
 
 interface ThinkingBlockProps {
   text: string;
@@ -56,7 +57,7 @@ export function ThinkingBlock({
 
       {expanded && (
         <div className="mt-2 ml-[26px] pl-3 border-l-2 border-border text-foreground-secondary text-[13px] leading-relaxed italic animate-fade-in max-h-64 overflow-y-auto">
-          <p className="whitespace-pre-wrap">{text}</p>
+          <MarkdownContent content={text} className="text-[13px]" />
         </div>
       )}
     </div>

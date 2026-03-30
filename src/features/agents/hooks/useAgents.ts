@@ -63,6 +63,24 @@ export function useAgents() {
     if (existing.length === 0) {
       store.setPersonas(BUILTIN_PERSONAS);
     }
+    // Seed a default Goose ACP agent if none exist
+    if (store.agents.length === 0) {
+      const defaultAgent = {
+        id: "default-goose-acp",
+        name: "Goose",
+        personaId: "builtin-goose",
+        provider: "goose" as const,
+        model: "claude-sonnet-4-20250514",
+        systemPrompt: BUILTIN_PERSONAS[0].systemPrompt,
+        connectionType: "acp" as const,
+        status: "online" as const,
+        isBuiltin: true,
+        createdAt: "2025-01-01T00:00:00Z",
+        updatedAt: "2025-01-01T00:00:00Z",
+      };
+      store.addAgent(defaultAgent);
+      store.setActiveAgent(defaultAgent.id);
+    }
   }, []);
 
   const createPersona = useCallback(

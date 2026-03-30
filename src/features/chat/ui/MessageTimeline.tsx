@@ -105,7 +105,7 @@ export function MessageTimeline({
             !prev || !isSameDay(prev.created, message.created);
 
           return (
-            <div key={message.id}>
+            <div key={message.id} className={index === 0 ? "mt-0" : "mt-4"}>
               {showDateSeparator && (
                 <div className="my-4 flex items-center gap-3 px-4">
                   <div className="h-px flex-1 bg-border-secondary" />

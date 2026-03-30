@@ -2,13 +2,22 @@ mod commands;
 mod services;
 mod types;
 
+use std::sync::Arc;
+
 use commands::sidecar::SidecarState;
+use services::acp::AcpSessionRegistry;
 use services::personas::PersonaStore;
 use services::sessions::SessionStore;
 use tauri_plugin_window_state::StateFlags;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Clean up stale ACP session files older than 24 hours.
+    services::acp::TauriStore::cleanup_stale_sessions(std::time::Duration::from_secs(24 * 60 * 60));
+
+    let acp_registry = Arc::new(AcpSessionRegistry::new());
+    let acp_registry_for_exit = Arc::clone(&acp_registry);
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(
@@ -19,6 +28,7 @@ pub fn run() {
         .manage(SidecarState::default())
         .manage(PersonaStore::new())
         .manage(SessionStore::new())
+        .manage(acp_registry)
         .invoke_handler(tauri::generate_handler![
             commands::sidecar::start_sidecar,
             commands::sidecar::stop_sidecar,
@@ -37,6 +47,11 @@ pub fn run() {
             commands::sessions::get_session_messages,
             commands::sessions::delete_session,
             commands::chat::chat_send_message,
+            commands::acp::discover_acp_providers,
+            commands::acp::acp_send_message,
+            commands::acp::acp_cancel_session,
+            commands::acp::acp_list_running,
+            commands::acp::acp_cancel_all,
             commands::skills::create_skill,
             commands::skills::list_skills,
             commands::skills::delete_skill,
@@ -44,6 +59,11 @@ pub fn run() {
             commands::skills::export_skill,
             commands::skills::import_skills,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(move |_app, event| {
+            if let tauri::RunEvent::Exit = event {
+                acp_registry_for_exit.cancel_all();
+            }
+        });
 }
