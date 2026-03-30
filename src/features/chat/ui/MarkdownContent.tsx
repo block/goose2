@@ -103,19 +103,20 @@ const CodeBlock = memo(function CodeBlock({
 
 interface CodeProps
   extends React.ClassAttributes<HTMLElement>,
-    React.HTMLAttributes<HTMLElement> {
-  inline?: boolean;
-}
+    React.HTMLAttributes<HTMLElement> {}
 
 const MarkdownCode = memo(function MarkdownCode({
-  inline,
   className,
   children,
+  node,
   ...props
-}: CodeProps) {
+}: CodeProps & { node?: { tagName?: string; children?: unknown[] } }) {
   const match = /language-(\w+)/.exec(className || "");
-  return !inline && match ? (
-    <CodeBlock language={match[1]}>
+  // In react-markdown v9+, block code is wrapped in <pre><code>
+  // Detect block vs inline by checking if there's a language class or if content has newlines
+  const isBlock = Boolean(match) || String(children).includes("\n");
+  return isBlock ? (
+    <CodeBlock language={match?.[1] ?? "text"}>
       {String(children).replace(/\n$/, "")}
     </CodeBlock>
   ) : (
@@ -135,7 +136,7 @@ export const MarkdownContent = memo(function MarkdownContent({
   return (
     <div
       className={cn(
-        `w-full overflow-x-hidden prose prose-sm max-w-full
+        `w-full overflow-x-hidden prose prose-sm dark:prose-invert max-w-full
         prose-pre:p-0 prose-pre:m-0 !p-0
         prose-code:break-all prose-code:whitespace-pre-wrap prose-code:font-mono
         prose-a:break-all prose-a:text-accent prose-a:underline
