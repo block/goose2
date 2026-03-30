@@ -310,8 +310,10 @@ impl AcpService {
     ) -> Result<(), String> {
         let driver = AcpDriver::new(&provider_id)?;
 
-        let writer: Arc<dyn MessageWriter> =
-            Arc::new(TauriMessageWriter::new(app_handle.clone(), session_id.clone()));
+        let writer: Arc<dyn MessageWriter> = Arc::new(TauriMessageWriter::new(
+            app_handle.clone(),
+            session_id.clone(),
+        ));
         let store: Arc<dyn Store> = Arc::new(TauriStore::new());
         let cancel_token = registry.register(&session_id, &provider_id);
 

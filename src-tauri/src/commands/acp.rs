@@ -2,8 +2,8 @@ use serde::Serialize;
 use std::sync::Arc;
 use tauri::{AppHandle, State};
 
+use crate::services::acp::{AcpRunningSession, AcpService, AcpSessionRegistry};
 use acp_client::discover_providers;
-use crate::services::acp::{AcpService, AcpSessionRegistry, AcpRunningSession};
 
 /// Response type for an ACP provider, sent to the frontend.
 #[derive(Serialize)]
@@ -69,9 +69,7 @@ pub async fn acp_list_running(
 
 /// Cancel all running ACP sessions (used during shutdown).
 #[tauri::command]
-pub async fn acp_cancel_all(
-    registry: State<'_, Arc<AcpSessionRegistry>>,
-) -> Result<(), String> {
+pub async fn acp_cancel_all(registry: State<'_, Arc<AcpSessionRegistry>>) -> Result<(), String> {
     registry.cancel_all();
     Ok(())
 }
