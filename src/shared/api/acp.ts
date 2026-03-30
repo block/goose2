@@ -3,7 +3,6 @@ import { invoke } from "@tauri-apps/api/core";
 export interface AcpProvider {
   id: string;
   label: string;
-  binaryPath: string;
 }
 
 /** Discover ACP providers installed on the system. */
