@@ -3,4 +3,5 @@ export interface Tab {
   title: string;
   sessionId: string;
   agentId?: string;
+  projectId?: string;
 }

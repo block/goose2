@@ -58,6 +58,11 @@ pub fn run() {
             commands::skills::update_skill,
             commands::skills::export_skill,
             commands::skills::import_skills,
+            commands::projects::list_projects,
+            commands::projects::create_project,
+            commands::projects::update_project,
+            commands::projects::delete_project,
+            commands::projects::get_project,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

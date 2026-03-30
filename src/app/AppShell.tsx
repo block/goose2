@@ -6,12 +6,14 @@ import { HomeScreen } from "@/features/home/ui/HomeScreen";
 import { ChatView } from "@/features/chat/ui/ChatView";
 import { SkillsView } from "@/features/skills/ui/SkillsView";
 import { AgentsView } from "@/features/agents/ui/AgentsView";
+import { ProjectsView } from "@/features/projects/ui/ProjectsView";
+import type { ProjectInfo } from "@/features/projects/api/projects";
 import { SettingsModal } from "@/features/settings/ui/SettingsModal";
 import { useChatStore } from "@/features/chat/stores/chatStore";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import type { Tab } from "@/features/tabs/types";
 
-export type AppView = "home" | "chat" | "skills" | "agents";
+export type AppView = "home" | "chat" | "skills" | "agents" | "projects";
 
 const SIDEBAR_WIDTH = 240;
 const SIDEBAR_COLLAPSED_WIDTH = 48;
@@ -38,12 +40,18 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     : ("disconnected" as const);
 
   const createNewTab = useCallback(
-    (title = "New Chat") => {
+    (title = "New Chat", project?: ProjectInfo) => {
       const id = crypto.randomUUID();
       const sessionId = crypto.randomUUID();
       const agentId = agentStore.activeAgentId ?? undefined;
 
-      const tab: Tab = { id, title, sessionId, agentId };
+      const tab: Tab = {
+        id,
+        title,
+        sessionId,
+        agentId,
+        projectId: project?.id,
+      };
       setTabs((prev) => [...prev, tab]);
       setActiveTabId(id);
       setActiveView("chat");
@@ -51,9 +59,33 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       // Set the active session in chatStore
       chatStore.setActiveSession(sessionId);
 
+      // Inject project context as a system message if starting from a project
+      if (project?.prompt) {
+        chatStore.addMessage(sessionId, {
+          id: crypto.randomUUID(),
+          role: "system",
+          created: Date.now(),
+          content: [
+            {
+              type: "systemNotification",
+              notificationType: "info",
+              text: `Project: ${project.name}\n\n${project.prompt}`,
+            },
+          ],
+          metadata: { userVisible: true, agentVisible: true },
+        });
+      }
+
       return tab;
     },
     [chatStore, agentStore.activeAgentId],
+  );
+
+  const handleStartChatFromProject = useCallback(
+    (project: ProjectInfo) => {
+      createNewTab(project.name, project);
+    },
+    [createNewTab],
   );
 
   const handleNewTab = useCallback(() => {
@@ -138,6 +170,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         return <SkillsView />;
       case "agents":
         return <AgentsView />;
+      case "projects":
+        return <ProjectsView onStartChat={handleStartChatFromProject} />;
       case "chat":
         return activeTab ? (
           <ChatView sessionId={activeTab.sessionId} />

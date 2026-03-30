@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   BookOpen,
   Bot,
+  FolderKanban,
   MessageSquare,
   PanelLeft,
   PanelLeftClose,
@@ -26,6 +27,7 @@ interface SidebarProps {
 }
 
 const NAV_ITEMS: readonly { id: AppView; label: string; icon: typeof Bot }[] = [
+  { id: "projects", label: "Projects", icon: FolderKanban },
   { id: "agents", label: "Personas", icon: Bot },
   { id: "skills", label: "Skills", icon: BookOpen },
 ];
