@@ -26,7 +26,7 @@ export function ChatView({
   } = useChat(activeSessionId);
 
   // Listen for ACP streaming events
-  useAcpStream(activeSessionId, streamingMessageId !== null);
+  useAcpStream(activeSessionId, true);
 
   const isStreaming = chatState === "streaming";
   const showIndicator = chatState === "thinking" || chatState === "compacting";

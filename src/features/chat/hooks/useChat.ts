@@ -66,6 +66,7 @@ export function useChat(sessionId: string) {
           const errorMessage =
             err instanceof Error ? err.message : "Unknown error";
           store.setError(errorMessage);
+          store.setStreamingMessageId(null);
         }
       } finally {
         abortRef.current = null;

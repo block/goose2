@@ -179,6 +179,74 @@ describe("chatStore", () => {
     expect(useChatStore.getState().getActiveMessages()).toEqual([]);
   });
 
+  // ── streaming error cleanup ──────────────────────────────────────
+
+  it("setError transitions chatState to 'error'", () => {
+    useChatStore.getState().setChatState("streaming");
+    useChatStore.getState().setError("something broke");
+    const state = useChatStore.getState();
+    expect(state.chatState).toBe("error");
+    expect(state.error).toBe("something broke");
+  });
+
+  it("setError(null) preserves current chatState", () => {
+    useChatStore.getState().setChatState("streaming");
+    useChatStore.getState().setError(null);
+    expect(useChatStore.getState().chatState).toBe("streaming");
+    expect(useChatStore.getState().error).toBeNull();
+  });
+
+  it("error cleanup pattern clears both error and streamingMessageId", () => {
+    const msg = makeMessage({ id: "s1" });
+    useChatStore.getState().setMessages("s1", [msg]);
+    useChatStore.getState().setStreamingMessageId("s1");
+    useChatStore.getState().setChatState("streaming");
+
+    // Simulate the error cleanup pattern from useChat (Bug 3 fix)
+    useChatStore.getState().setError("ACP connection lost");
+    useChatStore.getState().setStreamingMessageId(null);
+
+    const state = useChatStore.getState();
+    expect(state.chatState).toBe("error");
+    expect(state.error).toBe("ACP connection lost");
+    expect(state.streamingMessageId).toBeNull();
+  });
+
+  it("updateStreamingText creates a text block when none exists", () => {
+    const msg = makeMessage({ id: "stream-no-text", content: [] });
+    useChatStore.getState().setMessages("s1", [msg]);
+    useChatStore.getState().setStreamingMessageId("stream-no-text");
+    useChatStore.getState().updateStreamingText("s1", "created from nothing");
+    const updated = useChatStore.getState().messagesBySession.s1[0];
+    expect(updated.content).toHaveLength(1);
+    expect(updated.content[0]).toEqual({
+      type: "text",
+      text: "created from nothing",
+    });
+  });
+
+  it("updateStreamingText is a no-op when streamingMessageId is null", () => {
+    const msg = makeMessage({
+      id: "m1",
+      content: [{ type: "text", text: "original" }],
+    });
+    useChatStore.getState().setMessages("s1", [msg]);
+    // streamingMessageId is null by default
+    useChatStore.getState().updateStreamingText("s1", "should not appear");
+    const updated = useChatStore.getState().messagesBySession.s1[0];
+    expect(updated.content[0]).toEqual({ type: "text", text: "original" });
+  });
+
+  it("appendToStreamingMessage is a no-op when streamingMessageId is null", () => {
+    const msg = makeMessage({ id: "m1", content: [] });
+    useChatStore.getState().setMessages("s1", [msg]);
+    useChatStore
+      .getState()
+      .appendToStreamingMessage("s1", { type: "text", text: "nope" });
+    const updated = useChatStore.getState().messagesBySession.s1[0];
+    expect(updated.content).toHaveLength(0);
+  });
+
   // ── cleanup ───────────────────────────────────────────────────────
 
   it("cleanupSession removes all data for the session", () => {

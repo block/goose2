@@ -18,8 +18,8 @@ export async function acpSendMessage(
   prompt: string,
 ): Promise<void> {
   return invoke("acp_send_message", {
-    session_id: sessionId,
-    provider_id: providerId,
+    sessionId,
+    providerId,
     prompt,
   });
 }
