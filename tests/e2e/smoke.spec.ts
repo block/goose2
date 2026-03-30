@@ -21,7 +21,7 @@ test.describe("Smoke tests", () => {
     await page.goto("/");
 
     await expect(
-      page.getByPlaceholderText("Ask Goose anything..."),
+      page.locator('textarea[placeholder="Ask Goose anything..."]'),
     ).toBeVisible({
       timeout: 10_000,
     });
