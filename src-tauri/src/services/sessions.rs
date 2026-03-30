@@ -41,10 +41,7 @@ impl SessionStore {
                                         .and_then(|m| serde_json::from_str(&m).ok())
                                         .unwrap_or_default();
 
-                                sessions.insert(
-                                    id.to_string(),
-                                    SessionData { session, messages },
-                                );
+                                sessions.insert(id.to_string(), SessionData { session, messages });
                             }
                         }
                     }
@@ -95,6 +92,7 @@ impl SessionStore {
         session
     }
 
+    #[allow(dead_code)]
     pub fn get_session(&self, id: &str) -> Option<Session> {
         let sessions = self.sessions.lock().unwrap();
         sessions.get(id).map(|d| d.session.clone())
@@ -144,6 +142,7 @@ impl SessionStore {
             .unwrap_or_default()
     }
 
+    #[allow(dead_code)]
     pub fn update_session_title(&self, id: &str, title: &str) -> Result<(), String> {
         let mut sessions = self.sessions.lock().unwrap();
         let data = sessions

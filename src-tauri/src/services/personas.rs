@@ -63,6 +63,7 @@ impl PersonaStore {
         personas.clone()
     }
 
+    #[allow(dead_code)]
     pub fn get(&self, id: &str) -> Option<Persona> {
         let personas = self.personas.lock().unwrap();
         personas.iter().find(|p| p.id == id).cloned()
