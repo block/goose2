@@ -5,6 +5,7 @@ import type { Message } from "@/shared/types/messages";
 import type { ChatState, TokenState } from "@/shared/types/chat";
 import { acpSendMessage } from "@/shared/api/acp";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
+import { findLastIndex } from "@/shared/lib/arrays";
 
 /**
  * Hook for managing a chat session -- sending messages, handling streaming,
@@ -125,15 +126,4 @@ export function useChat(sessionId: string) {
     clearChat,
     isStreaming,
   };
-}
-
-/** Find the last index in an array matching a predicate. */
-function findLastIndex<T>(
-  arr: readonly T[],
-  predicate: (item: T) => boolean,
-): number {
-  for (let i = arr.length - 1; i >= 0; i--) {
-    if (predicate(arr[i])) return i;
-  }
-  return -1;
 }
