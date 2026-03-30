@@ -131,6 +131,8 @@ export function SkillsView() {
   >(undefined);
   const [skills, setSkills] = useState<SkillInfo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingSkill, setDeletingSkill] = useState<SkillInfo | null>(null);
+  const [notification, setNotification] = useState<string | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
   const loadSkills = useCallback(async () => {
@@ -149,13 +151,19 @@ export function SkillsView() {
     loadSkills();
   }, [loadSkills]);
 
-  const handleDelete = async (skill: SkillInfo) => {
+  const handleDelete = (skill: SkillInfo) => {
+    setDeletingSkill(skill);
+  };
+
+  const handleConfirmDeleteSkill = async () => {
+    if (!deletingSkill) return;
     try {
-      await deleteSkill(skill.name);
+      await deleteSkill(deletingSkill.name);
       await loadSkills();
     } catch {
       // best-effort
     }
+    setDeletingSkill(null);
   };
 
   const handleEdit = (skill: SkillInfo) => {
@@ -195,6 +203,8 @@ export function SkillsView() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      setNotification(`Exported to ${result.filename}`);
+      setTimeout(() => setNotification(null), 3000);
     } catch (err) {
       console.error("Failed to export skill:", err);
     }
@@ -340,6 +350,47 @@ export function SkillsView() {
         onCreated={loadSkills}
         editingSkill={editingSkill}
       />
+
+      {/* Delete confirmation dialog */}
+      {deletingSkill && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setDeletingSkill(null)}
+            aria-hidden="true"
+          />
+          <div className="relative z-10 w-full max-w-sm rounded-xl border border-border bg-background p-6 shadow-xl space-y-4">
+            <h3 className="text-sm font-semibold">Delete skill?</h3>
+            <p className="text-sm text-foreground-secondary">
+              Are you sure you want to delete &quot;{deletingSkill.name}&quot;?
+              This cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeletingSkill(null)}
+                className="px-3 py-1.5 text-xs font-medium rounded-md hover:bg-background-secondary transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteSkill}
+                className="px-3 py-1.5 text-xs font-medium rounded-md bg-background-danger text-foreground-inverse shadow-sm hover:bg-background-danger/90 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export notification toast */}
+      {notification && (
+        <div className="fixed bottom-4 right-4 z-50 rounded-lg border border-border bg-background px-4 py-3 shadow-lg text-sm animate-in fade-in slide-in-from-bottom-2">
+          {notification}
+        </div>
+      )}
     </div>
   );
 }

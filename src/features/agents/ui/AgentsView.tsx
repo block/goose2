@@ -53,6 +53,8 @@ function AgentRow({ agent }: { agent: Agent }) {
 
 export function AgentsView() {
   const [search, setSearch] = useState("");
+  const [deletingPersona, setDeletingPersona] = useState<Persona | null>(null);
+  const [notification, setNotification] = useState<string | null>(null);
 
   const personas = useAgentStore((s) => s.personas);
   const personasLoading = useAgentStore((s) => s.personasLoading);
@@ -62,11 +64,11 @@ export function AgentsView() {
   const openPersonaEditor = useAgentStore((s) => s.openPersonaEditor);
   const closePersonaEditor = useAgentStore((s) => s.closePersonaEditor);
   const addPersona = useAgentStore((s) => s.addPersona);
-  const removePersona = useAgentStore((s) => s.removePersona);
 
   const {
     createPersona,
     updatePersona: updatePersonaViaHook,
+    deletePersona,
     refreshFromDisk,
   } = usePersonas();
 
@@ -122,13 +124,20 @@ export function AgentsView() {
     [addPersona],
   );
 
-  const handleDeletePersona = useCallback(
-    (persona: Persona) => {
-      if (persona.isBuiltin) return;
-      removePersona(persona.id);
-    },
-    [removePersona],
-  );
+  const handleDeletePersona = useCallback((persona: Persona) => {
+    if (persona.isBuiltin) return;
+    setDeletingPersona(persona);
+  }, []);
+
+  const handleConfirmDeletePersona = useCallback(async () => {
+    if (!deletingPersona) return;
+    try {
+      await deletePersona(deletingPersona.id);
+    } catch (err) {
+      console.error("Failed to delete persona:", err);
+    }
+    setDeletingPersona(null);
+  }, [deletingPersona, deletePersona]);
 
   const handleExportPersona = useCallback(async (persona: Persona) => {
     try {
@@ -143,6 +152,8 @@ export function AgentsView() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      setNotification(`Exported to ${result.suggestedFilename}`);
+      setTimeout(() => setNotification(null), 3000);
     } catch (err) {
       console.error("Failed to export persona:", err);
     }
@@ -271,6 +282,47 @@ export function AgentsView() {
         onSave={handleSavePersona}
         onDuplicate={handleDuplicatePersona}
       />
+
+      {/* Delete confirmation dialog */}
+      {deletingPersona && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setDeletingPersona(null)}
+            aria-hidden="true"
+          />
+          <div className="relative z-10 w-full max-w-sm rounded-xl border border-border bg-background p-6 shadow-xl space-y-4">
+            <h3 className="text-sm font-semibold">Delete persona?</h3>
+            <p className="text-sm text-foreground-secondary">
+              Are you sure you want to delete &quot;
+              {deletingPersona.displayName}&quot;? This cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setDeletingPersona(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleConfirmDeletePersona}
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export notification toast */}
+      {notification && (
+        <div className="fixed bottom-4 right-4 z-50 rounded-lg border border-border bg-background px-4 py-3 shadow-lg text-sm animate-in fade-in slide-in-from-bottom-2">
+          {notification}
+        </div>
+      )}
     </div>
   );
 }
