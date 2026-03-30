@@ -11,6 +11,7 @@ interface PersonaGalleryProps {
   onEditPersona: (persona: Persona) => void;
   onDuplicatePersona: (persona: Persona) => void;
   onDeletePersona: (persona: Persona) => void;
+  onExportPersona?: (persona: Persona) => void;
   onCreatePersona: () => void;
   isLoading?: boolean;
 }
@@ -36,6 +37,7 @@ export function PersonaGallery({
   onEditPersona,
   onDuplicatePersona,
   onDeletePersona,
+  onExportPersona,
   onCreatePersona,
   isLoading = false,
 }: PersonaGalleryProps) {
@@ -75,6 +77,7 @@ export function PersonaGallery({
           onEdit={onEditPersona}
           onDuplicate={onDuplicatePersona}
           onDelete={onDeletePersona}
+          onExport={onExportPersona}
         />
       ))}
 

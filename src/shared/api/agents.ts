@@ -25,3 +25,23 @@ export async function updatePersona(
 export async function deletePersona(id: string): Promise<void> {
   return invoke("delete_persona", { id });
 }
+
+export async function refreshPersonas(): Promise<Persona[]> {
+  return invoke("refresh_personas");
+}
+
+export interface ExportResult {
+  json: string;
+  suggestedFilename: string;
+}
+
+export async function exportPersona(id: string): Promise<ExportResult> {
+  return invoke("export_persona", { id });
+}
+
+export async function importPersonas(
+  fileBytes: number[],
+  fileName: string,
+): Promise<Persona[]> {
+  return invoke("import_personas", { fileBytes, fileName });
+}

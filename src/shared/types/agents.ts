@@ -28,6 +28,7 @@ export interface Persona {
   provider?: ProviderType;
   model?: string;
   isBuiltin: boolean;
+  isFromDisk?: boolean;
   createdAt: string;
   updatedAt: string;
 }
