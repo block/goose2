@@ -11,6 +11,7 @@ import type { ProjectInfo } from "@/features/projects/api/projects";
 import { SettingsModal } from "@/features/settings/ui/SettingsModal";
 import { useChatStore } from "@/features/chat/stores/chatStore";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
+import { useProjectStore } from "@/features/projects/stores/projectStore";
 import type { Tab } from "@/features/tabs/types";
 
 export type AppView = "home" | "chat" | "skills" | "agents" | "projects";
@@ -27,6 +28,11 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   const chatStore = useChatStore();
   const agentStore = useAgentStore();
+  const projectStore = useProjectStore();
+
+  useEffect(() => {
+    projectStore.fetchProjects();
+  }, [projectStore.fetchProjects]);
 
   const isHome = activeTabId === null && activeView === "home";
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
@@ -86,6 +92,16 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       createNewTab(project.name, project);
     },
     [createNewTab],
+  );
+
+  const handleNewChatInProject = useCallback(
+    (projectId: string) => {
+      const project = projectStore.projects.find((p) => p.id === projectId);
+      if (project) {
+        createNewTab(project.name, project);
+      }
+    },
+    [createNewTab, projectStore.projects],
   );
 
   const handleNewTab = useCallback(() => {
@@ -218,7 +234,12 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             onSettingsClick={() => setSettingsOpen(true)}
             onNavigate={handleNavigate}
             onNewChat={handleNewTab}
+            onNewChatInProject={handleNewChatInProject}
+            onSelectTab={handleTabSelect}
             activeView={activeView}
+            activeTabId={activeTabId}
+            projects={projectStore.projects}
+            tabs={tabs}
             className="h-full shadow-xl rounded-xl"
           />
         </div>

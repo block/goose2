@@ -1,9 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BookOpen,
   Bot,
-  FolderKanban,
-  MessageSquare,
   PanelLeft,
   PanelLeftClose,
   Plus,
@@ -13,6 +11,8 @@ import {
 import { cn } from "@/shared/lib/cn";
 import { GooseIcon } from "@/shared/ui/icons/GooseIcon";
 import type { AppView } from "@/app/AppShell";
+import type { ProjectInfo } from "@/features/projects/api/projects";
+import { SidebarProjectsSection } from "./SidebarProjectsSection";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -21,23 +21,26 @@ interface SidebarProps {
   onSettingsClick?: () => void;
   onSearchClick?: () => void;
   onNewChat?: () => void;
+  onNewChatInProject?: (projectId: string) => void;
   onNavigate?: (view: AppView) => void;
+  onSelectTab?: (tabId: string) => void;
   activeView?: AppView;
+  activeTabId?: string | null;
   className?: string;
+  // Project & tab data
+  projects: ProjectInfo[];
+  tabs: Array<{
+    id: string;
+    title: string;
+    sessionId: string;
+    projectId?: string;
+  }>;
 }
 
 const NAV_ITEMS: readonly { id: AppView; label: string; icon: typeof Bot }[] = [
-  { id: "projects", label: "Projects", icon: FolderKanban },
   { id: "agents", label: "Personas", icon: Bot },
   { id: "skills", label: "Skills", icon: BookOpen },
 ];
-
-const RECENT_CHATS = [
-  { id: "1", name: "Debug login flow", time: "2m" },
-  { id: "2", name: "API refactor notes", time: "1h" },
-  { id: "3", name: "Weekend deploy plan", time: "3h" },
-  { id: "4", name: "Design review", time: "1d" },
-] as const;
 
 export function Sidebar({
   collapsed,
@@ -46,12 +49,20 @@ export function Sidebar({
   onSettingsClick,
   onSearchClick,
   onNewChat,
+  onNewChatInProject,
   onNavigate,
+  onSelectTab,
   activeView,
+  activeTabId,
   className,
+  projects,
+  tabs,
 }: SidebarProps) {
   const [expanded, setExpanded] = useState(!collapsed);
   const prevCollapsed = useRef(collapsed);
+  const [expandedProjects, setExpandedProjects] = useState<
+    Record<string, boolean>
+  >({});
 
   useEffect(() => {
     if (collapsed) {
@@ -67,6 +78,27 @@ export function Sidebar({
 
   const labelTransition = "transition-all duration-300 ease-out";
   const labelVisible = expanded && !collapsed;
+
+  const projectTabs = useMemo(() => {
+    const byProject: Record<string, typeof tabs> = {};
+    const standalone: typeof tabs = [];
+    for (const tab of tabs) {
+      if (tab.projectId) {
+        if (!byProject[tab.projectId]) byProject[tab.projectId] = [];
+        byProject[tab.projectId].push(tab);
+      } else {
+        standalone.push(tab);
+      }
+    }
+    return { byProject, standalone };
+  }, [tabs]);
+
+  const toggleProject = (projectId: string) => {
+    setExpandedProjects((prev) => ({
+      ...prev,
+      [projectId]: !prev[projectId],
+    }));
+  };
 
   return (
     <div
@@ -254,83 +286,20 @@ export function Sidebar({
             )}
           />
 
-          {/* Recent section */}
-          <div
-            className={cn(
-              labelTransition,
-              labelVisible
-                ? "opacity-100 max-h-[2000px]"
-                : collapsed
-                  ? "opacity-100 max-h-[2000px]"
-                  : "opacity-0 max-h-0 overflow-hidden",
-            )}
-          >
-            {/* Section header (expanded only) */}
-            <div
-              className={cn(
-                "flex items-center transition-all duration-300",
-                collapsed ? "px-0 pt-0 pb-1 justify-center" : "px-3 pt-2 pb-1",
-              )}
-            >
-              <span
-                className={cn(
-                  "text-[10px] font-semibold uppercase tracking-wider text-foreground-secondary/70",
-                  labelTransition,
-                  labelVisible
-                    ? "opacity-100 w-auto"
-                    : "opacity-0 w-0 overflow-hidden",
-                )}
-              >
-                Recent
-              </span>
-            </div>
-
-            {/* Chat items */}
-            {collapsed ? (
-              <div className="flex flex-col items-center gap-1">
-                {RECENT_CHATS.map((chat) => (
-                  <button
-                    type="button"
-                    key={chat.id}
-                    title={chat.name}
-                    className={cn(
-                      "flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-200",
-                      "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
-                    )}
-                  >
-                    <MessageSquare className="w-4 h-4" />
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-0.5">
-                {RECENT_CHATS.map((chat, index) => (
-                  <button
-                    key={chat.id}
-                    type="button"
-                    className={cn(
-                      "group flex items-center gap-2 w-full py-1.5 rounded-md text-[13px]",
-                      "transition-colors duration-150 px-2.5",
-                      "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
-                    )}
-                    style={{
-                      transitionDelay:
-                        !collapsed && expanded
-                          ? `${(NAV_ITEMS.length + index) * 30}ms`
-                          : "0ms",
-                    }}
-                  >
-                    <span className="flex-1 min-w-0 truncate text-left">
-                      {chat.name}
-                    </span>
-                    <span className="text-[10px] text-foreground-secondary/60 flex-shrink-0">
-                      {chat.time}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Projects + Chats section */}
+          <SidebarProjectsSection
+            projects={projects}
+            projectTabs={projectTabs}
+            expandedProjects={expandedProjects}
+            toggleProject={toggleProject}
+            collapsed={collapsed}
+            labelTransition={labelTransition}
+            labelVisible={labelVisible}
+            activeTabId={activeTabId}
+            onNavigate={onNavigate}
+            onSelectTab={onSelectTab}
+            onNewChatInProject={onNewChatInProject}
+          />
         </nav>
 
         {/* Footer */}
