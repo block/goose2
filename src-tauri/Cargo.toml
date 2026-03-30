@@ -1,3 +1,6 @@
+[workspace]
+members = [".", "crates/acp-client"]
+
 [package]
 name = "goose2"
 version = "0.1.0"
@@ -27,3 +30,6 @@ uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 futures = "0.3"
 tokio-stream = "0.1"
+tokio-util = { version = "0.7", features = ["rt"] }
+async-trait = "0.1"
+acp-client = { path = "crates/acp-client" }
