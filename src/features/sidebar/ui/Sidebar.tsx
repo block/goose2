@@ -171,7 +171,7 @@ export function Sidebar({
         </div>
 
         {/* Navigation (scrollable) */}
-        <nav className="flex-1 min-h-0 overflow-y-auto px-1.5 py-1">
+        <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-1.5 py-1">
           <div className="space-y-0.5">
             {/* New Chat */}
             <button
