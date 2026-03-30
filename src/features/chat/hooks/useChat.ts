@@ -21,7 +21,6 @@ export function useChat(sessionId: string) {
   const streamingMessageId = store.streamingMessageId;
   const isStreaming = streamingMessageId !== null;
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: store is stable and should not trigger re-creation
   const sendMessage = useCallback(
     async (text: string) => {
       if (!text.trim() || chatState === "streaming" || chatState === "thinking")

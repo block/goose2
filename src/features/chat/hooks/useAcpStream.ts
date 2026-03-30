@@ -45,18 +45,29 @@ export function useAcpStream(sessionId: string, enabled: boolean): void {
   const sessionIdRef = useRef(sessionId);
   sessionIdRef.current = sessionId;
 
+  // Accumulate text chunks across events so updateStreamingText
+  // always receives the full text, not just the latest delta.
+  const accumulatedTextRef = useRef("");
+
   useEffect(() => {
     if (!enabled || !sessionId) return;
 
+    // Reset accumulated text when the session changes or streaming restarts.
+    accumulatedTextRef.current = "";
+
     const unlisteners: Promise<UnlistenFn>[] = [];
 
-    // acp:text — append text to the current streaming message
+    // acp:text — accumulate and update the full text in the streaming message
     unlisteners.push(
       listen<AcpTextPayload>("acp:text", (event) => {
         if (event.payload.sessionId !== sessionIdRef.current) return;
+        accumulatedTextRef.current += event.payload.text;
         useChatStore
           .getState()
-          .updateStreamingText(event.payload.sessionId, event.payload.text);
+          .updateStreamingText(
+            event.payload.sessionId,
+            accumulatedTextRef.current,
+          );
       }),
     );
 
@@ -64,6 +75,7 @@ export function useAcpStream(sessionId: string, enabled: boolean): void {
     unlisteners.push(
       listen<AcpDonePayload>("acp:done", (event) => {
         if (event.payload.sessionId !== sessionIdRef.current) return;
+        accumulatedTextRef.current = "";
         const store = useChatStore.getState();
         store.setStreamingMessageId(null);
         store.setChatState("idle");

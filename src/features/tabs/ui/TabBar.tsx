@@ -38,22 +38,29 @@ export function TabBar({
         className="flex items-center gap-0.5 overflow-x-auto px-1"
       >
         {tabs.map((tab) => (
-          <button
+          <div
             key={tab.id}
-            type="button"
             role="tab"
+            tabIndex={0}
             aria-selected={tab.id === activeTabId}
             onClick={() => onTabSelect(tab.id)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onTabSelect(tab.id);
+              }
+            }}
             className={cn(
-              "group flex h-7 items-center gap-1.5 rounded-md pl-3 pr-1.5 text-xs transition-colors",
+              "group flex h-7 cursor-pointer items-center gap-1.5 rounded-md pl-3 pr-1.5 text-xs transition-colors",
               tab.id === activeTabId
                 ? "bg-background-secondary text-foreground"
                 : "text-foreground-secondary hover:bg-background-secondary/50 hover:text-foreground",
             )}
           >
             <span className="truncate">{tab.title}</span>
-            <button
-              type="button"
+            {/* biome-ignore lint/a11y/useKeyWithClickEvents: close is a secondary action inside an interactive tab, keyboard users close tabs via other means */}
+            {/* biome-ignore lint/a11y/noStaticElementInteractions: cannot use button inside a tab element, span with click is intentional */}
+            <span
               tabIndex={-1}
               onClick={(e) => {
                 e.stopPropagation();
@@ -62,8 +69,8 @@ export function TabBar({
               className="flex h-4 w-4 shrink-0 items-center justify-center rounded opacity-0 transition-opacity hover:bg-background-secondary group-hover:opacity-100"
             >
               <X className="h-3 w-3" />
-            </button>
-          </button>
+            </span>
+          </div>
         ))}
       </div>
 
