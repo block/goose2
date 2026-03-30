@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { TabBar } from "@/features/tabs/ui/TabBar";
 import { Sidebar } from "@/features/sidebar/ui/Sidebar";
 import { StatusBar } from "@/features/status/ui/StatusBar";
@@ -7,6 +7,8 @@ import { ChatView } from "@/features/chat/ui/ChatView";
 import { SkillsView } from "@/features/skills/ui/SkillsView";
 import { AgentsView } from "@/features/agents/ui/AgentsView";
 import { SettingsModal } from "@/features/settings/ui/SettingsModal";
+import { useChatStore } from "@/features/chat/stores/chatStore";
+import { useAgentStore } from "@/features/agents/stores/agentStore";
 import type { Tab } from "@/features/tabs/types";
 
 export type AppView = "home" | "chat" | "skills" | "agents";
@@ -20,26 +22,89 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<AppView>("home");
-  const isHome = activeTabId === null && activeView === "home";
 
-  const handleNewTab = () => {
-    const id = String(Date.now());
-    setTabs((prev) => [...prev, { id, title: "New Chat" }]);
-    setActiveTabId(id);
-    setActiveView("chat");
-  };
+  const chatStore = useChatStore();
+  const agentStore = useAgentStore();
+
+  const isHome = activeTabId === null && activeView === "home";
+  const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
+
+  // Derive status bar values from stores
+  const activeAgent = agentStore.getActiveAgent();
+  const modelName = activeAgent?.model ?? "Claude Sonnet 4";
+  const tokenCount = chatStore.tokenState.totalTokens;
+  const connectionStatus = chatStore.isConnected
+    ? ("connected" as const)
+    : ("disconnected" as const);
+
+  const createNewTab = useCallback(
+    (title = "New Chat") => {
+      const id = crypto.randomUUID();
+      const sessionId = crypto.randomUUID();
+      const agentId = agentStore.activeAgentId ?? undefined;
+
+      const tab: Tab = { id, title, sessionId, agentId };
+      setTabs((prev) => [...prev, tab]);
+      setActiveTabId(id);
+      setActiveView("chat");
+
+      // Set the active session in chatStore
+      chatStore.setActiveSession(sessionId);
+
+      return tab;
+    },
+    [chatStore, agentStore.activeAgentId],
+  );
+
+  const handleNewTab = useCallback(() => {
+    createNewTab();
+  }, [createNewTab]);
+
+  const handleHomeStartChat = useCallback(
+    (initialMessage?: string) => {
+      const tab = createNewTab(initialMessage?.slice(0, 40) || "New Chat");
+      // The ChatView will handle sending the initial message via its own input
+      // We just need to create the tab and session
+      void tab; // tab is used for side effects in createNewTab
+    },
+    [createNewTab],
+  );
 
   const handleTabClose = (id: string) => {
     setTabs((prev) => {
+      const closingTab = prev.find((t) => t.id === id);
       const next = prev.filter((t) => t.id !== id);
+
+      // Cleanup session data when closing tab
+      if (closingTab) {
+        chatStore.cleanupSession(closingTab.sessionId);
+      }
+
       if (activeTabId === id) {
-        const nextId = next[0]?.id ?? null;
-        setActiveTabId(nextId);
-        if (!nextId) setActiveView("home");
+        const nextTab = next[0] ?? null;
+        setActiveTabId(nextTab?.id ?? null);
+        if (nextTab) {
+          chatStore.setActiveSession(nextTab.sessionId);
+          setActiveView("chat");
+        } else {
+          setActiveView("home");
+        }
       }
       return next;
     });
   };
+
+  const handleTabSelect = useCallback(
+    (id: string) => {
+      setActiveTabId(id);
+      setActiveView("chat");
+      const tab = tabs.find((t) => t.id === id);
+      if (tab) {
+        chatStore.setActiveSession(tab.sessionId);
+      }
+    },
+    [tabs, chatStore],
+  );
 
   const handleNavigate = (view: AppView) => {
     setActiveView(view);
@@ -74,9 +139,17 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       case "agents":
         return <AgentsView />;
       case "chat":
-        return <ChatView />;
+        return activeTab ? (
+          <ChatView sessionId={activeTab.sessionId} />
+        ) : (
+          <HomeScreen onStartChat={handleHomeStartChat} />
+        );
       case "home":
-        return activeTabId ? <ChatView /> : <HomeScreen />;
+        return activeTab ? (
+          <ChatView sessionId={activeTab.sessionId} />
+        ) : (
+          <HomeScreen onStartChat={handleHomeStartChat} />
+        );
     }
   };
 
@@ -86,7 +159,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       <TabBar
         tabs={tabs}
         activeTabId={activeTabId}
-        onTabSelect={setActiveTabId}
+        onTabSelect={handleTabSelect}
         onTabClose={handleTabClose}
         onNewTab={handleNewTab}
         onHomeClick={() => handleNavigate("home")}
@@ -129,9 +202,9 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         }`}
       >
         <StatusBar
-          modelName="Claude Sonnet 4"
-          tokenCount={0}
-          status="connected"
+          modelName={modelName}
+          tokenCount={tokenCount}
+          status={connectionStatus}
         />
       </div>
 

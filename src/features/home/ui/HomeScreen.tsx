@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
-import { ArrowUp } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { ArrowUp, Paperclip } from "lucide-react";
+import { cn } from "@/shared/lib/cn";
 
 function HomeClock() {
   const [time, setTime] = useState(new Date());
@@ -33,7 +34,80 @@ function getGreeting(hour: number): string {
   return "Good evening";
 }
 
-export function HomeScreen() {
+function HomeInput({ onStartChat }: { onStartChat?: (msg?: string) => void }) {
+  const [value, setValue] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const hasContent = value.trim().length > 0;
+
+  const handleSubmit = () => {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    onStartChat?.(trimmed);
+    setValue("");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
+  return (
+    <div className="px-4 pb-6 pt-2">
+      <div className="relative max-w-3xl mx-auto rounded-2xl px-4 pt-4 pb-3 bg-background-secondary border border-border shadow-lg">
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Ask Goose anything..."
+          rows={1}
+          className="w-full resize-none bg-transparent text-[14px] leading-relaxed px-1 placeholder:text-muted-foreground/60 focus:outline-none min-h-[36px] max-h-[200px] mb-3"
+        />
+        {/* Bottom bar */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center">
+            <span className="rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground">
+              Claude Sonnet 4
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+            >
+              <Paperclip className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={!hasContent}
+              className={cn(
+                "w-8 h-8 rounded-full flex items-center justify-center",
+                hasContent
+                  ? "bg-foreground text-background hover:opacity-90"
+                  : "bg-foreground/10 text-muted-foreground cursor-default",
+              )}
+            >
+              <ArrowUp className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+      <p className="text-[10px] text-muted-foreground/40 text-center mt-2">
+        ⏎ to send · ⇧⏎ for newline
+      </p>
+    </div>
+  );
+}
+
+interface HomeScreenProps {
+  onStartChat?: (initialMessage?: string) => void;
+}
+
+export function HomeScreen({ onStartChat }: HomeScreenProps) {
   const [hour] = useState(() => new Date().getHours());
   const greeting = getGreeting(hour);
 
@@ -50,28 +124,7 @@ export function HomeScreen() {
           </p>
 
           {/* Chat input */}
-          <div className="px-4 pb-6 pt-2">
-            <div className="relative rounded-2xl bg-background-secondary border border-border px-4 pt-4 pb-3 shadow-lg">
-              {/* Textarea placeholder */}
-              <div className="mb-3 min-h-[36px] w-full px-1 text-sm leading-relaxed text-foreground-tertiary">
-                Ask Goose anything...
-              </div>
-              {/* Bottom bar */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1 text-xs text-foreground-tertiary">
-                  <span className="rounded-md border border-border px-2 py-0.5">
-                    Claude Sonnet 4
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground/10 text-foreground-secondary transition-all"
-                >
-                  <ArrowUp className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </div>
+          <HomeInput onStartChat={onStartChat} />
         </div>
       </div>
     </div>

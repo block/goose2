@@ -1,0 +1,27 @@
+import { invoke } from "@tauri-apps/api/core";
+import type {
+  Persona,
+  CreatePersonaRequest,
+  UpdatePersonaRequest,
+} from "@/shared/types/agents";
+
+export async function listPersonas(): Promise<Persona[]> {
+  return invoke("list_personas");
+}
+
+export async function createPersona(
+  request: CreatePersonaRequest,
+): Promise<Persona> {
+  return invoke("create_persona", { request });
+}
+
+export async function updatePersona(
+  id: string,
+  request: UpdatePersonaRequest,
+): Promise<Persona> {
+  return invoke("update_persona", { id, request });
+}
+
+export async function deletePersona(id: string): Promise<void> {
+  return invoke("delete_persona", { id });
+}
