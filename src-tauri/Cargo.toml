@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "crates/acp-client"]
+members = ["."]
 
 [package]
 name = "goose2"
@@ -34,4 +34,4 @@ futures = "0.3"
 tokio-stream = "0.1"
 tokio-util = { version = "0.7", features = ["rt"] }
 async-trait = "0.1"
-acp-client = { path = "crates/acp-client" }
+acp-client = { git = "https://github.com/block/builderbot", branch = "main" }
