@@ -1,8 +1,9 @@
 use serde::Serialize;
-use tauri::AppHandle;
+use std::sync::Arc;
+use tauri::{AppHandle, State};
 
 use acp_client::discover_providers;
-use crate::services::acp::AcpService;
+use crate::services::acp::{AcpService, AcpSessionRegistry, AcpRunningSession};
 
 /// Response type for an ACP provider, sent to the frontend.
 #[derive(Serialize)]
@@ -31,11 +32,46 @@ pub async fn discover_acp_providers() -> Vec<AcpProviderResponse> {
 #[tauri::command]
 pub async fn acp_send_message(
     app_handle: AppHandle,
+    registry: State<'_, Arc<AcpSessionRegistry>>,
     session_id: String,
     provider_id: String,
     prompt: String,
 ) -> Result<(), String> {
     let working_dir = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("/tmp"));
 
-    AcpService::send_prompt(app_handle, session_id, provider_id, prompt, working_dir).await
+    AcpService::send_prompt(
+        app_handle,
+        Arc::clone(&registry),
+        session_id,
+        provider_id,
+        prompt,
+        working_dir,
+    )
+    .await
+}
+
+/// Cancel a running ACP session.
+#[tauri::command]
+pub async fn acp_cancel_session(
+    registry: State<'_, Arc<AcpSessionRegistry>>,
+    session_id: String,
+) -> Result<bool, String> {
+    Ok(registry.cancel(&session_id))
+}
+
+/// List all currently running ACP sessions.
+#[tauri::command]
+pub async fn acp_list_running(
+    registry: State<'_, Arc<AcpSessionRegistry>>,
+) -> Result<Vec<AcpRunningSession>, String> {
+    Ok(registry.list_running())
+}
+
+/// Cancel all running ACP sessions (used during shutdown).
+#[tauri::command]
+pub async fn acp_cancel_all(
+    registry: State<'_, Arc<AcpSessionRegistry>>,
+) -> Result<(), String> {
+    registry.cancel_all();
+    Ok(())
 }
