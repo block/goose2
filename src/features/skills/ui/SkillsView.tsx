@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { SearchBar } from "@/shared/ui/SearchBar";
+import { useFileImportZone } from "@/shared/hooks/useFileImportZone";
 import { CreateSkillDialog } from "./CreateSkillDialog";
 import {
   listSkills,
@@ -242,6 +243,25 @@ export function SkillsView() {
     setDialogOpen(true);
   };
 
+  const handleDropImport = useCallback(
+    async (fileBytes: number[], fileName: string) => {
+      try {
+        await importSkills(fileBytes, fileName);
+        await loadSkills();
+      } catch (err) {
+        console.error("Failed to import skill:", err);
+      }
+    },
+    [loadSkills],
+  );
+
+  const {
+    fileInputRef: dropFileInputRef,
+    isDragOver,
+    dropHandlers,
+    handleFileChange: handleDropFileChange,
+  } = useFileImportZone({ onImportFile: handleDropImport });
+
   const filtered = skills.filter(
     (s) =>
       s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -321,12 +341,41 @@ export function SkillsView() {
                   />
                 </div>
               ))}
+
+              {/* New Skill card */}
+              <button
+                type="button"
+                onClick={handleNewSkill}
+                {...dropHandlers}
+                className={cn(
+                  "flex w-full items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-3 transition-colors",
+                  isDragOver
+                    ? "border-ring bg-background-secondary"
+                    : "border-border hover:border-foreground-secondary/40 hover:bg-background-secondary/50",
+                )}
+              >
+                <Plus className="h-4 w-4 text-foreground-secondary" />
+                <span className="text-sm text-foreground-secondary">
+                  New Skill
+                </span>
+                <span className="text-xs text-foreground-secondary/50 ml-1">
+                  or drop a file
+                </span>
+              </button>
             </div>
           )}
 
           {/* Empty state */}
           {!loading && filtered.length === 0 && (
-            <div className="flex flex-col items-center justify-center gap-3 py-16 text-foreground-secondary">
+            <div
+              {...dropHandlers}
+              className={cn(
+                "flex flex-col items-center justify-center gap-3 py-16 text-foreground-secondary rounded-lg border border-dashed transition-colors",
+                isDragOver
+                  ? "border-ring bg-background-secondary"
+                  : "border-transparent",
+              )}
+            >
               <AtSign className="h-10 w-10 opacity-30" />
               <div className="text-center">
                 <p className="text-sm font-medium">
@@ -334,14 +383,33 @@ export function SkillsView() {
                 </p>
                 <p className="text-xs text-foreground-secondary/60 mt-1">
                   {skills.length === 0
-                    ? "Skills you add will appear here."
+                    ? "Create a skill or drop a .skill.json file here."
                     : "Try a different search term."}
                 </p>
               </div>
+              {skills.length === 0 && (
+                <button
+                  type="button"
+                  onClick={handleNewSkill}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-background-tertiary transition-colors mt-2"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  New Skill
+                </button>
+              )}
             </div>
           )}
         </div>
       </div>
+
+      {/* Hidden file input for drag-and-drop import */}
+      <input
+        ref={dropFileInputRef}
+        type="file"
+        accept=".skill.json,.json"
+        className="hidden"
+        onChange={handleDropFileChange}
+      />
 
       {/* Create / Edit dialog */}
       <CreateSkillDialog

@@ -107,12 +107,12 @@ export function CreateSkillDialog({
       <div
         className={cn(
           "relative z-10 w-full max-w-lg rounded-xl border border-border bg-background shadow-xl",
-          "max-h-[85vh] overflow-y-auto",
+          "max-h-[85vh] flex flex-col",
           "motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95",
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+        <div className="shrink-0 flex items-center justify-between border-b border-border px-5 py-4">
           <h2 className="text-sm font-semibold">
             {isEditing ? "Edit Skill" : "New Skill"}
           </h2>
@@ -126,7 +126,12 @@ export function CreateSkillDialog({
           </button>
         </div>
 
-        <form onSubmit={handleSave} className="space-y-4 p-5">
+        {/* Scrollable content */}
+        <form
+          id="skill-form"
+          onSubmit={handleSave}
+          className="min-h-0 flex-1 overflow-y-auto space-y-4 p-5"
+        >
           {/* Name */}
           <label className="block space-y-1">
             <span className="text-xs font-medium text-foreground-secondary">
@@ -193,29 +198,29 @@ export function CreateSkillDialog({
 
           {/* Error */}
           {error && <p className="text-xs text-foreground-danger">{error}</p>}
-
-          {/* Actions */}
-          <div className="flex items-center justify-end gap-2 pt-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={handleClose}
-              disabled={saving}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" size="sm" disabled={!canSave}>
-              {saving
-                ? isEditing
-                  ? "Saving..."
-                  : "Creating..."
-                : isEditing
-                  ? "Save Changes"
-                  : "Create Skill"}
-            </Button>
-          </div>
         </form>
+
+        {/* Footer */}
+        <div className="shrink-0 border-t border-border px-5 py-4 flex items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleClose}
+            disabled={saving}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" form="skill-form" size="sm" disabled={!canSave}>
+            {saving
+              ? isEditing
+                ? "Saving..."
+                : "Creating..."
+              : isEditing
+                ? "Save Changes"
+                : "Create Skill"}
+          </Button>
+        </div>
       </div>
     </div>
   );
