@@ -10,16 +10,20 @@ interface ChatViewProps {
   sessionId?: string;
   agentName?: string;
   agentAvatarUrl?: string;
+  initialProvider?: string;
 }
 
 export function ChatView({
   sessionId,
   agentName = "Goose",
   agentAvatarUrl,
+  initialProvider,
 }: ChatViewProps) {
   const [activeSessionId] = useState(() => sessionId ?? crypto.randomUUID());
   const [providers, setProviders] = useState<AcpProvider[]>([]);
-  const [selectedProvider, setSelectedProvider] = useState("goose");
+  const [selectedProvider, setSelectedProvider] = useState(
+    initialProvider ?? "goose",
+  );
 
   useEffect(() => {
     discoverAcpProviders()
@@ -37,6 +41,9 @@ export function ChatView({
       })
       .catch(() => setProviders([]));
   }, []);
+
+  const providerLabel = providers.find((p) => p.id === selectedProvider)?.label;
+  const displayAgentName = providerLabel ?? agentName;
 
   const {
     messages,
@@ -58,13 +65,13 @@ export function ChatView({
         messages={messages}
         streamingMessageId={streamingMessageId}
         isStreaming={isStreaming}
-        agentName={agentName}
+        agentName={displayAgentName}
         agentAvatarUrl={agentAvatarUrl}
       />
 
       {showIndicator && (
         <StreamingIndicator
-          agentName={agentName}
+          agentName={displayAgentName}
           state={chatState as "thinking" | "streaming" | "compacting"}
         />
       )}
@@ -73,7 +80,7 @@ export function ChatView({
         onSend={sendMessage}
         onStop={stopStreaming}
         isStreaming={isStreaming || chatState === "thinking"}
-        placeholder={`Message ${agentName}...`}
+        placeholder={`Message ${displayAgentName}...`}
         providers={providers}
         selectedProvider={selectedProvider}
         onProviderChange={setSelectedProvider}
