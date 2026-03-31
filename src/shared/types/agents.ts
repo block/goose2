@@ -79,47 +79,4 @@ export interface CreateAgentRequest {
   acpEndpoint?: string;
 }
 
-// Session types
-export interface Session {
-  id: string;
-  title: string;
-  agentId?: string;
-  createdAt: string;
-  updatedAt: string;
-  messageCount: number;
-  lastMessagePreview?: string;
-}
-
-// Token tracking
-export interface TokenState {
-  inputTokens: number;
-  outputTokens: number;
-  totalTokens: number;
-  accumulatedInput: number;
-  accumulatedOutput: number;
-  accumulatedTotal: number;
-}
-
-// Chat state
-export type ChatState =
-  | "idle"
-  | "thinking"
-  | "streaming"
-  | "waiting"
-  | "compacting"
-  | "error";
-
-// SSE event types (from goosed server)
-export type MessageEventType =
-  | "message"
-  | "error"
-  | "finish"
-  | "modelChange"
-  | "notification"
-  | "updateConversation"
-  | "ping";
-
-export interface MessageEvent {
-  type: MessageEventType;
-  data: unknown;
-}
+// Session, TokenState, ChatState, and MessageEventType are defined in ./chat.ts
