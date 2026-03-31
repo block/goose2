@@ -1,4 +1,4 @@
-use crate::types::agents::Session;
+use crate::types::agents::{Session, SessionUpdate};
 use crate::types::messages::Message;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -93,6 +93,9 @@ impl SessionStore {
             title: "New Chat".to_string(),
             agent_id,
             project_id,
+            provider_id: None,
+            persona_id: None,
+            model_name: None,
             created_at: now.clone(),
             updated_at: now,
             message_count: 0,
@@ -129,6 +132,9 @@ impl SessionStore {
                     title: "New Chat".to_string(),
                     agent_id,
                     project_id: None,
+                    provider_id: None,
+                    persona_id: None,
+                    model_name: None,
                     created_at: now.clone(),
                     updated_at: now,
                     message_count: 0,
@@ -190,14 +196,24 @@ impl SessionStore {
         self.load_messages(session_id)
     }
 
-    #[allow(dead_code)]
-    pub fn update_session_title(&self, id: &str, title: &str) -> Result<(), String> {
+    pub fn update_session(&self, id: &str, update: SessionUpdate) -> Result<(), String> {
         let mut sessions = self.sessions.lock().unwrap();
         let session = sessions
             .get_mut(id)
             .ok_or_else(|| format!("Session '{}' not found", id))?;
 
-        session.title = title.to_string();
+        if let Some(title) = update.title {
+            session.title = title;
+        }
+        if let Some(provider_id) = update.provider_id {
+            session.provider_id = Some(provider_id);
+        }
+        if let Some(persona_id) = update.persona_id {
+            session.persona_id = Some(persona_id);
+        }
+        if let Some(model_name) = update.model_name {
+            session.model_name = Some(model_name);
+        }
         session.updated_at = chrono::Utc::now().to_rfc3339();
         self.save_metadata(&sessions);
         Ok(())

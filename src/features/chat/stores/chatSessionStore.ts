@@ -3,6 +3,7 @@ import {
   createSession as apiCreateSession,
   listSessions as apiListSessions,
   deleteSession as apiDeleteSession,
+  updateSession as apiUpdateSession,
   saveUiState as apiSaveUiState,
   loadUiState as apiLoadUiState,
 } from "@/shared/api/chat";
@@ -16,6 +17,7 @@ export interface ChatSession {
   agentId?: string;
   providerId?: string;
   personaId?: string;
+  modelName?: string;
   createdAt: string; // ISO timestamp
   updatedAt: string;
 }
@@ -63,6 +65,9 @@ function sessionToChatSession(session: Session): ChatSession {
     title: session.title,
     agentId: session.agentId,
     projectId: session.projectId,
+    providerId: session.providerId,
+    personaId: session.personaId,
+    modelName: session.modelName,
     createdAt: session.createdAt,
     updatedAt: session.updatedAt,
   };
@@ -92,6 +97,16 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
       createdAt: backendSession.createdAt ?? now,
       updatedAt: backendSession.updatedAt ?? now,
     };
+    // Persist initial metadata (title, persona, provider) to backend
+    const initialUpdate: Record<string, string> = {};
+    if (opts?.title) initialUpdate.title = opts.title;
+    if (opts?.providerId) initialUpdate.providerId = opts.providerId;
+    if (opts?.personaId) initialUpdate.personaId = opts.personaId;
+    if (Object.keys(initialUpdate).length > 0) {
+      apiUpdateSession(backendSession.id, initialUpdate).catch((err) => {
+        console.error("Failed to persist initial session metadata:", err);
+      });
+    }
     set((state) => ({
       sessions: [...state.sessions, chatSession],
     }));
@@ -109,14 +124,26 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     }
   },
 
-  updateSession: (id, patch) =>
+  updateSession: (id, patch) => {
     set((state) => ({
       sessions: state.sessions.map((s) =>
         s.id === id
           ? { ...s, ...patch, updatedAt: new Date().toISOString() }
           : s,
       ),
-    })),
+    }));
+    // Persist persistable fields to the backend
+    const backendPatch: Record<string, string> = {};
+    if (patch.title) backendPatch.title = patch.title;
+    if (patch.providerId) backendPatch.providerId = patch.providerId;
+    if (patch.personaId) backendPatch.personaId = patch.personaId;
+    if (patch.modelName) backendPatch.modelName = patch.modelName;
+    if (Object.keys(backendPatch).length > 0) {
+      apiUpdateSession(id, backendPatch).catch((err) => {
+        console.error("Failed to persist session update:", err);
+      });
+    }
+  },
 
   archiveSession: async (id) => {
     // Remove from open tabs immediately for responsive UI
@@ -191,21 +218,17 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
 
   // Persistence
   persistTabState: () => {
-    const { openTabIds, activeTabId, sessions } = get();
-    // Build persona mapping from sessions
-    const personaPerSession: Record<string, string> = {};
-    for (const s of sessions) {
-      if (s.personaId) personaPerSession[s.id] = s.personaId;
-    }
-    apiSaveUiState(openTabIds, activeTabId, personaPerSession).catch((err) => {
+    const { openTabIds, activeTabId } = get();
+    // personaPerSession kept for backward compat with ui_state.json but
+    // persona is now persisted on the session itself via update_session.
+    apiSaveUiState(openTabIds, activeTabId, {}).catch((err) => {
       console.error("Failed to persist tab state:", err);
     });
   },
 
   loadTabState: async () => {
     try {
-      const { openTabIds, activeTabId, personaPerSession } =
-        await apiLoadUiState();
+      const { openTabIds, activeTabId } = await apiLoadUiState();
       const { sessions } = get();
       const sessionIds = new Set(sessions.map((s) => s.id));
 
@@ -216,14 +239,7 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
           ? activeTabId
           : (validTabIds[0] ?? null);
 
-      // Restore persona IDs from persisted mapping
-      const updatedSessions = sessions.map((s) => {
-        const personaId = personaPerSession?.[s.id];
-        return personaId ? { ...s, personaId } : s;
-      });
-
       set({
-        sessions: updatedSessions,
         openTabIds: validTabIds,
         activeTabId: validActiveTabId,
       });

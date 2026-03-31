@@ -77,11 +77,27 @@ pub struct Session {
     pub agent_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub project_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub provider_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub persona_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub model_name: Option<String>,
     pub created_at: String,
     pub updated_at: String,
     pub message_count: u32,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_message_preview: Option<String>,
+}
+
+/// Partial update for a session — only provided fields are applied.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionUpdate {
+    pub title: Option<String>,
+    pub provider_id: Option<String>,
+    pub persona_id: Option<String>,
+    pub model_name: Option<String>,
 }
 
 /// Built-in persona definitions

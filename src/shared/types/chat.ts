@@ -35,6 +35,9 @@ export interface Session {
   title: string;
   agentId?: string;
   projectId?: string;
+  providerId?: string;
+  personaId?: string;
+  modelName?: string;
   createdAt: string;
   updatedAt: string;
   messageCount: number;
