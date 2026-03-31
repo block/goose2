@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::services::sessions::SessionStore;
-use crate::types::agents::Session;
+use crate::types::agents::{Session, SessionUpdate};
 use crate::types::messages::Message;
 use tauri::State;
 
@@ -25,6 +25,15 @@ pub fn get_session_messages(
     session_id: String,
 ) -> Vec<Message> {
     store.get_messages(&session_id)
+}
+
+#[tauri::command]
+pub fn update_session(
+    store: State<'_, Arc<SessionStore>>,
+    session_id: String,
+    update: SessionUpdate,
+) -> Result<(), String> {
+    store.update_session(&session_id, update)
 }
 
 #[tauri::command]

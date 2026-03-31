@@ -53,7 +53,7 @@ export function StatusBar({
             </button>
           </div>
         )}
-        <span>{tokenCount.toLocaleString()} tokens</span>
+        {tokenCount > 0 && <span>{tokenCount.toLocaleString()} tokens</span>}
         <div
           role="status"
           aria-label={status}

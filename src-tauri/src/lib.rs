@@ -46,6 +46,7 @@ pub fn run() {
             commands::sessions::create_session,
             commands::sessions::list_sessions,
             commands::sessions::get_session_messages,
+            commands::sessions::update_session,
             commands::sessions::delete_session,
             commands::ui_state::save_ui_state,
             commands::ui_state::load_ui_state,

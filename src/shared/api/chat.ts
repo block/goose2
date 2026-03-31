@@ -26,6 +26,18 @@ export async function sendMessage(
   return invoke("chat_send_message", { sessionId, message });
 }
 
+export async function updateSession(
+  sessionId: string,
+  update: {
+    title?: string;
+    providerId?: string;
+    personaId?: string;
+    modelName?: string;
+  },
+): Promise<void> {
+  return invoke("update_session", { sessionId, update });
+}
+
 export async function deleteSession(sessionId: string): Promise<void> {
   return invoke("delete_session", { sessionId });
 }
