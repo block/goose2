@@ -8,6 +8,7 @@ import { SkillsView } from "@/features/skills/ui/SkillsView";
 import { AgentsView } from "@/features/agents/ui/AgentsView";
 import { ProjectsView } from "@/features/projects/ui/ProjectsView";
 import { CreateProjectDialog } from "@/features/projects/ui/CreateProjectDialog";
+import { deleteProject } from "@/features/projects/api/projects";
 import type { ProjectInfo } from "@/features/projects/api/projects";
 import { SettingsModal } from "@/features/settings/ui/SettingsModal";
 import { useChatStore } from "@/features/chat/stores/chatStore";
@@ -107,6 +108,42 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       }
     },
     [createNewTab, projectStore.projects],
+  );
+
+  const handleArchiveProject = useCallback(
+    async (projectId: string) => {
+      try {
+        await deleteProject(projectId);
+        projectStore.fetchProjects();
+      } catch {
+        // best-effort
+      }
+    },
+    [projectStore.fetchProjects],
+  );
+
+  const handleArchiveChat = useCallback(
+    (tabId: string) => {
+      setTabs((prev) => {
+        const closingTab = prev.find((t) => t.id === tabId);
+        const next = prev.filter((t) => t.id !== tabId);
+        if (closingTab) {
+          chatStore.cleanupSession(closingTab.sessionId);
+        }
+        if (activeTabId === tabId) {
+          const nextTab = next[0] ?? null;
+          setActiveTabId(nextTab?.id ?? null);
+          if (nextTab) {
+            chatStore.setActiveSession(nextTab.sessionId);
+            setActiveView("chat");
+          } else {
+            setActiveView("home");
+          }
+        }
+        return next;
+      });
+    },
+    [activeTabId, chatStore],
   );
 
   const handleEditProject = useCallback(
@@ -253,6 +290,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             onNewChatInProject={handleNewChatInProject}
             onCreateProject={() => setCreateProjectOpen(true)}
             onEditProject={handleEditProject}
+            onArchiveProject={handleArchiveProject}
+            onArchiveChat={handleArchiveChat}
             onSelectTab={handleTabSelect}
             activeView={activeView}
             activeTabId={activeTabId}

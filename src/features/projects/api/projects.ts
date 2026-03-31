@@ -11,6 +11,7 @@ export interface ProjectInfo {
   preferredModel: string | null;
   workingDir: string | null;
   useWorktrees: boolean;
+  order: number;
   createdAt: string;
   updatedAt: string;
 }

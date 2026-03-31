@@ -106,6 +106,8 @@ pub struct ProjectInfo {
     pub preferred_model: Option<String>,
     pub working_dir: Option<String>,
     pub use_worktrees: bool,
+    #[serde(default)]
+    pub order: i32,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -143,7 +145,7 @@ pub fn list_projects() -> Result<Vec<ProjectInfo>, String> {
         projects.push(info);
     }
 
-    projects.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    projects.sort_by_key(|p| p.order);
     Ok(projects)
 }
 
@@ -180,6 +182,14 @@ pub fn create_project(
         }
     }
 
+    let existing_count = if base.exists() {
+        fs::read_dir(&base)
+            .map(|entries| entries.flatten().filter(|e| e.path().is_dir()).count())
+            .unwrap_or(0)
+    } else {
+        0
+    };
+
     let dir = base.join(&dir_name);
     fs::create_dir_all(&dir).map_err(|e| format!("Failed to create project directory: {}", e))?;
 
@@ -195,6 +205,7 @@ pub fn create_project(
         preferred_model,
         working_dir,
         use_worktrees,
+        order: existing_count as i32,
         created_at: now.clone(),
         updated_at: now,
     };
@@ -238,6 +249,7 @@ pub fn update_project(
         preferred_model,
         working_dir,
         use_worktrees,
+        order: existing.order,
         created_at: existing.created_at,
         updated_at: now_timestamp(),
     };
