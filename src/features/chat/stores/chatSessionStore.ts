@@ -116,7 +116,7 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     })),
 
   archiveSession: async (id) => {
-    // Remove from open tabs
+    // Remove from open tabs immediately for responsive UI
     set((state) => {
       const newOpenTabIds = state.openTabIds.filter((tabId) => tabId !== id);
       const newActiveTabId =
@@ -130,17 +130,15 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     });
     get().persistTabState();
 
-    // Delete from backend
+    // Delete from backend — only remove from local sessions on success
     try {
       await apiDeleteSession(id);
+      set((state) => ({
+        sessions: state.sessions.filter((s) => s.id !== id),
+      }));
     } catch (err) {
       console.error("Failed to delete session from backend:", err);
     }
-
-    // Remove from local sessions list
-    set((state) => ({
-      sessions: state.sessions.filter((s) => s.id !== id),
-    }));
   },
 
   // Tab management

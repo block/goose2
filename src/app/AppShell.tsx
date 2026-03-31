@@ -71,18 +71,18 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   // Load sessions and tab state on mount
   useEffect(() => {
-    const { loadSessions, loadTabState } = useChatSessionStore.getState();
-    loadSessions().then(() => {
-      loadTabState().then(() => {
-        // If there's an active tab after loading, switch to chat view and sync chatStore
-        const { activeTabId } = useChatSessionStore.getState();
-        if (activeTabId) {
-          setActiveView("chat");
-          useChatStore.getState().setActiveSession(activeTabId);
-          loadSessionMessages(activeTabId);
-        }
-      });
-    });
+    (async () => {
+      const { loadSessions, loadTabState } = useChatSessionStore.getState();
+      await loadSessions();
+      await loadTabState();
+      // If there's an active tab after loading, switch to chat view and sync chatStore
+      const { activeTabId: restoredTabId } = useChatSessionStore.getState();
+      if (restoredTabId) {
+        setActiveView("chat");
+        useChatStore.getState().setActiveSession(restoredTabId);
+        loadSessionMessages(restoredTabId);
+      }
+    })();
   }, [loadSessionMessages]);
 
   useEffect(() => {
@@ -92,24 +92,23 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   // Derive tab objects from session store for TabBar and Sidebar compatibility
   const { sessions, openTabIds, activeTabId } = sessionStore;
 
-  const tabs: Tab[] = useMemo(
-    () =>
-      openTabIds.reduce<Tab[]>((acc, id) => {
-        const session = sessions.find((s) => s.id === id);
-        if (session) {
-          const tab: Tab = {
-            id: session.id,
-            title: session.title,
-            sessionId: session.id, // tab ID === session ID in new model
-          };
-          if (session.agentId) tab.agentId = session.agentId;
-          if (session.projectId) tab.projectId = session.projectId;
-          acc.push(tab);
-        }
-        return acc;
-      }, []),
-    [openTabIds, sessions],
-  );
+  const tabs: Tab[] = useMemo(() => {
+    const sessionMap = new Map(sessions.map((s) => [s.id, s]));
+    return openTabIds.reduce<Tab[]>((acc, id) => {
+      const session = sessionMap.get(id);
+      if (session) {
+        const tab: Tab = {
+          id: session.id,
+          title: session.title,
+          sessionId: session.id, // tab ID === session ID in new model
+        };
+        if (session.agentId) tab.agentId = session.agentId;
+        if (session.projectId) tab.projectId = session.projectId;
+        acc.push(tab);
+      }
+      return acc;
+    }, []);
+  }, [openTabIds, sessions]);
 
   const isHome = activeTabId === null && activeView === "home";
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;

@@ -62,14 +62,13 @@ export function ChatView({
 
   // Auto-send initial message from HomeScreen on mount
   const initialMessageSent = useRef(false);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally mount-only; key={sessionId} forces remount on session change
   useEffect(() => {
     if (initialMessage && !initialMessageSent.current) {
       initialMessageSent.current = true;
       sendMessage(initialMessage);
       onInitialMessageConsumed?.();
     }
-  }, []);
+  }, [initialMessage, sendMessage, onInitialMessageConsumed]);
 
   const isStreaming = chatState === "streaming";
   const showIndicator = chatState === "thinking" || chatState === "compacting";

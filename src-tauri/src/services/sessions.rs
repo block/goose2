@@ -33,17 +33,46 @@ impl SessionStore {
     /// Persist the full metadata map to a single file.
     fn save_metadata(&self, sessions: &HashMap<String, Session>) {
         let metadata_file = self.sessions_dir.join("metadata.json");
-        if let Ok(json) = serde_json::to_string_pretty(sessions) {
-            let _ = std::fs::write(metadata_file, json);
+        match serde_json::to_string_pretty(sessions) {
+            Ok(json) => {
+                if let Err(e) = std::fs::write(&metadata_file, json) {
+                    eprintln!(
+                        "Failed to write session metadata to {}: {}",
+                        metadata_file.display(),
+                        e
+                    );
+                }
+            }
+            Err(e) => {
+                eprintln!("Failed to serialize session metadata: {}", e);
+            }
         }
     }
 
     /// Persist messages for a single session to its directory.
     fn save_messages(&self, session_id: &str, messages: &[Message]) {
         let dir = self.sessions_dir.join(session_id);
-        let _ = std::fs::create_dir_all(&dir);
-        if let Ok(json) = serde_json::to_string_pretty(messages) {
-            let _ = std::fs::write(dir.join("messages.json"), json);
+        if let Err(e) = std::fs::create_dir_all(&dir) {
+            eprintln!(
+                "Failed to create session directory {}: {}",
+                dir.display(),
+                e
+            );
+            return;
+        }
+        match serde_json::to_string_pretty(messages) {
+            Ok(json) => {
+                let path = dir.join("messages.json");
+                if let Err(e) = std::fs::write(&path, &json) {
+                    eprintln!("Failed to write messages for session {}: {}", session_id, e);
+                }
+            }
+            Err(e) => {
+                eprintln!(
+                    "Failed to serialize messages for session {}: {}",
+                    session_id, e
+                );
+            }
         }
     }
 
@@ -156,6 +185,8 @@ impl SessionStore {
     }
 
     pub fn get_messages(&self, session_id: &str) -> Vec<Message> {
+        // Acquire the mutex to avoid reading a partially-written messages file
+        let _guard = self.sessions.lock().unwrap();
         self.load_messages(session_id)
     }
 
