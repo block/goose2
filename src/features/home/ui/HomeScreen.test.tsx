@@ -2,12 +2,36 @@ import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { HomeScreen } from "./HomeScreen";
 
-vi.mock("@/shared/api/acp", () => ({
-  discoverAcpProviders: vi.fn().mockResolvedValue([
-    { id: "goose", label: "Goose" },
-    { id: "claude", label: "Claude Code" },
-  ]),
-}));
+// HomeScreen now reads personas from the agent store, not from ACP providers
+vi.mock("@/features/agents/stores/agentStore", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("@/features/agents/stores/agentStore")
+    >();
+  return {
+    ...actual,
+    useAgentStore: Object.assign(
+      (selector?: (s: unknown) => unknown) => {
+        const state = {
+          personas: [
+            {
+              id: "builtin-goose",
+              displayName: "Goose",
+              systemPrompt: "You are Goose.",
+              isBuiltin: true,
+              createdAt: "",
+              updatedAt: "",
+            },
+          ],
+          personasLoading: false,
+          openPersonaEditor: vi.fn(),
+        };
+        return selector ? selector(state) : state;
+      },
+      { getState: () => ({ openPersonaEditor: vi.fn() }) },
+    ),
+  };
+});
 
 describe("HomeScreen", () => {
   beforeEach(() => {
@@ -26,17 +50,15 @@ describe("HomeScreen", () => {
     expect(screen.getByText("Good afternoon")).toBeInTheDocument();
   });
 
-  it("renders the chat input placeholder", async () => {
+  it("renders the chat input placeholder with persona name", () => {
     render(<HomeScreen />);
-    await vi.advanceTimersByTimeAsync(0);
     expect(
-      screen.getByPlaceholderText("Ask Goose anything..."),
+      screen.getByPlaceholderText("Ask Goose anything... (type @ to mention)"),
     ).toBeInTheDocument();
   });
 
-  it("renders the provider selector with default provider", async () => {
+  it("renders the persona picker with default persona", () => {
     render(<HomeScreen />);
-    await vi.advanceTimersByTimeAsync(0);
     expect(screen.getByText("Goose")).toBeInTheDocument();
   });
 });

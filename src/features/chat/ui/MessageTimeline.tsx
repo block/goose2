@@ -117,7 +117,11 @@ export function MessageTimeline({
               )}
               <MessageBubble
                 message={message}
-                agentName={message.role === "assistant" ? agentName : undefined}
+                agentName={
+                  message.role === "assistant"
+                    ? (message.metadata?.personaName ?? agentName)
+                    : undefined
+                }
                 agentAvatarUrl={
                   message.role === "assistant" ? agentAvatarUrl : undefined
                 }

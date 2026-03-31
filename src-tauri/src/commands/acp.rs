@@ -38,6 +38,7 @@ pub async fn acp_send_message(
     session_id: String,
     provider_id: String,
     prompt: String,
+    system_prompt: Option<String>,
 ) -> Result<(), String> {
     let working_dir = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("/tmp"));
 
@@ -49,6 +50,7 @@ pub async fn acp_send_message(
         provider_id,
         prompt,
         working_dir,
+        system_prompt,
     )
     .await
 }

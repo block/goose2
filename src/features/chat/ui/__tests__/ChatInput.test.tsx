@@ -11,7 +11,9 @@ describe("ChatInput", () => {
 
   it("renders with default placeholder", () => {
     render(<ChatInput onSend={vi.fn()} />);
-    expect(screen.getByPlaceholderText("Message Goose...")).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText("Message Goose... (type @ to mention)"),
+    ).toBeInTheDocument();
   });
 
   it("calls onSend when Enter is pressed", async () => {
@@ -23,7 +25,7 @@ describe("ChatInput", () => {
     await user.type(input, "hello");
     await user.keyboard("{Enter}");
 
-    expect(onSend).toHaveBeenCalledWith("hello");
+    expect(onSend).toHaveBeenCalledWith("hello", undefined);
   });
 
   it("does not call onSend on Shift+Enter (newline)", async () => {
@@ -39,12 +41,23 @@ describe("ChatInput", () => {
   });
 
   it("shows current model name in model picker", () => {
-    render(<ChatInput onSend={vi.fn()} currentModel="GPT-4o" />);
+    render(
+      <ChatInput
+        onSend={vi.fn()}
+        currentModel="GPT-4o"
+        availableModels={[{ id: "gpt-4o", name: "GPT-4o" }]}
+      />,
+    );
     expect(screen.getByText("GPT-4o")).toBeInTheDocument();
   });
 
   it("shows default model name in model picker", () => {
-    render(<ChatInput onSend={vi.fn()} />);
+    render(
+      <ChatInput
+        onSend={vi.fn()}
+        availableModels={[{ id: "claude-sonnet-4", name: "Claude Sonnet 4" }]}
+      />,
+    );
     expect(screen.getByText("Claude Sonnet 4")).toBeInTheDocument();
   });
 

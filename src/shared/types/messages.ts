@@ -95,6 +95,9 @@ export interface MessageMetadata {
   agentVisible?: boolean;
   attachments?: MessageAttachment[];
   chips?: MessageChip[];
+  /** Persona that generated this assistant message (set on send). */
+  personaId?: string;
+  personaName?: string;
 }
 
 export interface Message {

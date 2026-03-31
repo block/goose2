@@ -15,10 +15,17 @@ export async function acpSendMessage(
   sessionId: string,
   providerId: string,
   prompt: string,
+  systemPrompt?: string,
 ): Promise<void> {
   return invoke("acp_send_message", {
     sessionId,
     providerId,
     prompt,
+    systemPrompt: systemPrompt ?? null,
   });
+}
+
+/** Cancel an in-progress ACP session so the backend stops streaming. */
+export async function acpCancelSession(sessionId: string): Promise<boolean> {
+  return invoke("acp_cancel_session", { sessionId });
 }

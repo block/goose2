@@ -33,13 +33,19 @@ export async function deleteSession(sessionId: string): Promise<void> {
 export async function saveUiState(
   openTabIds: string[],
   activeTabId: string | null,
+  personaPerSession: Record<string, string>,
 ): Promise<void> {
-  return invoke("save_ui_state", { openTabIds, activeTabId });
+  return invoke("save_ui_state", {
+    openTabIds,
+    activeTabId,
+    personaPerSession,
+  });
 }
 
 export async function loadUiState(): Promise<{
   openTabIds: string[];
   activeTabId: string | null;
+  personaPerSession: Record<string, string>;
 }> {
   return invoke("load_ui_state");
 }

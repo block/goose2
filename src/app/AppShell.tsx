@@ -69,9 +69,22 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     }
   }, []);
 
-  // Load sessions and tab state on mount
+  // Load sessions, personas, and tab state on mount
   useEffect(() => {
     (async () => {
+      // Load personas eagerly so they're available in HomeScreen and ChatView
+      const personaStore = useAgentStore.getState();
+      personaStore.setPersonasLoading(true);
+      try {
+        const { listPersonas } = await import("@/shared/api/agents");
+        const personas = await listPersonas();
+        personaStore.setPersonas(personas);
+      } catch (err) {
+        console.error("Failed to load personas on startup:", err);
+      } finally {
+        personaStore.setPersonasLoading(false);
+      }
+
       const { loadSessions, loadTabState } = useChatSessionStore.getState();
       await loadSessions();
       await loadTabState();
@@ -121,6 +134,13 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     ? ("connected" as const)
     : ("disconnected" as const);
 
+  const [pendingInitialMessage, setPendingInitialMessage] = useState<
+    string | undefined
+  >();
+  const [homeSelectedPersonaId, setHomeSelectedPersonaId] = useState<
+    string | undefined
+  >();
+
   const createNewTab = useCallback(
     async (title = "New Chat", project?: ProjectInfo) => {
       const agentId = agentStore.activeAgentId ?? undefined;
@@ -129,6 +149,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         title,
         projectId: project?.id,
         agentId,
+        personaId: homeSelectedPersonaId,
       });
 
       sessionStore.openTab(session.id);
@@ -156,7 +177,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
       return session;
     },
-    [chatStore, sessionStore, agentStore.activeAgentId],
+    [chatStore, sessionStore, agentStore.activeAgentId, homeSelectedPersonaId],
   );
 
   const handleStartChatFromProject = useCallback(
@@ -224,17 +245,15 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     createNewTab();
   }, [createNewTab]);
 
-  const [pendingInitialMessage, setPendingInitialMessage] = useState<
-    string | undefined
-  >();
-
   const handleHomeStartChat = useCallback(
-    (initialMessage?: string, providerId?: string) => {
+    (initialMessage?: string, providerId?: string, personaId?: string) => {
       setHomeSelectedProvider(providerId);
+      setHomeSelectedPersonaId(personaId);
       setPendingInitialMessage(initialMessage);
       createNewTab(initialMessage?.slice(0, 40) || "New Chat").catch(() => {
         // Clear pending message if tab creation fails to avoid stale state
         setPendingInitialMessage(undefined);
+        setHomeSelectedPersonaId(undefined);
       });
     },
     [createNewTab],
@@ -286,6 +305,11 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  // Derive stored persona for active session
+  const activeSessionPersonaId = activeTab
+    ? sessionStore.getSession(activeTab.sessionId)?.personaId
+    : undefined;
+
   const renderContent = () => {
     switch (activeView) {
       case "skills":
@@ -301,8 +325,12 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             key={activeTab.sessionId}
             sessionId={activeTab.sessionId}
             initialProvider={homeSelectedProvider}
+            initialPersonaId={activeSessionPersonaId ?? homeSelectedPersonaId}
             initialMessage={pendingInitialMessage}
-            onInitialMessageConsumed={() => setPendingInitialMessage(undefined)}
+            onInitialMessageConsumed={() => {
+              setPendingInitialMessage(undefined);
+              setHomeSelectedPersonaId(undefined);
+            }}
           />
         ) : (
           <HomeScreen onStartChat={handleHomeStartChat} />

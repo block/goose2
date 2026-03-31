@@ -3,7 +3,7 @@ import { useChatStore } from "../stores/chatStore";
 import { createUserMessage } from "@/shared/types/messages";
 import type { Message } from "@/shared/types/messages";
 import type { ChatState, TokenState } from "@/shared/types/chat";
-import { acpSendMessage } from "@/shared/api/acp";
+import { acpSendMessage, acpCancelSession } from "@/shared/api/acp";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { findLastIndex } from "@/shared/lib/arrays";
 
@@ -11,7 +11,12 @@ import { findLastIndex } from "@/shared/lib/arrays";
  * Hook for managing a chat session -- sending messages, handling streaming,
  * and managing chat lifecycle.
  */
-export function useChat(sessionId: string, providerOverride?: string) {
+export function useChat(
+  sessionId: string,
+  providerOverride?: string,
+  systemPromptOverride?: string,
+  personaInfo?: { id: string; name: string },
+) {
   const store = useChatStore();
   const abortRef = useRef<AbortController | null>(null);
 
@@ -42,7 +47,12 @@ export function useChat(sessionId: string, providerOverride?: string) {
         role: "assistant",
         created: Date.now(),
         content: [],
-        metadata: { userVisible: true, agentVisible: true },
+        metadata: {
+          userVisible: true,
+          agentVisible: true,
+          personaId: personaInfo?.id,
+          personaName: personaInfo?.name,
+        },
       };
       store.addMessage(sessionId, assistantMessage);
       store.setStreamingMessageId(assistantMessage.id);
@@ -53,12 +63,14 @@ export function useChat(sessionId: string, providerOverride?: string) {
       try {
         const agent = useAgentStore.getState().getActiveAgent();
         const providerId = providerOverride ?? agent?.provider ?? "goose";
+        const systemPrompt =
+          systemPromptOverride ?? agent?.systemPrompt ?? undefined;
 
         // Send via ACP — response streams back through Tauri events
         // which are handled by useAcpStream in ChatView
         store.setChatState("streaming");
         store.appendToStreamingMessage(sessionId, { type: "text", text: "" });
-        await acpSendMessage(sessionId, providerId, text);
+        await acpSendMessage(sessionId, providerId, text, systemPrompt);
         // Note: setChatState("idle") is handled by useAcpStream on "acp:done"
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") {
@@ -67,20 +79,32 @@ export function useChat(sessionId: string, providerOverride?: string) {
           const errorMessage =
             err instanceof Error ? err.message : "Unknown error";
           store.setError(errorMessage);
+          store.setChatState("idle");
           store.setStreamingMessageId(null);
         }
       } finally {
         abortRef.current = null;
       }
     },
-    [sessionId, chatState, store, providerOverride],
+    [
+      sessionId,
+      chatState,
+      store,
+      providerOverride,
+      systemPromptOverride,
+      personaInfo,
+    ],
   );
 
   const stopGeneration = useCallback(() => {
     abortRef.current?.abort();
     store.setChatState("idle");
     store.setStreamingMessageId(null);
-  }, [store]);
+    // Cancel the backend ACP session to stop orphaned streaming events
+    acpCancelSession(sessionId).catch(() => {
+      // Best-effort cancellation — ignore errors
+    });
+  }, [store, sessionId]);
 
   const retryLastMessage = useCallback(async () => {
     const sessionMessages = store.messagesBySession[sessionId] ?? [];
