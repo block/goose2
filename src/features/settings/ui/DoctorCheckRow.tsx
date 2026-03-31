@@ -7,6 +7,7 @@ import {
   Wrench,
   Loader2,
 } from "lucide-react";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { cn } from "@/shared/lib/cn";
 import { runDoctorFix, type DoctorCheck } from "@/shared/api/doctor";
 
@@ -92,7 +93,7 @@ export function DoctorCheckRow({ check, onFixed }: DoctorCheckRowProps) {
           <button
             type="button"
             onClick={() => {
-              if (check.fixUrl) window.open(check.fixUrl, "_blank");
+              if (check.fixUrl) void openUrl(check.fixUrl);
             }}
             aria-label="Open fix URL"
             className="flex flex-shrink-0 items-center justify-center rounded-md p-1 text-foreground-secondary transition-colors hover:bg-background-secondary hover:text-foreground"
