@@ -101,7 +101,16 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
             isLoaded ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-2",
           )}
         >
-          <h2 className="text-sm font-semibold">Settings</h2>
+          <div
+            className={cn(
+              "px-4 py-4 transition-all duration-500 ease-out",
+              isLoaded
+                ? "opacity-100 translate-x-0"
+                : "opacity-0 -translate-x-2",
+            )}
+          >
+            <h2 className="text-sm font-semibold">Settings</h2>
+          </div>
           <nav className="flex flex-col gap-1 px-2">
             {NAV_ITEMS.map((item, index) => (
               <button
