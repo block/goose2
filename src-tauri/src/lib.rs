@@ -67,6 +67,8 @@ pub fn run() {
             commands::projects::list_archived_projects,
             commands::projects::archive_project,
             commands::projects::restore_project,
+            commands::doctor::run_doctor,
+            commands::doctor::run_doctor_fix,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

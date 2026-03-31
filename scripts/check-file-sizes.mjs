@@ -4,7 +4,11 @@ import { join, relative } from "node:path";
 const DEFAULT_LIMIT = 500;
 
 // Add narrowly scoped exceptions here with justification
-const EXCEPTIONS = {};
+const EXCEPTIONS = {
+  // Ported from staged app — cohesive health-check module with many repetitive
+  // per-dependency check functions that share the same structure.
+  "src-tauri/src/commands/doctor.rs": { limit: 1000 },
+};
 
 const DIRS_TO_CHECK = [
   { dir: "src/app", glob: /\.[jt]sx?$/ },
