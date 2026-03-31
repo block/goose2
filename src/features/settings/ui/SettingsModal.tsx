@@ -18,6 +18,7 @@ import {
   type ProjectInfo,
 } from "@/features/projects/api/projects";
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
+import { useProjectStore } from "@/features/projects/stores/projectStore";
 import { listArchivedSessions } from "@/shared/api/chat";
 import type { Session } from "@/shared/types/chat";
 
@@ -73,6 +74,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   const handleRestoreProject = async (id: string) => {
     try {
       await restoreProject(id);
+      await useProjectStore.getState().fetchProjects();
       setArchivedProjects((prev) => prev.filter((p) => p.id !== id));
     } catch {
       // best-effort
