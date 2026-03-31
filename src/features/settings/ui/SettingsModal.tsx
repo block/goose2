@@ -1,7 +1,15 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/shared/lib/cn";
-import { Palette, Settings2, FolderKanban, Info, X } from "lucide-react";
+import {
+  Palette,
+  Settings2,
+  FolderKanban,
+  Info,
+  Stethoscope,
+  X,
+} from "lucide-react";
 import { AppearanceSettings } from "./AppearanceSettings";
+import { DoctorSettings } from "./DoctorSettings";
 import {
   listArchivedProjects,
   restoreProject,
@@ -11,6 +19,7 @@ import {
 
 const NAV_ITEMS = [
   { id: "appearance", label: "Appearance", icon: Palette },
+  { id: "doctor", label: "Doctor", icon: Stethoscope },
   { id: "general", label: "General", icon: Settings2 },
   { id: "projects", label: "Projects", icon: FolderKanban },
   { id: "about", label: "About", icon: Info },
@@ -167,6 +176,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               }}
             >
               {activeSection === "appearance" && <AppearanceSettings />}
+              {activeSection === "doctor" && <DoctorSettings />}
               {activeSection === "general" && (
                 <div className="space-y-6">
                   <div>
