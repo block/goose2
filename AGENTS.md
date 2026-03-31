@@ -19,6 +19,10 @@ src/
       api/       — Backend API integration (when feature calls backend)
       types.ts   — Feature-specific type definitions (when needed)
   shared/
+    types/       — Canonical shared type definitions (single source of truth)
+      agents.ts  — Agent, Persona, Provider types
+      chat.ts    — ChatState, TokenState, Session, SSE events
+      messages.ts — Message, MessageContent, type guards
     ui/          — Reusable UI components (button, etc.)
     lib/         — Utilities (cn.ts for class merging)
     theme/       — Theme provider, appearance settings
@@ -27,7 +31,6 @@ src/
     api/         — API integration
     constants/   — Shared constants
     context/     — Shared contexts
-    types/       — Shared type definitions (single source of truth)
 ```
 
 ### Feature Organization
@@ -133,3 +136,5 @@ ThemeProvider manages three axes:
 - Don't skip `type="button"` on buttons.
 - Don't use color-only indicators without text alternatives.
 - Never use `--no-verify` when pushing — fix the underlying lint/hook issues.
+- Don't create root-level `src/types/` or `src/stores/` directories — types belong in `src/shared/types/`, stores belong in `src/features/<feature>/stores/`.
+- Don't duplicate type definitions across files — each type has one canonical location.

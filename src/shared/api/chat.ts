@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { Message } from "@/shared/types/messages";
-import type { Session } from "@/shared/types/agents";
+import type { Session } from "@/shared/types/chat";
 
 export async function createSession(agentId?: string): Promise<Session> {
   return invoke("create_session", { agentId });
