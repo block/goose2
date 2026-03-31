@@ -88,15 +88,11 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       const { loadSessions, loadTabState } = useChatSessionStore.getState();
       await loadSessions();
       await loadTabState();
-      // If there's an active tab after loading, switch to chat view and sync chatStore
-      const { activeTabId: restoredTabId } = useChatSessionStore.getState();
-      if (restoredTabId) {
-        setActiveView("chat");
-        useChatStore.getState().setActiveSession(restoredTabId);
-        loadSessionMessages(restoredTabId);
-      }
+      // Always start on the Home screen — tabs are restored in the tab bar
+      // but no tab is selected until the user clicks one.
+      useChatSessionStore.getState().setActiveTab(null);
     })();
-  }, [loadSessionMessages]);
+  }, []);
 
   useEffect(() => {
     projectStore.fetchProjects();
@@ -176,7 +172,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const handleStartChatFromProject = useCallback(
     (project: ProjectInfo) => {
       setHomeSelectedProvider(undefined);
-      createNewTab(project.name, project);
+      createNewTab("New Chat", project);
     },
     [createNewTab],
   );
@@ -186,7 +182,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       setHomeSelectedProvider(undefined);
       const project = projectStore.projects.find((p) => p.id === projectId);
       if (project) {
-        createNewTab(project.name, project);
+        createNewTab("New Chat", project);
       }
     },
     [createNewTab, projectStore.projects],
