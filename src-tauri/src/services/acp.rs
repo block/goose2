@@ -413,9 +413,9 @@ impl AcpService {
         // Prepend the persona's system prompt to the user's message so the
         // agent sees the persona instructions as context for this turn.
         let effective_prompt = match &system_prompt {
-            Some(sp) if !sp.is_empty() => format!(
-                "<persona-instructions>\n{sp}\n</persona-instructions>\n\n{prompt}"
-            ),
+            Some(sp) if !sp.is_empty() => {
+                format!("<persona-instructions>\n{sp}\n</persona-instructions>\n\n{prompt}")
+            }
             _ => prompt.clone(),
         };
 
