@@ -31,4 +31,4 @@ futures = "0.3"
 tokio-stream = "0.1"
 tokio-util = { version = "0.7", features = ["rt"] }
 async-trait = "0.1"
-acp-client = { git = "https://github.com/block/builderbot", rev = "5af819e" }
+acp-client = { git = "https://github.com/block/builderbot", rev = "17e609814900afdb2a437523a9756f7ef1b80469" }
