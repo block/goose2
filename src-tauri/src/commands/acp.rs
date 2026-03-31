@@ -30,6 +30,7 @@ pub async fn discover_acp_providers() -> Vec<AcpProviderResponse> {
 ///
 /// The actual content arrives asynchronously through `acp:text`, `acp:tool_call`,
 /// `acp:tool_result`, and `acp:done` events.
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub async fn acp_send_message(
     app_handle: AppHandle,
@@ -39,8 +40,13 @@ pub async fn acp_send_message(
     provider_id: String,
     prompt: String,
     system_prompt: Option<String>,
+    working_dir: Option<String>,
 ) -> Result<(), String> {
-    let working_dir = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("/tmp"));
+    let working_dir = working_dir
+        .map(|dir| dir.trim().to_string())
+        .filter(|dir| !dir.is_empty())
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("/tmp")));
 
     AcpService::send_prompt(
         app_handle,

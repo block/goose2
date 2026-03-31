@@ -43,7 +43,7 @@ interface ChatInputProps {
   onModelChange?: (modelId: string) => void;
   // Folder
   folder?: string | null;
-  availableFolders?: Array<{ id: string; name: string }>;
+  availableFolders?: Array<{ id: string; name: string; path?: string }>;
   onFolderChange?: (folderId: string | null) => void;
   // Context
   contextTokens?: number;

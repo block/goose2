@@ -146,11 +146,13 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const createNewTab = useCallback(
     async (title = "New Chat", project?: ProjectInfo) => {
       const agentId = agentStore.activeAgentId ?? undefined;
+      const providerId = project?.preferredProvider ?? homeSelectedProvider;
 
       const session = await sessionStore.createSession({
         title,
         projectId: project?.id,
         agentId,
+        providerId,
         personaId: homeSelectedPersonaId,
       });
 
@@ -160,26 +162,15 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       // Set the active session in chatStore
       chatStore.setActiveSession(session.id);
 
-      // Inject project context as a system message if starting from a project
-      if (project?.prompt) {
-        chatStore.addMessage(session.id, {
-          id: crypto.randomUUID(),
-          role: "system",
-          created: Date.now(),
-          content: [
-            {
-              type: "systemNotification",
-              notificationType: "info",
-              text: `Project: ${project.name}\n\n${project.prompt}`,
-            },
-          ],
-          metadata: { userVisible: true, agentVisible: true },
-        });
-      }
-
       return session;
     },
-    [chatStore, sessionStore, agentStore.activeAgentId, homeSelectedPersonaId],
+    [
+      chatStore,
+      sessionStore,
+      agentStore.activeAgentId,
+      homeSelectedPersonaId,
+      homeSelectedProvider,
+    ],
   );
 
   const handleStartChatFromProject = useCallback(
@@ -282,6 +273,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       createNewTab(initialMessage?.slice(0, 40) || "New Chat").catch(() => {
         // Clear pending message if tab creation fails to avoid stale state
         setPendingInitialMessage(undefined);
+        setHomeSelectedProvider(undefined);
         setHomeSelectedPersonaId(undefined);
       });
     },
@@ -358,6 +350,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             initialMessage={pendingInitialMessage}
             onInitialMessageConsumed={() => {
               setPendingInitialMessage(undefined);
+              setHomeSelectedProvider(undefined);
               setHomeSelectedPersonaId(undefined);
             }}
           />

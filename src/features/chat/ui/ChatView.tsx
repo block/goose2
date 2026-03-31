@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { MessageTimeline } from "./MessageTimeline";
 import { ChatInput } from "./ChatInput";
 import { LoadingGoose } from "./LoadingGoose";
@@ -8,6 +8,13 @@ import { useChatStore } from "../stores/chatStore";
 import { discoverAcpProviders, type AcpProvider } from "@/shared/api/acp";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { useChatSessionStore } from "../stores/chatSessionStore";
+import { getProject, type ProjectInfo } from "@/features/projects/api/projects";
+import { useProjectStore } from "@/features/projects/stores/projectStore";
+import {
+  buildProjectSystemPrompt,
+  composeSystemPrompt,
+  getProjectFolderOption,
+} from "@/features/projects/lib/chatProjectContext";
 
 interface ChatViewProps {
   sessionId?: string;
@@ -30,17 +37,70 @@ export function ChatView({
 }: ChatViewProps) {
   const [activeSessionId] = useState(() => sessionId ?? crypto.randomUUID());
   const [providers, setProviders] = useState<AcpProvider[]>([]);
-  const [selectedProvider, setSelectedProvider] = useState(
-    initialProvider ?? "goose",
-  );
 
   // Persona state
   const personas = useAgentStore((s) => s.personas);
   const [selectedPersonaId, setSelectedPersonaId] = useState<string>(
     initialPersonaId ?? "builtin-goose",
   );
+  const session = useChatSessionStore((s) =>
+    s.sessions.find((candidate) => candidate.id === activeSessionId),
+  );
+  const storedProject = useProjectStore((s) =>
+    session?.projectId
+      ? s.projects.find((candidate) => candidate.id === session.projectId)
+      : undefined,
+  );
+  const [fallbackProject, setFallbackProject] = useState<ProjectInfo | null>(
+    null,
+  );
+  const project = storedProject ?? fallbackProject;
+  const effectiveProvider =
+    session?.providerId ??
+    initialProvider ??
+    project?.preferredProvider ??
+    "goose";
+  const [selectedProvider, setSelectedProvider] = useState(effectiveProvider);
 
   const selectedPersona = personas.find((p) => p.id === selectedPersonaId);
+  const projectFolder = useMemo(
+    () => getProjectFolderOption(project),
+    [project],
+  );
+  const projectSystemPrompt = useMemo(
+    () => buildProjectSystemPrompt(project),
+    [project],
+  );
+  const effectiveSystemPrompt = useMemo(
+    () =>
+      composeSystemPrompt(selectedPersona?.systemPrompt, projectSystemPrompt),
+    [selectedPersona?.systemPrompt, projectSystemPrompt],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!session?.projectId || storedProject) {
+      setFallbackProject(null);
+      return;
+    }
+
+    getProject(session.projectId)
+      .then((projectInfo) => {
+        if (!cancelled) {
+          setFallbackProject(projectInfo);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setFallbackProject(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.projectId, storedProject]);
 
   useEffect(() => {
     discoverAcpProviders()
@@ -59,6 +119,26 @@ export function ChatView({
       .catch(() => setProviders([]));
   }, []);
 
+  useEffect(() => {
+    setSelectedProvider((current) =>
+      current === effectiveProvider ? current : effectiveProvider,
+    );
+  }, [effectiveProvider]);
+
+  const handleProviderChange = useCallback(
+    (providerId: string) => {
+      if (providerId === selectedProvider) {
+        return;
+      }
+
+      setSelectedProvider(providerId);
+      useChatSessionStore
+        .getState()
+        .updateSession(activeSessionId, { providerId });
+    },
+    [activeSessionId, selectedProvider],
+  );
+
   // When persona changes, update the provider to match persona's default
   const handlePersonaChange = useCallback(
     (personaId: string) => {
@@ -71,7 +151,7 @@ export function ChatView({
             p.label.toLowerCase().includes(persona.provider ?? ""),
         );
         if (matchingProvider) {
-          setSelectedProvider(matchingProvider.id);
+          handleProviderChange(matchingProvider.id);
         }
       }
 
@@ -89,7 +169,7 @@ export function ChatView({
         .getState()
         .updateSession(activeSessionId, { personaId });
     },
-    [personas, providers, activeSessionId],
+    [personas, providers, activeSessionId, handleProviderChange],
   );
 
   // Validate persona still exists — fall back to default if deleted
@@ -124,8 +204,9 @@ export function ChatView({
   } = useChat(
     activeSessionId,
     selectedProvider,
-    selectedPersona?.systemPrompt,
+    effectiveSystemPrompt,
     personaInfo,
+    projectFolder?.path,
   );
 
   // Listen for ACP streaming events
@@ -235,7 +316,9 @@ export function ChatView({
         // Providers (secondary)
         providers={providers}
         selectedProvider={selectedProvider}
-        onProviderChange={setSelectedProvider}
+        onProviderChange={handleProviderChange}
+        folder={projectFolder?.id ?? null}
+        availableFolders={projectFolder ? [projectFolder] : []}
       />
     </div>
   );

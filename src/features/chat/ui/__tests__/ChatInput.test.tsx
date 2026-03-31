@@ -72,6 +72,23 @@ describe("ChatInput", () => {
     expect(screen.getByText("Goose")).toBeInTheDocument();
   });
 
+  it("shows the selected folder name in the toolbar", () => {
+    render(
+      <ChatInput
+        onSend={vi.fn()}
+        folder="/Users/wesb/dev/goose2"
+        availableFolders={[
+          {
+            id: "/Users/wesb/dev/goose2",
+            name: "goose2",
+            path: "/Users/wesb/dev/goose2",
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByText("goose2")).toBeInTheDocument();
+  });
+
   it("shows stop button when streaming", () => {
     render(<ChatInput onSend={vi.fn()} onStop={vi.fn()} isStreaming />);
     expect(

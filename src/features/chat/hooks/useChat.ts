@@ -16,6 +16,7 @@ export function useChat(
   providerOverride?: string,
   systemPromptOverride?: string,
   personaInfo?: { id: string; name: string },
+  workingDirOverride?: string,
 ) {
   const store = useChatStore();
   const abortRef = useRef<AbortController | null>(null);
@@ -67,9 +68,15 @@ export function useChat(
           systemPromptOverride ?? agent?.systemPrompt ?? undefined;
 
         // Send via ACP — response streams back through Tauri events
-        // which are handled by useAcpStream in ChatView
+        // which are handled by useAcpStream in ChatView.
         store.setChatState("streaming");
-        await acpSendMessage(sessionId, providerId, text, systemPrompt);
+        await acpSendMessage(
+          sessionId,
+          providerId,
+          text,
+          systemPrompt,
+          workingDirOverride,
+        );
         // Note: setChatState("idle") is handled by useAcpStream on "acp:done"
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") {
@@ -92,6 +99,7 @@ export function useChat(
       providerOverride,
       systemPromptOverride,
       personaInfo,
+      workingDirOverride,
     ],
   );
 

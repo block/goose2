@@ -39,7 +39,7 @@ interface ChatInputToolbarProps {
   onModelChange?: (modelId: string) => void;
   // Folder
   folder: string | null;
-  availableFolders: Array<{ id: string; name: string }>;
+  availableFolders: Array<{ id: string; name: string; path?: string }>;
   onFolderChange?: (folderId: string | null) => void;
   // Context
   contextTokens: number;
@@ -77,6 +77,7 @@ export function ChatInputToolbar({
 }: ChatInputToolbarProps) {
   const selectedFolder = availableFolders.find((f) => f.id === folder);
   const folderLabel = selectedFolder?.name ?? "Folder";
+  const folderTitle = selectedFolder?.path ?? undefined;
 
   return (
     <div className="flex items-center justify-between gap-2">
@@ -179,6 +180,7 @@ export function ChatInputToolbar({
               type="button"
               className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-foreground-tertiary transition-colors hover:bg-background-tertiary hover:text-foreground"
               aria-label="Select folder"
+              title={folderTitle}
             >
               <FolderOpen className="h-3.5 w-3.5" />
               {!isCompact && <span>{folderLabel}</span>}
@@ -195,7 +197,14 @@ export function ChatInputToolbar({
                   onSelect={() => onFolderChange?.(f.id)}
                   className="flex items-center justify-between"
                 >
-                  <span className="text-sm">{f.name}</span>
+                  <div className="min-w-0 flex-1">
+                    <span className="block truncate text-sm">{f.name}</span>
+                    {f.path && (
+                      <span className="block truncate text-xs text-foreground-tertiary">
+                        {f.path}
+                      </span>
+                    )}
+                  </div>
                   {f.id === folder && (
                     <Check className="h-4 w-4 shrink-0 text-foreground-secondary" />
                   )}
