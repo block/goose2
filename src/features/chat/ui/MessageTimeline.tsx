@@ -1,14 +1,12 @@
 import { useEffect, useRef } from "react";
 import { cn } from "@/shared/lib/cn";
 import { MessageBubble } from "./MessageBubble";
-import { StreamingIndicator } from "./StreamingIndicator";
 import type { Message } from "@/shared/types/messages";
 
 interface MessageTimelineProps {
   messages: Message[];
   agentName?: string;
   agentAvatarUrl?: string;
-  isStreaming?: boolean;
   streamingMessageId?: string | null;
   onRetryMessage?: (messageId: string) => void;
   onEditMessage?: (messageId: string) => void;
@@ -45,7 +43,6 @@ export function MessageTimeline({
   messages,
   agentName,
   agentAvatarUrl,
-  isStreaming,
   streamingMessageId,
   onRetryMessage,
   onEditMessage,
@@ -140,10 +137,6 @@ export function MessageTimeline({
             </div>
           );
         })}
-
-        {isStreaming && !streamingMessageId && (
-          <StreamingIndicator agentName={agentName} />
-        )}
 
         <div ref={bottomRef} />
       </div>

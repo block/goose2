@@ -3,6 +3,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useChatStore } from "../stores/chatStore";
 import { useChatSessionStore } from "../stores/chatSessionStore";
 import type {
+  MessageContent,
   ToolRequestContent,
   ToolResponseContent,
 } from "@/shared/types/messages";
@@ -46,6 +47,28 @@ interface AcpModelStatePayload {
   currentModelName?: string;
 }
 
+function findLatestUnpairedToolRequest(
+  content: MessageContent[],
+): ToolRequestContent | null {
+  for (let index = content.length - 1; index >= 0; index -= 1) {
+    const block = content[index];
+    if (block?.type !== "toolRequest") {
+      continue;
+    }
+
+    const alreadyHasResponse = content.some(
+      (candidate): candidate is ToolResponseContent =>
+        candidate.type === "toolResponse" && candidate.id === block.id,
+    );
+
+    if (!alreadyHasResponse) {
+      return block;
+    }
+  }
+
+  return null;
+}
+
 /**
  * Hook that listens to Tauri events for ACP streaming responses.
  *
@@ -57,10 +80,6 @@ export function useAcpStream(sessionId: string, enabled: boolean): void {
   const sessionIdRef = useRef(sessionId);
   sessionIdRef.current = sessionId;
 
-  // Accumulate text chunks across events so updateStreamingText
-  // always receives the full text, not just the latest delta.
-  const accumulatedTextRef = useRef("");
-
   useEffect(() => {
     if (!enabled || !sessionId) return;
 
@@ -68,23 +87,16 @@ export function useAcpStream(sessionId: string, enabled: boolean): void {
     // Each listener checks this flag before acting; cleanup sets it immediately.
     let active = true;
 
-    // Reset accumulated text when the session changes or streaming restarts.
-    accumulatedTextRef.current = "";
-
     const unlisteners: Promise<UnlistenFn>[] = [];
 
-    // acp:text — accumulate and update the full text in the streaming message
+    // acp:text — append streamed text to the current trailing text segment
     unlisteners.push(
       listen<AcpTextPayload>("acp:text", (event) => {
         if (!active) return;
         if (event.payload.sessionId !== sessionIdRef.current) return;
-        accumulatedTextRef.current += event.payload.text;
         useChatStore
           .getState()
-          .updateStreamingText(
-            event.payload.sessionId,
-            accumulatedTextRef.current,
-          );
+          .updateStreamingText(event.payload.sessionId, event.payload.text);
       }),
     );
 
@@ -93,7 +105,6 @@ export function useAcpStream(sessionId: string, enabled: boolean): void {
       listen<AcpDonePayload>("acp:done", (event) => {
         if (!active) return;
         if (event.payload.sessionId !== sessionIdRef.current) return;
-        accumulatedTextRef.current = "";
         const store = useChatStore.getState();
         store.setStreamingMessageId(null);
         store.setChatState("idle");
@@ -142,7 +153,9 @@ export function useAcpStream(sessionId: string, enabled: boolean): void {
         if (!active) return;
         if (event.payload.sessionId !== sessionIdRef.current) return;
         const { sessionId: sid, toolCallId, title } = event.payload;
-        useChatStore.getState().updateMessage(sid, toolCallId, (msg) => ({
+        const store = useChatStore.getState();
+        if (!store.streamingMessageId) return;
+        store.updateMessage(sid, store.streamingMessageId, (msg) => ({
           ...msg,
           content: msg.content.map((c) =>
             c.type === "toolRequest" && c.id === toolCallId
@@ -158,16 +171,23 @@ export function useAcpStream(sessionId: string, enabled: boolean): void {
       listen<AcpToolResultPayload>("acp:tool_result", (event) => {
         if (!active) return;
         if (event.payload.sessionId !== sessionIdRef.current) return;
+        const store = useChatStore.getState();
+        const streamingMessage = store.streamingMessageId
+          ? store.messagesBySession[event.payload.sessionId]?.find(
+              (message) => message.id === store.streamingMessageId,
+            )
+          : undefined;
+        const toolRequest = streamingMessage
+          ? findLatestUnpairedToolRequest(streamingMessage.content)
+          : null;
         const toolResponse: ToolResponseContent = {
           type: "toolResponse",
-          id: crypto.randomUUID(),
-          name: "",
+          id: toolRequest?.id ?? crypto.randomUUID(),
+          name: toolRequest?.name ?? "",
           result: event.payload.content,
           isError: false,
         };
-        useChatStore
-          .getState()
-          .appendToStreamingMessage(event.payload.sessionId, toolResponse);
+        store.appendToStreamingMessage(event.payload.sessionId, toolResponse);
       }),
     );
 

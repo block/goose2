@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { MessageTimeline } from "./MessageTimeline";
 import { ChatInput } from "./ChatInput";
-import { StreamingIndicator } from "./StreamingIndicator";
+import { LoadingGoose } from "./LoadingGoose";
 import { useChat } from "../hooks/useChat";
 import { useAcpStream } from "../hooks/useAcpStream";
 import { useChatStore } from "../stores/chatStore";
@@ -193,7 +193,11 @@ export function ChatView({
   }, [initialMessage, handleSend, onInitialMessageConsumed]);
 
   const isStreaming = chatState === "streaming";
-  const showIndicator = chatState === "thinking" || chatState === "compacting";
+  const showIndicator =
+    chatState === "thinking" ||
+    chatState === "streaming" ||
+    chatState === "waiting" ||
+    chatState === "compacting";
 
   // Open persona editor
   const handleCreatePersona = useCallback(() => {
@@ -205,15 +209,16 @@ export function ChatView({
       <MessageTimeline
         messages={messages}
         streamingMessageId={streamingMessageId}
-        isStreaming={isStreaming}
         agentName={displayAgentName}
         agentAvatarUrl={selectedPersona?.avatarUrl ?? agentAvatarUrl}
       />
 
       {showIndicator && (
-        <StreamingIndicator
+        <LoadingGoose
           agentName={displayAgentName}
-          state={chatState as "thinking" | "streaming" | "compacting"}
+          chatState={
+            chatState as "thinking" | "streaming" | "waiting" | "compacting"
+          }
         />
       )}
 

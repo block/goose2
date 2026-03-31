@@ -2,7 +2,6 @@ import { create } from "zustand";
 import type { Message, MessageContent } from "@/shared/types/messages";
 import type { ChatState, TokenState } from "@/shared/types/chat";
 import { INITIAL_TOKEN_STATE } from "@/shared/types/chat";
-import { findLastIndex } from "@/shared/lib/arrays";
 
 interface ChatStoreState {
   // Per-session messages
@@ -173,20 +172,20 @@ export const useChatStore = create<ChatStore>((set, get) => ({
           ...state.messagesBySession,
           [sessionId]: messages.map((m) => {
             if (m.id !== streamingMessageId) return m;
-            // Find the last text content block and update it
-            const lastTextIndex = findLastIndex(
-              m.content,
-              (c) => c.type === "text",
-            );
-            if (lastTextIndex === -1) {
-              // No text block yet, append one
+            const lastContent = m.content[m.content.length - 1];
+            if (lastContent?.type !== "text") {
+              // Start a new text segment after non-text content so
+              // streamed tool calls stay inline between text blocks.
               return {
                 ...m,
                 content: [...m.content, { type: "text" as const, text }],
               };
             }
             const newContent = [...m.content];
-            newContent[lastTextIndex] = { type: "text" as const, text };
+            newContent[newContent.length - 1] = {
+              type: "text" as const,
+              text: lastContent.text + text,
+            };
             return { ...m, content: newContent };
           }),
         },
