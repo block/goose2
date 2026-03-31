@@ -7,7 +7,9 @@ use serde::Serialize;
 use tauri::Emitter;
 use tokio_util::sync::CancellationToken;
 
-use acp_client::{AcpDriver, AgentDriver, MessageWriter, Store};
+use acp_client::{
+    AcpDriver, AgentDriver, MessageWriter, SessionInfoUpdate, SessionModelState, Store,
+};
 
 use crate::services::sessions::SessionStore;
 use crate::types::messages::{MessageContent, MessageRole};
@@ -55,6 +57,21 @@ struct ToolTitlePayload {
 struct ToolResultPayload {
     session_id: String,
     content: String,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SessionInfoPayload {
+    session_id: String,
+    title: Option<String>,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ModelStatePayload {
+    session_id: String,
+    current_model_id: String,
+    current_model_name: Option<String>,
 }
 
 // ---------------------------------------------------------------------------
@@ -166,6 +183,32 @@ impl MessageWriter for TauriMessageWriter {
             ToolResultPayload {
                 session_id: self.session_id.clone(),
                 content: content.to_string(),
+            },
+        );
+    }
+
+    async fn on_session_info_update(&self, info: &SessionInfoUpdate) {
+        let _ = self.app_handle.emit(
+            "acp:session_info",
+            SessionInfoPayload {
+                session_id: self.session_id.clone(),
+                title: info.title.value().cloned(),
+            },
+        );
+    }
+
+    async fn on_model_state_update(&self, state: &SessionModelState) {
+        let current_model_name = state
+            .available_models
+            .iter()
+            .find(|m| m.model_id == state.current_model_id)
+            .map(|m| m.name.clone());
+        let _ = self.app_handle.emit(
+            "acp:model_state",
+            ModelStatePayload {
+                session_id: self.session_id.clone(),
+                current_model_id: state.current_model_id.to_string(),
+                current_model_name,
             },
         );
     }

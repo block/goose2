@@ -16,6 +16,7 @@ export interface ChatSession {
   agentId?: string;
   providerId?: string;
   personaId?: string;
+  modelName?: string;
   createdAt: string; // ISO timestamp
   updatedAt: string;
 }

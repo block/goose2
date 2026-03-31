@@ -1,7 +1,10 @@
+import { useState } from "react";
+import { Copy, Check } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 
 interface StatusBarProps {
   modelName?: string;
+  sessionId?: string;
   tokenCount?: number;
   status?: "connected" | "disconnected" | "loading";
 }
@@ -13,10 +16,20 @@ const statusColor = {
 } as const;
 
 export function StatusBar({
-  modelName = "Claude Sonnet 4",
+  modelName,
+  sessionId,
   tokenCount = 0,
   status = "disconnected",
 }: StatusBarProps) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopySessionId = () => {
+    if (!sessionId) return;
+    navigator.clipboard.writeText(sessionId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <div
       className={cn(
@@ -24,9 +37,22 @@ export function StatusBar({
         "bg-background/80 px-3 text-xs text-foreground-secondary",
       )}
     >
-      <span>{modelName}</span>
+      {modelName ? <span>{modelName}</span> : <span />}
 
       <div className="flex items-center gap-2">
+        {sessionId && (
+          <div className="flex items-center gap-0.5">
+            <span className="text-foreground-tertiary">{sessionId}</span>
+            <button
+              type="button"
+              onClick={handleCopySessionId}
+              className="rounded p-0.5 text-foreground-tertiary hover:text-foreground-primary transition-colors"
+              aria-label={copied ? "Copied" : "Copy session ID"}
+            >
+              {copied ? <Check size={10} /> : <Copy size={10} />}
+            </button>
+          </div>
+        )}
         <span>{tokenCount.toLocaleString()} tokens</span>
         <div
           role="status"

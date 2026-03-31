@@ -127,8 +127,10 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
 
   // Derive status bar values from stores
-  const activeAgent = agentStore.getActiveAgent();
-  const modelName = activeAgent?.model ?? "Claude Sonnet 4";
+  const activeSession = activeTabId
+    ? sessionStore.getSession(activeTabId)
+    : undefined;
+  const modelName = activeSession?.modelName;
   const tokenCount = chatStore.tokenState.totalTokens;
   const connectionStatus = chatStore.isConnected
     ? ("connected" as const)
@@ -396,6 +398,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       >
         <StatusBar
           modelName={modelName}
+          sessionId={activeTabId ?? undefined}
           tokenCount={tokenCount}
           status={connectionStatus}
         />
