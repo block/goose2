@@ -5,6 +5,7 @@ import {
   type DoctorCheck,
   type DoctorReport,
 } from "@/shared/api/doctor";
+import { discoverAcpProviders } from "@/shared/api/acp";
 import { DoctorCheckRow } from "./DoctorCheckRow";
 
 function formatDebugReport(report: DoctorReport): string {
@@ -63,13 +64,25 @@ export function DoctorSettings() {
     }
   }, []);
 
+  /** Run checks, then refresh the ACP provider list so newly-installed agents appear. */
+  const runChecksAndRefresh = useCallback(async () => {
+    await runChecks();
+    if (mountedRef.current) {
+      try {
+        await discoverAcpProviders();
+      } catch (e) {
+        console.error("[Doctor] Failed to refresh providers:", e);
+      }
+    }
+  }, [runChecks]);
+
   useEffect(() => {
     mountedRef.current = true;
-    runChecks();
+    runChecksAndRefresh();
     return () => {
       mountedRef.current = false;
     };
-  }, [runChecks]);
+  }, [runChecksAndRefresh]);
 
   const toolChecks =
     report?.checks.filter((c) => !c.id.startsWith("ai-agent-")) ?? [];
@@ -112,7 +125,7 @@ export function DoctorSettings() {
           {!loading && (
             <button
               type="button"
-              onClick={runChecks}
+              onClick={runChecksAndRefresh}
               className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground-secondary transition-colors hover:bg-background-secondary hover:text-foreground"
             >
               <RefreshCw className="h-3.5 w-3.5" />
@@ -140,7 +153,7 @@ export function DoctorSettings() {
                 <DoctorCheckRow
                   key={check.id}
                   check={check}
-                  onFixed={runChecks}
+                  onFixed={runChecksAndRefresh}
                 />
               ))}
             </div>
@@ -156,7 +169,7 @@ export function DoctorSettings() {
                   <DoctorCheckRow
                     key={check.id}
                     check={check}
-                    onFixed={runChecks}
+                    onFixed={runChecksAndRefresh}
                   />
                 ))}
               </div>
