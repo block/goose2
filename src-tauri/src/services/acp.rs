@@ -370,6 +370,7 @@ pub struct AcpService;
 impl AcpService {
     /// Send a prompt to the given ACP provider and stream the response via
     /// Tauri events.
+    #[allow(clippy::too_many_arguments)]
     pub async fn send_prompt(
         app_handle: tauri::AppHandle,
         registry: Arc<AcpSessionRegistry>,
