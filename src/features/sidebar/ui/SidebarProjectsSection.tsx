@@ -77,8 +77,9 @@ function ItemMenu({
         className={cn(
           "flex items-center justify-center w-6 h-6 rounded-md",
           "text-foreground-secondary/40 hover:text-foreground hover:bg-background-tertiary/50",
-          open ? "opacity-100" : "opacity-0 group-hover:opacity-100",
-          "transition-opacity duration-150",
+          open
+            ? "visible opacity-100"
+            : "invisible group-hover:visible opacity-0 group-hover:opacity-100",
         )}
       >
         <MoreHorizontal className="w-3.5 h-3.5" />
@@ -189,7 +190,7 @@ function ProjectSection({
           className={cn(
             "flex items-center justify-center w-6 h-6 rounded-md mr-1 flex-shrink-0",
             "text-foreground-secondary/50 hover:text-foreground hover:bg-background-tertiary/50",
-            "opacity-0 group-hover:opacity-100 transition-opacity duration-150",
+            "invisible group-hover:visible opacity-0 group-hover:opacity-100",
           )}
         >
           <Plus className="w-3.5 h-3.5" />
