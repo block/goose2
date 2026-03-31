@@ -1,0 +1,61 @@
+import { describe, expect, it } from "vitest";
+import {
+  buildProjectSystemPrompt,
+  composeSystemPrompt,
+  getProjectFolderName,
+  getProjectFolderOption,
+} from "./chatProjectContext";
+
+describe("chatProjectContext", () => {
+  it("builds project instructions from stored project settings", () => {
+    const systemPrompt = buildProjectSystemPrompt({
+      id: "project-1",
+      name: "Goose2",
+      description: "Desktop app",
+      prompt: "Always read AGENTS.md before editing.",
+      icon: "folder",
+      color: "#000000",
+      preferredProvider: "goose",
+      preferredModel: "claude-sonnet-4",
+      workingDir: "/Users/wesb/dev/goose2",
+      useWorktrees: true,
+      order: 0,
+      archivedAt: null,
+      createdAt: "now",
+      updatedAt: "now",
+    });
+
+    expect(systemPrompt).toContain("<project-settings>");
+    expect(systemPrompt).toContain("Project name: Goose2");
+    expect(systemPrompt).toContain("Working directory: /Users/wesb/dev/goose2");
+    expect(systemPrompt).toContain("Preferred provider: goose");
+    expect(systemPrompt).toContain(
+      "Use git worktrees for branch isolation: yes",
+    );
+    expect(systemPrompt).toContain("<project-instructions>");
+    expect(systemPrompt).toContain("Always read AGENTS.md before editing.");
+  });
+
+  it("combines persona and project prompts without empty sections", () => {
+    expect(
+      composeSystemPrompt("Persona prompt", undefined, "Project prompt"),
+    ).toBe("Persona prompt\n\nProject prompt");
+  });
+
+  it("extracts the folder name from a path", () => {
+    expect(getProjectFolderName("/Users/wesb/dev/goose2")).toBe("goose2");
+    expect(getProjectFolderName("C:\\Users\\wesb\\goose2\\")).toBe("goose2");
+  });
+
+  it("creates a folder option from the project's working directory", () => {
+    expect(
+      getProjectFolderOption({
+        workingDir: "/Users/wesb/dev/goose2",
+      }),
+    ).toEqual({
+      id: "/Users/wesb/dev/goose2",
+      name: "goose2",
+      path: "/Users/wesb/dev/goose2",
+    });
+  });
+});

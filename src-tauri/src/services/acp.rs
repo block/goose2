@@ -454,8 +454,8 @@ impl AcpService {
         let store: Arc<dyn Store> = Arc::new(TauriStore::new(session_store));
         let cancel_token = registry.register(&session_id, &provider_id);
 
-        // Prepend the persona's system prompt to the user's message so the
-        // agent sees the persona instructions as context for this turn.
+        // Prepend the effective system prompt so the agent sees persona and
+        // project instructions as context for this turn.
         let effective_prompt = match &system_prompt {
             Some(sp) if !sp.is_empty() => {
                 format!("<persona-instructions>\n{sp}\n</persona-instructions>\n\n{prompt}")
