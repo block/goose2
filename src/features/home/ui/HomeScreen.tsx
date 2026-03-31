@@ -1,15 +1,9 @@
-import { useState, useEffect, useRef } from "react";
-import { ArrowUp, Paperclip, Bot, ChevronDown, Check } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { ArrowUp, Paperclip } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
-import { discoverAcpProviders, type AcpProvider } from "@/shared/api/acp";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "@/shared/ui/dropdown-menu";
+import { useAgentStore } from "@/features/agents/stores/agentStore";
+import { PersonaPicker } from "@/features/chat/ui/PersonaPicker";
+import type { Persona } from "@/shared/types/agents";
 
 function HomeClock() {
   const [time, setTime] = useState(new Date());
@@ -44,30 +38,35 @@ function getGreeting(hour: number): string {
 }
 
 interface HomeInputProps {
-  onStartChat?: (msg?: string, providerId?: string) => void;
-  providers: AcpProvider[];
-  selectedProvider: string;
-  onProviderChange: (id: string) => void;
+  onStartChat?: (msg?: string, providerId?: string, personaId?: string) => void;
+  personas: Persona[];
+  selectedPersonaId: string;
+  onPersonaChange: (id: string) => void;
+  onCreatePersona?: () => void;
 }
 
 function HomeInput({
   onStartChat,
-  providers,
-  selectedProvider,
-  onProviderChange,
+  personas,
+  selectedPersonaId,
+  onPersonaChange,
+  onCreatePersona,
 }: HomeInputProps) {
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const hasContent = value.trim().length > 0;
-
-  const providerLabel =
-    providers.find((p) => p.id === selectedProvider)?.label ?? selectedProvider;
+  const selectedPersona = personas.find((p) => p.id === selectedPersonaId);
+  const personaName = selectedPersona?.displayName ?? "Goose";
 
   const handleSubmit = () => {
     const trimmed = value.trim();
     if (!trimmed) return;
-    onStartChat?.(trimmed, selectedProvider);
+    onStartChat?.(
+      trimmed,
+      selectedPersona?.provider ?? "goose",
+      selectedPersonaId,
+    );
     setValue("");
   };
 
@@ -86,52 +85,20 @@ function HomeInput({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={`Ask ${providerLabel} anything...`}
+          placeholder={`Ask ${personaName} anything...`}
           rows={1}
           className="w-full resize-none bg-transparent text-[14px] leading-relaxed px-1 placeholder:text-muted-foreground/60 focus:outline-none min-h-[36px] max-h-[200px] mb-3"
         />
         {/* Bottom bar */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-background-tertiary"
-                  aria-label="Select provider"
-                >
-                  <Bot className="h-3 w-3" />
-                  <span>{providerLabel}</span>
-                  <ChevronDown className="h-3 w-3 opacity-50" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56">
-                <DropdownMenuLabel>Provider</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {providers.length > 0 ? (
-                  providers.map((provider) => (
-                    <DropdownMenuItem
-                      key={provider.id}
-                      onSelect={() => onProviderChange(provider.id)}
-                      className="flex items-center justify-between"
-                    >
-                      <span className="text-sm font-medium">
-                        {provider.label}
-                      </span>
-                      {provider.id === selectedProvider && (
-                        <Check className="h-4 w-4 shrink-0 text-foreground-secondary" />
-                      )}
-                    </DropdownMenuItem>
-                  ))
-                ) : (
-                  <DropdownMenuItem disabled>
-                    <span className="text-xs text-foreground-tertiary">
-                      No providers detected
-                    </span>
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <PersonaPicker
+              personas={personas}
+              selectedPersonaId={selectedPersonaId}
+              onPersonaChange={onPersonaChange}
+              onCreatePersona={onCreatePersona}
+              className="rounded-md border border-border px-2 py-0.5"
+            />
           </div>
           <div className="flex items-center gap-1">
             <button
@@ -157,38 +124,29 @@ function HomeInput({
         </div>
       </div>
       <p className="text-[10px] text-muted-foreground/40 text-center mt-2">
-        ⏎ to send · ⇧⏎ for newline
+        ⏎ to send · ⇧⏎ for newline · @ to mention a persona
       </p>
     </div>
   );
 }
 
 interface HomeScreenProps {
-  onStartChat?: (initialMessage?: string, providerId?: string) => void;
+  onStartChat?: (
+    initialMessage?: string,
+    providerId?: string,
+    personaId?: string,
+  ) => void;
 }
 
 export function HomeScreen({ onStartChat }: HomeScreenProps) {
   const [hour] = useState(() => new Date().getHours());
   const greeting = getGreeting(hour);
 
-  const [providers, setProviders] = useState<AcpProvider[]>([]);
-  const [selectedProvider, setSelectedProvider] = useState("goose");
+  const personas = useAgentStore((s) => s.personas);
+  const [selectedPersonaId, setSelectedPersonaId] = useState("builtin-goose");
 
-  useEffect(() => {
-    discoverAcpProviders()
-      .then((discovered) => {
-        setProviders(discovered);
-        setSelectedProvider((current) => {
-          if (
-            discovered.length > 0 &&
-            !discovered.some((p) => p.id === current)
-          ) {
-            return discovered[0].id;
-          }
-          return current;
-        });
-      })
-      .catch(() => setProviders([]));
+  const handleCreatePersona = useCallback(() => {
+    useAgentStore.getState().openPersonaEditor();
   }, []);
 
   return (
@@ -206,9 +164,10 @@ export function HomeScreen({ onStartChat }: HomeScreenProps) {
           {/* Chat input */}
           <HomeInput
             onStartChat={onStartChat}
-            providers={providers}
-            selectedProvider={selectedProvider}
-            onProviderChange={setSelectedProvider}
+            personas={personas}
+            selectedPersonaId={selectedPersonaId}
+            onPersonaChange={setSelectedPersonaId}
+            onCreatePersona={handleCreatePersona}
           />
         </div>
       </div>

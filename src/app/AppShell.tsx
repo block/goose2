@@ -227,14 +227,19 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const [pendingInitialMessage, setPendingInitialMessage] = useState<
     string | undefined
   >();
+  const [homeSelectedPersonaId, setHomeSelectedPersonaId] = useState<
+    string | undefined
+  >();
 
   const handleHomeStartChat = useCallback(
-    (initialMessage?: string, providerId?: string) => {
+    (initialMessage?: string, providerId?: string, personaId?: string) => {
       setHomeSelectedProvider(providerId);
+      setHomeSelectedPersonaId(personaId);
       setPendingInitialMessage(initialMessage);
       createNewTab(initialMessage?.slice(0, 40) || "New Chat").catch(() => {
         // Clear pending message if tab creation fails to avoid stale state
         setPendingInitialMessage(undefined);
+        setHomeSelectedPersonaId(undefined);
       });
     },
     [createNewTab],
@@ -301,8 +306,12 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             key={activeTab.sessionId}
             sessionId={activeTab.sessionId}
             initialProvider={homeSelectedProvider}
+            initialPersonaId={homeSelectedPersonaId}
             initialMessage={pendingInitialMessage}
-            onInitialMessageConsumed={() => setPendingInitialMessage(undefined)}
+            onInitialMessageConsumed={() => {
+              setPendingInitialMessage(undefined);
+              setHomeSelectedPersonaId(undefined);
+            }}
           />
         ) : (
           <HomeScreen onStartChat={handleHomeStartChat} />
