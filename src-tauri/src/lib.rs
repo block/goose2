@@ -28,7 +28,7 @@ pub fn run() {
         )
         .manage(SidecarState::default())
         .manage(PersonaStore::new())
-        .manage(SessionStore::new())
+        .manage(Arc::new(SessionStore::new()))
         .manage(acp_registry)
         .invoke_handler(tauri::generate_handler![
             commands::sidecar::start_sidecar,
@@ -47,6 +47,8 @@ pub fn run() {
             commands::sessions::list_sessions,
             commands::sessions::get_session_messages,
             commands::sessions::delete_session,
+            commands::ui_state::save_ui_state,
+            commands::ui_state::load_ui_state,
             commands::chat::chat_send_message,
             commands::acp::discover_acp_providers,
             commands::acp::acp_send_message,

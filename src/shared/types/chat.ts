@@ -34,6 +34,7 @@ export interface Session {
   id: string;
   title: string;
   agentId?: string;
+  projectId?: string;
   createdAt: string;
   updatedAt: string;
   messageCount: number;

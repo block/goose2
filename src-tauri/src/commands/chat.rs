@@ -1,10 +1,12 @@
+use std::sync::Arc;
+
 use crate::services::sessions::SessionStore;
 use crate::types::messages::*;
 use tauri::State;
 
 #[tauri::command]
 pub async fn chat_send_message(
-    session_store: State<'_, SessionStore>,
+    session_store: State<'_, Arc<SessionStore>>,
     session_id: String,
     message: Message,
 ) -> Result<Message, String> {

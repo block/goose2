@@ -75,6 +75,8 @@ pub struct Session {
     pub title: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub agent_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub project_id: Option<String>,
     pub created_at: String,
     pub updated_at: String,
     pub message_count: u32,

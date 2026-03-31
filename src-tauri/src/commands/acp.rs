@@ -3,6 +3,7 @@ use std::sync::Arc;
 use tauri::{AppHandle, State};
 
 use crate::services::acp::{AcpRunningSession, AcpService, AcpSessionRegistry};
+use crate::services::sessions::SessionStore;
 use acp_client::discover_providers;
 
 /// Response type for an ACP provider, sent to the frontend.
@@ -33,6 +34,7 @@ pub async fn discover_acp_providers() -> Vec<AcpProviderResponse> {
 pub async fn acp_send_message(
     app_handle: AppHandle,
     registry: State<'_, Arc<AcpSessionRegistry>>,
+    session_store: State<'_, Arc<SessionStore>>,
     session_id: String,
     provider_id: String,
     prompt: String,
@@ -42,6 +44,7 @@ pub async fn acp_send_message(
     AcpService::send_prompt(
         app_handle,
         Arc::clone(&registry),
+        Arc::clone(&session_store),
         session_id,
         provider_id,
         prompt,

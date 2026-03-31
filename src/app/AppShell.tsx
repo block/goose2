@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TabBar } from "@/features/tabs/ui/TabBar";
 import { Sidebar } from "@/features/sidebar/ui/Sidebar";
 import { StatusBar } from "@/features/status/ui/StatusBar";
@@ -12,8 +12,10 @@ import { archiveProject } from "@/features/projects/api/projects";
 import type { ProjectInfo } from "@/features/projects/api/projects";
 import { SettingsModal } from "@/features/settings/ui/SettingsModal";
 import { useChatStore } from "@/features/chat/stores/chatStore";
+import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
+import { getSessionMessages } from "@/shared/api/chat";
 import type { Tab } from "@/features/tabs/types";
 
 export type AppView = "home" | "chat" | "skills" | "agents" | "projects";
@@ -28,20 +30,85 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const [editingProject, setEditingProject] = useState<ProjectInfo | null>(
     null,
   );
-  const [tabs, setTabs] = useState<Tab[]>([]);
-  const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<AppView>("home");
   const [homeSelectedProvider, setHomeSelectedProvider] = useState<
     string | undefined
   >();
 
   const chatStore = useChatStore();
+  const sessionStore = useChatSessionStore();
   const agentStore = useAgentStore();
   const projectStore = useProjectStore();
+
+  // Track in-flight message loads to avoid duplicate requests
+  const loadingSessionsRef = useRef<Set<string>>(new Set());
+
+  // Load messages from backend for a session if not already in the store
+  const loadSessionMessages = useCallback(async (sessionId: string) => {
+    const { messagesBySession, setMessages } = useChatStore.getState();
+    const existing = messagesBySession[sessionId];
+    // Skip if messages are already loaded or currently being loaded
+    if (
+      (existing && existing.length > 0) ||
+      loadingSessionsRef.current.has(sessionId)
+    ) {
+      return;
+    }
+    loadingSessionsRef.current.add(sessionId);
+    try {
+      const messages = await getSessionMessages(sessionId);
+      // Only set if still empty (another path may have populated it)
+      const current = useChatStore.getState().messagesBySession[sessionId];
+      if (!current || current.length === 0) {
+        setMessages(sessionId, messages);
+      }
+    } catch (err) {
+      console.error(`Failed to load messages for session ${sessionId}:`, err);
+    } finally {
+      loadingSessionsRef.current.delete(sessionId);
+    }
+  }, []);
+
+  // Load sessions and tab state on mount
+  useEffect(() => {
+    (async () => {
+      const { loadSessions, loadTabState } = useChatSessionStore.getState();
+      await loadSessions();
+      await loadTabState();
+      // If there's an active tab after loading, switch to chat view and sync chatStore
+      const { activeTabId: restoredTabId } = useChatSessionStore.getState();
+      if (restoredTabId) {
+        setActiveView("chat");
+        useChatStore.getState().setActiveSession(restoredTabId);
+        loadSessionMessages(restoredTabId);
+      }
+    })();
+  }, [loadSessionMessages]);
 
   useEffect(() => {
     projectStore.fetchProjects();
   }, [projectStore.fetchProjects]);
+
+  // Derive tab objects from session store for TabBar and Sidebar compatibility
+  const { sessions, openTabIds, activeTabId } = sessionStore;
+
+  const tabs: Tab[] = useMemo(() => {
+    const sessionMap = new Map(sessions.map((s) => [s.id, s]));
+    return openTabIds.reduce<Tab[]>((acc, id) => {
+      const session = sessionMap.get(id);
+      if (session) {
+        const tab: Tab = {
+          id: session.id,
+          title: session.title,
+          sessionId: session.id, // tab ID === session ID in new model
+        };
+        if (session.agentId) tab.agentId = session.agentId;
+        if (session.projectId) tab.projectId = session.projectId;
+        acc.push(tab);
+      }
+      return acc;
+    }, []);
+  }, [openTabIds, sessions]);
 
   const isHome = activeTabId === null && activeView === "home";
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
@@ -55,28 +122,24 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     : ("disconnected" as const);
 
   const createNewTab = useCallback(
-    (title = "New Chat", project?: ProjectInfo) => {
-      const id = crypto.randomUUID();
-      const sessionId = crypto.randomUUID();
+    async (title = "New Chat", project?: ProjectInfo) => {
       const agentId = agentStore.activeAgentId ?? undefined;
 
-      const tab: Tab = {
-        id,
+      const session = await sessionStore.createSession({
         title,
-        sessionId,
-        agentId,
         projectId: project?.id,
-      };
-      setTabs((prev) => [...prev, tab]);
-      setActiveTabId(id);
+        agentId,
+      });
+
+      sessionStore.openTab(session.id);
       setActiveView("chat");
 
       // Set the active session in chatStore
-      chatStore.setActiveSession(sessionId);
+      chatStore.setActiveSession(session.id);
 
       // Inject project context as a system message if starting from a project
       if (project?.prompt) {
-        chatStore.addMessage(sessionId, {
+        chatStore.addMessage(session.id, {
           id: crypto.randomUUID(),
           role: "system",
           created: Date.now(),
@@ -91,9 +154,9 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         });
       }
 
-      return tab;
+      return session;
     },
-    [chatStore, agentStore.activeAgentId],
+    [chatStore, sessionStore, agentStore.activeAgentId],
   );
 
   const handleStartChatFromProject = useCallback(
@@ -127,29 +190,23 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     [projectStore.fetchProjects],
   );
 
-  const handleArchiveChat = useCallback(
+  const closeAndCleanupTab = useCallback(
     (tabId: string) => {
-      setTabs((prev) => {
-        const closingTab = prev.find((t) => t.id === tabId);
-        const next = prev.filter((t) => t.id !== tabId);
-        if (closingTab) {
-          chatStore.cleanupSession(closingTab.sessionId);
-        }
-        if (activeTabId === tabId) {
-          const nextTab = next[0] ?? null;
-          setActiveTabId(nextTab?.id ?? null);
-          if (nextTab) {
-            chatStore.setActiveSession(nextTab.sessionId);
-            setActiveView("chat");
-          } else {
-            setActiveView("home");
-          }
-        }
-        return next;
-      });
+      chatStore.cleanupSession(tabId);
+      sessionStore.closeTab(tabId);
+
+      const { activeTabId: newActiveTabId } = useChatSessionStore.getState();
+      if (newActiveTabId) {
+        chatStore.setActiveSession(newActiveTabId);
+        setActiveView("chat");
+      } else {
+        setActiveView("home");
+      }
     },
-    [activeTabId, chatStore],
+    [chatStore, sessionStore],
   );
+
+  const handleArchiveChat = closeAndCleanupTab;
 
   const handleEditProject = useCallback(
     (projectId: string) => {
@@ -167,57 +224,46 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     createNewTab();
   }, [createNewTab]);
 
+  const [pendingInitialMessage, setPendingInitialMessage] = useState<
+    string | undefined
+  >();
+
   const handleHomeStartChat = useCallback(
     (initialMessage?: string, providerId?: string) => {
       setHomeSelectedProvider(providerId);
-      const tab = createNewTab(initialMessage?.slice(0, 40) || "New Chat");
-      // The ChatView will handle sending the initial message via its own input
-      // We just need to create the tab and session
-      void tab; // tab is used for side effects in createNewTab
+      setPendingInitialMessage(initialMessage);
+      createNewTab(initialMessage?.slice(0, 40) || "New Chat").catch(() => {
+        // Clear pending message if tab creation fails to avoid stale state
+        setPendingInitialMessage(undefined);
+      });
     },
     [createNewTab],
   );
 
-  const handleTabClose = (id: string) => {
-    setTabs((prev) => {
-      const closingTab = prev.find((t) => t.id === id);
-      const next = prev.filter((t) => t.id !== id);
-
-      // Cleanup session data when closing tab
-      if (closingTab) {
-        chatStore.cleanupSession(closingTab.sessionId);
-      }
-
-      if (activeTabId === id) {
-        const nextTab = next[0] ?? null;
-        setActiveTabId(nextTab?.id ?? null);
-        if (nextTab) {
-          chatStore.setActiveSession(nextTab.sessionId);
-          setActiveView("chat");
-        } else {
-          setActiveView("home");
-        }
-      }
-      return next;
-    });
-  };
+  const handleTabClose = closeAndCleanupTab;
 
   const handleTabSelect = useCallback(
     (id: string) => {
-      setActiveTabId(id);
-      setActiveView("chat");
-      const tab = tabs.find((t) => t.id === id);
-      if (tab) {
-        chatStore.setActiveSession(tab.sessionId);
+      // Open the tab if it's not already open (e.g. clicking a recent session)
+      const { openTabIds: currentOpenTabIds } = useChatSessionStore.getState();
+      if (!currentOpenTabIds.includes(id)) {
+        sessionStore.openTab(id);
+      } else {
+        sessionStore.setActiveTab(id);
       }
+      setActiveView("chat");
+      // Sync chatStore's active session (id === sessionId in new model)
+      chatStore.setActiveSession(id);
+      // Load historical messages from backend if not already in store
+      loadSessionMessages(id);
     },
-    [tabs, chatStore],
+    [sessionStore, chatStore, loadSessionMessages],
   );
 
   const handleNavigate = (view: AppView) => {
     setActiveView(view);
     if (view !== "chat") {
-      setActiveTabId(null);
+      sessionStore.setActiveTab(null);
     }
   };
 
@@ -249,19 +295,14 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       case "projects":
         return <ProjectsView onStartChat={handleStartChatFromProject} />;
       case "chat":
-        return activeTab ? (
-          <ChatView
-            sessionId={activeTab.sessionId}
-            initialProvider={homeSelectedProvider}
-          />
-        ) : (
-          <HomeScreen onStartChat={handleHomeStartChat} />
-        );
       case "home":
         return activeTab ? (
           <ChatView
+            key={activeTab.sessionId}
             sessionId={activeTab.sessionId}
             initialProvider={homeSelectedProvider}
+            initialMessage={pendingInitialMessage}
+            onInitialMessageConsumed={() => setPendingInitialMessage(undefined)}
           />
         ) : (
           <HomeScreen onStartChat={handleHomeStartChat} />
@@ -309,7 +350,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             activeView={activeView}
             activeTabId={activeTabId}
             projects={projectStore.projects}
-            tabs={tabs}
             className="h-full shadow-xl rounded-xl"
           />
         </div>

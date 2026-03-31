@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { MessageTimeline } from "./MessageTimeline";
 import { ChatInput } from "./ChatInput";
 import { StreamingIndicator } from "./StreamingIndicator";
@@ -11,6 +11,8 @@ interface ChatViewProps {
   agentName?: string;
   agentAvatarUrl?: string;
   initialProvider?: string;
+  initialMessage?: string;
+  onInitialMessageConsumed?: () => void;
 }
 
 export function ChatView({
@@ -18,6 +20,8 @@ export function ChatView({
   agentName = "Goose",
   agentAvatarUrl,
   initialProvider,
+  initialMessage,
+  onInitialMessageConsumed,
 }: ChatViewProps) {
   const [activeSessionId] = useState(() => sessionId ?? crypto.randomUUID());
   const [providers, setProviders] = useState<AcpProvider[]>([]);
@@ -55,6 +59,16 @@ export function ChatView({
 
   // Listen for ACP streaming events
   useAcpStream(activeSessionId, true);
+
+  // Auto-send initial message from HomeScreen on mount
+  const initialMessageSent = useRef(false);
+  useEffect(() => {
+    if (initialMessage && !initialMessageSent.current) {
+      initialMessageSent.current = true;
+      sendMessage(initialMessage);
+      onInitialMessageConsumed?.();
+    }
+  }, [initialMessage, sendMessage, onInitialMessageConsumed]);
 
   const isStreaming = chatState === "streaming";
   const showIndicator = chatState === "thinking" || chatState === "compacting";
