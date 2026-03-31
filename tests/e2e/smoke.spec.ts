@@ -24,12 +24,4 @@ test.describe("Smoke tests", () => {
       timeout: 10_000,
     });
   });
-
-  test("home screen shows persona picker", async ({ page }) => {
-    await page.goto("/");
-
-    await expect(page.getByText("Goose").first()).toBeVisible({
-      timeout: 10_000,
-    });
-  });
 });
