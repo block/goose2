@@ -9,9 +9,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Command;
 
-// =============================================================================
-// Types
-// =============================================================================
+// --- Types ---
 
 /// Severity level for a single check.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -35,8 +33,12 @@ pub struct DoctorCheck {
     pub message: String,
     /// If non-None, the UI shows an "Install" link that opens this URL.
     pub fix_url: Option<String>,
-    /// If non-None, the UI shows a "Fix" button that runs this shell command.
+    /// If non-None, the UI shows the command text in a confirmation dialog.
+    /// Display-only — never sent back to the backend for execution.
     pub fix_command: Option<String>,
+    /// The type of fix: "command" (install/fix command) or "bridge" (bridge install).
+    /// Sent back to the backend along with the check ID to execute the fix.
+    pub fix_type: Option<String>,
     /// If non-None, the resolved path to the main executable on disk.
     pub path: Option<String>,
     /// If non-None, the resolved path to the ACP bridge executable on disk.
@@ -53,9 +55,7 @@ pub struct DoctorReport {
     pub checks: Vec<DoctorCheck>,
 }
 
-// =============================================================================
-// Binary resolution
-// =============================================================================
+// --- Binary resolution ---
 
 /// A resolved binary: the path (if found) and the diagnostic search trace.
 #[derive(Clone)]
@@ -118,9 +118,7 @@ fn resolve_binary(cmd: &str) -> ResolvedBinary {
     }
 }
 
-// =============================================================================
-// Individual checks
-// =============================================================================
+// --- Individual checks ---
 
 /// Format the raw output of a command invocation for debug diagnostics.
 fn format_command_output(cmd_desc: &str, output: &std::process::Output) -> String {
@@ -153,6 +151,7 @@ fn check_git(resolved: &ResolvedBinary) -> DoctorCheck {
                 message: "Git not found".to_string(),
                 fix_url: Some("https://git-scm.com/downloads".to_string()),
                 fix_command: None,
+                fix_type: None,
                 path: None,
                 bridge_path: None,
                 raw_output: Some(format!("{header}\nnot found via resolve_binary\n{search}")),
@@ -176,6 +175,7 @@ fn check_git(resolved: &ResolvedBinary) -> DoctorCheck {
                 message: version,
                 fix_url: None,
                 fix_command: None,
+                fix_type: None,
                 path: Some(path_str),
                 bridge_path: None,
                 raw_output: Some(raw),
@@ -194,6 +194,7 @@ fn check_git(resolved: &ResolvedBinary) -> DoctorCheck {
                 message: "Git not found".to_string(),
                 fix_url: Some("https://git-scm.com/downloads".to_string()),
                 fix_command: None,
+                fix_type: None,
                 path: Some(path_str),
                 bridge_path: None,
                 raw_output: Some(raw),
@@ -206,6 +207,7 @@ fn check_git(resolved: &ResolvedBinary) -> DoctorCheck {
             message: "Git not found".to_string(),
             fix_url: Some("https://git-scm.com/downloads".to_string()),
             fix_command: None,
+            fix_type: None,
             path: Some(path_str),
             bridge_path: None,
             raw_output: Some(format!("{header}\n$ git --version\nerror: {e}\n{search}")),
@@ -230,6 +232,7 @@ fn check_gh(resolved: &ResolvedBinary) -> DoctorCheck {
                 message: "GitHub CLI not found".to_string(),
                 fix_url: Some("https://cli.github.com".to_string()),
                 fix_command: None,
+                fix_type: None,
                 path: None,
                 bridge_path: None,
                 raw_output: Some(format!("{header}\nnot found via resolve_binary\n{search}")),
@@ -254,6 +257,7 @@ fn check_gh(resolved: &ResolvedBinary) -> DoctorCheck {
                 message: first_line,
                 fix_url: None,
                 fix_command: None,
+                fix_type: None,
                 path: Some(path_str),
                 bridge_path: None,
                 raw_output: Some(raw),
@@ -272,6 +276,7 @@ fn check_gh(resolved: &ResolvedBinary) -> DoctorCheck {
                 message: "GitHub CLI not found".to_string(),
                 fix_url: Some("https://cli.github.com".to_string()),
                 fix_command: None,
+                fix_type: None,
                 path: Some(path_str),
                 bridge_path: None,
                 raw_output: Some(raw),
@@ -284,6 +289,7 @@ fn check_gh(resolved: &ResolvedBinary) -> DoctorCheck {
             message: "GitHub CLI not found".to_string(),
             fix_url: Some("https://cli.github.com".to_string()),
             fix_command: None,
+            fix_type: None,
             path: Some(path_str),
             bridge_path: None,
             raw_output: Some(format!("{header}\n$ gh --version\nerror: {e}\n{search}")),
@@ -307,6 +313,7 @@ fn check_gh_auth(gh: &ResolvedBinary) -> DoctorCheck {
                 message: "GitHub CLI not found — install gh first".to_string(),
                 fix_url: Some("https://cli.github.com".to_string()),
                 fix_command: None,
+                fix_type: None,
                 path: None,
                 bridge_path: None,
                 raw_output: Some(format!("{header}\ngh not found via resolve_binary")),
@@ -328,6 +335,7 @@ fn check_gh_auth(gh: &ResolvedBinary) -> DoctorCheck {
                     message: "Authenticated".to_string(),
                     fix_url: None,
                     fix_command: None,
+                    fix_type: None,
                     path: None,
                     bridge_path: None,
                     raw_output: Some(raw),
@@ -347,6 +355,7 @@ fn check_gh_auth(gh: &ResolvedBinary) -> DoctorCheck {
                     message: hint,
                     fix_url: Some("https://cli.github.com/manual/gh_auth_login".to_string()),
                     fix_command: None,
+                    fix_type: None,
                     path: None,
                     bridge_path: None,
                     raw_output: Some(raw),
@@ -360,6 +369,7 @@ fn check_gh_auth(gh: &ResolvedBinary) -> DoctorCheck {
             message: "Not authenticated".to_string(),
             fix_url: Some("https://cli.github.com/manual/gh_auth_login".to_string()),
             fix_command: None,
+            fix_type: None,
             path: None,
             bridge_path: None,
             raw_output: Some(format!("{header}\n$ gh auth status\nerror: {e}")),
@@ -385,6 +395,7 @@ fn check_git_lfs(git: &ResolvedBinary, git_lfs: &ResolvedBinary) -> DoctorCheck 
                 message: "Git LFS not installed (optional, needed for large files)".to_string(),
                 fix_url: Some("https://git-lfs.com".to_string()),
                 fix_command: None,
+                fix_type: None,
                 path: None,
                 bridge_path: None,
                 raw_output: Some(format!(
@@ -413,6 +424,7 @@ fn check_git_lfs(git: &ResolvedBinary, git_lfs: &ResolvedBinary) -> DoctorCheck 
                 message: version,
                 fix_url: None,
                 fix_command: None,
+                fix_type: None,
                 path,
                 bridge_path: None,
                 raw_output: Some(raw),
@@ -431,6 +443,7 @@ fn check_git_lfs(git: &ResolvedBinary, git_lfs: &ResolvedBinary) -> DoctorCheck 
                 message: "Git LFS not installed (optional, needed for large files)".to_string(),
                 fix_url: Some("https://git-lfs.com".to_string()),
                 fix_command: None,
+                fix_type: None,
                 path: None,
                 bridge_path: None,
                 raw_output: Some(raw),
@@ -443,6 +456,7 @@ fn check_git_lfs(git: &ResolvedBinary, git_lfs: &ResolvedBinary) -> DoctorCheck 
             message: "Git LFS not installed (optional, needed for large files)".to_string(),
             fix_url: Some("https://git-lfs.com".to_string()),
             fix_command: None,
+            fix_type: None,
             path: None,
             bridge_path: None,
             raw_output: Some(format!("{header}\n$ git lfs version\nerror: {e}\n{search}")),
@@ -467,6 +481,7 @@ fn check_clonefile(git: &ResolvedBinary) -> DoctorCheck {
                 message: "Git not found — cannot check clonefile setting".to_string(),
                 fix_url: Some("https://git-scm.com/downloads".to_string()),
                 fix_command: None,
+                fix_type: None,
                 path: None,
                 bridge_path: None,
                 raw_output: Some(format!("{header}\ngit not found via resolve_binary")),
@@ -494,6 +509,7 @@ fn check_clonefile(git: &ResolvedBinary) -> DoctorCheck {
                     message: "Enabled — reduces disk space used by new worktrees".to_string(),
                     fix_url: None,
                     fix_command: None,
+                    fix_type: None,
                     path: None,
                     bridge_path: None,
                     raw_output: Some(raw),
@@ -507,6 +523,7 @@ fn check_clonefile(git: &ResolvedBinary) -> DoctorCheck {
                         .to_string(),
                     fix_url: None,
                     fix_command: Some(fix_cmd),
+                    fix_type: Some("command".to_string()),
                     path: None,
                     bridge_path: None,
                     raw_output: Some(raw),
@@ -526,6 +543,7 @@ fn check_clonefile(git: &ResolvedBinary) -> DoctorCheck {
                 message: "Not set — enable to reduce disk space used by new worktrees".to_string(),
                 fix_url: None,
                 fix_command: Some(fix_cmd),
+                fix_type: Some("command".to_string()),
                 path: None,
                 bridge_path: None,
                 raw_output: Some(raw),
@@ -538,6 +556,7 @@ fn check_clonefile(git: &ResolvedBinary) -> DoctorCheck {
             message: "Not set — enable to reduce disk space used by new worktrees".to_string(),
             fix_url: None,
             fix_command: Some(fix_cmd),
+            fix_type: Some("command".to_string()),
             path: None,
             bridge_path: None,
             raw_output: Some(format!(
@@ -659,6 +678,7 @@ fn check_single_ai_agent(
                         message: "Installed".to_string(),
                         fix_url: None,
                         fix_command: None,
+                        fix_type: None,
                         path: resolved_path,
                         bridge_path: None,
                         raw_output: Some(raw),
@@ -678,6 +698,7 @@ fn check_single_ai_agent(
                             .to_string(),
                         fix_url: Some("https://github.com/block/goose".to_string()),
                         fix_command: None,
+                        fix_type: None,
                         path: resolved_path,
                         bridge_path: None,
                         raw_output: Some(raw),
@@ -690,6 +711,7 @@ fn check_single_ai_agent(
                     message: "Goose ACP subcommand not available — upgrade required".to_string(),
                     fix_url: Some("https://github.com/block/goose".to_string()),
                     fix_command: None,
+                    fix_type: None,
                     path: resolved_path,
                     bridge_path: None,
                     raw_output: Some(format!(
@@ -713,6 +735,7 @@ fn check_single_ai_agent(
                 message: "Installed".to_string(),
                 fix_url: None,
                 fix_command: None,
+                fix_type: None,
                 path: main_path,
                 bridge_path,
                 raw_output: Some(format!("{header}\n{search}")),
@@ -736,6 +759,7 @@ fn check_single_ai_agent(
                         .or(info.install_url)
                         .map(|s| s.to_string()),
                     fix_command: info.bridge_install_command.map(|s| s.to_string()),
+                    fix_type: info.bridge_install_command.map(|_| "bridge".to_string()),
                     path: Some(main_path.to_string_lossy().to_string()),
                     bridge_path: None,
                     raw_output: Some(format!("{header}\n{search}\n{main_search}")),
@@ -752,6 +776,7 @@ fn check_single_ai_agent(
                 },
                 fix_url: info.install_url.map(|s| s.to_string()),
                 fix_command: info.install_command.map(|s| s.to_string()),
+                fix_type: info.install_command.map(|_| "command".to_string()),
                 path: None,
                 bridge_path: None,
                 raw_output: Some(format!("{header}\n{search}\n{main_search}")),
@@ -769,6 +794,7 @@ fn check_single_ai_agent(
             },
             fix_url: info.install_url.map(|s| s.to_string()),
             fix_command: info.install_command.map(|s| s.to_string()),
+            fix_type: info.install_command.map(|_| "command".to_string()),
             path: None,
             bridge_path: None,
             raw_output: Some(format!("{header}\n{search}")),
@@ -776,9 +802,32 @@ fn check_single_ai_agent(
     }
 }
 
-// =============================================================================
-// Tauri commands
-// =============================================================================
+// --- Fix command lookup ---
+
+/// Look up the shell command for a given check ID and fix type.
+///
+/// Returns `None` if the check ID is unknown or has no fix of the requested type.
+fn lookup_fix_command(check_id: &str, fix_type: &str) -> Option<String> {
+    // Tool checks with hardcoded fix commands
+    if check_id == "git-clonefile" && fix_type == "command" {
+        return Some("git config --global core.clonefile true".to_string());
+    }
+
+    // AI agent checks
+    for info in AI_AGENT_CHECKS {
+        if info.id == check_id {
+            return match fix_type {
+                "command" => info.install_command.map(|s| s.to_string()),
+                "bridge" => info.bridge_install_command.map(|s| s.to_string()),
+                _ => None,
+            };
+        }
+    }
+
+    None
+}
+
+// --- Tauri commands ---
 
 /// Fallback check returned when a spawn_blocking task panics.
 fn empty_check(id: &str, label: &str) -> DoctorCheck {
@@ -789,6 +838,7 @@ fn empty_check(id: &str, label: &str) -> DoctorCheck {
         message: "Check failed to run".to_string(),
         fix_url: None,
         fix_command: None,
+        fix_type: None,
         path: None,
         bridge_path: None,
         raw_output: None,
@@ -904,9 +954,15 @@ pub async fn run_doctor() -> DoctorReport {
     DoctorReport { checks }
 }
 
-/// Run a fix command from a doctor check.
+/// Run a fix command for a doctor check, identified by check ID and fix type.
+///
+/// The actual shell command is looked up from the static check definitions —
+/// the frontend never sends a raw command string.
 #[tauri::command]
-pub async fn run_doctor_fix(command: String) -> Result<(), String> {
+pub async fn run_doctor_fix(check_id: String, fix_type: String) -> Result<(), String> {
+    let command = lookup_fix_command(&check_id, &fix_type)
+        .ok_or_else(|| format!("Unknown check '{check_id}' or fix type '{fix_type}'"))?;
+
     tokio::task::spawn_blocking(move || {
         let (shell, args) = if std::path::Path::new("/bin/zsh").exists() {
             ("/bin/zsh", vec!["-l", "-c", &command])

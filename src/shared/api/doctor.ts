@@ -7,6 +7,7 @@ export interface DoctorCheck {
   message: string;
   fixUrl: string | null;
   fixCommand: string | null;
+  fixType: string | null;
   path: string | null;
   bridgePath: string | null;
   rawOutput: string | null;
@@ -20,6 +21,9 @@ export async function runDoctor(): Promise<DoctorReport> {
   return invoke("run_doctor");
 }
 
-export async function runDoctorFix(command: string): Promise<void> {
-  return invoke("run_doctor_fix", { command });
+export async function runDoctorFix(
+  checkId: string,
+  fixType: string,
+): Promise<void> {
+  return invoke("run_doctor_fix", { checkId, fixType });
 }

@@ -36,11 +36,11 @@ export function DoctorCheckRow({ check, onFixed }: DoctorCheckRowProps) {
   const Icon = STATUS_ICON[check.status];
 
   async function confirmFix() {
-    if (!check.fixCommand) return;
+    if (!check.fixType) return;
     setFixing(true);
     setFixError(null);
     try {
-      await runDoctorFix(check.fixCommand);
+      await runDoctorFix(check.id, check.fixType);
       setShowFixDialog(false);
       onFixed?.();
     } catch (e) {
@@ -74,7 +74,7 @@ export function DoctorCheckRow({ check, onFixed }: DoctorCheckRowProps) {
           )}
         </div>
 
-        {check.fixCommand && check.status !== "pass" && (
+        {check.fixType && check.status !== "pass" && (
           <button
             type="button"
             onClick={() => {
