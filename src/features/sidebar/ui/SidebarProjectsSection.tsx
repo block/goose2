@@ -77,9 +77,7 @@ function ItemMenu({
         className={cn(
           "flex items-center justify-center w-6 h-6 rounded-md",
           "text-foreground-secondary/40 hover:text-foreground hover:bg-background-tertiary/50",
-          open
-            ? "opacity-100"
-            : "opacity-0 group-hover:opacity-100 transition-opacity duration-150",
+          "opacity-60 hover:opacity-100 transition-opacity duration-150",
         )}
       >
         <MoreHorizontal className="w-3.5 h-3.5" />
@@ -297,7 +295,7 @@ export function SidebarProjectsSection({
             onClick={onCreateProject}
             title="New project"
             className={cn(
-              "flex items-center justify-center w-6 h-6 rounded-md flex-shrink-0 mr-1",
+              "flex items-center justify-center w-6 h-6 rounded-md flex-shrink-0",
               "text-foreground-secondary/50 hover:text-foreground hover:bg-background-tertiary/50",
               "transition-opacity duration-150",
             )}
