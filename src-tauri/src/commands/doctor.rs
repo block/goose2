@@ -20,6 +20,16 @@ pub enum CheckStatus {
     Fail,
 }
 
+/// The type of fix available for a check.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum FixType {
+    /// A shell command to install or configure the dependency.
+    Command,
+    /// A shell command to install the ACP bridge binary.
+    Bridge,
+}
+
 /// A single health-check result shown in the UI.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -36,9 +46,9 @@ pub struct DoctorCheck {
     /// If non-None, the UI shows the command text in a confirmation dialog.
     /// Display-only — never sent back to the backend for execution.
     pub fix_command: Option<String>,
-    /// The type of fix: "command" (install/fix command) or "bridge" (bridge install).
+    /// The type of fix available for this check.
     /// Sent back to the backend along with the check ID to execute the fix.
-    pub fix_type: Option<String>,
+    pub fix_type: Option<FixType>,
     /// If non-None, the resolved path to the main executable on disk.
     pub path: Option<String>,
     /// If non-None, the resolved path to the ACP bridge executable on disk.
@@ -523,7 +533,7 @@ fn check_clonefile(git: &ResolvedBinary) -> DoctorCheck {
                         .to_string(),
                     fix_url: None,
                     fix_command: Some(fix_cmd),
-                    fix_type: Some("command".to_string()),
+                    fix_type: Some(FixType::Command),
                     path: None,
                     bridge_path: None,
                     raw_output: Some(raw),
@@ -543,7 +553,7 @@ fn check_clonefile(git: &ResolvedBinary) -> DoctorCheck {
                 message: "Not set — enable to reduce disk space used by new worktrees".to_string(),
                 fix_url: None,
                 fix_command: Some(fix_cmd),
-                fix_type: Some("command".to_string()),
+                fix_type: Some(FixType::Command),
                 path: None,
                 bridge_path: None,
                 raw_output: Some(raw),
@@ -556,7 +566,7 @@ fn check_clonefile(git: &ResolvedBinary) -> DoctorCheck {
             message: "Not set — enable to reduce disk space used by new worktrees".to_string(),
             fix_url: None,
             fix_command: Some(fix_cmd),
-            fix_type: Some("command".to_string()),
+            fix_type: Some(FixType::Command),
             path: None,
             bridge_path: None,
             raw_output: Some(format!(
@@ -742,46 +752,36 @@ fn check_single_ai_agent(
             }
         }
     } else {
-        if let Some(resolved_main) = resolved_main {
-            let main_search = &resolved_main.search_output;
-            if let Some(ref main_path) = resolved_main.path {
-                let bridge_cmd = info.commands[0];
-                return DoctorCheck {
-                    id: info.id.to_string(),
-                    label: info.label.to_string(),
-                    status: CheckStatus::Warn,
-                    message: format!(
-                        "{} is installed but {} also needs to be installed",
-                        info.label, bridge_cmd
-                    ),
-                    fix_url: info
-                        .bridge_install_url
-                        .or(info.install_url)
-                        .map(|s| s.to_string()),
-                    fix_command: info.bridge_install_command.map(|s| s.to_string()),
-                    fix_type: info.bridge_install_command.map(|_| "bridge".to_string()),
-                    path: Some(main_path.to_string_lossy().to_string()),
-                    bridge_path: None,
-                    raw_output: Some(format!("{header}\n{search}\n{main_search}")),
-                };
-            }
+        // Bridge binary not found. If the main binary exists, suggest installing
+        // just the bridge; otherwise report the agent as not installed.
+        if let Some(main_path) = resolved_main.as_ref().and_then(|rm| rm.path.as_ref()) {
+            let bridge_cmd = info.commands[0];
+            let main_search = &resolved_main.as_ref().unwrap().search_output;
             return DoctorCheck {
                 id: info.id.to_string(),
                 label: info.label.to_string(),
                 status: CheckStatus::Warn,
-                message: if any_agent_found {
-                    "Not installed (optional)".to_string()
-                } else {
-                    "Not installed — at least one AI agent is needed".to_string()
-                },
-                fix_url: info.install_url.map(|s| s.to_string()),
-                fix_command: info.install_command.map(|s| s.to_string()),
-                fix_type: info.install_command.map(|_| "command".to_string()),
-                path: None,
+                message: format!(
+                    "{} is installed but {} also needs to be installed",
+                    info.label, bridge_cmd
+                ),
+                fix_url: info
+                    .bridge_install_url
+                    .or(info.install_url)
+                    .map(|s| s.to_string()),
+                fix_command: info.bridge_install_command.map(|s| s.to_string()),
+                fix_type: info.bridge_install_command.map(|_| FixType::Bridge),
+                path: Some(main_path.to_string_lossy().to_string()),
                 bridge_path: None,
                 raw_output: Some(format!("{header}\n{search}\n{main_search}")),
             };
         }
+
+        // Neither bridge nor main binary found — agent is not installed.
+        let extra_search = resolved_main
+            .as_ref()
+            .map(|rm| format!("\n{}", rm.search_output))
+            .unwrap_or_default();
 
         DoctorCheck {
             id: info.id.to_string(),
@@ -794,10 +794,10 @@ fn check_single_ai_agent(
             },
             fix_url: info.install_url.map(|s| s.to_string()),
             fix_command: info.install_command.map(|s| s.to_string()),
-            fix_type: info.install_command.map(|_| "command".to_string()),
+            fix_type: info.install_command.map(|_| FixType::Command),
             path: None,
             bridge_path: None,
-            raw_output: Some(format!("{header}\n{search}")),
+            raw_output: Some(format!("{header}\n{search}{extra_search}")),
         }
     }
 }
@@ -807,9 +807,9 @@ fn check_single_ai_agent(
 /// Look up the shell command for a given check ID and fix type.
 ///
 /// Returns `None` if the check ID is unknown or has no fix of the requested type.
-fn lookup_fix_command(check_id: &str, fix_type: &str) -> Option<String> {
+fn lookup_fix_command(check_id: &str, fix_type: &FixType) -> Option<String> {
     // Tool checks with hardcoded fix commands
-    if check_id == "git-clonefile" && fix_type == "command" {
+    if check_id == "git-clonefile" && *fix_type == FixType::Command {
         return Some("git config --global core.clonefile true".to_string());
     }
 
@@ -817,9 +817,8 @@ fn lookup_fix_command(check_id: &str, fix_type: &str) -> Option<String> {
     for info in AI_AGENT_CHECKS {
         if info.id == check_id {
             return match fix_type {
-                "command" => info.install_command.map(|s| s.to_string()),
-                "bridge" => info.bridge_install_command.map(|s| s.to_string()),
-                _ => None,
+                FixType::Command => info.install_command.map(|s| s.to_string()),
+                FixType::Bridge => info.bridge_install_command.map(|s| s.to_string()),
             };
         }
     }
@@ -959,9 +958,9 @@ pub async fn run_doctor() -> DoctorReport {
 /// The actual shell command is looked up from the static check definitions —
 /// the frontend never sends a raw command string.
 #[tauri::command]
-pub async fn run_doctor_fix(check_id: String, fix_type: String) -> Result<(), String> {
+pub async fn run_doctor_fix(check_id: String, fix_type: FixType) -> Result<(), String> {
     let command = lookup_fix_command(&check_id, &fix_type)
-        .ok_or_else(|| format!("Unknown check '{check_id}' or fix type '{fix_type}'"))?;
+        .ok_or_else(|| format!("Unknown check '{check_id}' or fix type '{fix_type:?}'"))?;
 
     tokio::task::spawn_blocking(move || {
         let (shell, args) = if std::path::Path::new("/bin/zsh").exists() {

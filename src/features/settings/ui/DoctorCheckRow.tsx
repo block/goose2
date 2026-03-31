@@ -104,7 +104,15 @@ export function DoctorCheckRow({ check, onFixed }: DoctorCheckRowProps) {
       </div>
 
       {showFixDialog && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Run fix command"
+          className="fixed inset-0 z-[60] flex items-center justify-center"
+          onKeyDown={(e) => {
+            if (e.key === "Escape" && !fixing) setShowFixDialog(false);
+          }}
+        >
           <div
             className="absolute inset-0 bg-black/40"
             onClick={() => {
@@ -112,7 +120,7 @@ export function DoctorCheckRow({ check, onFixed }: DoctorCheckRowProps) {
             }}
             aria-hidden="true"
           />
-          <div className="relative z-10 w-full max-w-sm space-y-4 rounded-xl border border-border bg-background p-6 shadow-xl">
+          <div className="relative z-10 w-full max-w-sm rounded-xl border border-border bg-background p-6 shadow-xl space-y-4">
             <h3 className="text-sm font-semibold">Run fix command?</h3>
             <p className="break-all font-mono text-xs text-foreground-secondary">
               {check.fixCommand}
@@ -125,7 +133,7 @@ export function DoctorCheckRow({ check, onFixed }: DoctorCheckRowProps) {
                 type="button"
                 disabled={fixing}
                 onClick={() => setShowFixDialog(false)}
-                className="rounded-md px-3 py-1.5 text-xs font-medium transition-colors hover:bg-background-secondary disabled:opacity-50"
+                className="px-3 py-1.5 text-xs font-medium rounded-md hover:bg-background-secondary transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -133,7 +141,7 @@ export function DoctorCheckRow({ check, onFixed }: DoctorCheckRowProps) {
                 type="button"
                 disabled={fixing}
                 onClick={confirmFix}
-                className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-background-secondary disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-background-secondary transition-colors disabled:opacity-50"
               >
                 {fixing && <Loader2 className="h-3 w-3 animate-spin" />}
                 {fixing ? "Running" : fixError ? "Retry" : "Run"}

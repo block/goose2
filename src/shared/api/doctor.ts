@@ -1,5 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
+export type FixType = "command" | "bridge";
+
 export interface DoctorCheck {
   id: string;
   label: string;
@@ -7,7 +9,7 @@ export interface DoctorCheck {
   message: string;
   fixUrl: string | null;
   fixCommand: string | null;
-  fixType: string | null;
+  fixType: FixType | null;
   path: string | null;
   bridgePath: string | null;
   rawOutput: string | null;
@@ -23,7 +25,7 @@ export async function runDoctor(): Promise<DoctorReport> {
 
 export async function runDoctorFix(
   checkId: string,
-  fixType: string,
+  fixType: FixType,
 ): Promise<void> {
   return invoke("run_doctor_fix", { checkId, fixType });
 }
