@@ -14,10 +14,6 @@ use acp_client::{
 use crate::services::sessions::SessionStore;
 use crate::types::messages::{MessageContent, MessageRole};
 
-// ---------------------------------------------------------------------------
-// Event payload types
-// ---------------------------------------------------------------------------
-
 /// Payload for the `acp:text` event.
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -73,10 +69,6 @@ struct ModelStatePayload {
     current_model_id: String,
     current_model_name: Option<String>,
 }
-
-// ---------------------------------------------------------------------------
-// TauriMessageWriter
-// ---------------------------------------------------------------------------
 
 /// A [`MessageWriter`] implementation that streams ACP output to the frontend
 /// via Tauri events, and saves the final assistant message to the
@@ -214,9 +206,7 @@ impl MessageWriter for TauriMessageWriter {
     }
 }
 
-// ---------------------------------------------------------------------------
-// TauriStore
-// ---------------------------------------------------------------------------
+//TauriStore
 
 /// A [`Store`] implementation that persists ACP session mappings to disk
 /// under `~/.goose/acp_sessions/` and reads conversation history from the
@@ -238,6 +228,17 @@ impl TauriStore {
             sessions_dir,
             session_store,
         }
+    }
+
+    /// Look up a previously stored agent session ID, or `None` for new sessions.
+    pub fn get_agent_session_id(&self, session_id: &str) -> Option<String> {
+        let path = self.sessions_dir.join(format!("{session_id}.json"));
+        let json = std::fs::read_to_string(&path).ok()?;
+        let value: serde_json::Value = serde_json::from_str(&json).ok()?;
+        value
+            .get("agent_session_id")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
     }
 
     /// Remove session files that are older than the given duration.
@@ -305,9 +306,7 @@ impl Store for TauriStore {
     }
 }
 
-// ---------------------------------------------------------------------------
-// AcpSessionRegistry
-// ---------------------------------------------------------------------------
+//AcpSessionRegistry
 
 /// Info about a running ACP session, returned to the frontend.
 #[derive(Clone, Serialize)]
@@ -399,9 +398,7 @@ impl AcpSessionRegistry {
     }
 }
 
-// ---------------------------------------------------------------------------
-// AcpService
-// ---------------------------------------------------------------------------
+//AcpService
 
 /// High-level service for running ACP prompts through an agent driver.
 ///
@@ -451,7 +448,9 @@ impl AcpService {
             session_id.clone(),
             Arc::clone(&session_store),
         ));
-        let store: Arc<dyn Store> = Arc::new(TauriStore::new(session_store));
+        let tauri_store = TauriStore::new(Arc::clone(&session_store));
+        let agent_session_id = tauri_store.get_agent_session_id(&session_id);
+        let store: Arc<dyn Store> = Arc::new(tauri_store);
         let cancel_token = registry.register(&session_id, &provider_id);
 
         // Prepend the effective system prompt so the agent sees persona and
@@ -484,7 +483,7 @@ impl AcpService {
                         &store,
                         &writer,
                         &cancel_token,
-                        None,
+                        agent_session_id.as_deref(),
                     )
                     .await
             })
