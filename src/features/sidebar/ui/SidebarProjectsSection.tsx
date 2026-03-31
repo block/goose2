@@ -1,4 +1,11 @@
-import { ChevronDown, ChevronRight, MessageSquare, Plus } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import {
+  ChevronDown,
+  ChevronRight,
+  MessageSquare,
+  MoreHorizontal,
+  Plus,
+} from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import type { AppView } from "@/app/AppShell";
 import type { ProjectInfo } from "@/features/projects/api/projects";
@@ -28,6 +35,89 @@ interface SidebarProjectsSectionProps {
   onSelectTab?: (tabId: string) => void;
   onNewChatInProject?: (projectId: string) => void;
   onCreateProject?: () => void;
+  onEditProject?: (projectId: string) => void;
+  onArchiveProject?: (projectId: string) => void;
+  onEditChat?: (tabId: string) => void;
+  onArchiveChat?: (tabId: string) => void;
+}
+
+function ItemMenu({
+  label,
+  onEdit,
+  onArchive,
+}: {
+  label: string;
+  onEdit?: () => void;
+  onArchive?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button
+        type="button"
+        aria-label={`Options for ${label}`}
+        aria-haspopup="true"
+        aria-expanded={open}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((prev) => !prev);
+        }}
+        className={cn(
+          "flex items-center justify-center w-6 h-6 rounded-md",
+          "text-foreground-secondary/40 hover:text-foreground hover:bg-background-tertiary/50",
+          "opacity-0 group-hover:opacity-100 transition-opacity duration-150",
+        )}
+      >
+        <MoreHorizontal className="w-3.5 h-3.5" />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-10 mt-1 w-28 rounded-lg border border-border bg-background py-1 shadow-lg"
+        >
+          {onEdit && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onEdit();
+              }}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-background-secondary transition-colors"
+            >
+              Edit
+            </button>
+          )}
+          {onArchive && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onArchive();
+              }}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-background-secondary transition-colors"
+            >
+              Archive
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function ProjectSection({
@@ -39,6 +129,10 @@ function ProjectSection({
   onSelectTab,
   onNewChatInProject,
   onNavigate,
+  onEditProject,
+  onArchiveProject,
+  onEditChat,
+  onArchiveChat,
 }: {
   project: ProjectInfo;
   projectChats: TabInfo[];
@@ -48,6 +142,10 @@ function ProjectSection({
   onSelectTab?: (tabId: string) => void;
   onNewChatInProject?: (projectId: string) => void;
   onNavigate?: (view: AppView) => void;
+  onEditProject?: (projectId: string) => void;
+  onArchiveProject?: (projectId: string) => void;
+  onEditChat?: (tabId: string) => void;
+  onArchiveChat?: (tabId: string) => void;
 }) {
   const visibleChats = projectChats.slice(0, MAX_VISIBLE_CHATS);
   const hasMore = projectChats.length > MAX_VISIBLE_CHATS;
@@ -78,6 +176,11 @@ function ProjectSection({
             {project.name}
           </span>
         </button>
+        <ItemMenu
+          label={project.name}
+          onEdit={() => onEditProject?.(project.id)}
+          onArchive={() => onArchiveProject?.(project.id)}
+        />
         <button
           type="button"
           onClick={(e) => {
@@ -101,22 +204,28 @@ function ProjectSection({
           {visibleChats.map((tab) => {
             const isActive = activeTabId === tab.id;
             return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => onSelectTab?.(tab.id)}
-                className={cn(
-                  "flex items-center gap-2 w-full py-1.5 pl-8 pr-2.5 rounded-md text-[13px]",
-                  "transition-colors duration-150",
-                  isActive
-                    ? "bg-background-tertiary/70 text-foreground"
-                    : "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
-                )}
-              >
-                <span className="flex-1 min-w-0 truncate text-left">
-                  {tab.title}
-                </span>
-              </button>
+              <div key={tab.id} className="flex items-center group">
+                <button
+                  type="button"
+                  onClick={() => onSelectTab?.(tab.id)}
+                  className={cn(
+                    "flex items-center gap-2 flex-1 min-w-0 py-1.5 pl-8 pr-1 rounded-md text-[13px]",
+                    "transition-colors duration-150",
+                    isActive
+                      ? "bg-background-tertiary/70 text-foreground"
+                      : "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
+                  )}
+                >
+                  <span className="flex-1 min-w-0 truncate text-left">
+                    {tab.title}
+                  </span>
+                </button>
+                <ItemMenu
+                  label={tab.title}
+                  onEdit={() => onEditChat?.(tab.id)}
+                  onArchive={() => onArchiveChat?.(tab.id)}
+                />
+              </div>
             );
           })}
           {hasMore && (
@@ -150,6 +259,10 @@ export function SidebarProjectsSection({
   onSelectTab,
   onNewChatInProject,
   onCreateProject,
+  onEditProject,
+  onArchiveProject,
+  onEditChat,
+  onArchiveChat,
 }: SidebarProjectsSectionProps) {
   return (
     <div
@@ -166,7 +279,7 @@ export function SidebarProjectsSection({
       {/* Section header with [+] button */}
       <div
         className={cn(
-          "flex items-center transition-all duration-300 group",
+          "flex items-center transition-all duration-300",
           collapsed ? "px-0 pt-0 pb-1 justify-center" : "px-3 pt-2 pb-1",
         )}
       >
@@ -187,12 +300,12 @@ export function SidebarProjectsSection({
             onClick={onCreateProject}
             title="New project"
             className={cn(
-              "flex items-center justify-center w-5 h-5 rounded-md flex-shrink-0",
+              "flex items-center justify-center w-6 h-6 rounded-md flex-shrink-0 mr-1",
               "text-foreground-secondary/50 hover:text-foreground hover:bg-background-tertiary/50",
-              "opacity-0 group-hover:opacity-100 transition-opacity duration-150",
+              "transition-opacity duration-150",
             )}
           >
-            <Plus className="w-3 h-3" />
+            <Plus className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
@@ -230,6 +343,10 @@ export function SidebarProjectsSection({
               onSelectTab={onSelectTab}
               onNewChatInProject={onNewChatInProject}
               onNavigate={onNavigate}
+              onEditProject={onEditProject}
+              onArchiveProject={onArchiveProject}
+              onEditChat={onEditChat}
+              onArchiveChat={onArchiveChat}
             />
           ))}
         </div>
@@ -282,22 +399,28 @@ export function SidebarProjectsSection({
               {projectTabs.standalone.map((tab) => {
                 const isActive = activeTabId === tab.id;
                 return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => onSelectTab?.(tab.id)}
-                    className={cn(
-                      "group flex items-center gap-2 w-full py-1.5 rounded-md text-[13px]",
-                      "transition-colors duration-150 px-2.5",
-                      isActive
-                        ? "bg-background-tertiary/70 text-foreground"
-                        : "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
-                    )}
-                  >
-                    <span className="flex-1 min-w-0 truncate text-left">
-                      {tab.title}
-                    </span>
-                  </button>
+                  <div key={tab.id} className="flex items-center group">
+                    <button
+                      type="button"
+                      onClick={() => onSelectTab?.(tab.id)}
+                      className={cn(
+                        "flex items-center gap-2 flex-1 min-w-0 py-1.5 rounded-md text-[13px]",
+                        "transition-colors duration-150 px-2.5",
+                        isActive
+                          ? "bg-background-tertiary/70 text-foreground"
+                          : "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
+                      )}
+                    >
+                      <span className="flex-1 min-w-0 truncate text-left">
+                        {tab.title}
+                      </span>
+                    </button>
+                    <ItemMenu
+                      label={tab.title}
+                      onEdit={() => onEditChat?.(tab.id)}
+                      onArchive={() => onArchiveChat?.(tab.id)}
+                    />
+                  </div>
                 );
               })}
             </div>
