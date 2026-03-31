@@ -2,6 +2,12 @@ import { useState, useEffect } from "react";
 import { cn } from "@/shared/lib/cn";
 import { Palette, Settings2, Info, X } from "lucide-react";
 import { AppearanceSettings } from "./AppearanceSettings";
+import {
+  listArchivedProjects,
+  restoreProject,
+  deleteProject,
+  type ProjectInfo,
+} from "@/features/projects/api/projects";
 
 const NAV_ITEMS = [
   { id: "appearance", label: "Appearance", icon: Palette },
@@ -19,12 +25,40 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   const [activeSection, setActiveSection] = useState<SectionId>("appearance");
   const [isLoaded, setIsLoaded] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [archivedProjects, setArchivedProjects] = useState<ProjectInfo[]>([]);
+  const [loadingArchived, setLoadingArchived] = useState(true);
 
   // Trigger entrance animations after mount
   useEffect(() => {
     const timer = setTimeout(() => setIsLoaded(true), 50);
     return () => clearTimeout(timer);
   }, []);
+
+  // Load archived projects on mount
+  useEffect(() => {
+    listArchivedProjects()
+      .then(setArchivedProjects)
+      .catch(() => setArchivedProjects([]))
+      .finally(() => setLoadingArchived(false));
+  }, []);
+
+  const handleRestore = async (id: string) => {
+    try {
+      await restoreProject(id);
+      setArchivedProjects((prev) => prev.filter((p) => p.id !== id));
+    } catch {
+      // best-effort
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteProject(id);
+      setArchivedProjects((prev) => prev.filter((p) => p.id !== id));
+    } catch {
+      // best-effort
+    }
+  };
 
   // Content transition on section change
   // biome-ignore lint/correctness/useExhaustiveDependencies: activeSection triggers the transition effect intentionally
@@ -130,11 +164,55 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
             >
               {activeSection === "appearance" && <AppearanceSettings />}
               {activeSection === "general" && (
-                <div>
-                  <h3 className="text-lg font-semibold">General</h3>
-                  <p className="mt-1 text-sm text-foreground-secondary">
-                    General settings will appear here.
-                  </p>
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold">General</h3>
+                    <p className="mt-1 text-sm text-foreground-secondary">
+                      General settings will appear here.
+                    </p>
+                  </div>
+
+                  {/* Archived Projects */}
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold">Archived Projects</h3>
+                    {!loadingArchived && archivedProjects.length === 0 && (
+                      <p className="text-xs text-foreground-secondary">
+                        No archived projects.
+                      </p>
+                    )}
+                    {archivedProjects.map((project) => (
+                      <div
+                        key={project.id}
+                        className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className="inline-block w-2 h-2 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: project.color }}
+                          />
+                          <span className="text-sm truncate">
+                            {project.name}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleRestore(project.id)}
+                            className="px-2 py-1 text-xs font-medium rounded-md border border-border hover:bg-background-tertiary transition-colors"
+                          >
+                            Restore
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(project.id)}
+                            className="px-2 py-1 text-xs font-medium rounded-md text-foreground-danger hover:bg-background-danger/10 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
               {activeSection === "about" && (

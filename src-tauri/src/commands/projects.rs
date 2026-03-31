@@ -108,6 +108,8 @@ pub struct ProjectInfo {
     pub use_worktrees: bool,
     #[serde(default)]
     pub order: i32,
+    #[serde(default)]
+    pub archived_at: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -143,6 +145,38 @@ pub fn list_projects() -> Result<Vec<ProjectInfo>, String> {
         };
 
         projects.push(info);
+    }
+
+    projects.sort_by_key(|p| p.order);
+    projects.retain(|p| p.archived_at.is_none());
+    Ok(projects)
+}
+
+#[tauri::command]
+pub fn list_archived_projects() -> Result<Vec<ProjectInfo>, String> {
+    let dir = projects_dir()?;
+    if !dir.exists() {
+        return Ok(vec![]);
+    }
+
+    let mut projects = Vec::new();
+    let entries = fs::read_dir(&dir).map_err(|e| format!("Failed to read projects dir: {}", e))?;
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        let project_json = path.join("project.json");
+        if !project_json.exists() {
+            continue;
+        }
+        let raw = fs::read_to_string(&project_json).unwrap_or_default();
+        if let Ok(info) = serde_json::from_str::<ProjectInfo>(&raw) {
+            if info.archived_at.is_some() {
+                projects.push(info);
+            }
+        }
     }
 
     projects.sort_by_key(|p| p.order);
@@ -206,6 +240,7 @@ pub fn create_project(
         working_dir,
         use_worktrees,
         order: existing_count as i32,
+        archived_at: None,
         created_at: now.clone(),
         updated_at: now,
     };
@@ -250,6 +285,7 @@ pub fn update_project(
         working_dir,
         use_worktrees,
         order: existing.order,
+        archived_at: existing.archived_at,
         created_at: existing.created_at,
         updated_at: now_timestamp(),
     };
@@ -273,4 +309,70 @@ pub fn delete_project(id: String) -> Result<(), String> {
 pub fn get_project(id: String) -> Result<ProjectInfo, String> {
     let (_, info) = find_project_by_id(&id)?;
     Ok(info)
+}
+
+#[tauri::command]
+pub fn archive_project(id: String) -> Result<(), String> {
+    let base = projects_dir()?;
+    if !base.exists() {
+        return Err("Projects directory not found".to_string());
+    }
+
+    let entries = fs::read_dir(&base).map_err(|e| format!("Failed to read projects dir: {}", e))?;
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        let project_json = path.join("project.json");
+        if !project_json.exists() {
+            continue;
+        }
+        let raw = fs::read_to_string(&project_json).unwrap_or_default();
+        if let Ok(mut info) = serde_json::from_str::<ProjectInfo>(&raw) {
+            if info.id == id {
+                info.archived_at = Some(now_timestamp());
+                let json = serde_json::to_string_pretty(&info)
+                    .map_err(|e| format!("Failed to serialize: {}", e))?;
+                fs::write(&project_json, json).map_err(|e| format!("Failed to write: {}", e))?;
+                return Ok(());
+            }
+        }
+    }
+
+    Err(format!("Project with id \"{}\" not found", id))
+}
+
+#[tauri::command]
+pub fn restore_project(id: String) -> Result<(), String> {
+    let base = projects_dir()?;
+    if !base.exists() {
+        return Err("Projects directory not found".to_string());
+    }
+
+    let entries = fs::read_dir(&base).map_err(|e| format!("Failed to read projects dir: {}", e))?;
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        let project_json = path.join("project.json");
+        if !project_json.exists() {
+            continue;
+        }
+        let raw = fs::read_to_string(&project_json).unwrap_or_default();
+        if let Ok(mut info) = serde_json::from_str::<ProjectInfo>(&raw) {
+            if info.id == id {
+                info.archived_at = None;
+                let json = serde_json::to_string_pretty(&info)
+                    .map_err(|e| format!("Failed to serialize: {}", e))?;
+                fs::write(&project_json, json).map_err(|e| format!("Failed to write: {}", e))?;
+                return Ok(());
+            }
+        }
+    }
+
+    Err(format!("Project with id \"{}\" not found", id))
 }

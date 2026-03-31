@@ -8,7 +8,7 @@ import { SkillsView } from "@/features/skills/ui/SkillsView";
 import { AgentsView } from "@/features/agents/ui/AgentsView";
 import { ProjectsView } from "@/features/projects/ui/ProjectsView";
 import { CreateProjectDialog } from "@/features/projects/ui/CreateProjectDialog";
-import { deleteProject } from "@/features/projects/api/projects";
+import { archiveProject } from "@/features/projects/api/projects";
 import type { ProjectInfo } from "@/features/projects/api/projects";
 import { SettingsModal } from "@/features/settings/ui/SettingsModal";
 import { useChatStore } from "@/features/chat/stores/chatStore";
@@ -113,7 +113,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const handleArchiveProject = useCallback(
     async (projectId: string) => {
       try {
-        await deleteProject(projectId);
+        await archiveProject(projectId);
         projectStore.fetchProjects();
       } catch {
         // best-effort

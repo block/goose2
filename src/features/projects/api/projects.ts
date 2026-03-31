@@ -12,6 +12,7 @@ export interface ProjectInfo {
   workingDir: string | null;
   useWorktrees: boolean;
   order: number;
+  archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -76,4 +77,16 @@ export async function deleteProject(id: string): Promise<void> {
 
 export async function getProject(id: string): Promise<ProjectInfo> {
   return invoke("get_project", { id });
+}
+
+export async function listArchivedProjects(): Promise<ProjectInfo[]> {
+  return invoke("list_archived_projects");
+}
+
+export async function archiveProject(id: string): Promise<void> {
+  return invoke("archive_project", { id });
+}
+
+export async function restoreProject(id: string): Promise<void> {
+  return invoke("restore_project", { id });
 }
