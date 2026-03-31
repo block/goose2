@@ -5,7 +5,7 @@ version = 4
 [[package]]
 name = "acp-client"
 version = "0.1.0"
-source = "git+https://github.com/block/builderbot?branch=main#5af819ecf61eccb588b9dd3f2b34ffa66c225f8c"
+source = "git+https://github.com/block/builderbot?rev=5af819e#5af819ecf61eccb588b9dd3f2b34ffa66c225f8c"
 dependencies = [
  "agent-client-protocol",
  "anyhow",
@@ -359,7 +359,7 @@ dependencies = [
 [[package]]
 name = "blox-cli"
 version = "0.1.0"
-source = "git+https://github.com/block/builderbot?branch=main#5af819ecf61eccb588b9dd3f2b34ffa66c225f8c"
+source = "git+https://github.com/block/builderbot?rev=5af819e#5af819ecf61eccb588b9dd3f2b34ffa66c225f8c"
 dependencies = [
  "log",
  "serde",
