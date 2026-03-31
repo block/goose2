@@ -1,6 +1,7 @@
 pub mod acp;
 pub mod agents;
 pub mod chat;
+pub mod projects;
 pub mod sessions;
 pub mod sidecar;
 pub mod skills;

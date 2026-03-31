@@ -20,6 +20,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_window_state::Builder::default()
                 .with_state_flags(StateFlags::all() & !StateFlags::VISIBLE)
@@ -58,6 +59,14 @@ pub fn run() {
             commands::skills::update_skill,
             commands::skills::export_skill,
             commands::skills::import_skills,
+            commands::projects::list_projects,
+            commands::projects::create_project,
+            commands::projects::update_project,
+            commands::projects::delete_project,
+            commands::projects::get_project,
+            commands::projects::list_archived_projects,
+            commands::projects::archive_project,
+            commands::projects::restore_project,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

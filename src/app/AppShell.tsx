@@ -6,12 +6,17 @@ import { HomeScreen } from "@/features/home/ui/HomeScreen";
 import { ChatView } from "@/features/chat/ui/ChatView";
 import { SkillsView } from "@/features/skills/ui/SkillsView";
 import { AgentsView } from "@/features/agents/ui/AgentsView";
+import { ProjectsView } from "@/features/projects/ui/ProjectsView";
+import { CreateProjectDialog } from "@/features/projects/ui/CreateProjectDialog";
+import { archiveProject } from "@/features/projects/api/projects";
+import type { ProjectInfo } from "@/features/projects/api/projects";
 import { SettingsModal } from "@/features/settings/ui/SettingsModal";
 import { useChatStore } from "@/features/chat/stores/chatStore";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
+import { useProjectStore } from "@/features/projects/stores/projectStore";
 import type { Tab } from "@/features/tabs/types";
 
-export type AppView = "home" | "chat" | "skills" | "agents";
+export type AppView = "home" | "chat" | "skills" | "agents" | "projects";
 
 const SIDEBAR_WIDTH = 240;
 const SIDEBAR_COLLAPSED_WIDTH = 48;
@@ -19,12 +24,21 @@ const SIDEBAR_COLLAPSED_WIDTH = 48;
 export function AppShell({ children }: { children?: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [createProjectOpen, setCreateProjectOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<ProjectInfo | null>(
+    null,
+  );
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<AppView>("home");
 
   const chatStore = useChatStore();
   const agentStore = useAgentStore();
+  const projectStore = useProjectStore();
+
+  useEffect(() => {
+    projectStore.fetchProjects();
+  }, [projectStore.fetchProjects]);
 
   const isHome = activeTabId === null && activeView === "home";
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
@@ -38,12 +52,18 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     : ("disconnected" as const);
 
   const createNewTab = useCallback(
-    (title = "New Chat") => {
+    (title = "New Chat", project?: ProjectInfo) => {
       const id = crypto.randomUUID();
       const sessionId = crypto.randomUUID();
       const agentId = agentStore.activeAgentId ?? undefined;
 
-      const tab: Tab = { id, title, sessionId, agentId };
+      const tab: Tab = {
+        id,
+        title,
+        sessionId,
+        agentId,
+        projectId: project?.id,
+      };
       setTabs((prev) => [...prev, tab]);
       setActiveTabId(id);
       setActiveView("chat");
@@ -51,9 +71,90 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       // Set the active session in chatStore
       chatStore.setActiveSession(sessionId);
 
+      // Inject project context as a system message if starting from a project
+      if (project?.prompt) {
+        chatStore.addMessage(sessionId, {
+          id: crypto.randomUUID(),
+          role: "system",
+          created: Date.now(),
+          content: [
+            {
+              type: "systemNotification",
+              notificationType: "info",
+              text: `Project: ${project.name}\n\n${project.prompt}`,
+            },
+          ],
+          metadata: { userVisible: true, agentVisible: true },
+        });
+      }
+
       return tab;
     },
     [chatStore, agentStore.activeAgentId],
+  );
+
+  const handleStartChatFromProject = useCallback(
+    (project: ProjectInfo) => {
+      createNewTab(project.name, project);
+    },
+    [createNewTab],
+  );
+
+  const handleNewChatInProject = useCallback(
+    (projectId: string) => {
+      const project = projectStore.projects.find((p) => p.id === projectId);
+      if (project) {
+        createNewTab(project.name, project);
+      }
+    },
+    [createNewTab, projectStore.projects],
+  );
+
+  const handleArchiveProject = useCallback(
+    async (projectId: string) => {
+      try {
+        await archiveProject(projectId);
+        projectStore.fetchProjects();
+      } catch {
+        // best-effort
+      }
+    },
+    [projectStore.fetchProjects],
+  );
+
+  const handleArchiveChat = useCallback(
+    (tabId: string) => {
+      setTabs((prev) => {
+        const closingTab = prev.find((t) => t.id === tabId);
+        const next = prev.filter((t) => t.id !== tabId);
+        if (closingTab) {
+          chatStore.cleanupSession(closingTab.sessionId);
+        }
+        if (activeTabId === tabId) {
+          const nextTab = next[0] ?? null;
+          setActiveTabId(nextTab?.id ?? null);
+          if (nextTab) {
+            chatStore.setActiveSession(nextTab.sessionId);
+            setActiveView("chat");
+          } else {
+            setActiveView("home");
+          }
+        }
+        return next;
+      });
+    },
+    [activeTabId, chatStore],
+  );
+
+  const handleEditProject = useCallback(
+    (projectId: string) => {
+      const project = projectStore.projects.find((p) => p.id === projectId);
+      if (project) {
+        setEditingProject(project);
+        setCreateProjectOpen(true);
+      }
+    },
+    [projectStore.projects],
   );
 
   const handleNewTab = useCallback(() => {
@@ -138,6 +239,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         return <SkillsView />;
       case "agents":
         return <AgentsView />;
+      case "projects":
+        return <ProjectsView onStartChat={handleStartChatFromProject} />;
       case "chat":
         return activeTab ? (
           <ChatView sessionId={activeTab.sessionId} />
@@ -184,7 +287,16 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             onSettingsClick={() => setSettingsOpen(true)}
             onNavigate={handleNavigate}
             onNewChat={handleNewTab}
+            onNewChatInProject={handleNewChatInProject}
+            onCreateProject={() => setCreateProjectOpen(true)}
+            onEditProject={handleEditProject}
+            onArchiveProject={handleArchiveProject}
+            onArchiveChat={handleArchiveChat}
+            onSelectTab={handleTabSelect}
             activeView={activeView}
+            activeTabId={activeTabId}
+            projects={projectStore.projects}
+            tabs={tabs}
             className="h-full shadow-xl rounded-xl"
           />
         </div>
@@ -210,6 +322,34 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
       {/* Settings modal */}
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
+
+      {/* Create project dialog */}
+      <CreateProjectDialog
+        isOpen={createProjectOpen}
+        onClose={() => {
+          setCreateProjectOpen(false);
+          setEditingProject(null);
+        }}
+        onCreated={() => {
+          projectStore.fetchProjects();
+        }}
+        editingProject={
+          editingProject
+            ? {
+                id: editingProject.id,
+                name: editingProject.name,
+                description: editingProject.description,
+                prompt: editingProject.prompt,
+                icon: editingProject.icon,
+                color: editingProject.color,
+                preferredProvider: editingProject.preferredProvider,
+                preferredModel: editingProject.preferredModel,
+                workingDir: editingProject.workingDir,
+                useWorktrees: editingProject.useWorktrees,
+              }
+            : undefined
+        }
+      />
     </div>
   );
 }
