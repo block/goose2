@@ -101,6 +101,18 @@ export function Sidebar({
     return { byProject, standalone };
   }, [tabs]);
 
+  // Auto-expand the project containing the active tab
+  useEffect(() => {
+    if (!activeTabId) return;
+    const activeTab = tabs.find((t) => t.id === activeTabId);
+    if (activeTab?.projectId) {
+      setExpandedProjects((prev) => {
+        if (prev[activeTab.projectId!]) return prev;
+        return { ...prev, [activeTab.projectId!]: true };
+      });
+    }
+  }, [activeTabId, tabs]);
+
   const toggleProject = (projectId: string) => {
     setExpandedProjects((prev) => ({
       ...prev,
