@@ -269,6 +269,13 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     [projectStore.projects],
   );
 
+  const handleRenameChat = useCallback(
+    (tabId: string, nextTitle: string) => {
+      sessionStore.updateSession(tabId, { title: nextTitle });
+    },
+    [sessionStore],
+  );
+
   const handleNewTab = useCallback(() => {
     setHomeSelectedProvider(undefined);
     createNewTab();
@@ -403,6 +410,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             onEditProject={handleEditProject}
             onArchiveProject={handleArchiveProject}
             onArchiveChat={handleArchiveChat}
+            onRenameChat={handleRenameChat}
             onSelectTab={handleTabSelect}
             activeView={activeView}
             activeTabId={activeTabId}
