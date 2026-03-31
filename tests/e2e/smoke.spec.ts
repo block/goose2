@@ -25,10 +25,10 @@ test.describe("Smoke tests", () => {
     });
   });
 
-  test("home screen shows model badge", async ({ page }) => {
+  test("home screen shows persona picker", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.getByText("Claude Sonnet 4").first()).toBeVisible({
+    await expect(page.getByText("Goose").first()).toBeVisible({
       timeout: 10_000,
     });
   });
