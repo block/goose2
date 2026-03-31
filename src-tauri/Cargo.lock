@@ -5,10 +5,14 @@ version = 4
 [[package]]
 name = "acp-client"
 version = "0.1.0"
+source = "git+https://github.com/block/builderbot?rev=17e609814900afdb2a437523a9756f7ef1b80469#17e609814900afdb2a437523a9756f7ef1b80469"
 dependencies = [
  "agent-client-protocol",
  "anyhow",
  "async-trait",
+ "blox-cli",
+ "log",
+ "nix",
  "serde",
  "serde_json",
  "tokio",
@@ -350,6 +354,18 @@ dependencies = [
  "futures-io",
  "futures-lite",
  "piper",
+]
+
+[[package]]
+name = "blox-cli"
+version = "0.1.0"
+source = "git+https://github.com/block/builderbot?rev=17e609814900afdb2a437523a9756f7ef1b80469#17e609814900afdb2a437523a9756f7ef1b80469"
+dependencies = [
+ "log",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "wait-timeout",
 ]
 
 [[package]]
@@ -2393,6 +2409,18 @@ name = "new_debug_unreachable"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "650eef8c711430f1a879fdd01d4745a7deea475becfb90269c06775983bbf086"
+
+[[package]]
+name = "nix"
+version = "0.29.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "71e2746dc3a24dd78b3cfcb7be93368c6de9963d30f43a6a73998a9cf4b17b46"
+dependencies = [
+ "bitflags 2.11.0",
+ "cfg-if",
+ "cfg_aliases",
+ "libc",
+]
 
 [[package]]
 name = "nodrop"
@@ -5080,6 +5108,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fb067e4cbd1ff067d1df46c9194b5de0e98efd2810bbc95c5d5e5f25a3231150"
 dependencies = [
  "cc",
+ "libc",
+]
+
+[[package]]
+name = "wait-timeout"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "09ac3b126d3914f9849036f826e054cbabdc8519970b8998ddaf3b5bd3c65f11"
+dependencies = [
  "libc",
 ]
 
