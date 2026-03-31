@@ -11,10 +11,13 @@ Goose2 is a Tauri 2 + React 19 desktop app. It uses TypeScript strict mode, Vite
 ```
 src/
   app/           — App shell, entry point, top-level providers
-  features/      — Feature modules (tabs, sidebar, settings, status)
+  features/      — Feature modules (see Feature Organization below)
     <feature>/
-      ui/        — React components
-      types.ts   — Shared types for the feature
+      ui/        — React components (required)
+      hooks/     — Custom React hooks for feature logic (when needed)
+      stores/    — Zustand state management (when feature needs shared state)
+      api/       — Backend API integration (when feature calls backend)
+      types.ts   — Feature-specific type definitions (when needed)
   shared/
     ui/          — Reusable UI components (button, etc.)
     lib/         — Utilities (cn.ts for class merging)
@@ -24,7 +27,27 @@ src/
     api/         — API integration
     constants/   — Shared constants
     context/     — Shared contexts
+    types/       — Shared type definitions (single source of truth)
 ```
+
+### Feature Organization
+
+Not every feature needs every subdirectory. Use only what the feature requires:
+
+| Pattern              | Structure                        | Examples             |
+|----------------------|----------------------------------|----------------------|
+| **Full-featured**    | `stores/` + `hooks/` + `ui/`    | agents, chat         |
+| **Data-driven**      | `stores/` + `api/` + `ui/`      | projects             |
+| **API features**     | `api/` + `ui/`                   | skills               |
+| **Simple features**  | `ui/` only                       | home, settings, sidebar, status |
+| **Tabs**             | `ui/` + `types.ts`               | tabs                 |
+
+### Import Rules for Features
+
+- Shared types live in `src/shared/types/` — this is the single source of truth for cross-feature types.
+- There should be NO root-level `src/stores/` or `src/types/` directories.
+- Feature stores use feature-relative imports (e.g., `../stores/featureStore`).
+- Cross-feature imports use `@/features/*/stores/` or `@/shared/types/`.
 
 ## Coding Conventions
 
