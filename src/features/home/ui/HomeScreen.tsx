@@ -1,8 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { ArrowUp, Paperclip } from "lucide-react";
+import { ArrowUp, Paperclip, X } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { PersonaPicker } from "@/features/chat/ui/PersonaPicker";
+import {
+  MentionAutocomplete,
+  useMentionDetection,
+} from "@/features/chat/ui/MentionAutocomplete";
 import type { Persona } from "@/shared/types/agents";
 
 function HomeClock() {
@@ -53,10 +57,23 @@ function HomeInput({
   onCreatePersona,
 }: HomeInputProps) {
   const [value, setValue] = useState("");
+  const [mentionPersonaId, setMentionPersonaId] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const {
+    mentionOpen,
+    mentionQuery,
+    mentionStartIndex,
+    mentionSelectedIndex,
+    detectMention,
+    closeMention,
+    navigateMention,
+    confirmMention,
+  } = useMentionDetection(personas);
+
   const hasContent = value.trim().length > 0;
-  const selectedPersona = personas.find((p) => p.id === selectedPersonaId);
+  const effectivePersonaId = mentionPersonaId ?? selectedPersonaId;
+  const selectedPersona = personas.find((p) => p.id === effectivePersonaId);
   const personaName = selectedPersona?.displayName ?? "Goose";
 
   const handleSubmit = () => {
@@ -65,29 +82,104 @@ function HomeInput({
     onStartChat?.(
       trimmed,
       selectedPersona?.provider ?? "goose",
-      selectedPersonaId,
+      effectivePersonaId,
     );
     setValue("");
+    setMentionPersonaId(null);
   };
 
+  const handleMentionSelect = useCallback(
+    (persona: Persona) => {
+      const before = value.slice(0, mentionStartIndex);
+      const after = value.slice(mentionStartIndex + 1 + mentionQuery.length);
+      const newText = `${before}@${persona.displayName} ${after}`;
+      setValue(newText);
+      setMentionPersonaId(persona.id);
+      closeMention();
+      onPersonaChange(persona.id);
+
+      requestAnimationFrame(() => {
+        const ta = textareaRef.current;
+        if (ta) {
+          ta.focus();
+          const cursorPos = before.length + persona.displayName.length + 2;
+          ta.setSelectionRange(cursorPos, cursorPos);
+        }
+      });
+    },
+    [value, mentionStartIndex, mentionQuery, closeMention, onPersonaChange],
+  );
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (mentionOpen) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeMention();
+        return;
+      }
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        navigateMention(e.key === "ArrowDown" ? "down" : "up");
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        const persona = confirmMention();
+        if (persona) {
+          e.preventDefault();
+          handleMentionSelect(persona);
+          return;
+        }
+      }
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
     }
   };
 
+  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setValue(val);
+    const cursorPos = e.target.selectionStart ?? val.length;
+    detectMention(val, cursorPos);
+  };
+
   return (
     <div className="px-4 pb-6 pt-2">
-      <div className="relative max-w-3xl mx-auto rounded-2xl px-4 pt-4 pb-3 bg-background-secondary border border-border shadow-lg">
+      <div className="relative mx-auto max-w-3xl rounded-2xl border border-border bg-background-secondary px-4 pb-3 pt-4 shadow-lg">
+        <MentionAutocomplete
+          personas={personas}
+          query={mentionQuery}
+          isOpen={mentionOpen}
+          onSelect={handleMentionSelect}
+          onClose={closeMention}
+          selectedIndex={mentionSelectedIndex}
+        />
+
+        {mentionPersonaId && (
+          <div className="mb-2 flex items-center gap-1.5">
+            <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2.5 py-0.5 text-[11px] font-medium text-accent">
+              @{personas.find((p) => p.id === mentionPersonaId)?.displayName}
+              <button
+                type="button"
+                className="ml-0.5 inline-flex items-center opacity-60 hover:opacity-100"
+                onClick={() => setMentionPersonaId(null)}
+                aria-label="Remove mention"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          </div>
+        )}
+
         <textarea
           ref={textareaRef}
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={handleInput}
           onKeyDown={handleKeyDown}
-          placeholder={`Ask ${personaName} anything...`}
+          placeholder={`Ask ${personaName} anything... (type @ to mention)`}
           rows={1}
-          className="w-full resize-none bg-transparent text-[14px] leading-relaxed px-1 placeholder:text-muted-foreground/60 focus:outline-none min-h-[36px] max-h-[200px] mb-3"
+          className="mb-3 min-h-[36px] max-h-[200px] w-full resize-none bg-transparent px-1 text-[14px] leading-relaxed placeholder:text-foreground-tertiary/60 focus:outline-none"
         />
         {/* Bottom bar */}
         <div className="flex items-center justify-between gap-2">
@@ -103,7 +195,7 @@ function HomeInput({
           <div className="flex items-center gap-1">
             <button
               type="button"
-              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+              className="rounded-lg p-2 text-foreground-tertiary transition-colors hover:bg-background-tertiary hover:text-foreground"
             >
               <Paperclip className="h-4 w-4" />
             </button>
@@ -112,10 +204,10 @@ function HomeInput({
               onClick={handleSubmit}
               disabled={!hasContent}
               className={cn(
-                "w-8 h-8 rounded-full flex items-center justify-center",
+                "flex h-8 w-8 items-center justify-center rounded-full",
                 hasContent
-                  ? "bg-foreground text-background hover:opacity-90"
-                  : "bg-foreground/10 text-muted-foreground cursor-default",
+                  ? "bg-foreground text-background-primary hover:opacity-90"
+                  : "cursor-default bg-foreground/10 text-foreground-tertiary",
               )}
             >
               <ArrowUp className="h-4 w-4" />
@@ -123,7 +215,7 @@ function HomeInput({
           </div>
         </div>
       </div>
-      <p className="text-[10px] text-muted-foreground/40 text-center mt-2">
+      <p className="mt-2 text-center text-[10px] text-foreground-tertiary/40">
         ⏎ to send · ⇧⏎ for newline · @ to mention a persona
       </p>
     </div>

@@ -15,6 +15,7 @@ export function useChat(
   sessionId: string,
   providerOverride?: string,
   systemPromptOverride?: string,
+  personaInfo?: { id: string; name: string },
 ) {
   const store = useChatStore();
   const abortRef = useRef<AbortController | null>(null);
@@ -46,7 +47,12 @@ export function useChat(
         role: "assistant",
         created: Date.now(),
         content: [],
-        metadata: { userVisible: true, agentVisible: true },
+        metadata: {
+          userVisible: true,
+          agentVisible: true,
+          personaId: personaInfo?.id,
+          personaName: personaInfo?.name,
+        },
       };
       store.addMessage(sessionId, assistantMessage);
       store.setStreamingMessageId(assistantMessage.id);
@@ -79,7 +85,14 @@ export function useChat(
         abortRef.current = null;
       }
     },
-    [sessionId, chatState, store, providerOverride, systemPromptOverride],
+    [
+      sessionId,
+      chatState,
+      store,
+      providerOverride,
+      systemPromptOverride,
+      personaInfo,
+    ],
   );
 
   const stopGeneration = useCallback(() => {

@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { X } from "lucide-react";
 import type { AcpProvider } from "@/shared/api/acp";
 import type { Persona } from "@/shared/types/agents";
 import { cn } from "@/shared/lib/cn";
@@ -206,11 +207,11 @@ export function ChatInput({
                   {personas.find((p) => p.id === mentionPersonaId)?.displayName}
                   <button
                     type="button"
-                    className="ml-0.5 opacity-60 hover:opacity-100"
+                    className="ml-0.5 inline-flex items-center opacity-60 hover:opacity-100"
                     onClick={() => setMentionPersonaId(null)}
                     aria-label="Remove mention"
                   >
-                    x
+                    <X className="h-3 w-3" />
                   </button>
                 </span>
               </div>

@@ -4,6 +4,7 @@ import { ChatInput } from "./ChatInput";
 import { StreamingIndicator } from "./StreamingIndicator";
 import { useChat } from "../hooks/useChat";
 import { useAcpStream } from "../hooks/useAcpStream";
+import { useChatStore } from "../stores/chatStore";
 import { discoverAcpProviders, type AcpProvider } from "@/shared/api/acp";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 
@@ -87,27 +88,60 @@ export function ChatView({
 
   const displayAgentName = selectedPersona?.displayName ?? agentName;
 
+  const personaInfo = selectedPersona
+    ? { id: selectedPersona.id, name: selectedPersona.displayName }
+    : undefined;
+
   const {
     messages,
     chatState,
     sendMessage,
     stopStreaming,
     streamingMessageId,
-  } = useChat(activeSessionId, selectedProvider, selectedPersona?.systemPrompt);
+  } = useChat(
+    activeSessionId,
+    selectedProvider,
+    selectedPersona?.systemPrompt,
+    personaInfo,
+  );
 
   // Listen for ACP streaming events
   useAcpStream(activeSessionId, true);
 
   // Wrap sendMessage to handle @ mentioned persona overrides
+  const chatStore = useChatStore();
   const handleSend = useCallback(
     (text: string, personaId?: string) => {
       if (personaId && personaId !== selectedPersonaId) {
-        // An @ mention switched the persona for this message
+        const newPersona = personas.find((p) => p.id === personaId);
+        if (newPersona) {
+          // Inject a system notification about the persona switch
+          chatStore.addMessage(activeSessionId, {
+            id: crypto.randomUUID(),
+            role: "system",
+            created: Date.now(),
+            content: [
+              {
+                type: "systemNotification",
+                notificationType: "info",
+                text: `Switched to ${newPersona.displayName}`,
+              },
+            ],
+            metadata: { userVisible: true, agentVisible: false },
+          });
+        }
         handlePersonaChange(personaId);
       }
       sendMessage(text);
     },
-    [sendMessage, selectedPersonaId, handlePersonaChange],
+    [
+      sendMessage,
+      selectedPersonaId,
+      handlePersonaChange,
+      personas,
+      chatStore,
+      activeSessionId,
+    ],
   );
 
   // Auto-send initial message from HomeScreen on mount
