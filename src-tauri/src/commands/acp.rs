@@ -30,6 +30,7 @@ pub async fn discover_acp_providers() -> Vec<AcpProviderResponse> {
 ///
 /// The actual content arrives asynchronously through `acp:text`, `acp:tool_call`,
 /// `acp:tool_result`, and `acp:done` events.
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub async fn acp_send_message(
     app_handle: AppHandle,
