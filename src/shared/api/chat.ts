@@ -13,6 +13,10 @@ export async function listSessions(): Promise<Session[]> {
   return invoke("list_sessions");
 }
 
+export async function listArchivedSessions(): Promise<Session[]> {
+  return invoke("list_archived_sessions");
+}
+
 export async function getSessionMessages(
   sessionId: string,
 ): Promise<Message[]> {
@@ -40,6 +44,14 @@ export async function updateSession(
 
 export async function deleteSession(sessionId: string): Promise<void> {
   return invoke("delete_session", { sessionId });
+}
+
+export async function archiveSession(sessionId: string): Promise<void> {
+  return invoke("archive_session", { sessionId });
+}
+
+export async function unarchiveSession(sessionId: string): Promise<void> {
+  return invoke("unarchive_session", { sessionId });
 }
 
 export async function saveUiState(

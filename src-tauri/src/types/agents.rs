@@ -88,6 +88,8 @@ pub struct Session {
     pub message_count: u32,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_message_preview: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub archived_at: Option<String>,
 }
 
 /// Partial update for a session — only provided fields are applied.

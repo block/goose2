@@ -40,6 +40,7 @@ export interface Session {
   modelName?: string;
   createdAt: string;
   updatedAt: string;
+  archivedAt?: string;
   messageCount: number;
 }
 

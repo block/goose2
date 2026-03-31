@@ -5,6 +5,7 @@ import {
   Settings2,
   FolderKanban,
   Info,
+  MessageSquare,
   Stethoscope,
   X,
 } from "lucide-react";
@@ -16,11 +17,16 @@ import {
   deleteProject,
   type ProjectInfo,
 } from "@/features/projects/api/projects";
+import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
+import { useProjectStore } from "@/features/projects/stores/projectStore";
+import { listArchivedSessions } from "@/shared/api/chat";
+import type { Session } from "@/shared/types/chat";
 
 const NAV_ITEMS = [
   { id: "appearance", label: "Appearance", icon: Palette },
   { id: "general", label: "General", icon: Settings2 },
   { id: "projects", label: "Projects", icon: FolderKanban },
+  { id: "chats", label: "Chats", icon: MessageSquare },
   { id: "doctor", label: "Doctor", icon: Stethoscope },
   { id: "about", label: "About", icon: Info },
 ] as const;
@@ -36,7 +42,9 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [archivedProjects, setArchivedProjects] = useState<ProjectInfo[]>([]);
+  const [archivedChats, setArchivedChats] = useState<Session[]>([]);
   const [loadingArchived, setLoadingArchived] = useState(true);
+  const [loadingArchivedChats, setLoadingArchivedChats] = useState(true);
   const [deletingProject, setDeletingProject] = useState<ProjectInfo | null>(
     null,
   );
@@ -55,10 +63,28 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
       .finally(() => setLoadingArchived(false));
   }, []);
 
-  const handleRestore = async (id: string) => {
+  // Load archived chats on mount
+  useEffect(() => {
+    listArchivedSessions()
+      .then(setArchivedChats)
+      .catch(() => setArchivedChats([]))
+      .finally(() => setLoadingArchivedChats(false));
+  }, []);
+
+  const handleRestoreProject = async (id: string) => {
     try {
       await restoreProject(id);
+      await useProjectStore.getState().fetchProjects();
       setArchivedProjects((prev) => prev.filter((p) => p.id !== id));
+    } catch {
+      // best-effort
+    }
+  };
+
+  const handleRestoreChat = async (id: string) => {
+    try {
+      await useChatSessionStore.getState().unarchiveSession(id);
+      setArchivedChats((prev) => prev.filter((session) => session.id !== id));
     } catch {
       // best-effort
     }
@@ -221,7 +247,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                         <div className="flex items-center gap-1.5 flex-shrink-0">
                           <button
                             type="button"
-                            onClick={() => handleRestore(project.id)}
+                            onClick={() => handleRestoreProject(project.id)}
                             className="px-2 py-1 text-xs font-medium rounded-md border border-border hover:bg-background-tertiary transition-colors"
                           >
                             Restore
@@ -234,6 +260,53 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                             Delete
                           </button>
                         </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {activeSection === "chats" && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold">Chats</h3>
+                    <p className="mt-1 text-sm text-foreground-secondary">
+                      Restore archived chats.
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold">Archived Chats</h3>
+                    {!loadingArchivedChats && archivedChats.length === 0 && (
+                      <p className="text-xs text-foreground-secondary">
+                        No archived chats.
+                      </p>
+                    )}
+                    {archivedChats.map((session) => (
+                      <div
+                        key={session.id}
+                        className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <div className="truncate text-sm">
+                            {session.title}
+                          </div>
+                          <p className="truncate text-xs text-foreground-secondary">
+                            {session.projectId
+                              ? "Project chat"
+                              : "Standalone chat"}{" "}
+                            -{" "}
+                            {session.messageCount === 1
+                              ? "1 message"
+                              : `${session.messageCount} messages`}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRestoreChat(session.id)}
+                          className="flex-shrink-0 rounded-md border border-border px-2 py-1 text-xs font-medium transition-colors hover:bg-background-tertiary"
+                        >
+                          Restore
+                        </button>
                       </div>
                     ))}
                   </div>
