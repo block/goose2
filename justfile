@@ -71,11 +71,65 @@ test-e2e-all:
 
 # Start the desktop app in dev mode
 dev:
-    pnpm tauri dev
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    # Derive a stable port from the working directory so the same worktree
+    # always gets the same port. This avoids changing TAURI_CONFIG between
+    # runs, which would invalidate Cargo's build cache and trigger a full
+    # Rust rebuild every time.
+    VITE_PORT=$(python3 -c "import hashlib,os; h=int(hashlib.sha256(os.getcwd().encode()).hexdigest(),16); print(10000 + h % 55000)")
+    export VITE_PORT
+    TAURI_CONFIG="{\"build\":{\"devUrl\":\"http://localhost:${VITE_PORT}\",\"beforeDevCommand\":{\"script\":\"exec ./node_modules/.bin/vite --port ${VITE_PORT} --strictPort\",\"cwd\":\"..\",\"wait\":false}}}"
+
+    # In worktrees, generate a labeled icon so you can tell instances apart
+    if git rev-parse --is-inside-work-tree &>/dev/null; then
+        GIT_DIR=$(git rev-parse --git-dir)
+        if [[ "$GIT_DIR" == *".git/worktrees/"* ]]; then
+            BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+            WORKTREE_LABEL="${BRANCH_NAME##*/}"
+
+            ICON_DIR="$(pwd)/src-tauri/target/dev-icons"
+            mkdir -p "$ICON_DIR"
+            DEV_ICON="$ICON_DIR/icon.icns"
+
+            if swift scripts/generate-dev-icon.swift src-tauri/icons/icon.icns "$DEV_ICON" "$WORKTREE_LABEL"; then
+                echo "🌳 Worktree: ${WORKTREE_LABEL}"
+                TAURI_CONFIG=$(python3 -c "import json,sys; a=json.loads(sys.argv[1]); a['bundle']={'icon':['$DEV_ICON']}; print(json.dumps(a))" "$TAURI_CONFIG")
+            fi
+        fi
+    fi
+
+    pnpm tauri dev --config "$TAURI_CONFIG"
 
 # Start the desktop app with dev config
 dev-debug:
-    pnpm tauri dev --config src-tauri/tauri.dev.conf.json
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    VITE_PORT=$(python3 -c "import hashlib,os; h=int(hashlib.sha256(os.getcwd().encode()).hexdigest(),16); print(10000 + h % 55000)")
+    export VITE_PORT
+    EXTRA_CONFIG="--config {\"build\":{\"devUrl\":\"http://localhost:${VITE_PORT}\",\"beforeDevCommand\":{\"script\":\"exec ./node_modules/.bin/vite --port ${VITE_PORT} --strictPort\",\"cwd\":\"..\",\"wait\":false}}}"
+
+    # In worktrees, generate a labeled icon so you can tell instances apart
+    if git rev-parse --is-inside-work-tree &>/dev/null; then
+        GIT_DIR=$(git rev-parse --git-dir)
+        if [[ "$GIT_DIR" == *".git/worktrees/"* ]]; then
+            BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+            WORKTREE_LABEL="${BRANCH_NAME##*/}"
+
+            ICON_DIR="$(pwd)/src-tauri/target/dev-icons"
+            mkdir -p "$ICON_DIR"
+            DEV_ICON="$ICON_DIR/icon.icns"
+
+            if swift scripts/generate-dev-icon.swift src-tauri/icons/icon.icns "$DEV_ICON" "$WORKTREE_LABEL"; then
+                echo "🌳 Worktree: ${WORKTREE_LABEL}"
+                EXTRA_CONFIG="$EXTRA_CONFIG --config {\"bundle\":{\"icon\":[\"$DEV_ICON\"]}}"
+            fi
+        fi
+    fi
+
+    pnpm tauri dev --config src-tauri/tauri.dev.conf.json $EXTRA_CONFIG
 
 # Start only the frontend dev server
 dev-frontend:
