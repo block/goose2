@@ -3,7 +3,7 @@ import { useChatStore } from "../stores/chatStore";
 import { createUserMessage } from "@/shared/types/messages";
 import type { Message } from "@/shared/types/messages";
 import type { ChatState, TokenState } from "@/shared/types/chat";
-import { acpSendMessage } from "@/shared/api/acp";
+import { acpSendMessage, acpCancelSession } from "@/shared/api/acp";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { findLastIndex } from "@/shared/lib/arrays";
 
@@ -79,6 +79,7 @@ export function useChat(
           const errorMessage =
             err instanceof Error ? err.message : "Unknown error";
           store.setError(errorMessage);
+          store.setChatState("idle");
           store.setStreamingMessageId(null);
         }
       } finally {
@@ -99,7 +100,11 @@ export function useChat(
     abortRef.current?.abort();
     store.setChatState("idle");
     store.setStreamingMessageId(null);
-  }, [store]);
+    // Cancel the backend ACP session to stop orphaned streaming events
+    acpCancelSession(sessionId).catch(() => {
+      // Best-effort cancellation — ignore errors
+    });
+  }, [store, sessionId]);
 
   const retryLastMessage = useCallback(async () => {
     const sessionMessages = store.messagesBySession[sessionId] ?? [];

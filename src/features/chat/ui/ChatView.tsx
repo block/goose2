@@ -92,6 +92,23 @@ export function ChatView({
     [personas, providers, activeSessionId],
   );
 
+  // Validate persona still exists — fall back to default if deleted
+  useEffect(() => {
+    if (
+      personas.length > 0 &&
+      !personas.find((p) => p.id === selectedPersonaId)
+    ) {
+      const fallback =
+        personas.find((p) => p.id === "builtin-goose") ?? personas[0];
+      if (fallback) {
+        setSelectedPersonaId(fallback.id);
+        useChatSessionStore
+          .getState()
+          .updateSession(activeSessionId, { personaId: fallback.id });
+      }
+    }
+  }, [personas, selectedPersonaId, activeSessionId]);
+
   const displayAgentName = selectedPersona?.displayName ?? agentName;
 
   const personaInfo = selectedPersona
@@ -113,6 +130,9 @@ export function ChatView({
 
   // Listen for ACP streaming events
   useAcpStream(activeSessionId, true);
+
+  // Ref for deferred sends after persona switch (Bug 1 fix: avoid stale system prompt)
+  const deferredSend = useRef<string | null>(null);
 
   // Wrap sendMessage to handle @ mentioned persona overrides
   const chatStore = useChatStore();
@@ -137,6 +157,9 @@ export function ChatView({
           });
         }
         handlePersonaChange(personaId);
+        // Defer the send until after persona state updates
+        deferredSend.current = text;
+        return;
       }
       sendMessage(text);
     },
@@ -149,6 +172,15 @@ export function ChatView({
       activeSessionId,
     ],
   );
+
+  // Effect to send deferred message after persona switch completes
+  useEffect(() => {
+    if (deferredSend.current && selectedPersona) {
+      const text = deferredSend.current;
+      deferredSend.current = null;
+      sendMessage(text);
+    }
+  }, [sendMessage, selectedPersona]);
 
   // Auto-send initial message from HomeScreen on mount
   const initialMessageSent = useRef(false);

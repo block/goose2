@@ -24,3 +24,8 @@ export async function acpSendMessage(
     systemPrompt: systemPrompt ?? null,
   });
 }
+
+/** Cancel an in-progress ACP session so the backend stops streaming. */
+export async function acpCancelSession(sessionId: string): Promise<boolean> {
+  return invoke("acp_cancel_session", { sessionId });
+}
