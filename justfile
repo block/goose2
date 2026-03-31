@@ -71,11 +71,57 @@ test-e2e-all:
 
 # Start the desktop app in dev mode
 dev:
-    pnpm tauri dev
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    TAURI_CONFIG="{}"
+
+    # In worktrees, generate a labeled icon so you can tell instances apart
+    if git rev-parse --is-inside-work-tree &>/dev/null; then
+        GIT_DIR=$(git rev-parse --git-dir)
+        if [[ "$GIT_DIR" == *".git/worktrees/"* ]]; then
+            BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+            WORKTREE_LABEL="${BRANCH_NAME##*/}"
+
+            ICON_DIR="$(pwd)/src-tauri/target/dev-icons"
+            mkdir -p "$ICON_DIR"
+            DEV_ICON="$ICON_DIR/icon.icns"
+
+            if swift scripts/generate-dev-icon.swift src-tauri/icons/icon.icns "$DEV_ICON" "$WORKTREE_LABEL"; then
+                echo "🌳 Worktree: ${WORKTREE_LABEL}"
+                TAURI_CONFIG="{\"bundle\":{\"icon\":[\"$DEV_ICON\"]}}"
+            fi
+        fi
+    fi
+
+    pnpm tauri dev --config "$TAURI_CONFIG"
 
 # Start the desktop app with dev config
 dev-debug:
-    pnpm tauri dev --config src-tauri/tauri.dev.conf.json
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    EXTRA_CONFIG=""
+
+    # In worktrees, generate a labeled icon so you can tell instances apart
+    if git rev-parse --is-inside-work-tree &>/dev/null; then
+        GIT_DIR=$(git rev-parse --git-dir)
+        if [[ "$GIT_DIR" == *".git/worktrees/"* ]]; then
+            BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+            WORKTREE_LABEL="${BRANCH_NAME##*/}"
+
+            ICON_DIR="$(pwd)/src-tauri/target/dev-icons"
+            mkdir -p "$ICON_DIR"
+            DEV_ICON="$ICON_DIR/icon.icns"
+
+            if swift scripts/generate-dev-icon.swift src-tauri/icons/icon.icns "$DEV_ICON" "$WORKTREE_LABEL"; then
+                echo "🌳 Worktree: ${WORKTREE_LABEL}"
+                EXTRA_CONFIG="--config {\"bundle\":{\"icon\":[\"$DEV_ICON\"]}}"
+            fi
+        fi
+    fi
+
+    pnpm tauri dev --config src-tauri/tauri.dev.conf.json $EXTRA_CONFIG
 
 # Start only the frontend dev server
 dev-frontend:
