@@ -2,8 +2,13 @@ import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { HomeScreen } from "./HomeScreen";
 
-// Mock the ThemeProvider since HomeScreen doesn't use it directly
-// but its children might
+vi.mock("@/shared/api/acp", () => ({
+  discoverAcpProviders: vi.fn().mockResolvedValue([
+    { id: "goose", label: "Goose" },
+    { id: "claude", label: "Claude Code" },
+  ]),
+}));
+
 describe("HomeScreen", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -21,15 +26,17 @@ describe("HomeScreen", () => {
     expect(screen.getByText("Good afternoon")).toBeInTheDocument();
   });
 
-  it("renders the chat input placeholder", () => {
+  it("renders the chat input placeholder", async () => {
     render(<HomeScreen />);
+    await vi.advanceTimersByTimeAsync(0);
     expect(
       screen.getByPlaceholderText("Ask Goose anything..."),
     ).toBeInTheDocument();
   });
 
-  it("renders the model badge", () => {
+  it("renders the provider selector with default provider", async () => {
     render(<HomeScreen />);
-    expect(screen.getByText("Claude Sonnet 4")).toBeInTheDocument();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(screen.getByText("Goose")).toBeInTheDocument();
   });
 });

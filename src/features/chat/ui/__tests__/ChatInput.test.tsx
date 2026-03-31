@@ -48,9 +48,15 @@ describe("ChatInput", () => {
     expect(screen.getByText("Claude Sonnet 4")).toBeInTheDocument();
   });
 
-  it("shows default mode as Agent", () => {
-    render(<ChatInput onSend={vi.fn()} />);
-    expect(screen.getByText("Agent")).toBeInTheDocument();
+  it("shows default provider label", () => {
+    render(
+      <ChatInput
+        onSend={vi.fn()}
+        providers={[{ id: "goose", label: "Goose" }]}
+        selectedProvider="goose"
+      />,
+    );
+    expect(screen.getByText("Goose")).toBeInTheDocument();
   });
 
   it("shows stop button when streaming", () => {

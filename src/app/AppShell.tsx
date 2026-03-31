@@ -31,6 +31,9 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<AppView>("home");
+  const [homeSelectedProvider, setHomeSelectedProvider] = useState<
+    string | undefined
+  >();
 
   const chatStore = useChatStore();
   const agentStore = useAgentStore();
@@ -95,6 +98,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   const handleStartChatFromProject = useCallback(
     (project: ProjectInfo) => {
+      setHomeSelectedProvider(undefined);
       createNewTab(project.name, project);
     },
     [createNewTab],
@@ -102,6 +106,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   const handleNewChatInProject = useCallback(
     (projectId: string) => {
+      setHomeSelectedProvider(undefined);
       const project = projectStore.projects.find((p) => p.id === projectId);
       if (project) {
         createNewTab(project.name, project);
@@ -158,11 +163,13 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   );
 
   const handleNewTab = useCallback(() => {
+    setHomeSelectedProvider(undefined);
     createNewTab();
   }, [createNewTab]);
 
   const handleHomeStartChat = useCallback(
-    (initialMessage?: string) => {
+    (initialMessage?: string, providerId?: string) => {
+      setHomeSelectedProvider(providerId);
       const tab = createNewTab(initialMessage?.slice(0, 40) || "New Chat");
       // The ChatView will handle sending the initial message via its own input
       // We just need to create the tab and session
@@ -243,13 +250,19 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         return <ProjectsView onStartChat={handleStartChatFromProject} />;
       case "chat":
         return activeTab ? (
-          <ChatView sessionId={activeTab.sessionId} />
+          <ChatView
+            sessionId={activeTab.sessionId}
+            initialProvider={homeSelectedProvider}
+          />
         ) : (
           <HomeScreen onStartChat={handleHomeStartChat} />
         );
       case "home":
         return activeTab ? (
-          <ChatView sessionId={activeTab.sessionId} />
+          <ChatView
+            sessionId={activeTab.sessionId}
+            initialProvider={homeSelectedProvider}
+          />
         ) : (
           <HomeScreen onStartChat={handleHomeStartChat} />
         );
