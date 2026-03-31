@@ -15,7 +15,10 @@ fn ui_state_path() -> std::path::PathBuf {
 }
 
 #[tauri::command]
-pub fn save_ui_state(open_tab_ids: Vec<String>, active_tab_id: Option<String>) -> Result<(), String> {
+pub fn save_ui_state(
+    open_tab_ids: Vec<String>,
+    active_tab_id: Option<String>,
+) -> Result<(), String> {
     let state = UiState {
         open_tab_ids,
         active_tab_id,
