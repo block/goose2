@@ -229,7 +229,34 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     [chatStore, sessionStore],
   );
 
-  const handleArchiveChat = closeAndCleanupTab;
+  const handleArchiveChat = useCallback(
+    async (tabId: string) => {
+      const { activeTabId: currentActiveTabId } =
+        useChatSessionStore.getState();
+      const wasActiveTab = currentActiveTabId === tabId;
+
+      try {
+        await sessionStore.archiveSession(tabId);
+        chatStore.cleanupSession(tabId);
+
+        if (!wasActiveTab) {
+          return;
+        }
+
+        const { activeTabId: newActiveTabId } = useChatSessionStore.getState();
+        if (newActiveTabId) {
+          chatStore.setActiveSession(newActiveTabId);
+          setActiveView("chat");
+          loadSessionMessages(newActiveTabId);
+        } else {
+          setActiveView("home");
+        }
+      } catch {
+        // best-effort
+      }
+    },
+    [chatStore, loadSessionMessages, sessionStore],
+  );
 
   const handleEditProject = useCallback(
     (projectId: string) => {

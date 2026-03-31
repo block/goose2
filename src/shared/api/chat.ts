@@ -13,6 +13,10 @@ export async function listSessions(): Promise<Session[]> {
   return invoke("list_sessions");
 }
 
+export async function listArchivedSessions(): Promise<Session[]> {
+  return invoke("list_archived_sessions");
+}
+
 export async function getSessionMessages(
   sessionId: string,
 ): Promise<Message[]> {

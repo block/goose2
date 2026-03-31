@@ -150,6 +150,8 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
   },
 
   archiveSession: async (id) => {
+    const { openTabIds, activeTabId } = get();
+
     // Remove from open tabs immediately for responsive UI
     set((state) => {
       const newOpenTabIds = state.openTabIds.filter((tabId) => tabId !== id);
@@ -174,20 +176,23 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
           .filter((s) => !s.archivedAt),
       }));
     } catch (err) {
+      set({
+        openTabIds,
+        activeTabId,
+      });
+      get().persistTabState();
       console.error("Failed to archive session:", err);
+      throw err;
     }
   },
 
   unarchiveSession: async (id) => {
     try {
       await apiUnarchiveSession(id);
-      set((state) => ({
-        sessions: state.sessions.map((s) =>
-          s.id === id ? { ...s, archivedAt: undefined } : s,
-        ),
-      }));
+      await get().loadSessions();
     } catch (err) {
       console.error("Failed to unarchive session:", err);
+      throw err;
     }
   },
 
