@@ -69,7 +69,6 @@ export function useChat(
         // Send via ACP — response streams back through Tauri events
         // which are handled by useAcpStream in ChatView
         store.setChatState("streaming");
-        store.appendToStreamingMessage(sessionId, { type: "text", text: "" });
         await acpSendMessage(sessionId, providerId, text, systemPrompt);
         // Note: setChatState("idle") is handled by useAcpStream on "acp:done"
       } catch (err) {

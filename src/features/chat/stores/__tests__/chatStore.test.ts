@@ -115,16 +115,45 @@ describe("chatStore", () => {
     expect(useChatStore.getState().streamingMessageId).toBe("msg-1");
   });
 
-  it("updateStreamingText updates the last text block of the streaming message", () => {
+  it("updateStreamingText appends streamed chunks to the trailing text block", () => {
     const msg = makeMessage({
       id: "stream-1",
       content: [{ type: "text", text: "" }],
     });
     useChatStore.getState().setMessages("s1", [msg]);
     useChatStore.getState().setStreamingMessageId("stream-1");
-    useChatStore.getState().updateStreamingText("s1", "new text");
+    useChatStore.getState().updateStreamingText("s1", "new");
+    useChatStore.getState().updateStreamingText("s1", " text");
     const updated = useChatStore.getState().messagesBySession.s1[0];
     expect(updated.content[0]).toEqual({ type: "text", text: "new text" });
+  });
+
+  it("updateStreamingText starts a new text block after tool content", () => {
+    const msg = makeMessage({
+      id: "stream-inline",
+      content: [
+        { type: "text", text: "Lemme check..." },
+        {
+          type: "toolRequest",
+          id: "tool-1",
+          name: "readFile",
+          arguments: {},
+          status: "executing",
+        },
+      ],
+    });
+    useChatStore.getState().setMessages("s1", [msg]);
+    useChatStore.getState().setStreamingMessageId("stream-inline");
+    useChatStore
+      .getState()
+      .updateStreamingText("s1", " Results from checking.");
+
+    const updated = useChatStore.getState().messagesBySession.s1[0];
+    expect(updated.content).toHaveLength(3);
+    expect(updated.content[2]).toEqual({
+      type: "text",
+      text: " Results from checking.",
+    });
   });
 
   it("appendToStreamingMessage adds content to the streaming message", () => {

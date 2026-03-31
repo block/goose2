@@ -46,6 +46,101 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
+interface ContentSection {
+  key: string;
+  type: "single" | "toolChain";
+  items: MessageContent[] | ToolChainItem[];
+}
+
+interface ToolChainItem {
+  key: string;
+  request?: ToolRequestContent;
+  response?: ToolResponseContent;
+}
+
+function findMatchingToolChainIndex(
+  items: ToolChainItem[],
+  response: ToolResponseContent,
+): number {
+  for (let index = items.length - 1; index >= 0; index -= 1) {
+    const item = items[index];
+    if (!item.request || item.response) {
+      continue;
+    }
+    if (item.request.id === response.id) {
+      return index;
+    }
+  }
+
+  if (!response.name) {
+    for (let index = items.length - 1; index >= 0; index -= 1) {
+      const item = items[index];
+      if (item.request && !item.response) {
+        return index;
+      }
+    }
+  }
+
+  return -1;
+}
+
+function groupContentSections(content: MessageContent[]): ContentSection[] {
+  const sections: ContentSection[] = [];
+  let currentToolChain: ToolChainItem[] = [];
+
+  const flushToolChain = () => {
+    if (currentToolChain.length > 0) {
+      sections.push({
+        key: currentToolChain.map((item) => item.key).join(":"),
+        type: "toolChain",
+        items: [...currentToolChain],
+      });
+      currentToolChain = [];
+    }
+  };
+
+  for (const [index, block] of content.entries()) {
+    if (block.type === "toolRequest") {
+      currentToolChain.push({
+        key: `tool-request-${block.id}-${index}`,
+        request: block,
+      });
+      continue;
+    }
+
+    if (block.type === "toolResponse") {
+      const matchingIndex = findMatchingToolChainIndex(currentToolChain, block);
+      if (matchingIndex !== -1) {
+        const requestName = currentToolChain[matchingIndex].request?.name ?? "";
+        currentToolChain[matchingIndex] = {
+          ...currentToolChain[matchingIndex],
+          response: {
+            ...block,
+            name: block.name || requestName,
+          },
+        };
+        continue;
+      }
+      currentToolChain.push({
+        key: `tool-response-${block.id}-${index}`,
+        response: block,
+      });
+      continue;
+    }
+
+    flushToolChain();
+    sections.push({
+      key: `${block.type}-${"id" in block ? String(block.id) : index}`,
+      type: "single",
+      items: [block],
+    });
+  }
+
+  flushToolChain();
+
+  return sections;
+}
+
 function renderContentBlock(content: MessageContent, index: number) {
   switch (content.type) {
     case "text": {
@@ -58,30 +153,10 @@ function renderContentBlock(content: MessageContent, index: number) {
         />
       );
     }
-    case "toolRequest": {
-      const tr = content as ToolRequestContent;
-      return (
-        <ToolCallCard
-          key={`tool-${tr.id}`}
-          name={tr.name}
-          arguments={tr.arguments}
-          status={tr.status}
-        />
-      );
-    }
-    case "toolResponse": {
-      const resp = content as ToolResponseContent;
-      return (
-        <ToolCallCard
-          key={`toolresp-${resp.id}`}
-          name={resp.name}
-          arguments={{}}
-          status={resp.isError ? "error" : "completed"}
-          result={resp.result}
-          isError={resp.isError}
-        />
-      );
-    }
+    case "toolRequest":
+    case "toolResponse":
+      // Handled by groupContentSections toolChain rendering
+      return null;
     case "thinking": {
       const th = content as ThinkingContent;
       return (
@@ -194,9 +269,42 @@ export function MessageBubble({
         )}
 
         <div className="text-[13px] leading-relaxed">
-          {content.map((c, i) => {
-            const key = `${c.type}-${message.id}-${"id" in c ? (c as unknown as Record<string, unknown>).id : i}`;
-            return <div key={key}>{renderContentBlock(c, i)}</div>;
+          {groupContentSections(content).map((section, sectionIdx) => {
+            if (section.type === "toolChain") {
+              const toolItems = section.items as ToolChainItem[];
+              return (
+                <div
+                  key={section.key}
+                  className="my-1 flex flex-col items-start gap-1.5"
+                >
+                  {toolItems.map((item) => {
+                    const { request, response } = item;
+                    return (
+                      <ToolCallCard
+                        key={item.key}
+                        name={request?.name || response?.name || "Tool result"}
+                        arguments={request?.arguments ?? {}}
+                        status={
+                          response
+                            ? response.isError
+                              ? "error"
+                              : "completed"
+                            : (request?.status ?? "completed")
+                        }
+                        result={response?.result}
+                        isError={response?.isError}
+                      />
+                    );
+                  })}
+                </div>
+              );
+            }
+            const block = section.items[0] as MessageContent;
+            return (
+              <div key={`${message.id}-${section.key}`}>
+                {renderContentBlock(block, sectionIdx)}
+              </div>
+            );
           })}
           {isStreaming && (
             <span

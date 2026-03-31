@@ -174,10 +174,57 @@ describe("useAcpStream", () => {
     }
   });
 
+  it("updates the active tool request title on acp:tool_title", async () => {
+    const msg = makeStreamingMessage({
+      content: [
+        {
+          type: "toolRequest",
+          id: "tool-1",
+          name: "placeholder",
+          arguments: {},
+          status: "executing",
+        },
+      ],
+    });
+    useChatStore.getState().addMessage(sessionId, msg);
+    useChatStore.getState().setStreamingMessageId("msg-1");
+    useChatStore.getState().setChatState("streaming");
+
+    renderHook(() => useAcpStream(sessionId, true));
+    await vi.waitFor(() =>
+      expect(listeners.get("acp:tool_title")).toBeDefined(),
+    );
+
+    act(() => {
+      emit("acp:tool_title", {
+        sessionId,
+        toolCallId: "tool-1",
+        title: "read_file",
+      });
+    });
+
+    const messages = useChatStore.getState().messagesBySession[sessionId];
+    const toolContent = messages[0].content[0];
+    expect(toolContent.type).toBe("toolRequest");
+    if (toolContent.type === "toolRequest") {
+      expect(toolContent.name).toBe("read_file");
+    }
+  });
+
   // ── tool_result events ───────────────────────────────────────────
 
   it("appends tool response on acp:tool_result", async () => {
-    const msg = makeStreamingMessage({ content: [] });
+    const msg = makeStreamingMessage({
+      content: [
+        {
+          type: "toolRequest",
+          id: "tool-1",
+          name: "read_file",
+          arguments: {},
+          status: "executing",
+        },
+      ],
+    });
     useChatStore.getState().addMessage(sessionId, msg);
     useChatStore.getState().setStreamingMessageId("msg-1");
     useChatStore.getState().setChatState("streaming");
@@ -192,10 +239,12 @@ describe("useAcpStream", () => {
     });
 
     const messages = useChatStore.getState().messagesBySession[sessionId];
-    expect(messages[0].content).toHaveLength(1);
-    const toolContent = messages[0].content[0];
+    expect(messages[0].content).toHaveLength(2);
+    const toolContent = messages[0].content[1];
     expect(toolContent.type).toBe("toolResponse");
     if (toolContent.type === "toolResponse") {
+      expect(toolContent.id).toBe("tool-1");
+      expect(toolContent.name).toBe("read_file");
       expect(toolContent.result).toBe("file contents here");
       expect(toolContent.isError).toBe(false);
     }
@@ -250,12 +299,20 @@ describe("useAcpStream", () => {
         title: "read_file",
       });
       emit("acp:tool_result", { sessionId, content: "file data" });
+      emit("acp:text", { sessionId, text: " Here is what I found." });
     });
 
     const messages = useChatStore.getState().messagesBySession[sessionId];
-    expect(messages[0].content).toHaveLength(3);
+    expect(messages[0].content).toHaveLength(4);
     expect(messages[0].content[0].type).toBe("text");
     expect(messages[0].content[1].type).toBe("toolRequest");
     expect(messages[0].content[2].type).toBe("toolResponse");
+    expect(messages[0].content[3].type).toBe("text");
+    if (messages[0].content[2].type === "toolResponse") {
+      expect(messages[0].content[2].id).toBe("t1");
+    }
+    if (messages[0].content[3].type === "text") {
+      expect(messages[0].content[3].text).toBe(" Here is what I found.");
+    }
   });
 });

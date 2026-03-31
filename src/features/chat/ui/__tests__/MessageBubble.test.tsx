@@ -94,6 +94,113 @@ describe("MessageBubble", () => {
     expect(screen.getByText("readFile")).toBeInTheDocument();
   });
 
+  it("renders standalone tool responses without dropping surrounding text", () => {
+    const msg = assistantMessage([
+      { type: "text", text: "Working on it." },
+      {
+        type: "toolResponse",
+        id: "tool-result-1",
+        name: "readFile",
+        result: "file contents here",
+        isError: false,
+      },
+      { type: "text", text: "Done." },
+    ]);
+
+    render(<MessageBubble message={msg} />);
+
+    expect(screen.getByText("Working on it.")).toBeInTheDocument();
+    expect(screen.getByText("readFile")).toBeInTheDocument();
+    expect(screen.getByText("Done.")).toBeInTheDocument();
+  });
+
+  it("merges matched tool requests and responses into one tool card", () => {
+    const msg = assistantMessage([
+      { type: "text", text: "Checking that now." },
+      {
+        type: "toolRequest",
+        id: "tool-1",
+        name: "readFile",
+        arguments: { path: "/tmp/demo.txt" },
+        status: "executing",
+      },
+      {
+        type: "toolResponse",
+        id: "tool-1",
+        name: "readFile",
+        result: "done",
+        isError: false,
+      },
+    ]);
+
+    render(<MessageBubble message={msg} />);
+
+    expect(screen.getByText("Checking that now.")).toBeInTheDocument();
+    expect(screen.getAllByText("readFile")).toHaveLength(1);
+  });
+
+  it("renders tool cards inline between surrounding assistant text blocks", () => {
+    const msg = assistantMessage([
+      { type: "text", text: "Lemme check..." },
+      {
+        type: "toolRequest",
+        id: "tool-1",
+        name: "readFile",
+        arguments: {},
+        status: "executing",
+      },
+      {
+        type: "toolResponse",
+        id: "tool-1",
+        name: "readFile",
+        result: "done",
+        isError: false,
+      },
+      { type: "text", text: "Results from checking." },
+    ]);
+
+    const { container } = render(<MessageBubble message={msg} />);
+    const bubbleText = container.querySelector(
+      '[data-role="assistant-message"]',
+    )?.textContent;
+
+    expect(bubbleText).toContain("Lemme check...");
+    expect(bubbleText).toContain("readFile");
+    expect(bubbleText).toContain("Results from checking.");
+    expect(bubbleText?.indexOf("Lemme check...")).toBeLessThan(
+      bubbleText?.indexOf("readFile") ?? Number.POSITIVE_INFINITY,
+    );
+    expect(bubbleText?.indexOf("readFile")).toBeLessThan(
+      bubbleText?.indexOf("Results from checking.") ?? Number.POSITIVE_INFINITY,
+    );
+  });
+
+  it("does not render a duplicate blank tool card for fallback responses", () => {
+    const msg = assistantMessage([
+      { type: "text", text: "Lemme check..." },
+      {
+        type: "toolRequest",
+        id: "tool-1",
+        name: "readFile",
+        arguments: {},
+        status: "executing",
+      },
+      {
+        type: "toolResponse",
+        id: "tool-response-1",
+        name: "",
+        result: "done",
+        isError: false,
+      },
+      { type: "text", text: "Results from checking." },
+    ]);
+
+    render(<MessageBubble message={msg} />);
+
+    expect(screen.getAllByText("readFile")).toHaveLength(1);
+    expect(screen.queryByText("Tool result")).not.toBeInTheDocument();
+  });
+
   it("renders thinking content as ThinkingBlock", () => {
     const msg = assistantMessage([{ type: "thinking", text: "deep thoughts" }]);
     render(<MessageBubble message={msg} />);
