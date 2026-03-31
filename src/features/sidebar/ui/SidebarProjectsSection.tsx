@@ -17,6 +17,8 @@ interface TabInfo {
   title: string;
   sessionId: string;
   projectId?: string;
+  isOpenTab?: boolean;
+  updatedAt?: string;
 }
 
 interface SidebarProjectsSectionProps {
@@ -202,6 +204,7 @@ function ProjectSection({
         <div className="space-y-0.5">
           {visibleChats.map((tab) => {
             const isActive = activeTabId === tab.id;
+            const isOpen = tab.isOpenTab ?? false;
             return (
               <div key={tab.id} className="flex items-center group">
                 <button
@@ -211,8 +214,10 @@ function ProjectSection({
                     "flex items-center gap-2 flex-1 min-w-0 py-1.5 pl-8 pr-1 rounded-md text-[13px]",
                     "transition-colors duration-150",
                     isActive
-                      ? "bg-background-tertiary/70 text-foreground"
-                      : "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
+                      ? "bg-background-tertiary/70 text-foreground font-medium"
+                      : isOpen
+                        ? "text-foreground hover:bg-background-tertiary/50"
+                        : "text-foreground-secondary/70 hover:text-foreground hover:bg-background-tertiary/50",
                   )}
                 >
                   <span className="flex-1 min-w-0 truncate text-left">
@@ -348,7 +353,7 @@ export function SidebarProjectsSection({
         </div>
       )}
 
-      {/* --- STANDALONE CHATS --- */}
+      {/* --- RECENTS (standalone chats from all sessions) --- */}
       {projectTabs.standalone.length > 0 && (
         <>
           {/* Section header (expanded only) */}
@@ -367,7 +372,7 @@ export function SidebarProjectsSection({
                   : "opacity-0 w-0 overflow-hidden",
               )}
             >
-              Chats
+              Recents
             </span>
           </div>
 
@@ -394,6 +399,7 @@ export function SidebarProjectsSection({
             <div className="space-y-0.5">
               {projectTabs.standalone.map((tab) => {
                 const isActive = activeTabId === tab.id;
+                const isOpen = tab.isOpenTab ?? false;
                 return (
                   <div key={tab.id} className="flex items-center group">
                     <button
@@ -403,8 +409,10 @@ export function SidebarProjectsSection({
                         "flex items-center gap-2 flex-1 min-w-0 py-1.5 rounded-md text-[13px]",
                         "transition-colors duration-150 px-2.5",
                         isActive
-                          ? "bg-background-tertiary/70 text-foreground"
-                          : "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
+                          ? "bg-background-tertiary/70 text-foreground font-medium"
+                          : isOpen
+                            ? "text-foreground hover:bg-background-tertiary/50"
+                            : "text-foreground-secondary/70 hover:text-foreground hover:bg-background-tertiary/50",
                       )}
                     >
                       <span className="flex-1 min-w-0 truncate text-left">

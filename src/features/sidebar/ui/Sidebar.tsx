@@ -12,6 +12,7 @@ import { cn } from "@/shared/lib/cn";
 import { GooseIcon } from "@/shared/ui/icons/GooseIcon";
 import type { AppView } from "@/app/AppShell";
 import type { ProjectInfo } from "@/features/projects/api/projects";
+import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
 import { SidebarProjectsSection } from "./SidebarProjectsSection";
 
 interface SidebarProps {
@@ -33,12 +34,6 @@ interface SidebarProps {
   className?: string;
   // Project & tab data
   projects: ProjectInfo[];
-  tabs: Array<{
-    id: string;
-    title: string;
-    sessionId: string;
-    projectId?: string;
-  }>;
 }
 
 const NAV_ITEMS: readonly { id: AppView; label: string; icon: typeof Bot }[] = [
@@ -64,13 +59,16 @@ export function Sidebar({
   activeTabId,
   className,
   projects,
-  tabs,
 }: SidebarProps) {
   const [expanded, setExpanded] = useState(!collapsed);
   const prevCollapsed = useRef(collapsed);
   const [expandedProjects, setExpandedProjects] = useState<
     Record<string, boolean>
   >({});
+
+  // Read all sessions and open tab IDs from the store
+  const { sessions, openTabIds } = useChatSessionStore();
+  const openTabIdSet = useMemo(() => new Set(openTabIds), [openTabIds]);
 
   useEffect(() => {
     if (collapsed) {
@@ -87,32 +85,56 @@ export function Sidebar({
   const labelTransition = "transition-all duration-300 ease-out";
   const labelVisible = expanded && !collapsed;
 
+  const MAX_RECENTS = 20;
+
   const projectTabs = useMemo(() => {
-    const byProject: Record<string, typeof tabs> = {};
-    const standalone: typeof tabs = [];
-    for (const tab of tabs) {
-      if (tab.projectId) {
-        if (!byProject[tab.projectId]) byProject[tab.projectId] = [];
-        byProject[tab.projectId].push(tab);
+    type SessionItem = {
+      id: string;
+      title: string;
+      sessionId: string;
+      projectId?: string;
+      isOpenTab: boolean;
+      updatedAt: string;
+    };
+    const byProject: Record<string, SessionItem[]> = {};
+    const standalone: SessionItem[] = [];
+    for (const session of sessions) {
+      const item: SessionItem = {
+        id: session.id,
+        title: session.title,
+        sessionId: session.id,
+        projectId: session.projectId,
+        isOpenTab: openTabIdSet.has(session.id),
+        updatedAt: session.updatedAt,
+      };
+      if (session.projectId) {
+        if (!byProject[session.projectId]) byProject[session.projectId] = [];
+        byProject[session.projectId].push(item);
       } else {
-        standalone.push(tab);
+        standalone.push(item);
       }
     }
-    return { byProject, standalone };
-  }, [tabs]);
+    // Sort standalone by updatedAt descending, limit to MAX_RECENTS
+    standalone.sort(
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    );
+    const limitedStandalone = standalone.slice(0, MAX_RECENTS);
+    return { byProject, standalone: limitedStandalone };
+  }, [sessions, openTabIdSet]);
 
   // Auto-expand the project containing the active tab
   useEffect(() => {
     if (!activeTabId) return;
-    const activeTab = tabs.find((t) => t.id === activeTabId);
-    const projectId = activeTab?.projectId;
+    const activeSession = sessions.find((s) => s.id === activeTabId);
+    const projectId = activeSession?.projectId;
     if (projectId) {
       setExpandedProjects((prev) => {
         if (prev[projectId]) return prev;
         return { ...prev, [projectId]: true };
       });
     }
-  }, [activeTabId, tabs]);
+  }, [activeTabId, sessions]);
 
   const toggleProject = (projectId: string) => {
     setExpandedProjects((prev) => ({

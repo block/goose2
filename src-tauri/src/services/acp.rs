@@ -9,6 +9,9 @@ use tokio_util::sync::CancellationToken;
 
 use acp_client::{AcpDriver, AgentDriver, MessageWriter, Store};
 
+use crate::services::sessions::SessionStore;
+use crate::types::messages::{MessageContent, MessageRole};
+
 // ---------------------------------------------------------------------------
 // Event payload types
 // ---------------------------------------------------------------------------
@@ -59,18 +62,28 @@ struct ToolResultPayload {
 // ---------------------------------------------------------------------------
 
 /// A [`MessageWriter`] implementation that streams ACP output to the frontend
-/// via Tauri events.
+/// via Tauri events, and saves the final assistant message to the
+/// [`SessionStore`] on finalization.
 pub struct TauriMessageWriter {
     app_handle: tauri::AppHandle,
     session_id: String,
+    session_store: Arc<SessionStore>,
+    /// Accumulated response text across all `append_text` calls.
+    accumulated_text: std::sync::Mutex<String>,
 }
 
 impl TauriMessageWriter {
     /// Create a new writer that emits events for the given session.
-    pub fn new(app_handle: tauri::AppHandle, session_id: String) -> Self {
+    pub fn new(
+        app_handle: tauri::AppHandle,
+        session_id: String,
+        session_store: Arc<SessionStore>,
+    ) -> Self {
         Self {
             app_handle,
             session_id,
+            session_store,
+            accumulated_text: std::sync::Mutex::new(String::new()),
         }
     }
 }
@@ -78,6 +91,12 @@ impl TauriMessageWriter {
 #[async_trait]
 impl MessageWriter for TauriMessageWriter {
     async fn append_text(&self, text: &str) {
+        // Accumulate the text for later persistence
+        {
+            let mut acc = self.accumulated_text.lock().expect("accumulated_text lock");
+            acc.push_str(text);
+        }
+
         let _ = self.app_handle.emit(
             "acp:text",
             TextPayload {
@@ -88,6 +107,29 @@ impl MessageWriter for TauriMessageWriter {
     }
 
     async fn finalize(&self) {
+        // Save the accumulated assistant message to the SessionStore
+        let text = {
+            let acc = self.accumulated_text.lock().expect("accumulated_text lock");
+            acc.clone()
+        };
+
+        if !text.is_empty() {
+            let message = crate::types::messages::Message {
+                id: uuid::Uuid::new_v4().to_string(),
+                role: MessageRole::Assistant,
+                created: chrono::Utc::now().timestamp(),
+                content: vec![MessageContent::Text { text }],
+                metadata: None,
+            };
+
+            if let Err(e) = self.session_store.add_message(&self.session_id, message) {
+                eprintln!(
+                    "Failed to save assistant message for session {}: {}",
+                    self.session_id, e
+                );
+            }
+        }
+
         let _ = self.app_handle.emit(
             "acp:done",
             DonePayload {
@@ -134,20 +176,25 @@ impl MessageWriter for TauriMessageWriter {
 // ---------------------------------------------------------------------------
 
 /// A [`Store`] implementation that persists ACP session mappings to disk
-/// under `~/.goose/acp_sessions/`.
+/// under `~/.goose/acp_sessions/` and reads conversation history from the
+/// [`SessionStore`].
 pub struct TauriStore {
     sessions_dir: PathBuf,
+    session_store: Arc<SessionStore>,
 }
 
 impl TauriStore {
     /// Create a new store, ensuring the backing directory exists.
-    pub fn new() -> Self {
+    pub fn new(session_store: Arc<SessionStore>) -> Self {
         let sessions_dir = dirs::home_dir()
             .expect("home dir")
             .join(".goose")
             .join("acp_sessions");
         let _ = std::fs::create_dir_all(&sessions_dir);
-        Self { sessions_dir }
+        Self {
+            sessions_dir,
+            session_store,
+        }
     }
 
     /// Remove session files that are older than the given duration.
@@ -186,9 +233,32 @@ impl Store for TauriStore {
         Ok(())
     }
 
-    fn get_session_messages(&self, _session_id: &str) -> Result<Vec<(String, String)>, String> {
-        // Placeholder — can be enhanced to load persisted messages later.
-        Ok(Vec::new())
+    fn get_session_messages(&self, session_id: &str) -> Result<Vec<(String, String)>, String> {
+        let messages = self.session_store.get_messages(session_id);
+        let mut pairs = Vec::new();
+        for msg in messages {
+            let role = match msg.role {
+                MessageRole::User => "user",
+                MessageRole::Assistant => "assistant",
+                MessageRole::System => "system",
+            }
+            .to_string();
+
+            // Concatenate all text content blocks into a single string
+            let text_parts: Vec<String> = msg
+                .content
+                .iter()
+                .filter_map(|c| match c {
+                    MessageContent::Text { text } => Some(text.clone()),
+                    _ => None,
+                })
+                .collect();
+
+            if !text_parts.is_empty() {
+                pairs.push((role, text_parts.join("\n")));
+            }
+        }
+        Ok(pairs)
     }
 }
 
@@ -303,18 +373,40 @@ impl AcpService {
     pub async fn send_prompt(
         app_handle: tauri::AppHandle,
         registry: Arc<AcpSessionRegistry>,
+        session_store: Arc<SessionStore>,
         session_id: String,
         provider_id: String,
         prompt: String,
         working_dir: PathBuf,
     ) -> Result<(), String> {
+        // Ensure the session exists in the SessionStore (create if needed)
+        session_store.ensure_session(&session_id, Some(provider_id.clone()));
+
+        // Save the user message to SessionStore
+        let user_message = crate::types::messages::Message {
+            id: uuid::Uuid::new_v4().to_string(),
+            role: MessageRole::User,
+            created: chrono::Utc::now().timestamp(),
+            content: vec![MessageContent::Text {
+                text: prompt.clone(),
+            }],
+            metadata: None,
+        };
+        if let Err(e) = session_store.add_message(&session_id, user_message) {
+            eprintln!(
+                "Failed to save user message for session {}: {}",
+                session_id, e
+            );
+        }
+
         let driver = AcpDriver::new(&provider_id)?;
 
         let writer: Arc<dyn MessageWriter> = Arc::new(TauriMessageWriter::new(
             app_handle.clone(),
             session_id.clone(),
+            Arc::clone(&session_store),
         ));
-        let store: Arc<dyn Store> = Arc::new(TauriStore::new());
+        let store: Arc<dyn Store> = Arc::new(TauriStore::new(session_store));
         let cancel_token = registry.register(&session_id, &provider_id);
 
         // AcpDriver::run may use !Send futures internally, so we run it on a
