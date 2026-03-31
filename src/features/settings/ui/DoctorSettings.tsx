@@ -91,7 +91,7 @@ export function DoctorSettings() {
 
   return (
     <div>
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4 pr-8">
         <div>
           <h3 className="flex items-center gap-2 text-lg font-semibold">
             <Stethoscope className="h-4 w-4" />
