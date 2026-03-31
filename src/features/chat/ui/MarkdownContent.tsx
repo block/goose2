@@ -138,6 +138,7 @@ export const MarkdownContent = memo(function MarkdownContent({
       className={cn(
         `w-full overflow-x-hidden prose prose-sm dark:prose-invert max-w-full
         prose-pre:p-0 prose-pre:m-0 !p-0
+        prose-code:before:content-none prose-code:after:content-none
         prose-code:break-all prose-code:whitespace-pre-wrap prose-code:font-mono
         prose-a:break-all prose-a:text-accent prose-a:underline
         prose-table:table prose-table:w-full
