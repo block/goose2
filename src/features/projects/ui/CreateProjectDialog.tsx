@@ -70,10 +70,8 @@ export function CreateProjectDialog({
 
   const handleBrowseFolder = async () => {
     try {
-      // Dynamic import — plugin may not be installed
-      const modulePath = "@tauri-apps/plugin-dialog";
-      const dialog = await import(/* @vite-ignore */ modulePath);
-      const selected = await dialog.open({
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const selected = await open({
         directory: true,
         multiple: false,
         title: "Select Working Directory",

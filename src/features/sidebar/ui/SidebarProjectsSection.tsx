@@ -37,7 +37,6 @@ interface SidebarProjectsSectionProps {
   onCreateProject?: () => void;
   onEditProject?: (projectId: string) => void;
   onArchiveProject?: (projectId: string) => void;
-  onEditChat?: (tabId: string) => void;
   onArchiveChat?: (tabId: string) => void;
 }
 
@@ -78,7 +77,9 @@ function ItemMenu({
         className={cn(
           "flex items-center justify-center w-6 h-6 rounded-md",
           "text-foreground-secondary/40 hover:text-foreground hover:bg-background-tertiary/50",
-          "opacity-0 group-hover:opacity-100 transition-opacity duration-150",
+          open
+            ? "opacity-100"
+            : "opacity-0 group-hover:opacity-100 transition-opacity duration-150",
         )}
       >
         <MoreHorizontal className="w-3.5 h-3.5" />
@@ -131,7 +132,6 @@ function ProjectSection({
   onNavigate,
   onEditProject,
   onArchiveProject,
-  onEditChat,
   onArchiveChat,
 }: {
   project: ProjectInfo;
@@ -144,7 +144,6 @@ function ProjectSection({
   onNavigate?: (view: AppView) => void;
   onEditProject?: (projectId: string) => void;
   onArchiveProject?: (projectId: string) => void;
-  onEditChat?: (tabId: string) => void;
   onArchiveChat?: (tabId: string) => void;
 }) {
   const visibleChats = projectChats.slice(0, MAX_VISIBLE_CHATS);
@@ -222,7 +221,6 @@ function ProjectSection({
                 </button>
                 <ItemMenu
                   label={tab.title}
-                  onEdit={() => onEditChat?.(tab.id)}
                   onArchive={() => onArchiveChat?.(tab.id)}
                 />
               </div>
@@ -261,7 +259,6 @@ export function SidebarProjectsSection({
   onCreateProject,
   onEditProject,
   onArchiveProject,
-  onEditChat,
   onArchiveChat,
 }: SidebarProjectsSectionProps) {
   return (
@@ -280,7 +277,7 @@ export function SidebarProjectsSection({
       <div
         className={cn(
           "flex items-center transition-all duration-300",
-          collapsed ? "px-0 pt-0 pb-1 justify-center" : "px-3 pt-2 pb-1",
+          collapsed ? "px-0 pt-0 pb-1 justify-center" : "px-1.5 pt-2 pb-1",
         )}
       >
         <span
@@ -345,7 +342,6 @@ export function SidebarProjectsSection({
               onNavigate={onNavigate}
               onEditProject={onEditProject}
               onArchiveProject={onArchiveProject}
-              onEditChat={onEditChat}
               onArchiveChat={onArchiveChat}
             />
           ))}
@@ -359,7 +355,7 @@ export function SidebarProjectsSection({
           <div
             className={cn(
               "flex items-center transition-all duration-300",
-              collapsed ? "px-0 pt-0 pb-1 justify-center" : "px-3 pt-2 pb-1",
+              collapsed ? "px-0 pt-0 pb-1 justify-center" : "px-1.5 pt-2 pb-1",
             )}
           >
             <span
@@ -417,7 +413,6 @@ export function SidebarProjectsSection({
                     </button>
                     <ItemMenu
                       label={tab.title}
-                      onEdit={() => onEditChat?.(tab.id)}
                       onArchive={() => onArchiveChat?.(tab.id)}
                     />
                   </div>

@@ -23,6 +23,9 @@ interface SidebarProps {
   onNewChat?: () => void;
   onNewChatInProject?: (projectId: string) => void;
   onCreateProject?: () => void;
+  onEditProject?: (projectId: string) => void;
+  onArchiveProject?: (projectId: string) => void;
+  onArchiveChat?: (tabId: string) => void;
   onNavigate?: (view: AppView) => void;
   onSelectTab?: (tabId: string) => void;
   activeView?: AppView;
@@ -52,6 +55,9 @@ export function Sidebar({
   onNewChat,
   onNewChatInProject,
   onCreateProject,
+  onEditProject,
+  onArchiveProject,
+  onArchiveChat,
   onNavigate,
   onSelectTab,
   activeView,
@@ -302,6 +308,9 @@ export function Sidebar({
             onSelectTab={onSelectTab}
             onNewChatInProject={onNewChatInProject}
             onCreateProject={onCreateProject}
+            onEditProject={onEditProject}
+            onArchiveProject={onArchiveProject}
+            onArchiveChat={onArchiveChat}
           />
         </nav>
 

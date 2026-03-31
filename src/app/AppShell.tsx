@@ -24,6 +24,9 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [createProjectOpen, setCreateProjectOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<ProjectInfo | null>(
+    null,
+  );
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<AppView>("home");
@@ -104,6 +107,17 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       }
     },
     [createNewTab, projectStore.projects],
+  );
+
+  const handleEditProject = useCallback(
+    (projectId: string) => {
+      const project = projectStore.projects.find((p) => p.id === projectId);
+      if (project) {
+        setEditingProject(project);
+        setCreateProjectOpen(true);
+      }
+    },
+    [projectStore.projects],
   );
 
   const handleNewTab = useCallback(() => {
@@ -238,6 +252,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             onNewChat={handleNewTab}
             onNewChatInProject={handleNewChatInProject}
             onCreateProject={() => setCreateProjectOpen(true)}
+            onEditProject={handleEditProject}
             onSelectTab={handleTabSelect}
             activeView={activeView}
             activeTabId={activeTabId}
@@ -272,10 +287,29 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       {/* Create project dialog */}
       <CreateProjectDialog
         isOpen={createProjectOpen}
-        onClose={() => setCreateProjectOpen(false)}
+        onClose={() => {
+          setCreateProjectOpen(false);
+          setEditingProject(null);
+        }}
         onCreated={() => {
           projectStore.fetchProjects();
         }}
+        editingProject={
+          editingProject
+            ? {
+                id: editingProject.id,
+                name: editingProject.name,
+                description: editingProject.description,
+                prompt: editingProject.prompt,
+                icon: editingProject.icon,
+                color: editingProject.color,
+                preferredProvider: editingProject.preferredProvider,
+                preferredModel: editingProject.preferredModel,
+                workingDir: editingProject.workingDir,
+                useWorktrees: editingProject.useWorktrees,
+              }
+            : undefined
+        }
       />
     </div>
   );
