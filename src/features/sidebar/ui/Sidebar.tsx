@@ -105,10 +105,11 @@ export function Sidebar({
   useEffect(() => {
     if (!activeTabId) return;
     const activeTab = tabs.find((t) => t.id === activeTabId);
-    if (activeTab?.projectId) {
+    const projectId = activeTab?.projectId;
+    if (projectId) {
       setExpandedProjects((prev) => {
-        if (prev[activeTab.projectId!]) return prev;
-        return { ...prev, [activeTab.projectId!]: true };
+        if (prev[projectId]) return prev;
+        return { ...prev, [projectId]: true };
       });
     }
   }, [activeTabId, tabs]);

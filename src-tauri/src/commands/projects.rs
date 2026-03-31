@@ -147,6 +147,7 @@ pub fn list_projects() -> Result<Vec<ProjectInfo>, String> {
     Ok(projects)
 }
 
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub fn create_project(
     name: String,
@@ -201,12 +202,12 @@ pub fn create_project(
     let project_path = dir.join("project.json");
     let json = serde_json::to_string_pretty(&info)
         .map_err(|e| format!("Failed to serialize project: {}", e))?;
-    fs::write(&project_path, json)
-        .map_err(|e| format!("Failed to write project.json: {}", e))?;
+    fs::write(&project_path, json).map_err(|e| format!("Failed to write project.json: {}", e))?;
 
     Ok(info)
 }
 
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub fn update_project(
     id: String,
@@ -244,8 +245,7 @@ pub fn update_project(
     let project_path = dir.join("project.json");
     let json = serde_json::to_string_pretty(&info)
         .map_err(|e| format!("Failed to serialize project: {}", e))?;
-    fs::write(&project_path, json)
-        .map_err(|e| format!("Failed to write project.json: {}", e))?;
+    fs::write(&project_path, json).map_err(|e| format!("Failed to write project.json: {}", e))?;
 
     Ok(info)
 }
