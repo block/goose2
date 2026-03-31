@@ -9,6 +9,7 @@ import {
 import { cn } from "@/shared/lib/cn";
 import type { AppView } from "@/app/AppShell";
 import type { ProjectInfo } from "@/features/projects/api/projects";
+import { SidebarChatRow } from "./SidebarChatRow";
 
 const MAX_VISIBLE_CHATS = 3;
 
@@ -40,6 +41,7 @@ interface SidebarProjectsSectionProps {
   onEditProject?: (projectId: string) => void;
   onArchiveProject?: (projectId: string) => void;
   onArchiveChat?: (tabId: string) => void;
+  onRenameChat?: (tabId: string, nextTitle: string) => void;
 }
 
 function ItemMenu({
@@ -135,6 +137,7 @@ function ProjectSection({
   onEditProject,
   onArchiveProject,
   onArchiveChat,
+  onRenameChat,
 }: {
   project: ProjectInfo;
   projectChats: TabInfo[];
@@ -147,6 +150,7 @@ function ProjectSection({
   onEditProject?: (projectId: string) => void;
   onArchiveProject?: (projectId: string) => void;
   onArchiveChat?: (tabId: string) => void;
+  onRenameChat?: (tabId: string, nextTitle: string) => void;
 }) {
   const [showAll, setShowAll] = useState(false);
   const visibleChats = showAll
@@ -209,29 +213,17 @@ function ProjectSection({
             const isActive = activeTabId === tab.id;
             const isOpen = tab.isOpenTab ?? false;
             return (
-              <div key={tab.id} className="flex items-center group">
-                <button
-                  type="button"
-                  onClick={() => onSelectTab?.(tab.id)}
-                  className={cn(
-                    "flex items-center gap-2 flex-1 min-w-0 py-1.5 pl-8 pr-1 rounded-md text-[13px]",
-                    "transition-colors duration-150",
-                    isActive
-                      ? "bg-background-tertiary/70 text-foreground font-medium"
-                      : isOpen
-                        ? "text-foreground hover:bg-background-tertiary/50"
-                        : "text-foreground-secondary/70 hover:text-foreground hover:bg-background-tertiary/50",
-                  )}
-                >
-                  <span className="flex-1 min-w-0 truncate text-left">
-                    {tab.title}
-                  </span>
-                </button>
-                <ItemMenu
-                  label={tab.title}
-                  onArchive={() => onArchiveChat?.(tab.id)}
-                />
-              </div>
+              <SidebarChatRow
+                key={tab.id}
+                id={tab.id}
+                title={tab.title}
+                isActive={isActive}
+                isOpen={isOpen}
+                className="pl-5"
+                onSelect={onSelectTab}
+                onRename={onRenameChat}
+                onArchive={onArchiveChat}
+              />
             );
           })}
           {hasMore && (
@@ -291,6 +283,7 @@ export function SidebarProjectsSection({
   onEditProject,
   onArchiveProject,
   onArchiveChat,
+  onRenameChat,
 }: SidebarProjectsSectionProps) {
   const [showAllRecents, setShowAllRecents] = useState(false);
   const visibleRecents = showAllRecents
@@ -380,6 +373,7 @@ export function SidebarProjectsSection({
               onEditProject={onEditProject}
               onArchiveProject={onArchiveProject}
               onArchiveChat={onArchiveChat}
+              onRenameChat={onRenameChat}
             />
           ))}
         </div>
@@ -433,29 +427,16 @@ export function SidebarProjectsSection({
                 const isActive = activeTabId === tab.id;
                 const isOpen = tab.isOpenTab ?? false;
                 return (
-                  <div key={tab.id} className="flex items-center group">
-                    <button
-                      type="button"
-                      onClick={() => onSelectTab?.(tab.id)}
-                      className={cn(
-                        "flex items-center gap-2 flex-1 min-w-0 py-1.5 rounded-md text-[13px]",
-                        "transition-colors duration-150 px-2.5",
-                        isActive
-                          ? "bg-background-tertiary/70 text-foreground font-medium"
-                          : isOpen
-                            ? "text-foreground hover:bg-background-tertiary/50"
-                            : "text-foreground-secondary/70 hover:text-foreground hover:bg-background-tertiary/50",
-                      )}
-                    >
-                      <span className="flex-1 min-w-0 truncate text-left">
-                        {tab.title}
-                      </span>
-                    </button>
-                    <ItemMenu
-                      label={tab.title}
-                      onArchive={() => onArchiveChat?.(tab.id)}
-                    />
-                  </div>
+                  <SidebarChatRow
+                    key={tab.id}
+                    id={tab.id}
+                    title={tab.title}
+                    isActive={isActive}
+                    isOpen={isOpen}
+                    onSelect={onSelectTab}
+                    onRename={onRenameChat}
+                    onArchive={onArchiveChat}
+                  />
                 );
               })}
               {hasMoreRecents && (
