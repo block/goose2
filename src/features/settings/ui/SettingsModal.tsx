@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/shared/lib/cn";
-import { Palette, Settings2, Info, X } from "lucide-react";
+import { Palette, Settings2, FolderKanban, Info, X } from "lucide-react";
 import { AppearanceSettings } from "./AppearanceSettings";
 import {
   listArchivedProjects,
@@ -12,6 +12,7 @@ import {
 const NAV_ITEMS = [
   { id: "appearance", label: "Appearance", icon: Palette },
   { id: "general", label: "General", icon: Settings2 },
+  { id: "projects", label: "Projects", icon: FolderKanban },
   { id: "about", label: "About", icon: Info },
 ] as const;
 
@@ -169,6 +170,16 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                     <h3 className="text-lg font-semibold">General</h3>
                     <p className="mt-1 text-sm text-foreground-secondary">
                       General settings will appear here.
+                    </p>
+                  </div>
+                </div>
+              )}
+              {activeSection === "projects" && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold">Projects</h3>
+                    <p className="mt-1 text-sm text-foreground-secondary">
+                      Manage your projects.
                     </p>
                   </div>
 
