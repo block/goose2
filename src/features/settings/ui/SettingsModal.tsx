@@ -19,9 +19,9 @@ import {
 
 const NAV_ITEMS = [
   { id: "appearance", label: "Appearance", icon: Palette },
-  { id: "doctor", label: "Doctor", icon: Stethoscope },
   { id: "general", label: "General", icon: Settings2 },
   { id: "projects", label: "Projects", icon: FolderKanban },
+  { id: "doctor", label: "Doctor", icon: Stethoscope },
   { id: "about", label: "About", icon: Info },
 ] as const;
 

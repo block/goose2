@@ -1,11 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import {
-  RefreshCw,
-  Stethoscope,
-  ClipboardCopy,
-  Check,
-  Loader2,
-} from "lucide-react";
+import { RefreshCw, ClipboardCopy, Check, Loader2 } from "lucide-react";
 import {
   runDoctor,
   type DoctorCheck,
@@ -93,10 +87,7 @@ export function DoctorSettings() {
     <div>
       <div className="flex items-start justify-between gap-4 pr-8">
         <div>
-          <h3 className="flex items-center gap-2 text-lg font-semibold">
-            <Stethoscope className="h-4 w-4" />
-            Doctor
-          </h3>
+          <h3 className="text-lg font-semibold">Doctor</h3>
           <p className="mt-1 text-sm text-foreground-secondary">
             Verify required tools and agent availability for Goose.
           </p>
