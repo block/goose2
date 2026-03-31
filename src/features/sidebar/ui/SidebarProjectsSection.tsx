@@ -148,7 +148,10 @@ function ProjectSection({
   onArchiveProject?: (projectId: string) => void;
   onArchiveChat?: (tabId: string) => void;
 }) {
-  const visibleChats = projectChats.slice(0, MAX_VISIBLE_CHATS);
+  const [showAll, setShowAll] = useState(false);
+  const visibleChats = showAll
+    ? projectChats
+    : projectChats.slice(0, MAX_VISIBLE_CHATS);
   const hasMore = projectChats.length > MAX_VISIBLE_CHATS;
 
   return (
@@ -234,13 +237,36 @@ function ProjectSection({
           {hasMore && (
             <button
               type="button"
-              onClick={() => onNavigate?.("projects")}
+              onClick={() => {
+                if (showAll) {
+                  setShowAll(false);
+                } else {
+                  // If more than 8 items, navigate to full view instead
+                  if (projectChats.length > 8) {
+                    onNavigate?.("projects");
+                  } else {
+                    setShowAll(true);
+                  }
+                }
+              }}
               className={cn(
-                "flex items-center w-full py-1 pl-8 pr-2.5 rounded-md text-[11px]",
+                "flex items-center gap-1.5 w-full pl-8 pr-3 py-1 text-[11px]",
                 "text-foreground-secondary/60 hover:text-foreground-secondary transition-colors duration-150",
               )}
             >
-              View all {projectChats.length} chats
+              {showAll ? (
+                <>
+                  <ChevronDown className="w-3 h-3" />
+                  Show less
+                </>
+              ) : (
+                <>
+                  <ChevronRight className="w-3 h-3" />
+                  {projectChats.length > 8
+                    ? `View all ${projectChats.length} chats`
+                    : `${projectChats.length - MAX_VISIBLE_CHATS} more`}
+                </>
+              )}
             </button>
           )}
         </div>
@@ -266,6 +292,12 @@ export function SidebarProjectsSection({
   onArchiveProject,
   onArchiveChat,
 }: SidebarProjectsSectionProps) {
+  const [showAllRecents, setShowAllRecents] = useState(false);
+  const visibleRecents = showAllRecents
+    ? projectTabs.standalone
+    : projectTabs.standalone.slice(0, MAX_VISIBLE_CHATS);
+  const hasMoreRecents = projectTabs.standalone.length > MAX_VISIBLE_CHATS;
+
   return (
     <div
       className={cn(
@@ -378,7 +410,7 @@ export function SidebarProjectsSection({
 
           {collapsed ? (
             <div className="flex flex-col items-center gap-1">
-              {projectTabs.standalone.map((tab) => (
+              {visibleRecents.map((tab) => (
                 <button
                   type="button"
                   key={tab.id}
@@ -397,7 +429,7 @@ export function SidebarProjectsSection({
             </div>
           ) : (
             <div className="space-y-0.5">
-              {projectTabs.standalone.map((tab) => {
+              {visibleRecents.map((tab) => {
                 const isActive = activeTabId === tab.id;
                 const isOpen = tab.isOpenTab ?? false;
                 return (
@@ -426,6 +458,30 @@ export function SidebarProjectsSection({
                   </div>
                 );
               })}
+              {hasMoreRecents && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllRecents((prev) => !prev)}
+                  className={cn(
+                    "flex items-center gap-1.5 w-full px-2.5 py-1 text-[11px]",
+                    "text-foreground-secondary/60 hover:text-foreground-secondary transition-colors duration-150",
+                  )}
+                >
+                  {showAllRecents ? (
+                    <>
+                      <ChevronDown className="w-3 h-3" />
+                      Show less
+                    </>
+                  ) : (
+                    <>
+                      <ChevronRight className="w-3 h-3" />
+                      {projectTabs.standalone.length > 8
+                        ? `View all ${projectTabs.standalone.length} chats`
+                        : `${projectTabs.standalone.length - MAX_VISIBLE_CHATS} more`}
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           )}
         </>
