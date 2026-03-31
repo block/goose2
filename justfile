@@ -74,7 +74,13 @@ dev:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    TAURI_CONFIG="{}"
+    # Derive a stable port from the working directory so the same worktree
+    # always gets the same port. This avoids changing TAURI_CONFIG between
+    # runs, which would invalidate Cargo's build cache and trigger a full
+    # Rust rebuild every time.
+    VITE_PORT=$(python3 -c "import hashlib,os; h=int(hashlib.sha256(os.getcwd().encode()).hexdigest(),16); print(10000 + h % 55000)")
+    export VITE_PORT
+    TAURI_CONFIG="{\"build\":{\"devUrl\":\"http://localhost:${VITE_PORT}\",\"beforeDevCommand\":{\"script\":\"exec ./node_modules/.bin/vite --port ${VITE_PORT} --strictPort\",\"cwd\":\"..\",\"wait\":false}}}"
 
     # In worktrees, generate a labeled icon so you can tell instances apart
     if git rev-parse --is-inside-work-tree &>/dev/null; then
@@ -89,7 +95,7 @@ dev:
 
             if swift scripts/generate-dev-icon.swift src-tauri/icons/icon.icns "$DEV_ICON" "$WORKTREE_LABEL"; then
                 echo "🌳 Worktree: ${WORKTREE_LABEL}"
-                TAURI_CONFIG="{\"bundle\":{\"icon\":[\"$DEV_ICON\"]}}"
+                TAURI_CONFIG=$(python3 -c "import json,sys; a=json.loads(sys.argv[1]); a['bundle']={'icon':['$DEV_ICON']}; print(json.dumps(a))" "$TAURI_CONFIG")
             fi
         fi
     fi
@@ -101,7 +107,9 @@ dev-debug:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    EXTRA_CONFIG=""
+    VITE_PORT=$(python3 -c "import hashlib,os; h=int(hashlib.sha256(os.getcwd().encode()).hexdigest(),16); print(10000 + h % 55000)")
+    export VITE_PORT
+    EXTRA_CONFIG="--config {\"build\":{\"devUrl\":\"http://localhost:${VITE_PORT}\",\"beforeDevCommand\":{\"script\":\"exec ./node_modules/.bin/vite --port ${VITE_PORT} --strictPort\",\"cwd\":\"..\",\"wait\":false}}}"
 
     # In worktrees, generate a labeled icon so you can tell instances apart
     if git rev-parse --is-inside-work-tree &>/dev/null; then
@@ -116,7 +124,7 @@ dev-debug:
 
             if swift scripts/generate-dev-icon.swift src-tauri/icons/icon.icns "$DEV_ICON" "$WORKTREE_LABEL"; then
                 echo "🌳 Worktree: ${WORKTREE_LABEL}"
-                EXTRA_CONFIG="--config {\"bundle\":{\"icon\":[\"$DEV_ICON\"]}}"
+                EXTRA_CONFIG="$EXTRA_CONFIG --config {\"bundle\":{\"icon\":[\"$DEV_ICON\"]}}"
             fi
         fi
     fi

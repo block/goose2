@@ -13,14 +13,14 @@ export default defineConfig(async () => ({
   },
   clearScreen: false,
   server: {
-    port: 1520,
+    port: parseInt(process.env.VITE_PORT || "1520", 10),
     strictPort: true,
     host: host || false,
     hmr: host
       ? {
           protocol: "ws",
           host,
-          port: 1521,
+          port: parseInt(process.env.VITE_PORT || "1520", 10) + 1,
         }
       : undefined,
     watch: {
