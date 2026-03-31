@@ -41,7 +41,9 @@ describe("SidebarChatRow", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /options for original title/i }));
+    await user.click(
+      screen.getByRole("button", { name: /options for original title/i }),
+    );
     await user.click(screen.getByRole("menuitem", { name: /rename/i }));
 
     const input = screen.getByRole("textbox");
