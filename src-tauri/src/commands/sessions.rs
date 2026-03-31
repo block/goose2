@@ -43,3 +43,24 @@ pub fn delete_session(
 ) -> Result<(), String> {
     store.delete_session(&session_id)
 }
+
+#[tauri::command]
+pub fn list_archived_sessions(store: State<'_, Arc<SessionStore>>) -> Vec<Session> {
+    store.list_archived_sessions()
+}
+
+#[tauri::command]
+pub fn archive_session(
+    store: State<'_, Arc<SessionStore>>,
+    session_id: String,
+) -> Result<(), String> {
+    store.archive_session(&session_id)
+}
+
+#[tauri::command]
+pub fn unarchive_session(
+    store: State<'_, Arc<SessionStore>>,
+    session_id: String,
+) -> Result<(), String> {
+    store.unarchive_session(&session_id)
+}

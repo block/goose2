@@ -2,7 +2,8 @@ import { create } from "zustand";
 import {
   createSession as apiCreateSession,
   listSessions as apiListSessions,
-  deleteSession as apiDeleteSession,
+  archiveSession as apiArchiveSession,
+  unarchiveSession as apiUnarchiveSession,
   updateSession as apiUpdateSession,
   saveUiState as apiSaveUiState,
   loadUiState as apiLoadUiState,
@@ -20,6 +21,7 @@ export interface ChatSession {
   modelName?: string;
   createdAt: string; // ISO timestamp
   updatedAt: string;
+  archivedAt?: string;
 }
 
 interface ChatSessionStoreState {
@@ -41,6 +43,7 @@ interface ChatSessionStoreActions {
   loadSessions: () => Promise<void>;
   updateSession: (id: string, patch: Partial<ChatSession>) => void;
   archiveSession: (id: string) => Promise<void>;
+  unarchiveSession: (id: string) => Promise<void>;
 
   // Tab management
   openTab: (sessionId: string) => void;
@@ -70,6 +73,7 @@ function sessionToChatSession(session: Session): ChatSession {
     modelName: session.modelName,
     createdAt: session.createdAt,
     updatedAt: session.updatedAt,
+    archivedAt: session.archivedAt,
   };
 }
 
@@ -160,14 +164,30 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     });
     get().persistTabState();
 
-    // Delete from backend — only remove from local sessions on success
+    // Archive on backend — update local state on success
     try {
-      await apiDeleteSession(id);
+      await apiArchiveSession(id);
+      const archivedAt = new Date().toISOString();
       set((state) => ({
-        sessions: state.sessions.filter((s) => s.id !== id),
+        sessions: state.sessions
+          .map((s) => (s.id === id ? { ...s, archivedAt } : s))
+          .filter((s) => !s.archivedAt),
       }));
     } catch (err) {
-      console.error("Failed to delete session from backend:", err);
+      console.error("Failed to archive session:", err);
+    }
+  },
+
+  unarchiveSession: async (id) => {
+    try {
+      await apiUnarchiveSession(id);
+      set((state) => ({
+        sessions: state.sessions.map((s) =>
+          s.id === id ? { ...s, archivedAt: undefined } : s,
+        ),
+      }));
+    } catch (err) {
+      console.error("Failed to unarchive session:", err);
     }
   },
 

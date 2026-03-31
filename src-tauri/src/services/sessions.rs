@@ -100,6 +100,7 @@ impl SessionStore {
             updated_at: now,
             message_count: 0,
             last_message_preview: None,
+            archived_at: None,
         };
 
         // Write empty messages file
@@ -139,6 +140,7 @@ impl SessionStore {
                     updated_at: now,
                     message_count: 0,
                     last_message_preview: None,
+                    archived_at: None,
                 };
 
                 self.save_messages(id, &[]);
@@ -151,10 +153,48 @@ impl SessionStore {
 
     pub fn list_sessions(&self) -> Vec<Session> {
         let sessions = self.sessions.lock().unwrap();
-        let mut list: Vec<Session> = sessions.values().cloned().collect();
+        let mut list: Vec<Session> = sessions
+            .values()
+            .filter(|s| s.archived_at.is_none())
+            .cloned()
+            .collect();
         // Sort by updated_at descending (most recent first)
         list.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
         list
+    }
+
+    pub fn list_archived_sessions(&self) -> Vec<Session> {
+        let sessions = self.sessions.lock().unwrap();
+        let mut list: Vec<Session> = sessions
+            .values()
+            .filter(|s| s.archived_at.is_some())
+            .cloned()
+            .collect();
+        // Sort by archived_at descending (most recently archived first)
+        list.sort_by(|a, b| b.archived_at.cmp(&a.archived_at));
+        list
+    }
+
+    pub fn archive_session(&self, id: &str) -> Result<(), String> {
+        let mut sessions = self.sessions.lock().unwrap();
+        let session = sessions
+            .get_mut(id)
+            .ok_or_else(|| format!("Session '{}' not found", id))?;
+
+        session.archived_at = Some(chrono::Utc::now().to_rfc3339());
+        self.save_metadata(&sessions);
+        Ok(())
+    }
+
+    pub fn unarchive_session(&self, id: &str) -> Result<(), String> {
+        let mut sessions = self.sessions.lock().unwrap();
+        let session = sessions
+            .get_mut(id)
+            .ok_or_else(|| format!("Session '{}' not found", id))?;
+
+        session.archived_at = None;
+        self.save_metadata(&sessions);
+        Ok(())
     }
 
     pub fn add_message(&self, session_id: &str, message: Message) -> Result<(), String> {

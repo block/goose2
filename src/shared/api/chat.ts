@@ -42,6 +42,14 @@ export async function deleteSession(sessionId: string): Promise<void> {
   return invoke("delete_session", { sessionId });
 }
 
+export async function archiveSession(sessionId: string): Promise<void> {
+  return invoke("archive_session", { sessionId });
+}
+
+export async function unarchiveSession(sessionId: string): Promise<void> {
+  return invoke("unarchive_session", { sessionId });
+}
+
 export async function saveUiState(
   openTabIds: string[],
   activeTabId: string | null,
