@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MessageTimeline } from "./MessageTimeline";
 import { ChatInput } from "./ChatInput";
 import { StreamingIndicator } from "./StreamingIndicator";
 import { useChat } from "../hooks/useChat";
 import { useAcpStream } from "../hooks/useAcpStream";
+import { discoverAcpProviders, type AcpProvider } from "@/shared/api/acp";
 
 interface ChatViewProps {
   sessionId?: string;
@@ -17,13 +18,33 @@ export function ChatView({
   agentAvatarUrl,
 }: ChatViewProps) {
   const [activeSessionId] = useState(() => sessionId ?? crypto.randomUUID());
+  const [providers, setProviders] = useState<AcpProvider[]>([]);
+  const [selectedProvider, setSelectedProvider] = useState("goose");
+
+  useEffect(() => {
+    discoverAcpProviders()
+      .then((discovered) => {
+        setProviders(discovered);
+        setSelectedProvider((current) => {
+          if (
+            discovered.length > 0 &&
+            !discovered.some((p) => p.id === current)
+          ) {
+            return discovered[0].id;
+          }
+          return current;
+        });
+      })
+      .catch(() => setProviders([]));
+  }, []);
+
   const {
     messages,
     chatState,
     sendMessage,
     stopStreaming,
     streamingMessageId,
-  } = useChat(activeSessionId);
+  } = useChat(activeSessionId, selectedProvider);
 
   // Listen for ACP streaming events
   useAcpStream(activeSessionId, true);
@@ -53,6 +74,9 @@ export function ChatView({
         onStop={stopStreaming}
         isStreaming={isStreaming || chatState === "thinking"}
         placeholder={`Message ${agentName}...`}
+        providers={providers}
+        selectedProvider={selectedProvider}
+        onProviderChange={setSelectedProvider}
       />
     </div>
   );

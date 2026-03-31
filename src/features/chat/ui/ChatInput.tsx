@@ -6,11 +6,10 @@ import {
   Mic,
   ChevronDown,
   Bot,
-  MessageSquare,
-  FileSearch,
   FolderOpen,
   Check,
 } from "lucide-react";
+import type { AcpProvider } from "@/shared/api/acp";
 import { cn } from "@/shared/lib/cn";
 import { ContextRing } from "./ContextRing";
 import {
@@ -32,8 +31,6 @@ import {
 // Types
 // ---------------------------------------------------------------------------
 
-export type ChatMode = "agent" | "ask" | "plan";
-
 export interface ModelOption {
   id: string;
   name: string;
@@ -48,9 +45,10 @@ interface ChatInputProps {
   disabled?: boolean;
   placeholder?: string;
   className?: string;
-  // Mode
-  mode?: ChatMode;
-  onModeChange?: (mode: ChatMode) => void;
+  // Provider
+  providers?: AcpProvider[];
+  selectedProvider?: string;
+  onProviderChange?: (providerId: string) => void;
   // Model
   currentModel?: string;
   availableModels?: ModelOption[];
@@ -65,28 +63,6 @@ interface ChatInputProps {
 }
 
 // ---------------------------------------------------------------------------
-// Mode config
-// ---------------------------------------------------------------------------
-
-const MODE_CONFIG = {
-  agent: {
-    label: "Agent",
-    description: "Autonomous coding with full tool access",
-    icon: Bot,
-  },
-  ask: {
-    label: "Ask",
-    description: "Read-only codebase exploration",
-    icon: MessageSquare,
-  },
-  plan: {
-    label: "Plan",
-    description: "Create a plan before implementing",
-    icon: FileSearch,
-  },
-} as const;
-
-// ---------------------------------------------------------------------------
 // ChatInput
 // ---------------------------------------------------------------------------
 
@@ -97,9 +73,10 @@ export function ChatInput({
   disabled = false,
   placeholder = "Message Goose...",
   className,
-  // Mode
-  mode: controlledMode,
-  onModeChange,
+  // Provider
+  providers = [],
+  selectedProvider = "goose",
+  onProviderChange,
   // Model
   currentModel = "Claude Sonnet 4",
   availableModels = [],
@@ -113,12 +90,10 @@ export function ChatInput({
   contextLimit = 0,
 }: ChatInputProps) {
   const [text, setText] = useState("");
-  const [internalMode, setInternalMode] = useState<ChatMode>("agent");
   const [isCompact, setIsCompact] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const activeMode = controlledMode ?? internalMode;
   const canSend = text.trim().length > 0 && !isStreaming && !disabled;
 
   // -----------------------------------------------------------------------
@@ -145,15 +120,11 @@ export function ChatInput({
   // Handlers
   // -----------------------------------------------------------------------
 
-  const handleModeChange = useCallback(
-    (newMode: ChatMode) => {
-      if (onModeChange) {
-        onModeChange(newMode);
-      } else {
-        setInternalMode(newMode);
-      }
+  const handleProviderChange = useCallback(
+    (providerId: string) => {
+      onProviderChange?.(providerId);
     },
-    [onModeChange],
+    [onProviderChange],
   );
 
   const handleSend = useCallback(() => {
@@ -183,8 +154,8 @@ export function ChatInput({
   // Derived
   // -----------------------------------------------------------------------
 
-  const ModeIcon = MODE_CONFIG[activeMode].icon;
-  const modeLabel = MODE_CONFIG[activeMode].label;
+  const activeProvider = providers.find((p) => p.id === selectedProvider);
+  const providerLabel = activeProvider?.label ?? selectedProvider;
   const selectedFolder = availableFolders.find((f) => f.id === folder);
   const folderLabel = selectedFolder?.name ?? "Folder";
 
@@ -214,46 +185,44 @@ export function ChatInput({
             <div className="flex items-center justify-between gap-2">
               {/* Left side: pickers */}
               <div className="flex items-center gap-0.5">
-                {/* Mode picker */}
+                {/* Provider picker */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
                       className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-background-tertiary"
-                      aria-label="Select mode"
+                      aria-label="Select provider"
                     >
-                      <ModeIcon className="h-3.5 w-3.5" />
-                      {!isCompact && <span>{modeLabel}</span>}
+                      <Bot className="h-3.5 w-3.5" />
+                      {!isCompact && <span>{providerLabel}</span>}
                       <ChevronDown className="h-3 w-3 opacity-50" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-64">
-                    <DropdownMenuLabel>Mode</DropdownMenuLabel>
+                  <DropdownMenuContent align="start" className="w-56">
+                    <DropdownMenuLabel>Provider</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {(Object.keys(MODE_CONFIG) as ChatMode[]).map((key) => {
-                      const config = MODE_CONFIG[key];
-                      const Icon = config.icon;
-                      return (
+                    {providers.length > 0 ? (
+                      providers.map((provider) => (
                         <DropdownMenuItem
-                          key={key}
-                          onSelect={() => handleModeChange(key)}
-                          className="flex items-start gap-2 py-2"
+                          key={provider.id}
+                          onSelect={() => handleProviderChange(provider.id)}
+                          className="flex items-center justify-between"
                         >
-                          <Icon className="mt-0.5 h-4 w-4 shrink-0" />
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-sm font-medium">
-                              {config.label}
-                            </span>
-                            <span className="text-xs text-foreground-tertiary">
-                              {config.description}
-                            </span>
-                          </div>
-                          {key === activeMode && (
-                            <Check className="ml-auto h-4 w-4 shrink-0 text-foreground-secondary" />
+                          <span className="text-sm font-medium">
+                            {provider.label}
+                          </span>
+                          {provider.id === selectedProvider && (
+                            <Check className="h-4 w-4 shrink-0 text-foreground-secondary" />
                           )}
                         </DropdownMenuItem>
-                      );
-                    })}
+                      ))
+                    ) : (
+                      <DropdownMenuItem disabled>
+                        <span className="text-xs text-foreground-tertiary">
+                          No providers detected
+                        </span>
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
 
