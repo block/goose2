@@ -11,7 +11,11 @@ import { findLastIndex } from "@/shared/lib/arrays";
  * Hook for managing a chat session -- sending messages, handling streaming,
  * and managing chat lifecycle.
  */
-export function useChat(sessionId: string, providerOverride?: string) {
+export function useChat(
+  sessionId: string,
+  providerOverride?: string,
+  systemPromptOverride?: string,
+) {
   const store = useChatStore();
   const abortRef = useRef<AbortController | null>(null);
 
@@ -53,12 +57,14 @@ export function useChat(sessionId: string, providerOverride?: string) {
       try {
         const agent = useAgentStore.getState().getActiveAgent();
         const providerId = providerOverride ?? agent?.provider ?? "goose";
+        const systemPrompt =
+          systemPromptOverride ?? agent?.systemPrompt ?? undefined;
 
         // Send via ACP — response streams back through Tauri events
         // which are handled by useAcpStream in ChatView
         store.setChatState("streaming");
         store.appendToStreamingMessage(sessionId, { type: "text", text: "" });
-        await acpSendMessage(sessionId, providerId, text);
+        await acpSendMessage(sessionId, providerId, text, systemPrompt);
         // Note: setChatState("idle") is handled by useAcpStream on "acp:done"
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") {
@@ -73,7 +79,7 @@ export function useChat(sessionId: string, providerOverride?: string) {
         abortRef.current = null;
       }
     },
-    [sessionId, chatState, store, providerOverride],
+    [sessionId, chatState, store, providerOverride, systemPromptOverride],
   );
 
   const stopGeneration = useCallback(() => {

@@ -88,9 +88,12 @@ export function ChatInput({
     mentionOpen,
     mentionQuery,
     mentionStartIndex,
+    mentionSelectedIndex,
     detectMention,
     closeMention,
-  } = useMentionDetection();
+    navigateMention,
+    confirmMention,
+  } = useMentionDetection(personas);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -139,12 +142,27 @@ export function ChatInput({
   );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (mentionOpen && e.key === "Escape") {
-      e.preventDefault();
-      closeMention();
-      return;
+    if (mentionOpen) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeMention();
+        return;
+      }
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        navigateMention(e.key === "ArrowDown" ? "down" : "up");
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        const persona = confirmMention();
+        if (persona) {
+          e.preventDefault();
+          handleMentionSelect(persona);
+          return;
+        }
+      }
     }
-    if (e.key === "Enter" && !e.shiftKey && !mentionOpen) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
@@ -178,6 +196,7 @@ export function ChatInput({
               isOpen={mentionOpen}
               onSelect={handleMentionSelect}
               onClose={closeMention}
+              selectedIndex={mentionSelectedIndex}
             />
 
             {mentionPersonaId && (

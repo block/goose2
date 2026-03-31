@@ -378,6 +378,7 @@ impl AcpService {
         provider_id: String,
         prompt: String,
         working_dir: PathBuf,
+        system_prompt: Option<String>,
     ) -> Result<(), String> {
         // Ensure the session exists in the SessionStore (create if needed)
         session_store.ensure_session(&session_id, Some(provider_id.clone()));
@@ -409,6 +410,15 @@ impl AcpService {
         let store: Arc<dyn Store> = Arc::new(TauriStore::new(session_store));
         let cancel_token = registry.register(&session_id, &provider_id);
 
+        // Prepend the persona's system prompt to the user's message so the
+        // agent sees the persona instructions as context for this turn.
+        let effective_prompt = match &system_prompt {
+            Some(sp) if !sp.is_empty() => format!(
+                "<persona-instructions>\n{sp}\n</persona-instructions>\n\n{prompt}"
+            ),
+            _ => prompt.clone(),
+        };
+
         // AcpDriver::run may use !Send futures internally, so we run it on a
         // dedicated thread with a LocalSet.
         let session_id_inner = session_id.clone();
@@ -424,7 +434,7 @@ impl AcpService {
                 driver
                     .run(
                         &session_id_inner,
-                        &prompt,
+                        &effective_prompt,
                         &[],
                         &working_dir,
                         &store,

@@ -15,10 +15,12 @@ export async function acpSendMessage(
   sessionId: string,
   providerId: string,
   prompt: string,
+  systemPrompt?: string,
 ): Promise<void> {
   return invoke("acp_send_message", {
     sessionId,
     providerId,
     prompt,
+    systemPrompt: systemPrompt ?? null,
   });
 }

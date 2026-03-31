@@ -117,7 +117,7 @@ function PersonaMenuItem({
 }) {
   // Extract a short description from the system prompt (first sentence)
   const shortDesc = useMemo(() => {
-    const first = persona.systemPrompt.split(/\.\s/)[1] ?? "";
+    const first = persona.systemPrompt.split(/\.\s/)[0] ?? "";
     return first.length > 60 ? `${first.slice(0, 57)}...` : first;
   }, [persona.systemPrompt]);
 

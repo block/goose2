@@ -11,6 +11,8 @@ interface MentionAutocompleteProps {
   /** Optional close handler (called on Escape). */
   onClose?: (() => void) | undefined;
   anchorRect?: DOMRect | null;
+  /** Index of the currently highlighted item (controlled by parent). */
+  selectedIndex?: number;
 }
 
 export function MentionAutocomplete({
@@ -19,8 +21,10 @@ export function MentionAutocomplete({
   isOpen,
   onSelect,
   anchorRect,
+  selectedIndex: controlledIndex,
 }: MentionAutocompleteProps) {
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [internalIndex, setInternalIndex] = useState(0);
+  const selectedIndex = controlledIndex ?? internalIndex;
   const listRef = useRef<HTMLDivElement>(null);
 
   const filtered = useMemo(() => {
@@ -32,12 +36,8 @@ export function MentionAutocomplete({
   // Reset index when results change
   // biome-ignore lint/correctness/useExhaustiveDependencies: reset on query/result changes
   useEffect(() => {
-    setSelectedIndex(0);
+    setInternalIndex(0);
   }, [filtered.length, query]);
-
-  // Keyboard navigation is handled by the parent textarea's onKeyDown
-  // The parent calls navigateMention() which updates selectedIndex
-  // and confirmMention() which calls onSelect
 
   const handleSelect = useCallback(
     (persona: Persona) => {
@@ -76,7 +76,7 @@ export function MentionAutocomplete({
                 : "text-foreground-secondary hover:bg-background-tertiary/50",
             )}
             onClick={() => handleSelect(persona)}
-            onMouseEnter={() => setSelectedIndex(index)}
+            onMouseEnter={() => setInternalIndex(index)}
           >
             <MentionAvatar persona={persona} />
             <div className="flex min-w-0 flex-col">
@@ -126,13 +126,21 @@ function MentionAvatar({ persona }: { persona: Persona }) {
   );
 }
 
-// Hook to manage mention detection in a textarea
-export function useMentionDetection() {
+// Hook to manage mention detection and keyboard navigation in a textarea
+export function useMentionDetection(personas: Persona[] = []) {
   const [mentionState, setMentionState] = useState<{
     isOpen: boolean;
     query: string;
     startIndex: number;
-  }>({ isOpen: false, query: "", startIndex: -1 });
+    selectedIndex: number;
+  }>({ isOpen: false, query: "", startIndex: -1, selectedIndex: 0 });
+
+  const filtered = useMemo(() => {
+    if (!mentionState.isOpen) return personas;
+    const q = mentionState.query.toLowerCase();
+    if (!q) return personas;
+    return personas.filter((p) => p.displayName.toLowerCase().includes(q));
+  }, [personas, mentionState.isOpen, mentionState.query]);
 
   const detectMention = useCallback(
     (value: string, cursorPos: number) => {
@@ -142,7 +150,12 @@ export function useMentionDetection() {
 
       if (lastAt === -1) {
         if (mentionState.isOpen) {
-          setMentionState({ isOpen: false, query: "", startIndex: -1 });
+          setMentionState({
+            isOpen: false,
+            query: "",
+            startIndex: -1,
+            selectedIndex: 0,
+          });
         }
         return;
       }
@@ -150,7 +163,12 @@ export function useMentionDetection() {
       // @ must be at start of input or preceded by whitespace
       if (lastAt > 0 && !/\s/.test(beforeCursor[lastAt - 1])) {
         if (mentionState.isOpen) {
-          setMentionState({ isOpen: false, query: "", startIndex: -1 });
+          setMentionState({
+            isOpen: false,
+            query: "",
+            startIndex: -1,
+            selectedIndex: 0,
+          });
         }
         return;
       }
@@ -160,25 +178,64 @@ export function useMentionDetection() {
       // Close if there's a space after the query (mention completed) or too long
       if (query.includes(" ") || query.length > 30) {
         if (mentionState.isOpen) {
-          setMentionState({ isOpen: false, query: "", startIndex: -1 });
+          setMentionState({
+            isOpen: false,
+            query: "",
+            startIndex: -1,
+            selectedIndex: 0,
+          });
         }
         return;
       }
 
-      setMentionState({ isOpen: true, query, startIndex: lastAt });
+      setMentionState((prev) => ({
+        isOpen: true,
+        query,
+        startIndex: lastAt,
+        selectedIndex: prev.query !== query ? 0 : prev.selectedIndex,
+      }));
     },
     [mentionState.isOpen],
   );
 
   const closeMention = useCallback(() => {
-    setMentionState({ isOpen: false, query: "", startIndex: -1 });
+    setMentionState({
+      isOpen: false,
+      query: "",
+      startIndex: -1,
+      selectedIndex: 0,
+    });
   }, []);
+
+  /** Move highlight up/down. Returns true if the event was consumed. */
+  const navigateMention = useCallback(
+    (direction: "up" | "down"): boolean => {
+      if (!mentionState.isOpen || filtered.length === 0) return false;
+      setMentionState((prev) => {
+        const delta = direction === "down" ? 1 : -1;
+        const next =
+          (prev.selectedIndex + delta + filtered.length) % filtered.length;
+        return { ...prev, selectedIndex: next };
+      });
+      return true;
+    },
+    [mentionState.isOpen, filtered.length],
+  );
+
+  /** Confirm the currently highlighted item. Returns the persona or null. */
+  const confirmMention = useCallback((): Persona | null => {
+    if (!mentionState.isOpen || filtered.length === 0) return null;
+    return filtered[mentionState.selectedIndex] ?? null;
+  }, [mentionState.isOpen, mentionState.selectedIndex, filtered]);
 
   return {
     mentionOpen: mentionState.isOpen,
     mentionQuery: mentionState.query,
     mentionStartIndex: mentionState.startIndex,
+    mentionSelectedIndex: mentionState.selectedIndex,
     detectMention,
     closeMention,
+    navigateMention,
+    confirmMention,
   };
 }

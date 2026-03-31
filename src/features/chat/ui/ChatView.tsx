@@ -93,30 +93,21 @@ export function ChatView({
     sendMessage,
     stopStreaming,
     streamingMessageId,
-  } = useChat(activeSessionId, selectedProvider);
+  } = useChat(activeSessionId, selectedProvider, selectedPersona?.systemPrompt);
 
   // Listen for ACP streaming events
   useAcpStream(activeSessionId, true);
 
-  // Wrap sendMessage to inject persona system prompt into the active agent
+  // Wrap sendMessage to handle @ mentioned persona overrides
   const handleSend = useCallback(
     (text: string, personaId?: string) => {
-      const effectivePersonaId = personaId ?? selectedPersonaId;
-      const persona = personas.find((p) => p.id === effectivePersonaId);
-
-      if (persona) {
-        const agentStore = useAgentStore.getState();
-        const activeAgent = agentStore.getActiveAgent();
-        if (activeAgent && activeAgent.systemPrompt !== persona.systemPrompt) {
-          agentStore.updateAgent(activeAgent.id, {
-            systemPrompt: persona.systemPrompt,
-          });
-        }
+      if (personaId && personaId !== selectedPersonaId) {
+        // An @ mention switched the persona for this message
+        handlePersonaChange(personaId);
       }
-
       sendMessage(text);
     },
-    [sendMessage, selectedPersonaId, personas],
+    [sendMessage, selectedPersonaId, handlePersonaChange],
   );
 
   // Auto-send initial message from HomeScreen on mount
