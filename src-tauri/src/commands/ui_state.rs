@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -5,6 +7,8 @@ use serde::{Deserialize, Serialize};
 pub struct UiState {
     pub open_tab_ids: Vec<String>,
     pub active_tab_id: Option<String>,
+    #[serde(default)]
+    pub persona_per_session: HashMap<String, String>,
 }
 
 fn ui_state_path() -> std::path::PathBuf {
@@ -18,10 +22,12 @@ fn ui_state_path() -> std::path::PathBuf {
 pub fn save_ui_state(
     open_tab_ids: Vec<String>,
     active_tab_id: Option<String>,
+    persona_per_session: HashMap<String, String>,
 ) -> Result<(), String> {
     let state = UiState {
         open_tab_ids,
         active_tab_id,
+        persona_per_session,
     };
     let path = ui_state_path();
     // Ensure parent directory exists
@@ -39,6 +45,7 @@ pub fn load_ui_state() -> Result<UiState, String> {
         return Ok(UiState {
             open_tab_ids: Vec::new(),
             active_tab_id: None,
+            persona_per_session: HashMap::new(),
         });
     }
     let json = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;

@@ -15,6 +15,7 @@ export interface ChatSession {
   projectId?: string;
   agentId?: string;
   providerId?: string;
+  personaId?: string;
   createdAt: string; // ISO timestamp
   updatedAt: string;
 }
@@ -33,6 +34,7 @@ interface ChatSessionStoreActions {
     projectId?: string;
     agentId?: string;
     providerId?: string;
+    personaId?: string;
   }) => Promise<ChatSession>;
   loadSessions: () => Promise<void>;
   updateSession: (id: string, patch: Partial<ChatSession>) => void;
@@ -86,6 +88,7 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
       projectId: opts?.projectId,
       agentId: opts?.agentId ?? backendSession.agentId,
       providerId: opts?.providerId,
+      personaId: opts?.personaId,
       createdAt: backendSession.createdAt ?? now,
       updatedAt: backendSession.updatedAt ?? now,
     };
@@ -188,15 +191,21 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
 
   // Persistence
   persistTabState: () => {
-    const { openTabIds, activeTabId } = get();
-    apiSaveUiState(openTabIds, activeTabId).catch((err) => {
+    const { openTabIds, activeTabId, sessions } = get();
+    // Build persona mapping from sessions
+    const personaPerSession: Record<string, string> = {};
+    for (const s of sessions) {
+      if (s.personaId) personaPerSession[s.id] = s.personaId;
+    }
+    apiSaveUiState(openTabIds, activeTabId, personaPerSession).catch((err) => {
       console.error("Failed to persist tab state:", err);
     });
   },
 
   loadTabState: async () => {
     try {
-      const { openTabIds, activeTabId } = await apiLoadUiState();
+      const { openTabIds, activeTabId, personaPerSession } =
+        await apiLoadUiState();
       const { sessions } = get();
       const sessionIds = new Set(sessions.map((s) => s.id));
 
@@ -207,7 +216,17 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
           ? activeTabId
           : (validTabIds[0] ?? null);
 
-      set({ openTabIds: validTabIds, activeTabId: validActiveTabId });
+      // Restore persona IDs from persisted mapping
+      const updatedSessions = sessions.map((s) => {
+        const personaId = personaPerSession?.[s.id];
+        return personaId ? { ...s, personaId } : s;
+      });
+
+      set({
+        sessions: updatedSessions,
+        openTabIds: validTabIds,
+        activeTabId: validActiveTabId,
+      });
     } catch (err) {
       console.error("Failed to load tab state:", err);
     }

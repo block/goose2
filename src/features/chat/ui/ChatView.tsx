@@ -7,6 +7,7 @@ import { useAcpStream } from "../hooks/useAcpStream";
 import { useChatStore } from "../stores/chatStore";
 import { discoverAcpProviders, type AcpProvider } from "@/shared/api/acp";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
+import { useChatSessionStore } from "../stores/chatSessionStore";
 
 interface ChatViewProps {
   sessionId?: string;
@@ -82,8 +83,13 @@ export function ChatView({
       if (matchingAgent) {
         agentStore.setActiveAgent(matchingAgent.id);
       }
+
+      // Persist persona selection to session store
+      useChatSessionStore
+        .getState()
+        .updateSession(activeSessionId, { personaId });
     },
-    [personas, providers],
+    [personas, providers, activeSessionId],
   );
 
   const displayAgentName = selectedPersona?.displayName ?? agentName;

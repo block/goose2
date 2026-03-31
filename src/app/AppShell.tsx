@@ -121,6 +121,13 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     ? ("connected" as const)
     : ("disconnected" as const);
 
+  const [pendingInitialMessage, setPendingInitialMessage] = useState<
+    string | undefined
+  >();
+  const [homeSelectedPersonaId, setHomeSelectedPersonaId] = useState<
+    string | undefined
+  >();
+
   const createNewTab = useCallback(
     async (title = "New Chat", project?: ProjectInfo) => {
       const agentId = agentStore.activeAgentId ?? undefined;
@@ -129,6 +136,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         title,
         projectId: project?.id,
         agentId,
+        personaId: homeSelectedPersonaId,
       });
 
       sessionStore.openTab(session.id);
@@ -156,7 +164,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
       return session;
     },
-    [chatStore, sessionStore, agentStore.activeAgentId],
+    [chatStore, sessionStore, agentStore.activeAgentId, homeSelectedPersonaId],
   );
 
   const handleStartChatFromProject = useCallback(
@@ -224,13 +232,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     createNewTab();
   }, [createNewTab]);
 
-  const [pendingInitialMessage, setPendingInitialMessage] = useState<
-    string | undefined
-  >();
-  const [homeSelectedPersonaId, setHomeSelectedPersonaId] = useState<
-    string | undefined
-  >();
-
   const handleHomeStartChat = useCallback(
     (initialMessage?: string, providerId?: string, personaId?: string) => {
       setHomeSelectedProvider(providerId);
@@ -291,6 +292,11 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  // Derive stored persona for active session
+  const activeSessionPersonaId = activeTab
+    ? sessionStore.getSession(activeTab.sessionId)?.personaId
+    : undefined;
+
   const renderContent = () => {
     switch (activeView) {
       case "skills":
@@ -306,7 +312,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             key={activeTab.sessionId}
             sessionId={activeTab.sessionId}
             initialProvider={homeSelectedProvider}
-            initialPersonaId={homeSelectedPersonaId}
+            initialPersonaId={activeSessionPersonaId ?? homeSelectedPersonaId}
             initialMessage={pendingInitialMessage}
             onInitialMessageConsumed={() => {
               setPendingInitialMessage(undefined);
