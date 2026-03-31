@@ -77,7 +77,8 @@ function ItemMenu({
         className={cn(
           "flex items-center justify-center w-6 h-6 rounded-md",
           "text-foreground-secondary/40 hover:text-foreground hover:bg-background-tertiary/50",
-          "opacity-60 hover:opacity-100 transition-opacity duration-150",
+          open ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+          "transition-opacity duration-150",
         )}
       >
         <MoreHorizontal className="w-3.5 h-3.5" />
@@ -275,12 +276,12 @@ export function SidebarProjectsSection({
       <div
         className={cn(
           "flex items-center transition-all duration-300",
-          collapsed ? "px-0 pt-0 pb-1 justify-center" : "px-1.5 pt-2 pb-1",
+          collapsed ? "px-0 pt-0 pb-1 justify-center" : "pt-2 pb-1",
         )}
       >
         <span
           className={cn(
-            "text-[10px] font-semibold uppercase tracking-wider text-foreground-secondary/70 flex-1",
+            "text-[10px] font-semibold uppercase tracking-wider text-foreground-secondary/70 flex-1 pl-1.5",
             labelTransition,
             labelVisible
               ? "opacity-100 w-auto"
@@ -295,7 +296,7 @@ export function SidebarProjectsSection({
             onClick={onCreateProject}
             title="New project"
             className={cn(
-              "flex items-center justify-center w-6 h-6 rounded-md flex-shrink-0",
+              "flex items-center justify-center w-6 h-6 rounded-md flex-shrink-0 mr-1",
               "text-foreground-secondary/50 hover:text-foreground hover:bg-background-tertiary/50",
               "transition-opacity duration-150",
             )}
@@ -353,12 +354,12 @@ export function SidebarProjectsSection({
           <div
             className={cn(
               "flex items-center transition-all duration-300",
-              collapsed ? "px-0 pt-0 pb-1 justify-center" : "px-1.5 pt-2 pb-1",
+              collapsed ? "px-0 pt-0 pb-1 justify-center" : "pt-2 pb-1",
             )}
           >
             <span
               className={cn(
-                "text-[10px] font-semibold uppercase tracking-wider text-foreground-secondary/70",
+                "text-[10px] font-semibold uppercase tracking-wider text-foreground-secondary/70 pl-1.5",
                 labelTransition,
                 labelVisible
                   ? "opacity-100 w-auto"
