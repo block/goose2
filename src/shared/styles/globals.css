@@ -50,6 +50,7 @@
 
     /* Text */
     --color-text-primary: #0a0a0a;
+    --color-text-subtle: #5f5f5f;
     --color-text-secondary: #878787;
     --color-text-tertiary: #a3a3a3;
     --color-text-inverse: #ffffff;
@@ -138,6 +139,7 @@
 
     /* Text */
     --color-text-primary: #fafafa;
+    --color-text-subtle: #c2c2c2;
     --color-text-secondary: #a3a3a3;
     --color-text-tertiary: #666666;
     --color-text-inverse: #000000;

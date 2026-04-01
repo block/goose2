@@ -10,6 +10,8 @@ import {
 } from "@/shared/api/chat";
 import type { Session } from "@/shared/types/chat";
 
+const SESSION_CACHE_STORAGE_KEY = "goose:chat-sessions";
+
 // Extended session metadata for tab management
 export interface ChatSession {
   id: string; // === sessionId
@@ -63,6 +65,30 @@ interface ChatSessionStoreActions {
 
 export type ChatSessionStore = ChatSessionStoreState & ChatSessionStoreActions;
 
+function loadCachedSessions(): ChatSession[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const stored = window.localStorage.getItem(SESSION_CACHE_STORAGE_KEY);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? (parsed as ChatSession[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistSessions(sessions: ChatSession[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      SESSION_CACHE_STORAGE_KEY,
+      JSON.stringify(sessions),
+    );
+  } catch {
+    // localStorage may be unavailable
+  }
+}
+
 function sessionToChatSession(session: Session): ChatSession {
   return {
     id: session.id,
@@ -81,7 +107,7 @@ function sessionToChatSession(session: Session): ChatSession {
 
 export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
   // State
-  sessions: [],
+  sessions: loadCachedSessions(),
   openTabIds: [],
   activeTabId: null,
   isLoading: false,
@@ -117,6 +143,7 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     set((state) => ({
       sessions: [...state.sessions, chatSession],
     }));
+    persistSessions([...get().sessions]);
     return chatSession;
   },
 
@@ -126,6 +153,7 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
       const backendSessions = await apiListSessions();
       const chatSessions = backendSessions.map(sessionToChatSession);
       set({ sessions: chatSessions });
+      persistSessions(chatSessions);
     } finally {
       set({ isLoading: false });
     }
@@ -139,6 +167,7 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
           : s,
       ),
     }));
+    persistSessions(get().sessions);
     const backendPatch: {
       title?: string;
       providerId?: string;
@@ -181,11 +210,11 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     try {
       await apiArchiveSession(id);
       const archivedAt = new Date().toISOString();
-      set((state) => ({
-        sessions: state.sessions
-          .map((s) => (s.id === id ? { ...s, archivedAt } : s))
-          .filter((s) => !s.archivedAt),
-      }));
+      const nextSessions = get()
+        .sessions.map((s) => (s.id === id ? { ...s, archivedAt } : s))
+        .filter((s) => !s.archivedAt);
+      set({ sessions: nextSessions });
+      persistSessions(nextSessions);
     } catch (err) {
       set({
         openTabIds,

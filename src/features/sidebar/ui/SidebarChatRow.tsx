@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 
+const OPEN_CHAT_ROW_CLASS = "text-foreground group-hover:text-foreground";
+const INACTIVE_CHAT_ROW_CLASS = "text-foreground group-hover:text-foreground";
+
 interface SidebarChatRowProps {
   id: string;
   title: string;
@@ -71,7 +74,7 @@ export function SidebarChatRow({
 
   if (editing) {
     return (
-      <div className={cn("flex items-center group", className)}>
+      <div className={cn("flex items-center group rounded-md", className)}>
         <div className="flex items-center flex-1 min-w-0 py-1.5 rounded-md text-[13px] px-2.5">
           <input
             ref={inputRef}
@@ -101,7 +104,13 @@ export function SidebarChatRow({
   }
 
   return (
-    <div className={cn("flex items-center group", className)}>
+    <div
+      className={cn(
+        "flex items-center group rounded-md transition-colors duration-150",
+        isActive ? "bg-background-tertiary/70" : "hover:bg-accent",
+        className,
+      )}
+    >
       <button
         type="button"
         onClick={() => onSelect?.(id)}
@@ -112,13 +121,13 @@ export function SidebarChatRow({
         }}
         title="Double-click to rename"
         className={cn(
-          "flex items-center gap-2 flex-1 min-w-0 py-1.5 rounded-md text-[13px]",
-          "transition-colors duration-150 px-2.5 text-left",
+          "flex items-center gap-2 flex-1 min-w-0 py-1.5 text-[13px]",
+          "transition-colors duration-150 px-2.5 text-left bg-transparent",
           isActive
-            ? "bg-background-tertiary/70 text-foreground font-medium"
+            ? "text-foreground font-medium"
             : isOpen
-              ? "text-foreground hover:bg-background-tertiary/50"
-              : "text-foreground-secondary/70 hover:text-foreground hover:bg-background-tertiary/50",
+              ? OPEN_CHAT_ROW_CLASS
+              : INACTIVE_CHAT_ROW_CLASS,
         )}
       >
         <span className="flex-1 min-w-0 truncate">{title}</span>
@@ -136,7 +145,7 @@ export function SidebarChatRow({
           }}
           className={cn(
             "flex items-center justify-center w-6 h-6 rounded-md",
-            "text-foreground-secondary/40 hover:text-foreground hover:bg-background-tertiary/50",
+            "text-muted-foreground/60 hover:text-foreground",
             menuOpen
               ? "visible opacity-100"
               : "invisible group-hover:visible opacity-0 group-hover:opacity-100",
