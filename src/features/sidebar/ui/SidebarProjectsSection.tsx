@@ -12,6 +12,8 @@ import type { ProjectInfo } from "@/features/projects/api/projects";
 import { SidebarChatRow } from "./SidebarChatRow";
 
 const MAX_VISIBLE_CHATS = 3;
+const PROJECT_ROW_TEXT_CLASS =
+  "text-foreground-subtle group-hover:text-foreground";
 
 interface TabInfo {
   id: string;
@@ -80,7 +82,7 @@ function ItemMenu({
         }}
         className={cn(
           "flex items-center justify-center w-6 h-6 rounded-md",
-          "text-foreground-secondary/40 hover:text-foreground hover:bg-background-tertiary/50",
+          "text-foreground-secondary/40 hover:text-foreground",
           open
             ? "visible opacity-100"
             : "invisible group-hover:visible opacity-0 group-hover:opacity-100",
@@ -161,25 +163,27 @@ function ProjectSection({
   return (
     <div>
       {/* Project row */}
-      <div className="flex items-center group">
+      <div className="flex items-center group rounded-md transition-colors duration-150 hover:bg-accent">
         <button
           type="button"
           onClick={() => toggleProject(project.id)}
           className={cn(
-            "flex items-center flex-1 min-w-0 gap-2 py-1.5 px-2.5 rounded-md text-[13px]",
+            "flex items-center flex-1 min-w-0 gap-1.5 py-1.5 px-2.5 text-[13px]",
             "transition-colors duration-150",
-            "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
+            PROJECT_ROW_TEXT_CLASS,
           )}
         >
-          {isExpanded ? (
-            <ChevronDown className="w-3 h-3 flex-shrink-0" />
-          ) : (
-            <ChevronRight className="w-3 h-3 flex-shrink-0" />
-          )}
-          <span
-            className="inline-block w-2 h-2 rounded-full flex-shrink-0"
-            style={{ backgroundColor: project.color }}
-          />
+          <span className="relative flex h-3 w-3 flex-shrink-0 items-center justify-center">
+            <span
+              className="absolute inline-block h-2 w-2 rounded-full transition-opacity duration-150 group-hover:opacity-0"
+              style={{ backgroundColor: project.color }}
+            />
+            {isExpanded ? (
+              <ChevronDown className="absolute h-3 w-3 opacity-0 transition-opacity duration-150 group-hover:opacity-100" />
+            ) : (
+              <ChevronRight className="absolute h-3 w-3 opacity-0 transition-opacity duration-150 group-hover:opacity-100" />
+            )}
+          </span>
           <span className="flex-1 min-w-0 truncate text-left">
             {project.name}
           </span>
@@ -198,7 +202,7 @@ function ProjectSection({
           title="New chat in project"
           className={cn(
             "flex items-center justify-center w-6 h-6 rounded-md mr-1 flex-shrink-0",
-            "text-foreground-secondary/50 hover:text-foreground hover:bg-background-tertiary/50",
+            "text-foreground-secondary/50 hover:text-foreground",
             "invisible group-hover:visible opacity-0 group-hover:opacity-100",
           )}
         >
@@ -208,7 +212,7 @@ function ProjectSection({
 
       {/* Nested chats */}
       {isExpanded && (
-        <div className="space-y-0.5">
+        <div className="mt-0.5 space-y-0.5">
           {visibleChats.map((tab) => {
             const isActive = activeTabId === tab.id;
             const isOpen = tab.isOpenTab ?? false;
@@ -285,12 +289,6 @@ export function SidebarProjectsSection({
   onArchiveChat,
   onRenameChat,
 }: SidebarProjectsSectionProps) {
-  const [showAllRecents, setShowAllRecents] = useState(false);
-  const visibleRecents = showAllRecents
-    ? projectTabs.standalone
-    : projectTabs.standalone.slice(0, MAX_VISIBLE_CHATS);
-  const hasMoreRecents = projectTabs.standalone.length > MAX_VISIBLE_CHATS;
-
   return (
     <div
       className={cn(
@@ -404,7 +402,7 @@ export function SidebarProjectsSection({
 
           {collapsed ? (
             <div className="flex flex-col items-center gap-1">
-              {visibleRecents.map((tab) => (
+              {projectTabs.standalone.map((tab) => (
                 <button
                   type="button"
                   key={tab.id}
@@ -423,7 +421,7 @@ export function SidebarProjectsSection({
             </div>
           ) : (
             <div className="space-y-0.5">
-              {visibleRecents.map((tab) => {
+              {projectTabs.standalone.map((tab) => {
                 const isActive = activeTabId === tab.id;
                 const isOpen = tab.isOpenTab ?? false;
                 return (
@@ -439,30 +437,6 @@ export function SidebarProjectsSection({
                   />
                 );
               })}
-              {hasMoreRecents && (
-                <button
-                  type="button"
-                  onClick={() => setShowAllRecents((prev) => !prev)}
-                  className={cn(
-                    "flex items-center gap-1.5 w-full px-2.5 py-1 text-[11px]",
-                    "text-foreground-secondary/60 hover:text-foreground-secondary transition-colors duration-150",
-                  )}
-                >
-                  {showAllRecents ? (
-                    <>
-                      <ChevronDown className="w-3 h-3" />
-                      Show less
-                    </>
-                  ) : (
-                    <>
-                      <ChevronRight className="w-3 h-3" />
-                      {projectTabs.standalone.length > 8
-                        ? `View all ${projectTabs.standalone.length} chats`
-                        : `${projectTabs.standalone.length - MAX_VISIBLE_CHATS} more`}
-                    </>
-                  )}
-                </button>
-              )}
             </div>
           )}
         </>

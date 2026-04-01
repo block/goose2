@@ -63,6 +63,7 @@ export default {
         foreground: {
           DEFAULT: "var(--color-text-primary)",
           primary: "var(--color-text-primary)",
+          subtle: "var(--color-text-subtle)",
           secondary: "var(--color-text-secondary)",
           tertiary: "var(--color-text-tertiary)",
           inverse: "var(--color-text-inverse)",
