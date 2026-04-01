@@ -65,7 +65,7 @@ describe("ChatInput", () => {
     await user.type(input, "hello");
     await user.keyboard("{Enter}");
 
-    expect(onSend).toHaveBeenCalledWith("hello", undefined);
+    expect(onSend).toHaveBeenCalledWith("hello", undefined, undefined);
   });
 
   it("does not call onSend on Shift+Enter (newline)", async () => {
@@ -237,7 +237,7 @@ describe("ChatInput", () => {
     await user.type(input, "hello");
     await user.keyboard("{Enter}");
 
-    expect(onSend).toHaveBeenCalledWith("hello", "reviewer");
+    expect(onSend).toHaveBeenCalledWith("hello", "reviewer", undefined);
     expect(screen.getByText("@Reviewer")).toBeInTheDocument();
   });
 });
