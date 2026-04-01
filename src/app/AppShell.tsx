@@ -15,6 +15,7 @@ import { useChatStore } from "@/features/chat/stores/chatStore";
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
+import { findReusableNewChatSession } from "@/features/chat/lib/newChat";
 import { getSessionMessages } from "@/shared/api/chat";
 import type { Tab } from "@/features/tabs/types";
 
@@ -143,13 +144,35 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     async (title = "New Chat", project?: ProjectInfo) => {
       const agentId = agentStore.activeAgentId ?? undefined;
       const providerId = project?.preferredProvider ?? homeSelectedProvider;
+      const personaId = homeSelectedPersonaId;
+      const sessionState = useChatSessionStore.getState();
+      const reusableSession = findReusableNewChatSession({
+        sessions: sessionState.sessions,
+        activeTabId: sessionState.activeTabId,
+        openTabIds: sessionState.openTabIds,
+        messagesBySession: useChatStore.getState().messagesBySession,
+        request: {
+          title,
+          projectId: project?.id,
+          agentId,
+          providerId,
+          personaId,
+        },
+      });
+
+      if (reusableSession) {
+        sessionState.openTab(reusableSession.id);
+        setActiveView("chat");
+        chatStore.setActiveSession(reusableSession.id);
+        return reusableSession;
+      }
 
       const session = await sessionStore.createSession({
         title,
         projectId: project?.id,
         agentId,
         providerId,
-        personaId: homeSelectedPersonaId,
+        personaId,
       });
 
       sessionStore.openTab(session.id);
