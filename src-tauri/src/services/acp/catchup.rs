@@ -48,6 +48,16 @@ pub fn build_catchup_context(
             continue;
         }
 
+        if matches!(msg.role, MessageRole::User) {
+            let target_persona_id = msg
+                .metadata
+                .as_ref()
+                .and_then(|meta| meta.target_persona_id.as_deref());
+            if target_persona_id == Some(persona_id) {
+                continue;
+            }
+        }
+
         // Skip assistant messages from this persona itself
         if matches!(msg.role, MessageRole::Assistant) {
             let msg_persona_id = msg
@@ -115,5 +125,89 @@ fn truncate_text(text: &str, max_chars: usize) -> String {
     match text.char_indices().nth(max_chars) {
         Some((byte_idx, _)) => format!("{}...", &text[..byte_idx]),
         None => text.to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::build_catchup_context;
+    use crate::types::messages::{Message, MessageContent, MessageMetadata, MessageRole};
+
+    fn text_message(
+        id: &str,
+        role: MessageRole,
+        text: &str,
+        metadata: Option<MessageMetadata>,
+    ) -> Message {
+        Message {
+            id: id.to_string(),
+            role,
+            created: 0,
+            content: vec![MessageContent::Text {
+                text: text.to_string(),
+            }],
+            metadata,
+        }
+    }
+
+    #[test]
+    fn skips_user_messages_already_targeted_at_current_persona() {
+        let messages = vec![
+            text_message(
+                "assistant-a",
+                MessageRole::Assistant,
+                "Earlier reply",
+                Some(MessageMetadata {
+                    persona_id: Some("persona-a".to_string()),
+                    persona_name: Some("Persona A".to_string()),
+                    ..Default::default()
+                }),
+            ),
+            text_message(
+                "user-to-a",
+                MessageRole::User,
+                "Please continue",
+                Some(MessageMetadata {
+                    target_persona_id: Some("persona-a".to_string()),
+                    target_persona_name: Some("Persona A".to_string()),
+                    ..Default::default()
+                }),
+            ),
+            text_message(
+                "assistant-b",
+                MessageRole::Assistant,
+                "Something happened elsewhere",
+                Some(MessageMetadata {
+                    persona_id: Some("persona-b".to_string()),
+                    persona_name: Some("Persona B".to_string()),
+                    ..Default::default()
+                }),
+            ),
+        ];
+
+        let context = build_catchup_context(&messages, "persona-a", "current-user-message")
+            .expect("expected catch-up context");
+
+        assert!(!context.contains("Please continue"));
+        assert!(context.contains("Persona B: Something happened elsewhere"));
+    }
+
+    #[test]
+    fn keeps_user_messages_for_other_personas_in_catchup() {
+        let messages = vec![text_message(
+            "user-to-b",
+            MessageRole::User,
+            "Can Persona B take this one?",
+            Some(MessageMetadata {
+                target_persona_id: Some("persona-b".to_string()),
+                target_persona_name: Some("Persona B".to_string()),
+                ..Default::default()
+            }),
+        )];
+
+        let context = build_catchup_context(&messages, "persona-a", "current-user-message")
+            .expect("expected catch-up context");
+
+        assert!(context.contains("User → Persona B: Can Persona B take this one?"));
     }
 }

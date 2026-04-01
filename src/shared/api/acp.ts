@@ -5,6 +5,13 @@ export interface AcpProvider {
   label: string;
 }
 
+export interface AcpSendMessageOptions {
+  systemPrompt?: string;
+  workingDir?: string;
+  personaId?: string;
+  personaName?: string;
+}
+
 /** Discover ACP providers installed on the system. */
 export async function discoverAcpProviders(): Promise<AcpProvider[]> {
   return invoke("discover_acp_providers");
@@ -15,11 +22,9 @@ export async function acpSendMessage(
   sessionId: string,
   providerId: string,
   prompt: string,
-  systemPrompt?: string,
-  workingDir?: string,
-  personaId?: string,
-  personaName?: string,
+  options: AcpSendMessageOptions = {},
 ): Promise<void> {
+  const { systemPrompt, workingDir, personaId, personaName } = options;
   return invoke("acp_send_message", {
     sessionId,
     providerId,

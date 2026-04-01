@@ -20,6 +20,7 @@ export function useChat(
 ) {
   const store = useChatStore();
   const abortRef = useRef<AbortController | null>(null);
+  const activeStreamingPersonaIdRef = useRef<string | null>(null);
 
   const messages = store.messagesBySession[sessionId] ?? [];
   const chatState = store.chatState;
@@ -31,6 +32,8 @@ export function useChat(
   const resolvePersonaInfo = useCallback(
     (overridePersonaId?: string, overridePersonaName?: string) => {
       if (overridePersonaId) {
+        // Read the latest persona snapshot at call time so override lookups
+        // still work even if the agent store changed after this hook rendered.
         const personaName =
           overridePersonaName ??
           useAgentStore.getState().getPersonaById(overridePersonaId)
@@ -88,6 +91,7 @@ export function useChat(
 
       const abort = new AbortController();
       abortRef.current = abort;
+      activeStreamingPersonaIdRef.current = effectivePersonaInfo?.id ?? null;
 
       try {
         const agent = useAgentStore.getState().getActiveAgent();
@@ -98,15 +102,12 @@ export function useChat(
         // Send via ACP — response streams back through Tauri events
         // which are handled by useAcpStream in ChatView.
         store.setChatState("streaming");
-        await acpSendMessage(
-          sessionId,
-          providerId,
-          text,
+        await acpSendMessage(sessionId, providerId, text, {
           systemPrompt,
-          workingDirOverride,
-          effectivePersonaInfo?.id,
-          effectivePersonaInfo?.name,
-        );
+          workingDir: workingDirOverride,
+          personaId: effectivePersonaInfo?.id,
+          personaName: effectivePersonaInfo?.name,
+        });
         // Note: setChatState("idle") is handled by useAcpStream on "acp:done"
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") {
@@ -120,6 +121,7 @@ export function useChat(
         }
       } finally {
         abortRef.current = null;
+        activeStreamingPersonaIdRef.current = null;
       }
     },
     [
@@ -135,13 +137,15 @@ export function useChat(
 
   const stopGeneration = useCallback(() => {
     abortRef.current?.abort();
+    const activePersonaId = activeStreamingPersonaIdRef.current;
     store.setChatState("idle");
     store.setStreamingMessageId(null);
+    activeStreamingPersonaIdRef.current = null;
     // Cancel the backend ACP session to stop orphaned streaming events
-    acpCancelSession(sessionId, personaInfo?.id).catch(() => {
+    acpCancelSession(sessionId, activePersonaId ?? undefined).catch(() => {
       // Best-effort cancellation — ignore errors
     });
-  }, [store, sessionId, personaInfo]);
+  }, [store, sessionId]);
 
   const retryLastMessage = useCallback(async () => {
     const sessionMessages = store.messagesBySession[sessionId] ?? [];
@@ -174,6 +178,7 @@ export function useChat(
 
   const clearChat = useCallback(() => {
     abortRef.current?.abort();
+    activeStreamingPersonaIdRef.current = null;
     store.clearMessages(sessionId);
     store.setChatState("idle");
     store.setStreamingMessageId(null);
