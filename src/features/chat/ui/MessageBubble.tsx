@@ -267,14 +267,13 @@ export function MessageBubble({
             You &rarr; {message.metadata.targetPersonaName}
           </span>
         )}
-        {!isUser && agentName && (
+        {!isUser && (agentName || message.metadata?.personaName) && (
           <span className="mb-0.5 inline-flex items-center gap-1.5 text-xs font-medium text-foreground-secondary">
-            {message.metadata?.personaName ? (
+            {agentName && <span>{agentName}</span>}
+            {message.metadata?.personaName && (
               <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">
                 {message.metadata.personaName}
               </span>
-            ) : (
-              agentName
             )}
           </span>
         )}

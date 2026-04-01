@@ -28,21 +28,42 @@ export function useChat(
   const streamingMessageId = store.streamingMessageId;
   const isStreaming = streamingMessageId !== null;
 
+  const resolvePersonaInfo = useCallback(
+    (overridePersonaId?: string, overridePersonaName?: string) => {
+      if (overridePersonaId) {
+        const personaName =
+          overridePersonaName ??
+          useAgentStore.getState().getPersonaById(overridePersonaId)
+            ?.displayName ??
+          overridePersonaId;
+        return { id: overridePersonaId, name: personaName };
+      }
+
+      return personaInfo;
+    },
+    [personaInfo],
+  );
+
   const sendMessage = useCallback(
-    async (text: string) => {
+    async (text: string, overridePersona?: { id: string; name?: string }) => {
       if (!text.trim() || chatState === "streaming" || chatState === "thinking")
         return;
+
+      const effectivePersonaInfo = resolvePersonaInfo(
+        overridePersona?.id,
+        overridePersona?.name,
+      );
 
       // Ensure active session
       store.setActiveSession(sessionId);
 
       // Create and add user message
       const userMessage = createUserMessage(text);
-      if (personaInfo) {
+      if (effectivePersonaInfo) {
         userMessage.metadata = {
           ...userMessage.metadata,
-          targetPersonaId: personaInfo.id,
-          targetPersonaName: personaInfo.name,
+          targetPersonaId: effectivePersonaInfo.id,
+          targetPersonaName: effectivePersonaInfo.name,
         };
       }
       store.addMessage(sessionId, userMessage);
@@ -58,8 +79,8 @@ export function useChat(
         metadata: {
           userVisible: true,
           agentVisible: true,
-          personaId: personaInfo?.id,
-          personaName: personaInfo?.name,
+          personaId: effectivePersonaInfo?.id,
+          personaName: effectivePersonaInfo?.name,
         },
       };
       store.addMessage(sessionId, assistantMessage);
@@ -83,8 +104,8 @@ export function useChat(
           text,
           systemPrompt,
           workingDirOverride,
-          personaInfo?.id,
-          personaInfo?.name,
+          effectivePersonaInfo?.id,
+          effectivePersonaInfo?.name,
         );
         // Note: setChatState("idle") is handled by useAcpStream on "acp:done"
       } catch (err) {
@@ -107,7 +128,7 @@ export function useChat(
       store,
       providerOverride,
       systemPromptOverride,
-      personaInfo,
+      resolvePersonaInfo,
       workingDirOverride,
     ],
   );
@@ -140,7 +161,14 @@ export function useChat(
     // Extract the text and resend
     const textContent = lastUserMessage.content.find((c) => c.type === "text");
     if (textContent && "text" in textContent) {
-      await sendMessage(textContent.text);
+      const targetPersonaId = lastUserMessage.metadata?.targetPersonaId;
+      const targetPersonaName = lastUserMessage.metadata?.targetPersonaName;
+      await sendMessage(
+        textContent.text,
+        targetPersonaId
+          ? { id: targetPersonaId, name: targetPersonaName }
+          : undefined,
+      );
     }
   }, [sessionId, store, sendMessage]);
 

@@ -11,11 +11,12 @@ use crate::types::messages::{Message, MessageContent, MessageRole};
 pub fn build_catchup_context(
     messages: &[Message],
     persona_id: &str,
+    current_message_id: &str,
 ) -> Option<String> {
     // Algorithm:
     // 1. Find the index of the last assistant message FROM this persona
     // 2. Collect all messages after that point, excluding:
-    //    - The last message (the new user prompt being sent now)
+    //    - The current user prompt being sent now
     //    - Messages from this persona itself
     // 3. Format as catch-up text
     // 4. Return None if no intervening messages
@@ -27,10 +28,11 @@ pub fn build_catchup_context(
     // Find last assistant message from this persona
     let last_own_idx = messages.iter().rposition(|m| {
         matches!(m.role, MessageRole::Assistant)
-            && m.metadata
+            && (m
+                .metadata
                 .as_ref()
                 .and_then(|meta| meta.persona_id.as_deref())
-                .map_or(false, |pid| pid == persona_id)
+                == Some(persona_id))
     });
 
     // Start collecting from after the last own message (or from beginning)
@@ -39,16 +41,13 @@ pub fn build_catchup_context(
         None => 0,
     };
 
-    // Exclude the last message (the current user prompt)
-    let end_idx = messages.len() - 1;
-
-    if start_idx >= end_idx {
-        return None;
-    }
-
     let mut lines = Vec::new();
 
-    for msg in &messages[start_idx..end_idx] {
+    for msg in &messages[start_idx..] {
+        if msg.id == current_message_id {
+            continue;
+        }
+
         // Skip assistant messages from this persona itself
         if matches!(msg.role, MessageRole::Assistant) {
             let msg_persona_id = msg
@@ -79,11 +78,7 @@ pub fn build_catchup_context(
                 let name = msg
                     .metadata
                     .as_ref()
-                    .and_then(|meta| {
-                        meta.persona_name
-                            .as_deref()
-                            .or(meta.persona_id.as_deref())
-                    })
+                    .and_then(|meta| meta.persona_name.as_deref().or(meta.persona_id.as_deref()))
                     .unwrap_or("Unknown");
                 lines.push(format!("- {}: {}", name, truncated));
             }

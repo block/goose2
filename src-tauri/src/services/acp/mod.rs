@@ -19,10 +19,19 @@ use crate::types::messages::{MessageContent, MessageRole};
 
 /// Build a composite registry key: `{session_id}__{persona_id}` when a
 /// persona is active, or plain `session_id` for backward compatibility.
+///
+/// This assumes neither component contains `__`.
 pub fn make_composite_key(session_id: &str, persona_id: Option<&str>) -> String {
     match persona_id {
         Some(pid) if !pid.is_empty() => format!("{session_id}__{pid}"),
         _ => session_id.to_string(),
+    }
+}
+
+pub fn split_composite_key(key: &str) -> (&str, Option<&str>) {
+    match key.split_once("__") {
+        Some((session_id, persona_id)) if !persona_id.is_empty() => (session_id, Some(persona_id)),
+        _ => (key, None),
     }
 }
 
@@ -53,8 +62,9 @@ impl AcpService {
         session_store.ensure_session(&session_id, Some(provider_id.clone()));
 
         // Save the user message to SessionStore, with persona metadata when targeted
+        let user_message_id = uuid::Uuid::new_v4().to_string();
         let user_message = crate::types::messages::Message {
-            id: uuid::Uuid::new_v4().to_string(),
+            id: user_message_id.clone(),
             role: MessageRole::User,
             created: chrono::Utc::now().timestamp(),
             content: vec![MessageContent::Text {
@@ -80,7 +90,7 @@ impl AcpService {
         // Build catch-up context from intervening messages for this persona
         let catchup_context = if let Some(ref pid) = persona_id {
             let all_messages = session_store.get_messages(&session_id);
-            build_catchup_context(&all_messages, pid)
+            build_catchup_context(&all_messages, pid, &user_message_id)
         } else {
             None
         };
@@ -95,11 +105,8 @@ impl AcpService {
             persona_name.clone(),
         ));
         let registry_key = make_composite_key(&session_id, persona_id.as_deref());
-        let tauri_store = TauriStore::new(
-            Arc::clone(&session_store),
-            session_id.clone(),
-            persona_id,
-        );
+        let tauri_store =
+            TauriStore::new(Arc::clone(&session_store), session_id.clone(), persona_id);
         let agent_session_id = tauri_store.get_agent_session_id();
         let store: Arc<dyn Store> = Arc::new(tauri_store);
         let cancel_token = registry.register(&registry_key, &provider_id);
@@ -107,7 +114,7 @@ impl AcpService {
         // Build the effective prompt, including persona instructions and
         // catch-up context when available.  When there is no extra context we
         // pass the raw prompt for backward compatibility.
-        let has_system = system_prompt.as_ref().map_or(false, |s| !s.is_empty());
+        let has_system = system_prompt.as_ref().is_some_and(|s| !s.is_empty());
         let has_catchup = catchup_context.is_some();
         let effective_prompt = if has_system || has_catchup {
             let mut parts = Vec::new();

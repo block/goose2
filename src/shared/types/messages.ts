@@ -101,8 +101,6 @@ export interface MessageMetadata {
   /** Which persona this user message is addressed to. */
   targetPersonaId?: string;
   targetPersonaName?: string;
-  /** Composite key used for ACP session lookup. */
-  acpSessionKey?: string;
 }
 
 export interface Message {

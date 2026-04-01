@@ -110,20 +110,13 @@ impl TauriStore {
 
         match msg.role {
             MessageRole::User => {
-                let target_match = meta
-                    .target_persona_id
-                    .as_deref()
-                    .map_or(false, |id| id == persona_id);
-                let persona_match = meta
-                    .persona_id
-                    .as_deref()
-                    .map_or(false, |id| id == persona_id);
+                let target_match = meta.target_persona_id.as_deref() == Some(persona_id);
+                let persona_match = meta.persona_id.as_deref() == Some(persona_id);
                 target_match || persona_match
             }
-            MessageRole::Assistant | MessageRole::System => meta
-                .persona_id
-                .as_deref()
-                .map_or(false, |id| id == persona_id),
+            MessageRole::Assistant | MessageRole::System => {
+                meta.persona_id.as_deref() == Some(persona_id)
+            }
         }
     }
 
@@ -155,7 +148,11 @@ impl TauriStore {
 }
 
 impl Store for TauriStore {
-    fn set_agent_session_id(&self, _session_id: &str, agent_session_id: &str) -> Result<(), String> {
+    fn set_agent_session_id(
+        &self,
+        _session_id: &str,
+        agent_session_id: &str,
+    ) -> Result<(), String> {
         let key = self.effective_key();
         let path = self.sessions_dir.join(format!("{key}.json"));
         let payload = serde_json::json!({
@@ -179,15 +176,12 @@ impl Store for TauriStore {
                 messages
                     .iter()
                     .filter(|m| Self::message_matches_persona(m, pid))
-                    .filter_map(|m| Self::message_to_pair(m))
+                    .filter_map(Self::message_to_pair)
                     .collect()
             }
             None => {
                 // Single-persona / backward-compat mode: return all messages.
-                messages
-                    .iter()
-                    .filter_map(|m| Self::message_to_pair(m))
-                    .collect()
+                messages.iter().filter_map(Self::message_to_pair).collect()
             }
         };
 
