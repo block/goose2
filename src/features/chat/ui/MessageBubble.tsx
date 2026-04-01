@@ -269,10 +269,8 @@ export function MessageBubble({
           </span>
         )}
         {!isUser && assistantDisplayName && (
-          <span className="mb-0.5 inline-flex items-center gap-1.5 text-xs font-medium text-foreground-secondary">
-            <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">
-              {assistantDisplayName}
-            </span>
+          <span className="mb-0.5 text-xs font-medium text-foreground-secondary">
+            {assistantDisplayName}
           </span>
         )}
 
