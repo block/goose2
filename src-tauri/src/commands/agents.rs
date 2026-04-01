@@ -35,6 +35,30 @@ pub fn refresh_personas(store: State<'_, PersonaStore>) -> Vec<Persona> {
     store.refresh_markdown()
 }
 
+/// Save avatar from a local file path for a persona.
+/// Copies the file into ~/.goose/avatars/{persona_id}.{ext}.
+/// Returns the stored filename (e.g. "persona-id.png").
+#[tauri::command]
+pub fn save_persona_avatar(persona_id: String, source_path: String) -> Result<String, String> {
+    PersonaStore::save_avatar_from_path(&persona_id, &source_path)
+}
+
+/// Save avatar from raw bytes (for drag-and-drop from the browser).
+#[tauri::command]
+pub fn save_persona_avatar_bytes(
+    persona_id: String,
+    bytes: Vec<u8>,
+    extension: String,
+) -> Result<String, String> {
+    PersonaStore::save_avatar_from_bytes(&persona_id, &bytes, &extension)
+}
+
+/// Returns the absolute path to the avatars directory (~/.goose/avatars/).
+#[tauri::command]
+pub fn get_avatars_dir() -> String {
+    PersonaStore::avatars_dir().to_string_lossy().to_string()
+}
+
 // --- Sprout-compatible persona import/export ---
 
 /// Sprout-compatible persona export format (version 1, camelCase keys).
@@ -45,7 +69,7 @@ struct PersonaExportV1 {
     display_name: String,
     system_prompt: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    avatar_url: Option<String>,
+    avatar: Option<Avatar>,
     #[serde(skip_serializing_if = "Option::is_none")]
     provider: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -107,11 +131,17 @@ pub fn export_persona(store: State<'_, PersonaStore>, id: String) -> Result<Expo
         .get(&id)
         .ok_or_else(|| format!("Persona '{}' not found", id))?;
 
+    // For export, only include URL avatars (local files aren't portable)
+    let export_avatar = match &persona.avatar {
+        Some(Avatar::Url(url)) => Some(Avatar::Url(url.clone())),
+        _ => None,
+    };
+
     let export = PersonaExportV1 {
         version: 1,
         display_name: persona.display_name.clone(),
         system_prompt: persona.system_prompt,
-        avatar_url: persona.avatar_url,
+        avatar: export_avatar,
         provider: persona.provider,
         model: persona.model,
     };
@@ -169,7 +199,7 @@ pub fn import_personas(
     // Create the persona via the store
     let request = CreatePersonaRequest {
         display_name: export.display_name,
-        avatar_url: export.avatar_url,
+        avatar: export.avatar,
         system_prompt: export.system_prompt,
         provider: export.provider,
         model: export.model,

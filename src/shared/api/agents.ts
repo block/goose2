@@ -45,3 +45,22 @@ export async function importPersonas(
 ): Promise<Persona[]> {
   return invoke("import_personas", { fileBytes, fileName });
 }
+
+export async function savePersonaAvatar(
+  personaId: string,
+  sourcePath: string,
+): Promise<string> {
+  return invoke("save_persona_avatar", { personaId, sourcePath });
+}
+
+export async function savePersonaAvatarBytes(
+  personaId: string,
+  bytes: number[],
+  extension: string,
+): Promise<string> {
+  return invoke("save_persona_avatar_bytes", { personaId, bytes, extension });
+}
+
+export async function getAvatarsDir(): Promise<string> {
+  return invoke("get_avatars_dir");
+}

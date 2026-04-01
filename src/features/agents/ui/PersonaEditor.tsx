@@ -5,9 +5,11 @@ import { Button } from "@/shared/ui/button";
 import type {
   Persona,
   ProviderType,
+  Avatar,
   CreatePersonaRequest,
   UpdatePersonaRequest,
 } from "@/shared/types/agents";
+import { AvatarDropZone } from "./AvatarDropZone";
 
 interface PersonaEditorProps {
   persona?: Persona;
@@ -38,7 +40,7 @@ export function PersonaEditor({
   const isReadOnly = persona?.isBuiltin ?? false;
 
   const [displayName, setDisplayName] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
+  const [avatar, setAvatar] = useState<Avatar | null>(null);
   const [systemPrompt, setSystemPrompt] = useState("");
   const [provider, setProvider] = useState<ProviderType | "">("");
   const [model, setModel] = useState("");
@@ -46,13 +48,13 @@ export function PersonaEditor({
   useEffect(() => {
     if (isOpen && persona) {
       setDisplayName(persona.displayName);
-      setAvatarUrl(persona.avatarUrl ?? "");
+      setAvatar(persona.avatar ?? null);
       setSystemPrompt(persona.systemPrompt);
       setProvider(persona.provider ?? "");
       setModel(persona.model ?? "");
     } else if (isOpen) {
       setDisplayName("");
-      setAvatarUrl("");
+      setAvatar(null);
       setSystemPrompt("");
       setProvider("");
       setModel("");
@@ -69,7 +71,7 @@ export function PersonaEditor({
 
       const data: CreatePersonaRequest | UpdatePersonaRequest = {
         displayName: displayName.trim(),
-        avatarUrl: avatarUrl.trim() || undefined,
+        avatar: avatar ?? undefined,
         systemPrompt: systemPrompt.trim(),
         provider: provider || undefined,
         model: model.trim() || undefined,
@@ -80,7 +82,7 @@ export function PersonaEditor({
       isValid,
       isReadOnly,
       displayName,
-      avatarUrl,
+      avatar,
       systemPrompt,
       provider,
       model,
@@ -91,6 +93,9 @@ export function PersonaEditor({
   if (!isOpen) return null;
 
   const initials = displayName.charAt(0).toUpperCase() || "?";
+
+  // For new personas, use a temporary ID for the avatar upload
+  const avatarPersonaId = persona?.id ?? "new-persona";
 
   return (
     <div
@@ -140,21 +145,30 @@ export function PersonaEditor({
           onSubmit={handleSubmit}
           className="min-h-0 flex-1 overflow-y-auto space-y-4 p-5"
         >
-          {/* Avatar preview */}
+          {/* Avatar drop zone */}
           <div className="flex justify-center">
-            {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt="Avatar preview"
-                className="h-16 w-16 rounded-full object-cover border border-border"
-              />
+            {isReadOnly ? (
+              avatar ? (
+                <img
+                  src={avatar.type === "url" ? avatar.value : undefined}
+                  alt="Avatar preview"
+                  className="h-16 w-16 rounded-full object-cover border border-border"
+                />
+              ) : (
+                <div
+                  aria-hidden="true"
+                  className="flex h-16 w-16 items-center justify-center rounded-full bg-background-secondary text-lg font-semibold text-foreground-secondary"
+                >
+                  {initials}
+                </div>
+              )
             ) : (
-              <div
-                aria-hidden="true"
-                className="flex h-16 w-16 items-center justify-center rounded-full bg-background-secondary text-lg font-semibold text-foreground-secondary"
-              >
-                {initials}
-              </div>
+              <AvatarDropZone
+                personaId={avatarPersonaId}
+                avatar={avatar}
+                onChange={setAvatar}
+                disabled={isReadOnly}
+              />
             )}
           </div>
 
@@ -170,26 +184,6 @@ export function PersonaEditor({
               readOnly={isReadOnly}
               required
               placeholder="e.g. Code Reviewer"
-              className={cn(
-                "w-full rounded-lg border border-border bg-background-secondary px-3 py-2 text-sm",
-                "placeholder:text-foreground-secondary/40",
-                "focus:outline-none focus:ring-1 focus:ring-ring transition-colors",
-                isReadOnly && "opacity-70 cursor-not-allowed",
-              )}
-            />
-          </label>
-
-          {/* Avatar URL */}
-          <label className="block space-y-1">
-            <span className="text-xs font-medium text-foreground-secondary">
-              Avatar URL
-            </span>
-            <input
-              type="text"
-              value={avatarUrl}
-              onChange={(e) => setAvatarUrl(e.target.value)}
-              readOnly={isReadOnly}
-              placeholder="https://example.com/avatar.png"
               className={cn(
                 "w-full rounded-lg border border-border bg-background-secondary px-3 py-2 text-sm",
                 "placeholder:text-foreground-secondary/40",

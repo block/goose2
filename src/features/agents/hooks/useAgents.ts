@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from "react";
 import { useAgentStore } from "../stores/agentStore";
+import type { Avatar } from "@/shared/types/agents";
 
 // Built-in persona definitions (shipped with app)
 const BUILTIN_PERSONAS = [
@@ -87,7 +88,7 @@ export function useAgents() {
     (data: {
       displayName: string;
       systemPrompt: string;
-      avatarUrl?: string;
+      avatar?: Avatar | null;
       provider?: "goose" | "claude" | "openai" | "ollama" | "custom";
       model?: string;
     }) => {
@@ -110,7 +111,7 @@ export function useAgents() {
       updates: Partial<{
         displayName: string;
         systemPrompt: string;
-        avatarUrl: string;
+        avatar: Avatar | null;
         provider: "goose" | "claude" | "openai" | "ollama" | "custom";
         model: string;
       }>,
@@ -138,7 +139,6 @@ export function useAgents() {
       provider: "goose" | "claude" | "openai" | "ollama" | "custom";
       model: string;
       systemPrompt?: string;
-      avatarUrl?: string;
       connectionType: "builtin" | "acp";
     }) => {
       // If persona, inherit defaults
@@ -149,7 +149,6 @@ export function useAgents() {
           finalData = {
             ...finalData,
             systemPrompt: finalData.systemPrompt ?? persona.systemPrompt,
-            avatarUrl: finalData.avatarUrl ?? persona.avatarUrl,
             provider: finalData.provider ?? persona.provider ?? "goose",
             model:
               finalData.model ?? persona.model ?? "claude-sonnet-4-20250514",

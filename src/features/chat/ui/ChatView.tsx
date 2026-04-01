@@ -15,6 +15,7 @@ import {
   composeSystemPrompt,
   getProjectFolderOption,
 } from "@/features/projects/lib/chatProjectContext";
+import { useAvatarSrc } from "@/shared/hooks/useAvatarSrc";
 
 interface ChatViewProps {
   sessionId?: string;
@@ -219,6 +220,7 @@ export function ChatView({
   }, [personas, selectedPersonaId, activeSessionId]);
 
   const displayAgentName = selectedPersona?.displayName ?? agentName;
+  const personaAvatarSrc = useAvatarSrc(selectedPersona?.avatar);
 
   const personaInfo = selectedPersona
     ? { id: selectedPersona.id, name: selectedPersona.displayName }
@@ -320,7 +322,7 @@ export function ChatView({
         messages={messages}
         streamingMessageId={streamingMessageId}
         agentName={displayAgentName}
-        agentAvatarUrl={selectedPersona?.avatarUrl ?? agentAvatarUrl}
+        agentAvatarUrl={personaAvatarSrc ?? agentAvatarUrl}
       />
 
       {showIndicator && (

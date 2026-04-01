@@ -1,13 +1,87 @@
-use serde::Deserializer;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
+
+/// Avatar for a persona — either a remote URL or a local file in ~/.goose/avatars/.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", content = "value")]
+pub enum Avatar {
+    #[serde(rename = "url")]
+    Url(String),
+    #[serde(rename = "local")]
+    Local(String),
+}
+
+/// Custom deserializer that handles migration from old format.
+/// Accepts:
+///   - null                              → None
+///   - "https://..."  (bare string)      → Some(Avatar::Url(s))
+///   - { "type": "url", "value": "..." } → Some(Avatar::Url(...))
+///   - { "type": "local", "value": "x" } → Some(Avatar::Local(...))
+fn deserialize_avatar_compat<'de, D>(deserializer: D) -> Result<Option<Avatar>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum AvatarOrString {
+        Avatar(Avatar),
+        BareString(String),
+    }
+
+    let opt: Option<AvatarOrString> = Option::deserialize(deserializer)?;
+    match opt {
+        None => Ok(None),
+        Some(AvatarOrString::BareString(s)) => {
+            if s.is_empty() {
+                Ok(None)
+            } else {
+                Ok(Some(Avatar::Url(s)))
+            }
+        }
+        Some(AvatarOrString::Avatar(a)) => Ok(Some(a)),
+    }
+}
+
+/// Deserializer for UpdatePersonaRequest: distinguishes "field absent" from "field: null".
+/// - JSON field absent          → None        (don't update)
+/// - "avatar": null             → Some(None)  (clear the avatar)
+/// - "avatar": {...} or "str"   → Some(Some(Avatar))
+fn deserialize_avatar_update<'de, D>(deserializer: D) -> Result<Option<Option<Avatar>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum AvatarOrString {
+        Avatar(Avatar),
+        BareString(String),
+    }
+
+    let opt: Option<AvatarOrString> = Option::deserialize(deserializer)?;
+    match opt {
+        None => Ok(Some(None)), // explicit null → clear
+        Some(AvatarOrString::BareString(s)) => {
+            if s.is_empty() {
+                Ok(Some(None))
+            } else {
+                Ok(Some(Some(Avatar::Url(s))))
+            }
+        }
+        Some(AvatarOrString::Avatar(a)) => Ok(Some(Some(a))),
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Persona {
     pub id: String,
     pub display_name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub avatar_url: Option<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "avatarUrl",
+        deserialize_with = "deserialize_avatar_compat"
+    )]
+    pub avatar: Option<Avatar>,
     pub system_prompt: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub provider: Option<String>,
@@ -24,8 +98,12 @@ pub struct Persona {
 #[serde(rename_all = "camelCase")]
 pub struct CreatePersonaRequest {
     pub display_name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub avatar_url: Option<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_avatar_compat"
+    )]
+    pub avatar: Option<Avatar>,
     pub system_prompt: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub provider: Option<String>,
@@ -38,8 +116,12 @@ pub struct CreatePersonaRequest {
 pub struct UpdatePersonaRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display_name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub avatar_url: Option<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_avatar_update"
+    )]
+    pub avatar: Option<Option<Avatar>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub system_prompt: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -120,7 +202,7 @@ pub fn builtin_personas() -> Vec<Persona> {
         Persona {
             id: "builtin-goose".to_string(),
             display_name: "Goose".to_string(),
-            avatar_url: None,
+            avatar: None,
             system_prompt: "You are Goose, a helpful AI coding assistant. You help users write, debug, and understand code. You are direct, concise, and prefer showing code over describing it. You have access to tools for reading files, running commands, and searching codebases.".to_string(),
             provider: Some("goose".to_string()),
             model: Some("claude-sonnet-4-20250514".to_string()),
@@ -132,7 +214,7 @@ pub fn builtin_personas() -> Vec<Persona> {
         Persona {
             id: "builtin-researcher".to_string(),
             display_name: "Scout".to_string(),
-            avatar_url: None,
+            avatar: None,
             system_prompt: "You are Scout, a research-focused AI assistant. You follow a Research-Plan-Implement pattern: first thoroughly research the problem space, then create a detailed plan, and finally implement the solution. You excel at exploring codebases, finding patterns, and synthesizing information from multiple sources.".to_string(),
             provider: Some("goose".to_string()),
             model: Some("claude-sonnet-4-20250514".to_string()),
@@ -144,7 +226,7 @@ pub fn builtin_personas() -> Vec<Persona> {
         Persona {
             id: "builtin-reviewer".to_string(),
             display_name: "Reviewer".to_string(),
-            avatar_url: None,
+            avatar: None,
             system_prompt: "You are Reviewer, a code review specialist. You analyze code changes for correctness, security vulnerabilities, performance issues, and adherence to best practices. You provide actionable feedback with specific suggestions for improvement. You check for edge cases, error handling, and test coverage.".to_string(),
             provider: Some("goose".to_string()),
             model: Some("claude-sonnet-4-20250514".to_string()),
@@ -156,7 +238,7 @@ pub fn builtin_personas() -> Vec<Persona> {
         Persona {
             id: "builtin-architect".to_string(),
             display_name: "Architect".to_string(),
-            avatar_url: None,
+            avatar: None,
             system_prompt: "You are Architect, a system design specialist. You help users design software architectures, make technology choices, and plan complex implementations. You think in terms of components, interfaces, data flow, and trade-offs. You consider scalability, maintainability, and simplicity.".to_string(),
             provider: Some("goose".to_string()),
             model: Some("claude-sonnet-4-20250514".to_string()),

@@ -1,4 +1,6 @@
-use crate::types::agents::{builtin_personas, CreatePersonaRequest, Persona, UpdatePersonaRequest};
+use crate::types::agents::{
+    builtin_personas, Avatar, CreatePersonaRequest, Persona, UpdatePersonaRequest,
+};
 use log::warn;
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -31,6 +33,14 @@ impl PersonaStore {
     fn store_path() -> PathBuf {
         let base = dirs::home_dir().expect("home dir");
         base.join(".goose").join("personas.json")
+    }
+
+    /// Path to the avatars directory (~/.goose/avatars/).
+    pub fn avatars_dir() -> PathBuf {
+        dirs::home_dir()
+            .expect("home dir")
+            .join(".goose")
+            .join("avatars")
     }
 
     fn load_from_disk(path: &PathBuf) -> Vec<Persona> {
@@ -176,7 +186,7 @@ impl PersonaStore {
         Ok(Persona {
             id,
             display_name: frontmatter.name,
-            avatar_url: None,
+            avatar: None,
             system_prompt,
             provider: None,
             model: None,
@@ -229,7 +239,7 @@ impl PersonaStore {
         let persona = Persona {
             id: uuid::Uuid::new_v4().to_string(),
             display_name: req.display_name,
-            avatar_url: req.avatar_url,
+            avatar: req.avatar,
             system_prompt: req.system_prompt,
             provider: req.provider,
             model: req.model,
@@ -262,8 +272,9 @@ impl PersonaStore {
         if let Some(name) = req.display_name {
             persona.display_name = name;
         }
-        if let Some(avatar) = req.avatar_url {
-            persona.avatar_url = Some(avatar);
+        if let Some(avatar_value) = req.avatar {
+            // Some(None) → clear, Some(Some(a)) → set
+            persona.avatar = avatar_value;
         }
         if let Some(prompt) = req.system_prompt {
             persona.system_prompt = prompt;
@@ -296,8 +307,91 @@ impl PersonaStore {
             return Err("Cannot delete a markdown persona — delete the file directly".to_string());
         }
 
+        // Clean up local avatar file if present
+        if let Some(Avatar::Local(filename)) = &persona.avatar {
+            let path = Self::avatars_dir().join(filename);
+            let _ = std::fs::remove_file(path);
+        }
+
         personas.retain(|p| p.id != id);
         self.save_to_disk(&personas);
         Ok(())
+    }
+
+    /// Copy an avatar image from a source path to ~/.goose/avatars/{persona_id}.{ext}.
+    /// Returns the filename (not full path).
+    pub fn save_avatar_from_path(persona_id: &str, source_path: &str) -> Result<String, String> {
+        let avatars_dir = Self::avatars_dir();
+        std::fs::create_dir_all(&avatars_dir)
+            .map_err(|e| format!("Failed to create avatars directory: {}", e))?;
+
+        let source = std::path::Path::new(source_path);
+
+        // Extract extension from source filename
+        let ext = source
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("png")
+            .to_lowercase();
+
+        let stored_name = format!("{}.{}", persona_id, ext);
+        let dest = avatars_dir.join(&stored_name);
+
+        // Remove any existing avatar for this persona (different extension)
+        if let Ok(entries) = std::fs::read_dir(&avatars_dir) {
+            let prefix = format!("{}.", persona_id);
+            for entry in entries.flatten() {
+                let name = entry.file_name();
+                if let Some(name_str) = name.to_str() {
+                    if name_str.starts_with(&prefix) && name_str != stored_name {
+                        let _ = std::fs::remove_file(entry.path());
+                    }
+                }
+            }
+        }
+
+        std::fs::copy(source, &dest).map_err(|e| format!("Failed to copy avatar file: {}", e))?;
+
+        Ok(stored_name)
+    }
+
+    /// Write avatar image bytes to ~/.goose/avatars/{persona_id}.{ext}.
+    /// Returns the filename (not full path).
+    pub fn save_avatar_from_bytes(
+        persona_id: &str,
+        bytes: &[u8],
+        extension: &str,
+    ) -> Result<String, String> {
+        let avatars_dir = Self::avatars_dir();
+        std::fs::create_dir_all(&avatars_dir)
+            .map_err(|e| format!("Failed to create avatars directory: {}", e))?;
+
+        let ext = extension.to_lowercase();
+        let stored_name = format!("{}.{}", persona_id, ext);
+        let dest = avatars_dir.join(&stored_name);
+
+        // Remove any existing avatar for this persona (different extension)
+        if let Ok(entries) = std::fs::read_dir(&avatars_dir) {
+            let prefix = format!("{}.", persona_id);
+            for entry in entries.flatten() {
+                let name = entry.file_name();
+                if let Some(name_str) = name.to_str() {
+                    if name_str.starts_with(&prefix) && name_str != stored_name {
+                        let _ = std::fs::remove_file(entry.path());
+                    }
+                }
+            }
+        }
+
+        std::fs::write(&dest, bytes).map_err(|e| format!("Failed to write avatar file: {}", e))?;
+
+        Ok(stored_name)
+    }
+
+    /// Delete avatar file for a persona.
+    #[allow(dead_code)]
+    pub fn delete_avatar_file(filename: &str) {
+        let path = Self::avatars_dir().join(filename);
+        let _ = std::fs::remove_file(path);
     }
 }
