@@ -240,6 +240,14 @@ impl TauriStore {
         }
     }
 
+    /// Look up a previously stored agent session ID, or `None` for new sessions.
+    pub fn get_agent_session_id(&self, session_id: &str) -> Option<String> {
+        let path = self.sessions_dir.join(format!("{session_id}.json"));
+        let json = std::fs::read_to_string(&path).ok()?;
+        let mapping: serde_json::Value = serde_json::from_str(&json).ok()?;
+        mapping["agent_session_id"].as_str().map(String::from)
+    }
+
     /// Remove session files that are older than the given duration.
     pub fn cleanup_stale_sessions(max_age: std::time::Duration) {
         let sessions_dir = dirs::home_dir()
@@ -451,7 +459,9 @@ impl AcpService {
             session_id.clone(),
             Arc::clone(&session_store),
         ));
-        let store: Arc<dyn Store> = Arc::new(TauriStore::new(session_store));
+        let tauri_store = TauriStore::new(Arc::clone(&session_store));
+        let agent_session_id = tauri_store.get_agent_session_id(&session_id);
+        let store: Arc<dyn Store> = Arc::new(tauri_store);
         let cancel_token = registry.register(&session_id, &provider_id);
 
         // Prepend the effective system prompt so the agent sees persona and
@@ -484,7 +494,7 @@ impl AcpService {
                         &store,
                         &writer,
                         &cancel_token,
-                        None,
+                        agent_session_id.as_deref(),
                     )
                     .await
             })
