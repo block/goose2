@@ -101,7 +101,9 @@ export function DoctorSettings() {
     <div>
       <div className="flex items-start justify-between gap-4 pr-8">
         <div>
-          <h3 className="text-lg font-semibold">Doctor</h3>
+          <h3 className="text-lg font-semibold font-display tracking-tight">
+            Doctor
+          </h3>
           <p className="mt-1 text-sm text-muted-foreground">
             Verify required tools and agent availability for Goose.
           </p>

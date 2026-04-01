@@ -25,7 +25,7 @@ function HomeClock() {
 
   return (
     <div className="mb-1 flex items-baseline gap-1.5 pl-4">
-      <span className="text-6xl font-light font-mono tracking-tight text-foreground">
+      <span className="text-6xl font-light font-display tracking-tight text-foreground">
         {hours}:{minutes}
       </span>
       <span className="text-lg text-muted-foreground">{period}</span>
@@ -117,7 +117,7 @@ export function HomeScreen({
           <HomeClock />
 
           {/* Greeting */}
-          <p className="mb-6 pl-4 text-xl font-light text-muted-foreground">
+          <p className="mb-6 pl-4 text-xl font-light font-display text-muted-foreground">
             {greeting}
           </p>
 

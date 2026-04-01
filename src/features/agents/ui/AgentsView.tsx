@@ -210,7 +210,9 @@ export function AgentsView() {
           {/* Header */}
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h1 className="text-lg font-semibold">Personas</h1>
+              <h1 className="text-lg font-semibold font-display tracking-tight">
+                Personas
+              </h1>
               <p className="text-xs text-muted-foreground">
                 Custom persona configurations for specific workflows
               </p>
@@ -253,9 +255,6 @@ export function AgentsView() {
 
           {/* Personas section */}
           <section aria-labelledby="personas-heading">
-            <h2 id="personas-heading" className="text-sm font-semibold mb-3">
-              Personas
-            </h2>
             <PersonaGallery
               personas={filteredPersonas}
               onSelectPersona={(p) => openPersonaEditor(p)}
@@ -271,7 +270,10 @@ export function AgentsView() {
 
           {/* Active Agents section */}
           <section aria-labelledby="agents-heading">
-            <h2 id="agents-heading" className="text-sm font-semibold mb-3">
+            <h2
+              id="agents-heading"
+              className="text-lg font-semibold font-display tracking-tight mb-3"
+            >
               Active Agents
             </h2>
             {filteredAgents.length === 0 ? (

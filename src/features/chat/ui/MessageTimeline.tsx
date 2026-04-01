@@ -75,7 +75,7 @@ export function MessageTimeline({
     return (
       <div className={cn("flex flex-1 items-center justify-center", className)}>
         <div className="text-center">
-          <p className="text-lg font-medium text-muted-foreground">
+          <p className="text-lg font-medium font-display tracking-tight text-muted-foreground">
             Start a conversation
           </p>
           <p className="mt-1 text-sm text-muted-foreground">

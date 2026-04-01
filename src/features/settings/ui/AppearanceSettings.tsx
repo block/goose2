@@ -54,7 +54,9 @@ export function AppearanceSettings() {
 
   return (
     <div>
-      <h3 className="text-lg font-semibold">Appearance</h3>
+      <h3 className="text-lg font-semibold font-display tracking-tight">
+        Appearance
+      </h3>
       <p className="mt-1 text-sm text-muted-foreground">
         Customize the look and feel of Goose
       </p>

@@ -597,6 +597,38 @@
   font-style: normal;
 }
 
+/* Font Faces — Cash Sans Wide (local) */
+@font-face {
+  font-family: "Cash Sans Wide";
+  src: url(../../assets/fonts/CashSansWide-Regular.woff2) format("woff2");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Cash Sans Wide";
+  src: url(../../assets/fonts/CashSansWide-Medium.woff2) format("woff2");
+  font-weight: 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Cash Sans Wide";
+  src: url(../../assets/fonts/CashSansWide-Semibold.woff2) format("woff2");
+  font-weight: 600;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Cash Sans Wide";
+  src: url(../../assets/fonts/CashSansWide-Bold.woff2) format("woff2");
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Cash Sans Wide";
+  src: url(../../assets/fonts/CashSansWide-Black.woff2) format("woff2");
+  font-weight: 900;
+  font-style: normal;
+}
+
 @layer base {
   *,
   ::after,

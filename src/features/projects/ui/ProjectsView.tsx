@@ -211,7 +211,9 @@ export function ProjectsView({ onStartChat }: ProjectsViewProps) {
           {/* Header */}
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h1 className="text-lg font-semibold">Projects</h1>
+              <h1 className="text-lg font-semibold font-display tracking-tight">
+                Projects
+              </h1>
               <p className="text-xs text-muted-foreground">
                 Organize your work into focused project contexts
               </p>

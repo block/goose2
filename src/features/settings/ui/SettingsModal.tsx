@@ -217,7 +217,9 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               {activeSection === "general" && (
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-lg font-semibold">General</h3>
+                    <h3 className="text-lg font-semibold font-display tracking-tight">
+                      General
+                    </h3>
                     <p className="mt-1 text-sm text-muted-foreground">
                       General settings will appear here.
                     </p>
@@ -227,7 +229,9 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               {activeSection === "projects" && (
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-lg font-semibold">Projects</h3>
+                    <h3 className="text-lg font-semibold font-display tracking-tight">
+                      Projects
+                    </h3>
                     <p className="mt-1 text-sm text-muted-foreground">
                       Manage your projects.
                     </p>
@@ -279,7 +283,9 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               {activeSection === "chats" && (
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-lg font-semibold">Chats</h3>
+                    <h3 className="text-lg font-semibold font-display tracking-tight">
+                      Chats
+                    </h3>
                     <p className="mt-1 text-sm text-muted-foreground">
                       Restore archived chats.
                     </p>
@@ -325,7 +331,9 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               )}
               {activeSection === "about" && (
                 <div>
-                  <h3 className="text-lg font-semibold">About</h3>
+                  <h3 className="text-lg font-semibold font-display tracking-tight">
+                    About
+                  </h3>
                   <p className="mt-1 text-sm text-muted-foreground">
                     About information will appear here.
                   </p>

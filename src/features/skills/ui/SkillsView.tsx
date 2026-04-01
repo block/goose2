@@ -286,7 +286,9 @@ export function SkillsView() {
           {/* Header */}
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h1 className="text-lg font-semibold">Skills</h1>
+              <h1 className="text-lg font-semibold font-display tracking-tight">
+                Skills
+              </h1>
               <p className="text-xs text-muted-foreground">
                 Reusable instructions for your AI personas
               </p>
