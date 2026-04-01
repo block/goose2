@@ -150,4 +150,3 @@ For non AI communication, such as configuration:
 - Never use `--no-verify` when pushing — fix the underlying lint/hook issues.
 - Don't create root-level `src/types/` or `src/stores/` directories — types belong in `src/shared/types/`, stores belong in `src/features/<feature>/stores/`.
 - Don't duplicate type definitions across files — each type has one canonical location.
-- Don't add a goosed sidecar, HTTP fetch utilities, or any backend HTTP server — all backend communication uses Tauri commands and ACP via stdin/stdout.
