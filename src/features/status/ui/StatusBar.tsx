@@ -51,9 +51,10 @@ export function StatusBar({
           <button
             type="button"
             onClick={handleCopySessionId}
-            className="flex items-center gap-0.5 rounded px-1 py-0.5 text-foreground-tertiary hover:text-foreground-secondary transition-colors"
+            className="flex items-center gap-1 rounded px-1 py-0.5 text-foreground-tertiary hover:text-foreground-secondary transition-colors"
             title={`Session: ${sessionId}`}
           >
+            <span className="font-mono">{sessionId.slice(0, 8)}</span>
             {copied ? <Check size={10} /> : <Copy size={10} />}
           </button>
         )}
