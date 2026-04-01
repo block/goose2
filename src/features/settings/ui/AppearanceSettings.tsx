@@ -39,9 +39,7 @@ function SettingRow({
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium">{label}</p>
         {description && (
-          <p className="mt-0.5 text-xs text-foreground-secondary">
-            {description}
-          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
         )}
       </div>
       <div className="flex-shrink-0">{children}</div>
@@ -56,7 +54,7 @@ export function AppearanceSettings() {
   return (
     <div>
       <h3 className="text-lg font-semibold">Appearance</h3>
-      <p className="mt-1 text-sm text-foreground-secondary">
+      <p className="mt-1 text-sm text-muted-foreground">
         Customize the look and feel of Goose
       </p>
 
@@ -66,7 +64,7 @@ export function AppearanceSettings() {
         label="Theme"
         description="Choose your preferred color scheme"
       >
-        <div className="flex gap-1 rounded-lg bg-background-secondary p-1">
+        <div className="flex gap-1 rounded-lg bg-muted p-1">
           {THEME_OPTIONS.map((option) => (
             <button
               type="button"
@@ -76,7 +74,7 @@ export function AppearanceSettings() {
                 "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors",
                 theme === option.value
                   ? "bg-background text-foreground shadow-sm"
-                  : "text-foreground-secondary hover:text-foreground",
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
               <option.icon className="h-3.5 w-3.5" />
@@ -117,7 +115,7 @@ export function AppearanceSettings() {
         label="Interface Density"
         description="Adjust the spacing of UI elements"
       >
-        <div className="flex gap-1 rounded-lg bg-background-secondary p-1">
+        <div className="flex gap-1 rounded-lg bg-muted p-1">
           {DENSITY_OPTIONS.map((option) => (
             <button
               type="button"
@@ -127,7 +125,7 @@ export function AppearanceSettings() {
                 "rounded-md px-3 py-1.5 text-sm transition-colors",
                 density === option.value
                   ? "bg-background text-foreground shadow-sm"
-                  : "text-foreground-secondary hover:text-foreground",
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
               {option.label}

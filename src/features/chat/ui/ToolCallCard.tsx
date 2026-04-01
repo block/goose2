@@ -12,12 +12,12 @@ interface ToolCallCardProps {
 }
 
 const pillColors: Record<ToolCallStatus, string> = {
-  pending: "bg-background-tertiary text-foreground-secondary border-border",
-  idle: "bg-background-tertiary text-foreground-secondary border-border",
-  executing: "bg-amber-500/[0.08] text-foreground-primary border-amber-500/20",
-  completed: "bg-background-tertiary text-foreground-secondary border-border",
-  error: "bg-red-500/[0.08] text-foreground-primary border-red-500/20",
-  stopped: "bg-background-tertiary text-foreground-secondary border-border",
+  pending: "bg-accent text-muted-foreground border-border",
+  idle: "bg-accent text-muted-foreground border-border",
+  executing: "bg-amber-500/[0.08] text-foreground border-amber-500/20",
+  completed: "bg-accent text-muted-foreground border-border",
+  error: "bg-red-500/[0.08] text-foreground border-red-500/20",
+  stopped: "bg-accent text-muted-foreground border-border",
 } as Record<string, string>;
 
 function StatusIndicator({ status }: { status: ToolCallStatus }) {
@@ -84,7 +84,7 @@ export function ToolCallCard({
         <span className="text-xs font-medium">{name}</span>
         <StatusIndicator status={status} />
         {status === "executing" && elapsed >= 3 && (
-          <span className="text-[10px] tabular-nums text-foreground-tertiary">
+          <span className="text-[10px] tabular-nums text-muted-foreground">
             {elapsed}s
           </span>
         )}
@@ -99,13 +99,13 @@ export function ToolCallCard({
       </button>
 
       {expanded && hasContent && (
-        <div className="mt-1.5 p-3 rounded-md bg-background-tertiary border border-border">
+        <div className="mt-1.5 p-3 rounded-md bg-accent border border-border">
           {Object.keys(args).length > 0 && (
             <div>
-              <span className="text-[10px] font-medium uppercase tracking-wide text-foreground-tertiary">
+              <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                 Arguments
               </span>
-              <pre className="mt-1 text-xs font-mono text-foreground-secondary whitespace-pre-wrap break-all">
+              <pre className="mt-1 text-xs font-mono text-muted-foreground whitespace-pre-wrap break-all">
                 {JSON.stringify(args, null, 2)}
               </pre>
             </div>
@@ -115,7 +115,7 @@ export function ToolCallCard({
               <span
                 className={cn(
                   "text-[10px] font-medium uppercase tracking-wide",
-                  isError ? "text-red-500" : "text-foreground-tertiary",
+                  isError ? "text-red-500" : "text-muted-foreground",
                 )}
               >
                 {isError ? "Error" : "Result"}
@@ -123,7 +123,7 @@ export function ToolCallCard({
               <pre
                 className={cn(
                   "mt-1 max-h-48 overflow-auto text-xs font-mono whitespace-pre-wrap break-all",
-                  isError ? "text-red-500" : "text-foreground-secondary",
+                  isError ? "text-red-500" : "text-muted-foreground",
                 )}
               >
                 {result}

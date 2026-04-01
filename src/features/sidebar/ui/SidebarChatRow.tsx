@@ -115,10 +115,10 @@ export function SidebarChatRow({
           "flex items-center gap-2 flex-1 min-w-0 py-1.5 rounded-md text-[13px]",
           "transition-colors duration-150 px-2.5 text-left",
           isActive
-            ? "bg-background-tertiary/70 text-foreground font-medium"
+            ? "bg-accent/70 text-foreground font-medium"
             : isOpen
-              ? "text-foreground hover:bg-background-tertiary/50"
-              : "text-foreground-secondary/70 hover:text-foreground hover:bg-background-tertiary/50",
+              ? "text-foreground hover:bg-accent/50"
+              : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
         )}
       >
         <span className="flex-1 min-w-0 truncate">{title}</span>
@@ -136,7 +136,7 @@ export function SidebarChatRow({
           }}
           className={cn(
             "flex items-center justify-center w-6 h-6 rounded-md",
-            "text-foreground-secondary/40 hover:text-foreground hover:bg-background-tertiary/50",
+            "text-muted-foreground hover:text-foreground hover:bg-accent/50",
             menuOpen
               ? "visible opacity-100"
               : "invisible group-hover:visible opacity-0 group-hover:opacity-100",
@@ -148,13 +148,13 @@ export function SidebarChatRow({
         {menuOpen && (
           <div
             role="menu"
-            className="absolute right-0 top-full z-10 mt-1 w-32 rounded-lg border border-border bg-background py-1 shadow-lg"
+            className="absolute right-0 top-full z-10 mt-1 w-32 rounded-lg border border-border bg-background py-1 shadow-popover"
           >
             <button
               type="button"
               role="menuitem"
               onClick={startRename}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-background-secondary transition-colors"
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted transition-colors"
             >
               <Pencil className="w-3.5 h-3.5" />
               Rename
@@ -166,7 +166,7 @@ export function SidebarChatRow({
                 setMenuOpen(false);
                 onArchive?.(id);
               }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-background-secondary transition-colors"
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" />
               Archive

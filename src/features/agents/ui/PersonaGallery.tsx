@@ -24,10 +24,10 @@ function SkeletonCard() {
       aria-hidden="true"
       className="flex flex-col items-center gap-3 rounded-xl border border-border p-5 motion-safe:animate-pulse"
     >
-      <div className="h-12 w-12 rounded-full bg-background-secondary" />
-      <div className="h-4 w-24 rounded bg-background-secondary" />
-      <div className="h-3 w-full rounded bg-background-secondary" />
-      <div className="h-3 w-3/4 rounded bg-background-secondary" />
+      <div className="h-12 w-12 rounded-full bg-muted" />
+      <div className="h-4 w-24 rounded bg-muted" />
+      <div className="h-3 w-full rounded bg-muted" />
+      <div className="h-3 w-3/4 rounded bg-muted" />
     </div>
   );
 }
@@ -96,17 +96,17 @@ export function PersonaGallery({
         {...dropHandlers}
         className={cn(
           "flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-5",
-          "text-foreground-secondary/60 transition-colors",
-          "hover:border-border-primary/50 hover:text-foreground-secondary hover:bg-background-secondary/50",
+          "text-muted-foreground transition-colors",
+          "hover:border-border hover:text-muted-foreground hover:bg-muted/50",
           isDragOver
-            ? "border-border-primary bg-background-secondary/50 text-foreground-secondary"
+            ? "border-border bg-muted/50 text-muted-foreground"
             : "border-border",
         )}
       >
         <Plus className="h-8 w-8" />
         <span className="text-sm font-medium">New Persona</span>
         {onImportFile && (
-          <span className="text-[11px] text-foreground-secondary/40">
+          <span className="text-[11px] text-muted-foreground">
             or drop a file
           </span>
         )}

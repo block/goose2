@@ -216,7 +216,7 @@ export function CreateProjectDialog({
       {/* Panel */}
       <div
         className={cn(
-          "relative z-10 w-full max-w-lg rounded-xl border border-border bg-background shadow-xl",
+          "relative z-10 w-full max-w-lg rounded-xl border border-border bg-background shadow-card",
           "max-h-[85vh] flex flex-col",
           "motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95",
         )}
@@ -230,7 +230,7 @@ export function CreateProjectDialog({
             type="button"
             aria-label="Close"
             onClick={handleClose}
-            className="rounded-md p-1 text-foreground-secondary hover:bg-background-secondary transition-colors"
+            className="rounded-md p-1 text-muted-foreground hover:bg-muted transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
@@ -244,8 +244,8 @@ export function CreateProjectDialog({
         >
           {/* Name */}
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-foreground-secondary">
-              Name <span className="text-foreground-danger">*</span>
+            <span className="text-xs font-medium text-muted-foreground">
+              Name <span className="text-destructive">*</span>
             </span>
             <input
               type="text"
@@ -256,8 +256,8 @@ export function CreateProjectDialog({
               }}
               placeholder="My Project"
               className={cn(
-                "w-full rounded-lg border border-border bg-background-secondary px-3 py-2 text-sm",
-                "placeholder:text-foreground-secondary/40",
+                "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm",
+                "placeholder:text-muted-foreground",
                 "focus:outline-none focus:ring-1 focus:ring-ring transition-colors",
               )}
             />
@@ -265,7 +265,7 @@ export function CreateProjectDialog({
 
           {/* Instructions */}
           <div className="block space-y-1">
-            <span className="text-xs font-medium text-foreground-secondary">
+            <span className="text-xs font-medium text-muted-foreground">
               Instructions
             </span>
             <PromptEditor
@@ -276,7 +276,7 @@ export function CreateProjectDialog({
             <button
               type="button"
               onClick={handleAddDirectory}
-              className="mt-1.5 flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs font-medium transition-colors hover:bg-background-tertiary"
+              className="mt-1.5 flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs font-medium transition-colors hover:bg-accent"
             >
               <FolderOpen className="h-3.5 w-3.5" />
               Add directory
@@ -285,7 +285,7 @@ export function CreateProjectDialog({
 
           {/* Color */}
           <div className="block space-y-1">
-            <span className="text-xs font-medium text-foreground-secondary">
+            <span className="text-xs font-medium text-muted-foreground">
               Color
             </span>
             <div className="flex flex-wrap gap-1.5 pt-1">
@@ -309,7 +309,7 @@ export function CreateProjectDialog({
 
           {/* Provider */}
           <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-foreground-secondary">
+            <span className="text-xs font-medium text-muted-foreground">
               Provider
             </span>
             <select
@@ -334,13 +334,13 @@ export function CreateProjectDialog({
               onChange={(e) => setUseWorktrees(e.target.checked)}
               className="h-4 w-4 rounded border-border accent-foreground"
             />
-            <span className="text-xs font-medium text-foreground-secondary">
+            <span className="text-xs font-medium text-muted-foreground">
               Use git worktrees for branch isolation
             </span>
           </label>
 
           {/* Error */}
-          {error && <p className="text-xs text-foreground-danger">{error}</p>}
+          {error && <p className="text-xs text-destructive">{error}</p>}
         </form>
 
         {/* Footer */}

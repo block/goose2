@@ -122,7 +122,7 @@ const MarkdownCode = memo(function MarkdownCode({
   ) : (
     <code
       {...props}
-      className="break-all whitespace-pre-wrap font-mono bg-background-tertiary rounded px-1 py-0.5 text-[13px]"
+      className="break-all whitespace-pre-wrap font-mono bg-accent rounded px-1 py-0.5 text-[13px]"
     >
       {children}
     </code>
@@ -152,7 +152,7 @@ export const MarkdownContent = memo(function MarkdownContent({
         prose-ol:my-2
         prose-ul:mt-0 prose-ul:mb-3
         prose-li:m-0
-        text-foreground-primary`,
+        text-foreground`,
         className,
       )}
     >

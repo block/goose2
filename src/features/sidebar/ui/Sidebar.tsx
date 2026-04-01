@@ -148,7 +148,7 @@ export function Sidebar({
   return (
     <div
       className={cn(
-        "relative h-full overflow-hidden bg-background-secondary border border-border-secondary/50",
+        "relative h-full overflow-hidden bg-background-alt border border-border",
         "transition-[width] duration-300 ease-in-out",
         className,
       )}
@@ -157,7 +157,7 @@ export function Sidebar({
       <div className="flex flex-col h-full">
         {/* Header */}
         <div
-          className="flex items-center justify-between px-3 py-3 border-b border-border-secondary flex-shrink-0"
+          className="flex items-center justify-between px-3 py-3 border-b border-border flex-shrink-0"
           data-tauri-drag-region
         >
           <button
@@ -174,7 +174,7 @@ export function Sidebar({
             onClick={onCollapse}
             className={cn(
               "flex items-center justify-center w-7 h-7 rounded-md",
-              "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
+              "text-muted-foreground hover:text-foreground hover:bg-accent/50",
               "transition-opacity duration-200",
               collapsed ? "opacity-0 pointer-events-none" : "opacity-100",
             )}
@@ -198,7 +198,7 @@ export function Sidebar({
             onClick={onCollapse}
             className={cn(
               "flex items-center justify-center w-7 h-7 rounded-md",
-              "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
+              "text-muted-foreground hover:text-foreground hover:bg-accent/50",
             )}
             aria-label="Expand sidebar"
           >
@@ -219,8 +219,8 @@ export function Sidebar({
             className={cn(
               "flex items-center rounded-md transition-all duration-300 ease-out",
               collapsed
-                ? "justify-center w-7 h-7 mx-auto text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50"
-                : "gap-2 w-full px-2.5 py-1.5 border border-border-secondary text-xs text-foreground-secondary hover:text-foreground hover:border-foreground-secondary/30",
+                ? "justify-center w-7 h-7 mx-auto text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                : "gap-2 w-full px-2.5 py-1.5 border border-border text-xs text-muted-foreground hover:text-foreground hover:border-border",
             )}
             title={collapsed ? "Search ⌘K" : undefined}
           >
@@ -237,7 +237,7 @@ export function Sidebar({
             </span>
             <kbd
               className={cn(
-                "text-[10px] text-foreground-tertiary px-1 py-0.5 rounded font-mono flex-shrink-0",
+                "text-[10px] text-muted-foreground px-1 py-0.5 rounded font-mono flex-shrink-0",
                 labelTransition,
                 labelVisible
                   ? "opacity-100 w-auto"
@@ -258,7 +258,7 @@ export function Sidebar({
               onClick={onNewChat}
               title={collapsed ? "New Chat" : undefined}
               className={cn(
-                "flex items-center w-full rounded-md text-[13px] transition-all duration-200 text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
+                "flex items-center w-full rounded-md text-[13px] transition-all duration-200 text-muted-foreground hover:text-foreground hover:bg-accent/50",
                 collapsed
                   ? "justify-center px-0 py-1.5"
                   : "gap-2.5 px-3 py-1.5",
@@ -293,8 +293,8 @@ export function Sidebar({
                       ? "justify-center px-0 py-1.5"
                       : "gap-2.5 px-3 py-1.5",
                     isActive
-                      ? "bg-background-secondary text-foreground"
-                      : "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
                   )}
                   aria-current={isActive ? "page" : undefined}
                   style={{
@@ -326,7 +326,7 @@ export function Sidebar({
           {/* Divider */}
           <div
             className={cn(
-              "my-2 mx-auto bg-border-secondary transition-all duration-300",
+              "my-2 mx-auto bg-border transition-all duration-300",
               collapsed ? "w-5 h-px" : "w-full h-px mx-1.5",
             )}
           />
@@ -355,17 +355,17 @@ export function Sidebar({
         {/* Footer */}
         <div
           className={cn(
-            "flex items-center border-t border-border-secondary flex-shrink-0 transition-all duration-300",
+            "flex items-center border-t border-border flex-shrink-0 transition-all duration-300",
             collapsed ? "justify-center px-0 py-2" : "px-3 py-2",
           )}
         >
           <button
             type="button"
             onClick={onSettingsClick}
-            className="w-7 h-7 rounded-full bg-background-tertiary flex items-center justify-center overflow-hidden hover:bg-background-tertiary/80 transition-colors cursor-pointer"
+            className="w-7 h-7 rounded-full bg-accent flex items-center justify-center overflow-hidden hover:bg-accent/80 transition-colors cursor-pointer"
             title="Settings"
           >
-            <User className="w-3.5 h-3.5 text-foreground-secondary" />
+            <User className="w-3.5 h-3.5 text-muted-foreground" />
           </button>
         </div>
       </div>

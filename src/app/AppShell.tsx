@@ -462,7 +462,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             activeView={activeView}
             activeTabId={activeTabId}
             projects={projectStore.projects}
-            className="h-full shadow-xl rounded-xl"
+            className="h-full rounded-xl"
           />
         </div>
 

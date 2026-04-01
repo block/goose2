@@ -106,7 +106,7 @@ export function CreateSkillDialog({
       {/* Panel */}
       <div
         className={cn(
-          "relative z-10 w-full max-w-lg rounded-xl border border-border bg-background shadow-xl",
+          "relative z-10 w-full max-w-lg rounded-xl border border-border bg-background shadow-card",
           "max-h-[85vh] flex flex-col",
           "motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95",
         )}
@@ -120,7 +120,7 @@ export function CreateSkillDialog({
             type="button"
             aria-label="Close"
             onClick={handleClose}
-            className="rounded-md p-1 text-foreground-secondary hover:bg-background-secondary transition-colors"
+            className="rounded-md p-1 text-muted-foreground hover:bg-muted transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
@@ -134,8 +134,8 @@ export function CreateSkillDialog({
         >
           {/* Name */}
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-foreground-secondary">
-              Name <span className="text-foreground-danger">*</span>
+            <span className="text-xs font-medium text-muted-foreground">
+              Name <span className="text-destructive">*</span>
             </span>
             <input
               type="text"
@@ -144,14 +144,14 @@ export function CreateSkillDialog({
               placeholder="my-skill-name"
               readOnly={isEditing}
               className={cn(
-                "w-full rounded-lg border border-border bg-background-secondary px-3 py-2 text-sm font-mono",
-                "placeholder:text-foreground-secondary/40",
+                "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm font-mono",
+                "placeholder:text-muted-foreground",
                 "focus:outline-none focus:ring-1 focus:ring-ring transition-colors",
                 isEditing && "opacity-60 cursor-not-allowed",
               )}
             />
             {name.length > 0 && !nameValid && (
-              <p className="text-xs text-foreground-danger">
+              <p className="text-xs text-destructive">
                 Must be kebab-case (e.g. code-review)
               </p>
             )}
@@ -159,8 +159,8 @@ export function CreateSkillDialog({
 
           {/* Description */}
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-foreground-secondary">
-              Description <span className="text-foreground-danger">*</span>
+            <span className="text-xs font-medium text-muted-foreground">
+              Description <span className="text-destructive">*</span>
             </span>
             <input
               type="text"
@@ -171,8 +171,8 @@ export function CreateSkillDialog({
               }}
               placeholder="What it does and when to use it..."
               className={cn(
-                "w-full rounded-lg border border-border bg-background-secondary px-3 py-2 text-sm",
-                "placeholder:text-foreground-secondary/40",
+                "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm",
+                "placeholder:text-muted-foreground",
                 "focus:outline-none focus:ring-1 focus:ring-ring transition-colors",
               )}
             />
@@ -180,7 +180,7 @@ export function CreateSkillDialog({
 
           {/* Instructions */}
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-foreground-secondary">
+            <span className="text-xs font-medium text-muted-foreground">
               Instructions
             </span>
             <textarea
@@ -189,15 +189,15 @@ export function CreateSkillDialog({
               rows={10}
               placeholder="Markdown instructions the agent will follow..."
               className={cn(
-                "w-full resize-y rounded-lg border border-border bg-background-secondary px-3 py-2 text-xs font-mono leading-relaxed",
-                "placeholder:text-foreground-secondary/40",
+                "w-full resize-y rounded-lg border border-input bg-background px-3 py-2 text-xs font-mono leading-relaxed",
+                "placeholder:text-muted-foreground",
                 "focus:outline-none focus:ring-1 focus:ring-ring transition-colors",
               )}
             />
           </label>
 
           {/* Error */}
-          {error && <p className="text-xs text-foreground-danger">{error}</p>}
+          {error && <p className="text-xs text-destructive">{error}</p>}
         </form>
 
         {/* Footer */}

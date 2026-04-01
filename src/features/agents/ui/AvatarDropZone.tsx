@@ -185,10 +185,10 @@ export function AvatarDropZone({
           onDrop={handleDrop}
           onClick={handleClick}
           className={cn(
-            "flex h-16 w-16 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 bg-background-secondary shadow-sm transition-all",
+            "flex h-16 w-16 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 bg-muted shadow-sm transition-all",
             isDragOver
               ? "scale-105 border-accent bg-accent/15 shadow-md ring-4 ring-accent/20"
-              : "border-border hover:border-border-primary/50 hover:bg-background-tertiary",
+              : "border-border hover:border-border hover:bg-accent",
             disabled && "opacity-70 cursor-not-allowed",
             isUploading && "animate-pulse",
           )}
@@ -201,7 +201,7 @@ export function AvatarDropZone({
               onError={() => setError("Failed to load image")}
             />
           ) : (
-            <div className="flex flex-col items-center justify-center text-foreground-secondary/50">
+            <div className="flex flex-col items-center justify-center text-muted-foreground">
               <Camera className="h-5 w-5" />
             </div>
           )}
@@ -215,8 +215,8 @@ export function AvatarDropZone({
             onClick={handleClear}
             className={cn(
               "absolute -top-0.5 -right-0.5 z-10 flex h-5 w-5 items-center justify-center rounded-full",
-              "bg-background border border-border text-foreground-secondary shadow-sm",
-              "hover:bg-background-secondary hover:text-foreground transition-colors",
+              "bg-background border border-border text-muted-foreground shadow-sm",
+              "hover:bg-muted hover:text-foreground transition-colors",
             )}
           >
             <X className="h-3 w-3" />
@@ -224,9 +224,7 @@ export function AvatarDropZone({
         )}
       </div>
 
-      {error && (
-        <span className="text-[10px] text-foreground-danger">{error}</span>
-      )}
+      {error && <span className="text-[10px] text-destructive">{error}</span>}
     </div>
   );
 }

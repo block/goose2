@@ -33,13 +33,13 @@ export function ThinkingBlock({
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-1.5 text-xs text-foreground-secondary hover:text-foreground-primary transition-colors duration-150"
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors duration-150"
         aria-expanded={expanded}
         aria-label={`${expanded ? "Collapse" : "Expand"} ${label}`}
       >
         <span
           className={cn(
-            "w-5 h-5 rounded-full bg-background-tertiary flex-shrink-0 flex items-center justify-center",
+            "w-5 h-5 rounded-full bg-accent flex-shrink-0 flex items-center justify-center",
             isStreaming && "bg-amber-500/10",
           )}
         >
@@ -56,7 +56,7 @@ export function ThinkingBlock({
       </button>
 
       {expanded && (
-        <div className="mt-2 ml-[26px] pl-3 border-l-2 border-border text-foreground-secondary text-[13px] leading-relaxed italic animate-fade-in max-h-64 overflow-y-auto">
+        <div className="mt-2 ml-[26px] pl-3 border-l-2 border-border text-muted-foreground text-[13px] leading-relaxed italic animate-fade-in max-h-64 overflow-y-auto">
           <MarkdownContent content={text} className="text-[13px]" />
         </div>
       )}

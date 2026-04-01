@@ -109,13 +109,13 @@ export function ChatInputSelector({
                     {item.label}
                   </span>
                   {item.description ? (
-                    <span className="block truncate text-xs text-foreground-tertiary">
+                    <span className="block truncate text-xs text-muted-foreground">
                       {item.description}
                     </span>
                   ) : null}
                 </div>
                 {item.value === value ? (
-                  <Check className="mt-0.5 size-4 shrink-0 text-foreground-secondary" />
+                  <Check className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                 ) : null}
               </DropdownMenuItem>
             ))}

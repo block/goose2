@@ -80,7 +80,7 @@ function ItemMenu({
         }}
         className={cn(
           "flex items-center justify-center w-6 h-6 rounded-md",
-          "text-foreground-secondary/40 hover:text-foreground hover:bg-background-tertiary/50",
+          "text-muted-foreground hover:text-foreground hover:bg-accent/50",
           open
             ? "visible opacity-100"
             : "invisible group-hover:visible opacity-0 group-hover:opacity-100",
@@ -91,7 +91,7 @@ function ItemMenu({
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full z-10 mt-1 w-28 rounded-lg border border-border bg-background py-1 shadow-lg"
+          className="absolute right-0 top-full z-10 mt-1 w-28 rounded-lg border border-border bg-background py-1 shadow-popover"
         >
           {onEdit && (
             <button
@@ -101,7 +101,7 @@ function ItemMenu({
                 setOpen(false);
                 onEdit();
               }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-background-secondary transition-colors"
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted transition-colors"
             >
               Edit
             </button>
@@ -114,7 +114,7 @@ function ItemMenu({
                 setOpen(false);
                 onArchive();
               }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-background-secondary transition-colors"
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted transition-colors"
             >
               Archive
             </button>
@@ -168,7 +168,7 @@ function ProjectSection({
           className={cn(
             "flex items-center flex-1 min-w-0 gap-2 py-1.5 px-2.5 rounded-md text-[13px]",
             "transition-colors duration-150",
-            "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
+            "text-muted-foreground hover:text-foreground hover:bg-accent/50",
           )}
         >
           {isExpanded ? (
@@ -198,7 +198,7 @@ function ProjectSection({
           title="New chat in project"
           className={cn(
             "flex items-center justify-center w-6 h-6 rounded-md mr-1 flex-shrink-0",
-            "text-foreground-secondary/50 hover:text-foreground hover:bg-background-tertiary/50",
+            "text-muted-foreground hover:text-foreground hover:bg-accent/50",
             "invisible group-hover:visible opacity-0 group-hover:opacity-100",
           )}
         >
@@ -243,7 +243,7 @@ function ProjectSection({
               }}
               className={cn(
                 "flex items-center gap-1.5 w-full pl-8 pr-3 py-1 text-[11px]",
-                "text-foreground-secondary/60 hover:text-foreground-secondary transition-colors duration-150",
+                "text-muted-foreground hover:text-muted-foreground transition-colors duration-150",
               )}
             >
               {showAll ? (
@@ -312,7 +312,7 @@ export function SidebarProjectsSection({
       >
         <span
           className={cn(
-            "text-[10px] font-semibold uppercase tracking-wider text-foreground-secondary/70 flex-1 pl-1.5",
+            "text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex-1 pl-1.5",
             labelTransition,
             labelVisible
               ? "opacity-100 w-auto"
@@ -328,7 +328,7 @@ export function SidebarProjectsSection({
             title="New project"
             className={cn(
               "flex items-center justify-center w-6 h-6 rounded-md flex-shrink-0 mr-1",
-              "text-foreground-secondary/50 hover:text-foreground hover:bg-background-tertiary/50",
+              "text-muted-foreground hover:text-foreground hover:bg-accent/50",
               "transition-opacity duration-150",
             )}
           >
@@ -347,7 +347,7 @@ export function SidebarProjectsSection({
               onClick={() => onNavigate?.("projects")}
               className={cn(
                 "flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-200",
-                "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
+                "text-muted-foreground hover:text-foreground hover:bg-accent/50",
               )}
             >
               <span
@@ -391,7 +391,7 @@ export function SidebarProjectsSection({
           >
             <span
               className={cn(
-                "text-[10px] font-semibold uppercase tracking-wider text-foreground-secondary/70 pl-1.5",
+                "text-[10px] font-semibold uppercase tracking-wider text-muted-foreground pl-1.5",
                 labelTransition,
                 labelVisible
                   ? "opacity-100 w-auto"
@@ -413,8 +413,8 @@ export function SidebarProjectsSection({
                   className={cn(
                     "flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-200",
                     activeTabId === tab.id
-                      ? "bg-background-tertiary/70 text-foreground"
-                      : "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
+                      ? "bg-accent/70 text-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
                   )}
                 >
                   <MessageSquare className="w-4 h-4" />
@@ -445,7 +445,7 @@ export function SidebarProjectsSection({
                   onClick={() => setShowAllRecents((prev) => !prev)}
                   className={cn(
                     "flex items-center gap-1.5 w-full px-2.5 py-1 text-[11px]",
-                    "text-foreground-secondary/60 hover:text-foreground-secondary transition-colors duration-150",
+                    "text-muted-foreground hover:text-muted-foreground transition-colors duration-150",
                   )}
                 >
                   {showAllRecents ? (

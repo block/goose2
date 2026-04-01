@@ -18,7 +18,7 @@ import type {
 
 const STATUS_STYLES: Record<AgentStatus, { dot: string; label: string }> = {
   online: { dot: "text-green-500", label: "Online" },
-  offline: { dot: "text-foreground-secondary/40", label: "Offline" },
+  offline: { dot: "text-muted-foreground", label: "Offline" },
   starting: { dot: "text-yellow-500", label: "Starting" },
   error: { dot: "text-red-500", label: "Error" },
 };
@@ -26,13 +26,13 @@ const STATUS_STYLES: Record<AgentStatus, { dot: string; label: string }> = {
 function AgentRow({ agent }: { agent: Agent }) {
   const status = STATUS_STYLES[agent.status];
   return (
-    <li className="flex items-center justify-between rounded-lg border border-border px-4 py-3 transition-colors hover:bg-background-secondary/50">
+    <li className="flex items-center justify-between rounded-lg border border-border px-4 py-3 transition-colors hover:bg-muted/50">
       <div className="flex items-center gap-3 min-w-0">
-        <Bot className="h-5 w-5 shrink-0 text-foreground-secondary" />
+        <Bot className="h-5 w-5 shrink-0 text-muted-foreground" />
         <div className="min-w-0">
           <p className="text-sm font-medium truncate">{agent.name}</p>
           {agent.persona && (
-            <p className="text-xs text-foreground-secondary truncate">
+            <p className="text-xs text-muted-foreground truncate">
               {agent.persona.displayName}
             </p>
           )}
@@ -43,9 +43,7 @@ function AgentRow({ agent }: { agent: Agent }) {
           className={cn("h-2.5 w-2.5 fill-current", status.dot)}
           aria-hidden="true"
         />
-        <span className="text-xs text-foreground-secondary">
-          {status.label}
-        </span>
+        <span className="text-xs text-muted-foreground">{status.label}</span>
       </div>
     </li>
   );
@@ -203,7 +201,7 @@ export function AgentsView() {
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h1 className="text-lg font-semibold">Personas</h1>
-              <p className="text-xs text-foreground-secondary">
+              <p className="text-xs text-muted-foreground">
                 Custom persona configurations for specific workflows
               </p>
             </div>
@@ -267,11 +265,11 @@ export function AgentsView() {
               Active Agents
             </h2>
             {filteredAgents.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-3 py-12 text-foreground-secondary">
+              <div className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground">
                 <Bot className="h-10 w-10 opacity-30" />
                 <div className="text-center">
                   <p className="text-sm font-medium">No active agents</p>
-                  <p className="text-xs text-foreground-secondary/60 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     Create an agent from a persona to get started.
                   </p>
                 </div>
@@ -304,9 +302,9 @@ export function AgentsView() {
             onClick={() => setDeletingPersona(null)}
             aria-hidden="true"
           />
-          <div className="relative z-10 w-full max-w-sm rounded-xl border border-border bg-background p-6 shadow-xl space-y-4">
+          <div className="relative z-10 w-full max-w-sm rounded-xl border border-border bg-background p-6 shadow-card space-y-4">
             <h3 className="text-sm font-semibold">Delete persona?</h3>
-            <p className="text-sm text-foreground-secondary">
+            <p className="text-sm text-muted-foreground">
               Are you sure you want to delete &quot;
               {deletingPersona.displayName}&quot;? This cannot be undone.
             </p>
@@ -332,7 +330,7 @@ export function AgentsView() {
 
       {/* Export notification toast */}
       {notification && (
-        <div className="fixed bottom-4 right-4 z-50 rounded-lg border border-border bg-background px-4 py-3 shadow-lg text-sm animate-in fade-in slide-in-from-bottom-2">
+        <div className="fixed bottom-4 right-4 z-50 rounded-lg border border-border bg-background px-4 py-3 shadow-popover text-sm animate-in fade-in slide-in-from-bottom-2">
           {notification}
         </div>
       )}

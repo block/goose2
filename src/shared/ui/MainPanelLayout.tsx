@@ -8,7 +8,7 @@ import type { ReactNode } from "react";
  */
 export function MainPanelLayout({
   children,
-  backgroundColor = "bg-background-primary",
+  backgroundColor = "bg-background",
 }: {
   children: ReactNode;
   backgroundColor?: string;
