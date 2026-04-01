@@ -112,6 +112,24 @@ function escapeHtml(str: string): string {
     .replace(/"/g, "&quot;");
 }
 
+/** Return the set of line indices that match INCLUDE_RE. */
+function getIncludeLineSet(text: string): Set<number> {
+  const set = new Set<number>();
+  const lines = text.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    if (INCLUDE_RE.test(lines[i])) set.add(i);
+  }
+  return set;
+}
+
+function setsEqual(a: Set<number>, b: Set<number>): boolean {
+  if (a.size !== b.size) return false;
+  for (const v of a) {
+    if (!b.has(v)) return false;
+  }
+  return true;
+}
+
 export function PromptEditor({
   value,
   onChange,
@@ -119,6 +137,7 @@ export function PromptEditor({
 }: PromptEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
   const lastPushedValue = useRef<string | null>(null);
+  const includeLines = useRef<Set<number>>(new Set());
 
   // Sync HTML when value changes externally (including initial mount)
   useEffect(() => {
@@ -126,6 +145,7 @@ export function PromptEditor({
     if (!el) return;
     if (value !== lastPushedValue.current) {
       lastPushedValue.current = value;
+      includeLines.current = getIncludeLineSet(value);
       el.innerHTML = value === "" ? "" : renderLines(value);
     }
   }, [value]);
@@ -139,10 +159,17 @@ export function PromptEditor({
     const normalized = text.replace(/\n$/, "");
     lastPushedValue.current = normalized;
 
-    // Re-render HTML so capsule styling is updated to match current text
-    const caret = getCaretPosition(el);
-    el.innerHTML = normalized === "" ? "" : renderLines(normalized);
-    setCaretPosition(el, caret);
+    // Only re-render innerHTML when include-line state changes (lines
+    // gained or lost the include: pattern). This avoids destroying and
+    // recreating DOM nodes on every keystroke, which caused characters
+    // to be reordered when typing quickly.
+    const newIncludeLines = getIncludeLineSet(normalized);
+    if (!setsEqual(newIncludeLines, includeLines.current)) {
+      includeLines.current = newIncludeLines;
+      const caret = getCaretPosition(el);
+      el.innerHTML = normalized === "" ? "" : renderLines(normalized);
+      setCaretPosition(el, caret);
+    }
 
     onChange(normalized);
   };
