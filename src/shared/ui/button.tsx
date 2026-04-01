@@ -18,15 +18,38 @@ const buttonVariants = cva(
         secondary:
           "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
+        toolbar:
+          "justify-start bg-transparent font-normal text-muted-foreground shadow-none hover:bg-accent hover:text-accent-foreground active:bg-accent active:text-accent-foreground focus-visible:ring-0 data-[state=open]:bg-accent data-[state=open]:text-accent-foreground aria-expanded:bg-accent aria-expanded:text-accent-foreground",
         link: "text-brand underline-offset-4 hover:underline",
       },
       size: {
+        xs: "h-7 rounded-md px-2.5 text-xs",
         default: "h-9 px-4 py-2",
         sm: "h-8 rounded-md px-3 text-xs",
         lg: "h-10 rounded-md px-8",
         icon: "h-9 w-9",
+        "icon-xs": "h-7 w-7",
+        "icon-sm": "h-8 w-8",
+        "icon-lg": "h-10 w-10",
       },
     },
+    compoundVariants: [
+      {
+        variant: "toolbar",
+        size: "xs",
+        className: "gap-1.5 px-1.5 text-[13px]",
+      },
+      {
+        variant: "toolbar",
+        size: "sm",
+        className: "gap-1.5 px-2 text-[13px]",
+      },
+      {
+        variant: "toolbar",
+        size: "default",
+        className: "gap-1.5 px-2.5 text-[13px]",
+      },
+    ],
     defaultVariants: {
       variant: "default",
       size: "default",
@@ -44,6 +67,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const Comp = asChild ? Slot : "button";
     return (
       <Comp
+        data-slot="button"
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         {...props}
