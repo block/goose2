@@ -212,7 +212,7 @@ function ProjectSection({
 
       {/* Nested chats */}
       {isExpanded && (
-        <div className="space-y-0.5">
+        <div className="mt-0.5 space-y-0.5">
           {visibleChats.map((tab) => {
             const isActive = activeTabId === tab.id;
             const isOpen = tab.isOpenTab ?? false;

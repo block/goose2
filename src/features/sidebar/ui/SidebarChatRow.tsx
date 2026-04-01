@@ -4,6 +4,7 @@ import { cn } from "@/shared/lib/cn";
 
 const OPEN_CHAT_ROW_CLASS = "text-foreground group-hover:text-foreground";
 const INACTIVE_CHAT_ROW_CLASS = "text-foreground group-hover:text-foreground";
+const ACTIVE_CHAT_ROW_CLASS = "bg-accent text-foreground";
 
 interface SidebarChatRowProps {
   id: string;
@@ -107,7 +108,7 @@ export function SidebarChatRow({
     <div
       className={cn(
         "flex items-center group rounded-md transition-colors duration-150",
-        isActive ? "bg-background-tertiary/70" : "hover:bg-accent",
+        isActive ? "bg-accent" : "hover:bg-accent",
         className,
       )}
     >
@@ -124,7 +125,7 @@ export function SidebarChatRow({
           "flex items-center gap-2 flex-1 min-w-0 py-1.5 text-[13px]",
           "transition-colors duration-150 px-2.5 text-left bg-transparent",
           isActive
-            ? "text-foreground font-medium"
+            ? ACTIVE_CHAT_ROW_CLASS
             : isOpen
               ? OPEN_CHAT_ROW_CLASS
               : INACTIVE_CHAT_ROW_CLASS,
