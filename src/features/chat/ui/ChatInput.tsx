@@ -188,14 +188,19 @@ export function ChatInput({
     return () => observer.disconnect();
   }, []);
 
-  // Revoke object URLs on unmount to avoid memory leaks
+  // Keep a ref to latest images so the unmount cleanup always sees current state
+  // without needing images as a dependency (which would revoke still-active URLs
+  // on every add/remove).
+  const imagesRef = useRef(images);
+  imagesRef.current = images;
+
   useEffect(() => {
     return () => {
-      for (const img of images) {
+      for (const img of imagesRef.current) {
         URL.revokeObjectURL(img.objectUrl);
       }
     };
-  }, [images]);
+  }, []);
 
   const handleSend = useCallback(() => {
     if (!canSend) return;
