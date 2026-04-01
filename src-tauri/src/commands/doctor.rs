@@ -1,6 +1,6 @@
 //! Tauri command wrappers for the doctor health-check system.
 
-pub use doctor::{CheckStatus, DoctorCheck, DoctorReport, FixType};
+pub use doctor::{DoctorReport, FixType};
 
 /// Run all health checks and return the report.
 #[tauri::command]
