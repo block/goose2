@@ -17,12 +17,17 @@ export function parseEditorText(text: string): {
   const lines = text.split("\n");
   const workingDirs: string[] = [];
   const promptLines: string[] = [];
+  let parsingIncludeBlock = true;
 
   for (const line of lines) {
     const match = line.match(INCLUDE_RE);
-    if (match) {
+    if (parsingIncludeBlock && match) {
       workingDirs.push(match[1].trim());
       continue;
+    }
+
+    if (line.trim() !== "") {
+      parsingIncludeBlock = false;
     }
 
     promptLines.push(line);
@@ -43,8 +48,12 @@ export function parseEditorText(text: string): {
 }
 
 export function insertWorkingDir(text: string, directory: string): string {
-  const lines = text === "" ? [] : text.split("\n");
-  return [...lines, `include: ${directory}`].join("\n");
+  if (text === "") {
+    return `include: ${directory}`;
+  }
+
+  const { prompt, workingDirs } = parseEditorText(text);
+  return buildEditorText([...workingDirs, directory], prompt);
 }
 
 export function hasEquivalentWorkingDir(
@@ -69,7 +78,7 @@ function normalizeWorkingDirPath(
   const trimmedHomeDir = homeDir?.trim().replace(/[\\/]+$/, "") ?? null;
 
   if (!trimmedHomeDir) {
-    return trimmedDirectory;
+    return trimmedDirectory.replace(/[\\/]+$/, "");
   }
 
   if (trimmedDirectory === "~") {
@@ -77,8 +86,11 @@ function normalizeWorkingDirPath(
   }
 
   if (trimmedDirectory.startsWith("~/") || trimmedDirectory.startsWith("~\\")) {
-    return `${trimmedHomeDir}${trimmedDirectory.slice(1)}`;
+    return `${trimmedHomeDir}${trimmedDirectory.slice(1)}`.replace(
+      /[\\/]+$/,
+      "",
+    );
   }
 
-  return trimmedDirectory;
+  return trimmedDirectory.replace(/[\\/]+$/, "");
 }

@@ -28,29 +28,29 @@ describe("projectPromptText", () => {
     });
   });
 
-  it("ignores include lines after prompt content begins", () => {
+  it("keeps include-looking prompt lines after prompt content begins", () => {
     expect(parseEditorText("prompt first\ninclude: /tmp/kept")).toEqual({
-      prompt: "prompt first",
-      workingDirs: ["/tmp/kept"],
+      prompt: "prompt first\ninclude: /tmp/kept",
+      workingDirs: [],
     });
   });
 
-  it("appends a directory after the existing prompt text", () => {
+  it("creates a leading include block for prompt-only text", () => {
     expect(insertWorkingDir("Existing prompt", "/tmp/one")).toBe(
-      "Existing prompt\ninclude: /tmp/one",
+      "include: /tmp/one\n\nExisting prompt",
     );
   });
 
-  it("appends a directory to the bottom of the editor text", () => {
+  it("appends a directory within the leading include block", () => {
     expect(
       insertWorkingDir("include: /tmp/one\n\nPrompt body", "/tmp/two"),
-    ).toBe("include: /tmp/one\n\nPrompt body\ninclude: /tmp/two");
+    ).toBe("include: /tmp/one\ninclude: /tmp/two\n\nPrompt body");
   });
 
   it("treats tilde and absolute paths as equivalent when checking duplicates", () => {
     expect(
       hasEquivalentWorkingDir(
-        "Prompt body\ninclude: ~/dev/goose2",
+        "include: ~/dev/goose2\n\nPrompt body",
         "/Users/mtoohey/dev/goose2",
         "/Users/mtoohey",
       ),
@@ -60,10 +60,20 @@ describe("projectPromptText", () => {
   it("does not match different directories when checking duplicates", () => {
     expect(
       hasEquivalentWorkingDir(
-        "Prompt body\ninclude: ~/dev/goose2",
+        "include: ~/dev/goose2\n\nPrompt body",
         "/Users/mtoohey/dev/other",
         "/Users/mtoohey",
       ),
     ).toBe(false);
+  });
+
+  it("treats trailing slashes as equivalent when checking duplicates", () => {
+    expect(
+      hasEquivalentWorkingDir(
+        "include: /Users/mtoohey/dev/goose2/\n\nPrompt body",
+        "/Users/mtoohey/dev/goose2",
+        "/Users/mtoohey",
+      ),
+    ).toBe(true);
   });
 });

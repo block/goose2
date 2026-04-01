@@ -1,4 +1,4 @@
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 use std::fs;
 use std::path::PathBuf;
 
@@ -94,7 +94,7 @@ fn find_project_by_id(id: &str) -> Result<(PathBuf, ProjectInfo), String> {
     Err(format!("Project with id \"{}\" not found", id))
 }
 
-#[derive(serde::Serialize, Clone)]
+#[derive(serde::Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectInfo {
     pub id: String,
@@ -105,6 +105,7 @@ pub struct ProjectInfo {
     pub color: String,
     pub preferred_provider: Option<String>,
     pub preferred_model: Option<String>,
+    #[serde(default)]
     pub working_dirs: Vec<String>,
     pub use_worktrees: bool,
     #[serde(default)]
@@ -113,70 +114,6 @@ pub struct ProjectInfo {
     pub archived_at: Option<String>,
     pub created_at: String,
     pub updated_at: String,
-}
-
-/// Shadow struct for backward-compatible deserialization.
-/// Handles both the old `workingDir` (string) and new `workingDirs` (array) formats.
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ProjectInfoRaw {
-    id: String,
-    name: String,
-    description: String,
-    prompt: String,
-    icon: String,
-    color: String,
-    preferred_provider: Option<String>,
-    preferred_model: Option<String>,
-    /// New field: array of working directories.
-    #[serde(default)]
-    working_dirs: Vec<String>,
-    /// Legacy field: single working directory (old format).
-    #[serde(default)]
-    working_dir: Option<String>,
-    use_worktrees: bool,
-    #[serde(default)]
-    order: i32,
-    #[serde(default)]
-    archived_at: Option<String>,
-    created_at: String,
-    updated_at: String,
-}
-
-impl<'de> Deserialize<'de> for ProjectInfo {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let raw = ProjectInfoRaw::deserialize(deserializer)?;
-
-        // Merge legacy workingDir into workingDirs for backward compatibility
-        let working_dirs = if raw.working_dirs.is_empty() {
-            match raw.working_dir {
-                Some(dir) if !dir.is_empty() => vec![dir],
-                _ => Vec::new(),
-            }
-        } else {
-            raw.working_dirs
-        };
-
-        Ok(ProjectInfo {
-            id: raw.id,
-            name: raw.name,
-            description: raw.description,
-            prompt: raw.prompt,
-            icon: raw.icon,
-            color: raw.color,
-            preferred_provider: raw.preferred_provider,
-            preferred_model: raw.preferred_model,
-            working_dirs,
-            use_worktrees: raw.use_worktrees,
-            order: raw.order,
-            archived_at: raw.archived_at,
-            created_at: raw.created_at,
-            updated_at: raw.updated_at,
-        })
-    }
 }
 
 #[tauri::command]
