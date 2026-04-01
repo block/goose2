@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 use tokio_util::sync::CancellationToken;
 
@@ -206,7 +206,7 @@ impl MessageWriter for TauriMessageWriter {
     }
 }
 
-//TauriStore
+// TauriStore
 
 /// A [`Store`] implementation that persists ACP session mappings to disk
 /// under `~/.goose/acp_sessions/` and reads conversation history from the
@@ -232,13 +232,13 @@ impl TauriStore {
 
     /// Look up a previously stored agent session ID, or `None` for new sessions.
     pub fn get_agent_session_id(&self, session_id: &str) -> Option<String> {
+        #[derive(Deserialize)]
+        struct SessionMapping { agent_session_id: String }
+
         let path = self.sessions_dir.join(format!("{session_id}.json"));
         let json = std::fs::read_to_string(&path).ok()?;
-        let value: serde_json::Value = serde_json::from_str(&json).ok()?;
-        value
-            .get("agent_session_id")
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string())
+        let mapping: SessionMapping = serde_json::from_str(&json).ok()?;
+        Some(mapping.agent_session_id)
     }
 
     /// Remove session files that are older than the given duration.
@@ -306,7 +306,7 @@ impl Store for TauriStore {
     }
 }
 
-//AcpSessionRegistry
+// AcpSessionRegistry
 
 /// Info about a running ACP session, returned to the frontend.
 #[derive(Clone, Serialize)]
@@ -398,7 +398,7 @@ impl AcpSessionRegistry {
     }
 }
 
-//AcpService
+// AcpService
 
 /// High-level service for running ACP prompts through an agent driver.
 ///
