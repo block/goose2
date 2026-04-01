@@ -16,41 +16,69 @@ export function parseEditorText(text: string): {
 } {
   const lines = text.split("\n");
   const workingDirs: string[] = [];
-  let i = 0;
+  const promptLines: string[] = [];
 
-  for (; i < lines.length; i++) {
-    const match = lines[i].match(INCLUDE_RE);
+  for (const line of lines) {
+    const match = line.match(INCLUDE_RE);
     if (match) {
       workingDirs.push(match[1].trim());
       continue;
     }
 
-    if (lines[i].trim() !== "") {
-      break;
-    }
+    promptLines.push(line);
+  }
+
+  while (promptLines[0]?.trim() === "") {
+    promptLines.shift();
+  }
+
+  while (promptLines[promptLines.length - 1]?.trim() === "") {
+    promptLines.pop();
   }
 
   return {
-    prompt: lines.slice(i).join("\n"),
+    prompt: promptLines.join("\n"),
     workingDirs,
   };
 }
 
 export function insertWorkingDir(text: string, directory: string): string {
   const lines = text === "" ? [] : text.split("\n");
-  let insertAt = 0;
+  return [...lines, `include: ${directory}`].join("\n");
+}
 
-  while (insertAt < lines.length) {
-    if (INCLUDE_RE.test(lines[insertAt]) || lines[insertAt].trim() === "") {
-      insertAt++;
-      continue;
-    }
+export function hasEquivalentWorkingDir(
+  text: string,
+  directory: string,
+  homeDir: string | null,
+): boolean {
+  const normalizedDirectory = normalizeWorkingDirPath(directory, homeDir);
 
-    break;
+  return parseEditorText(text).workingDirs.some(
+    (existingDirectory) =>
+      normalizeWorkingDirPath(existingDirectory, homeDir) ===
+      normalizedDirectory,
+  );
+}
+
+function normalizeWorkingDirPath(
+  directory: string,
+  homeDir: string | null,
+): string {
+  const trimmedDirectory = directory.trim();
+  const trimmedHomeDir = homeDir?.trim().replace(/[\\/]+$/, "") ?? null;
+
+  if (!trimmedHomeDir) {
+    return trimmedDirectory;
   }
 
-  const nextLines = [...lines];
-  nextLines.splice(insertAt, 0, `include: ${directory}`);
+  if (trimmedDirectory === "~") {
+    return trimmedHomeDir;
+  }
 
-  return nextLines.join("\n");
+  if (trimmedDirectory.startsWith("~/") || trimmedDirectory.startsWith("~\\")) {
+    return `${trimmedHomeDir}${trimmedDirectory.slice(1)}`;
+  }
+
+  return trimmedDirectory;
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildEditorText,
+  hasEquivalentWorkingDir,
   insertWorkingDir,
   parseEditorText,
 } from "./projectPromptText";
@@ -28,21 +29,41 @@ describe("projectPromptText", () => {
   });
 
   it("ignores include lines after prompt content begins", () => {
-    expect(parseEditorText("prompt first\ninclude: /tmp/ignored")).toEqual({
-      prompt: "prompt first\ninclude: /tmp/ignored",
-      workingDirs: [],
+    expect(parseEditorText("prompt first\ninclude: /tmp/kept")).toEqual({
+      prompt: "prompt first",
+      workingDirs: ["/tmp/kept"],
     });
   });
 
-  it("inserts a directory before the first prompt line", () => {
+  it("appends a directory after the existing prompt text", () => {
     expect(insertWorkingDir("Existing prompt", "/tmp/one")).toBe(
-      "include: /tmp/one\nExisting prompt",
+      "Existing prompt\ninclude: /tmp/one",
     );
   });
 
-  it("appends a directory after existing include and blank header lines", () => {
+  it("appends a directory to the bottom of the editor text", () => {
     expect(
       insertWorkingDir("include: /tmp/one\n\nPrompt body", "/tmp/two"),
-    ).toBe("include: /tmp/one\n\ninclude: /tmp/two\nPrompt body");
+    ).toBe("include: /tmp/one\n\nPrompt body\ninclude: /tmp/two");
+  });
+
+  it("treats tilde and absolute paths as equivalent when checking duplicates", () => {
+    expect(
+      hasEquivalentWorkingDir(
+        "Prompt body\ninclude: ~/dev/goose2",
+        "/Users/mtoohey/dev/goose2",
+        "/Users/mtoohey",
+      ),
+    ).toBe(true);
+  });
+
+  it("does not match different directories when checking duplicates", () => {
+    expect(
+      hasEquivalentWorkingDir(
+        "Prompt body\ninclude: ~/dev/goose2",
+        "/Users/mtoohey/dev/other",
+        "/Users/mtoohey",
+      ),
+    ).toBe(false);
   });
 });

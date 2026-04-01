@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { X, FolderOpen } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import { getHomeDir } from "@/shared/api/system";
 import { Button } from "@/shared/ui/button";
 import { createProject, updateProject } from "../api/projects";
 import { discoverAcpProviders, type AcpProvider } from "@/shared/api/acp";
 import {
   buildEditorText,
+  hasEquivalentWorkingDir,
   insertWorkingDir,
   parseEditorText,
 } from "../lib/projectPromptText";
@@ -82,7 +84,15 @@ export function CreateProjectDialog({
         title: "Select Directory",
       });
       if (selected && typeof selected === "string") {
-        setPrompt((prev) => insertWorkingDir(prev, selected));
+        const homeDir = await getHomeDir().catch(() => null);
+
+        setPrompt((prev) => {
+          if (hasEquivalentWorkingDir(prev, selected, homeDir)) {
+            return prev;
+          }
+
+          return insertWorkingDir(prev, selected);
+        });
       }
     } catch {
       // Dialog plugin not available
