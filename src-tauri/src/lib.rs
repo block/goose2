@@ -4,7 +4,6 @@ mod types;
 
 use std::sync::Arc;
 
-use commands::sidecar::SidecarState;
 use services::acp::AcpSessionRegistry;
 use services::personas::PersonaStore;
 use services::sessions::SessionStore;
@@ -26,16 +25,10 @@ pub fn run() {
                 .with_state_flags(StateFlags::all() & !StateFlags::VISIBLE)
                 .build(),
         )
-        .manage(SidecarState::default())
         .manage(PersonaStore::new())
         .manage(Arc::new(SessionStore::new()))
         .manage(acp_registry)
         .invoke_handler(tauri::generate_handler![
-            commands::sidecar::start_sidecar,
-            commands::sidecar::stop_sidecar,
-            commands::sidecar::get_sidecar_url,
-            commands::sidecar::get_sidecar_secret,
-            commands::sidecar::sidecar_health,
             commands::agents::list_personas,
             commands::agents::create_persona,
             commands::agents::update_persona,
