@@ -32,6 +32,12 @@ export async function acpSendMessage(
 }
 
 /** Cancel an in-progress ACP session so the backend stops streaming. */
-export async function acpCancelSession(sessionId: string): Promise<boolean> {
-  return invoke("acp_cancel_session", { sessionId });
+export async function acpCancelSession(
+  sessionId: string,
+  personaId?: string,
+): Promise<boolean> {
+  return invoke("acp_cancel_session", {
+    sessionId,
+    personaId: personaId ?? null,
+  });
 }

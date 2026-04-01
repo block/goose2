@@ -115,10 +115,10 @@ export function useChat(
     store.setChatState("idle");
     store.setStreamingMessageId(null);
     // Cancel the backend ACP session to stop orphaned streaming events
-    acpCancelSession(sessionId).catch(() => {
+    acpCancelSession(sessionId, personaInfo?.id).catch(() => {
       // Best-effort cancellation — ignore errors
     });
-  }, [store, sessionId]);
+  }, [store, sessionId, personaInfo]);
 
   const retryLastMessage = useCallback(async () => {
     const sessionMessages = store.messagesBySession[sessionId] ?? [];

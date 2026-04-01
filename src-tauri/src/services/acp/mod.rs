@@ -17,6 +17,15 @@ use acp_client::{AcpDriver, AgentDriver, MessageWriter, Store};
 use crate::services::sessions::SessionStore;
 use crate::types::messages::{MessageContent, MessageRole};
 
+/// Build a composite registry key: `{session_id}__{persona_id}` when a
+/// persona is active, or plain `session_id` for backward compatibility.
+pub fn make_composite_key(session_id: &str, persona_id: Option<&str>) -> String {
+    match persona_id {
+        Some(pid) if !pid.is_empty() => format!("{session_id}__{pid}"),
+        _ => session_id.to_string(),
+    }
+}
+
 /// High-level service for running ACP prompts through an agent driver.
 ///
 /// The actual response content is streamed to the frontend via Tauri events
@@ -85,6 +94,7 @@ impl AcpService {
             persona_id.clone(),
             persona_name.clone(),
         ));
+        let registry_key = make_composite_key(&session_id, persona_id.as_deref());
         let tauri_store = TauriStore::new(
             Arc::clone(&session_store),
             session_id.clone(),
@@ -92,7 +102,7 @@ impl AcpService {
         );
         let agent_session_id = tauri_store.get_agent_session_id();
         let store: Arc<dyn Store> = Arc::new(tauri_store);
-        let cancel_token = registry.register(&session_id, &provider_id);
+        let cancel_token = registry.register(&registry_key, &provider_id);
 
         // Build the effective prompt, including persona instructions and
         // catch-up context when available.  When there is no extra context we
@@ -148,7 +158,7 @@ impl AcpService {
         .await;
 
         // Always deregister, even on panic/JoinError
-        registry_inner.deregister(&session_id);
+        registry_inner.deregister(&registry_key);
 
         join_result.map_err(|e| format!("ACP task panicked: {e}"))?
     }
