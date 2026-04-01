@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { ChevronDown, Check, Plus, Sparkles, User } from "lucide-react";
+import { AtSign, ChevronDown, Check, Plus, Sparkles, User } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import {
   DropdownMenu,
@@ -9,6 +9,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/shared/ui/dropdown-menu";
+import { Button } from "@/shared/ui/button";
 import type { Persona } from "@/shared/types/agents";
 
 interface PersonaPickerProps {
@@ -18,6 +19,7 @@ interface PersonaPickerProps {
   onCreatePersona?: () => void;
   compact?: boolean;
   className?: string;
+  triggerVariant?: "default" | "icon";
 }
 
 export function PersonaPicker({
@@ -27,6 +29,7 @@ export function PersonaPicker({
   onCreatePersona,
   compact = false,
   className,
+  triggerVariant = "default",
 }: PersonaPickerProps) {
   const selected = useMemo(
     () => personas.find((p) => p.id === selectedPersonaId) ?? personas[0],
@@ -47,20 +50,40 @@ export function PersonaPicker({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className={cn(
-            "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-background-tertiary",
-            className,
-          )}
-          aria-label="Select persona"
-        >
-          <PersonaAvatar persona={selected} size="sm" />
-          {!compact && <span>{label}</span>}
-          <ChevronDown className="h-3 w-3 opacity-50" />
-        </button>
+        {triggerVariant === "icon" ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className={cn(
+              "rounded-lg text-foreground-secondary hover:bg-background-tertiary hover:text-foreground",
+              className,
+            )}
+            aria-label="Choose assistant"
+          >
+            <AtSign className="h-4 w-4" />
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "gap-1.5 rounded-lg px-2.5 font-medium text-foreground hover:bg-background-tertiary",
+              className,
+            )}
+            aria-label="Select persona"
+          >
+            <PersonaAvatar persona={selected} size="sm" />
+            {!compact && <span>{label}</span>}
+            <ChevronDown className="h-3 w-3 opacity-50" />
+          </Button>
+        )}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-64">
+      <DropdownMenuContent
+        align="start"
+        className="max-h-[min(70vh,32rem)] w-[22rem] overflow-y-auto"
+      >
         {builtinPersonas.length > 0 && (
           <>
             <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-foreground-tertiary">
@@ -182,3 +205,5 @@ function PersonaAvatar({
     </div>
   );
 }
+
+export { PersonaAvatar };

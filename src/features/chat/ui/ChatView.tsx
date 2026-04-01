@@ -24,6 +24,12 @@ interface ChatViewProps {
   initialPersonaId?: string;
   initialMessage?: string;
   onInitialMessageConsumed?: () => void;
+  onCreateProject?: (options?: {
+    onCreated?: (projectId: string) => void;
+  }) => void;
+  onCreateProjectFromFolder?: (options?: {
+    onCreated?: (projectId: string) => void;
+  }) => void;
 }
 
 export function ChatView({
@@ -34,6 +40,8 @@ export function ChatView({
   initialPersonaId,
   initialMessage,
   onInitialMessageConsumed,
+  onCreateProject,
+  onCreateProjectFromFolder,
 }: ChatViewProps) {
   const [activeSessionId] = useState(() => sessionId ?? crypto.randomUUID());
   const [providers, setProviders] = useState<AcpProvider[]>([]);
@@ -46,6 +54,7 @@ export function ChatView({
   const session = useChatSessionStore((s) =>
     s.sessions.find((candidate) => candidate.id === activeSessionId),
   );
+  const projects = useProjectStore((s) => s.projects);
   const storedProject = useProjectStore((s) =>
     session?.projectId
       ? s.projects.find((candidate) => candidate.id === session.projectId)
@@ -55,6 +64,17 @@ export function ChatView({
     null,
   );
   const project = storedProject ?? fallbackProject;
+  const availableProjects = useMemo(
+    () =>
+      [...projects]
+        .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name))
+        .map((projectInfo) => ({
+          id: projectInfo.id,
+          name: projectInfo.name,
+          workingDir: projectInfo.workingDirs[0] ?? null,
+        })),
+    [projects],
+  );
   const effectiveProvider =
     session?.providerId ??
     initialProvider ??
@@ -137,6 +157,15 @@ export function ChatView({
         .updateSession(activeSessionId, { providerId });
     },
     [activeSessionId, selectedProvider],
+  );
+
+  const handleProjectChange = useCallback(
+    (projectId: string | null) => {
+      useChatSessionStore
+        .getState()
+        .updateSession(activeSessionId, { projectId });
+    },
+    [activeSessionId],
   );
 
   // When persona changes, update the provider to match persona's default
@@ -317,8 +346,25 @@ export function ChatView({
         providers={providers}
         selectedProvider={selectedProvider}
         onProviderChange={handleProviderChange}
-        folder={projectFolders[0]?.id ?? null}
-        availableFolders={projectFolders}
+        selectedProjectId={session?.projectId ?? null}
+        availableProjects={availableProjects}
+        onProjectChange={handleProjectChange}
+        onCreateProject={(options) =>
+          onCreateProject?.({
+            onCreated: (projectId) => {
+              handleProjectChange(projectId);
+              options?.onCreated?.(projectId);
+            },
+          })
+        }
+        onCreateProjectFromFolder={(options) =>
+          onCreateProjectFromFolder?.({
+            onCreated: (projectId) => {
+              handleProjectChange(projectId);
+              options?.onCreated?.(projectId);
+            },
+          })
+        }
       />
     </div>
   );

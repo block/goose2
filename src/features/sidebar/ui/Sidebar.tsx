@@ -105,7 +105,7 @@ export function Sidebar({
         id: session.id,
         title: session.title,
         sessionId: session.id,
-        projectId: session.projectId,
+        projectId: session.projectId ?? undefined,
         isOpenTab: openTabIdSet.has(session.id),
         updatedAt: session.updatedAt,
       };

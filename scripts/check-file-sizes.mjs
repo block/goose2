@@ -4,7 +4,13 @@ import { join, relative } from "node:path";
 const DEFAULT_LIMIT = 500;
 
 // Add narrowly scoped exceptions here with justification
-const EXCEPTIONS = {};
+const EXCEPTIONS = {
+  "src/app/AppShell.tsx": {
+    limit: 560,
+    justification:
+      "Temporary allowance while project creation and home/chat handoff wiring remain in the shell.",
+  },
+};
 
 const DIRS_TO_CHECK = [
   { dir: "src/app", glob: /\.[jt]sx?$/ },

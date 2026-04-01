@@ -37,6 +37,7 @@ export async function updateSession(
     providerId?: string;
     personaId?: string;
     modelName?: string;
+    projectId?: string | null;
   },
 ): Promise<void> {
   return invoke("update_session", { sessionId, update });

@@ -20,8 +20,8 @@ test.describe("Smoke tests", () => {
   test("home screen shows chat input placeholder", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.locator('textarea[placeholder^="Ask "]')).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(
+      page.getByPlaceholder(/Message .*type @ to mention/),
+    ).toBeVisible({ timeout: 10_000 });
   });
 });

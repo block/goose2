@@ -34,7 +34,7 @@ export interface Session {
   id: string;
   title: string;
   agentId?: string;
-  projectId?: string;
+  projectId?: string | null;
   providerId?: string;
   personaId?: string;
   modelName?: string;

@@ -1,7 +1,45 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { ChatInput } from "../ChatInput";
+import type { Persona } from "@/shared/types/agents";
+
+const TEST_PERSONAS: Persona[] = [
+  {
+    id: "builtin-goose",
+    displayName: "Goose",
+    systemPrompt: "You are Goose.",
+    isBuiltin: true,
+    createdAt: "",
+    updatedAt: "",
+  },
+  {
+    id: "reviewer",
+    displayName: "Reviewer",
+    systemPrompt: "You are Reviewer, a code review specialist.",
+    isBuiltin: true,
+    createdAt: "",
+    updatedAt: "",
+  },
+];
+
+function StatefulChatInput({
+  onSend = vi.fn(),
+}: {
+  onSend?: (text: string, personaId?: string) => void;
+}) {
+  const [selectedPersonaId, setSelectedPersonaId] = useState("builtin-goose");
+
+  return (
+    <ChatInput
+      onSend={onSend}
+      personas={TEST_PERSONAS}
+      selectedPersonaId={selectedPersonaId}
+      onPersonaChange={setSelectedPersonaId}
+    />
+  );
+}
 
 describe("ChatInput", () => {
   it("renders with placeholder text", () => {
@@ -72,16 +110,66 @@ describe("ChatInput", () => {
     expect(screen.getByText("Goose")).toBeInTheDocument();
   });
 
-  it("shows the selected folder name in the toolbar", () => {
+  it("opens the provider selector menu", async () => {
+    const user = userEvent.setup();
+
     render(
       <ChatInput
         onSend={vi.fn()}
-        folder="/Users/wesb/dev/goose2"
-        availableFolders={[
+        providers={[
+          { id: "goose", label: "Goose" },
+          { id: "openai", label: "OpenAI" },
+        ]}
+        selectedProvider="goose"
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /override provider/i }),
+    );
+
+    expect(screen.getByText("Provider Override")).toBeInTheDocument();
+    expect(screen.getByText("OpenAI")).toBeInTheDocument();
+  });
+
+  it("opens the project selector menu", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ChatInput
+        onSend={vi.fn()}
+        selectedProjectId="project-1"
+        availableProjects={[
           {
-            id: "/Users/wesb/dev/goose2",
+            id: "project-1",
             name: "goose2",
-            path: "/Users/wesb/dev/goose2",
+            workingDir: "/Users/wesb/dev/goose2",
+          },
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /select project/i }));
+
+    expect(screen.getByText("Project")).toBeInTheDocument();
+    expect(screen.getByText("No project")).toBeInTheDocument();
+  });
+
+  it("shows no project in the toolbar when no project is selected", () => {
+    render(<ChatInput onSend={vi.fn()} />);
+    expect(screen.getByText("No project")).toBeInTheDocument();
+  });
+
+  it("shows the selected project name in the toolbar", () => {
+    render(
+      <ChatInput
+        onSend={vi.fn()}
+        selectedProjectId="project-1"
+        availableProjects={[
+          {
+            id: "project-1",
+            name: "goose2",
+            workingDir: "/Users/wesb/dev/goose2",
           },
         ]}
       />,
@@ -120,5 +208,34 @@ describe("ChatInput", () => {
     await user.keyboard("{Enter}");
 
     expect(input).toHaveValue("");
+  });
+
+  it("selecting an @mention creates a sticky assistant chip without leaving inline text", async () => {
+    const user = userEvent.setup();
+    render(<StatefulChatInput />);
+
+    const input = screen.getByRole("textbox");
+    await user.type(input, "@Rev");
+    await user.click(screen.getByRole("option", { name: /reviewer/i }));
+
+    expect(input).toHaveValue("");
+    expect(screen.getByText("@Reviewer")).toBeInTheDocument();
+  });
+
+  it("keeps the selected assistant chip after sending subsequent messages", async () => {
+    const onSend = vi.fn();
+    const user = userEvent.setup();
+    render(<StatefulChatInput onSend={onSend} />);
+
+    const input = screen.getByRole("textbox");
+    await user.type(input, "@Rev");
+    await user.click(screen.getByRole("option", { name: /reviewer/i }));
+    await user.click(input);
+    await user.keyboard("{End}");
+    await user.type(input, "hello");
+    await user.keyboard("{Enter}");
+
+    expect(onSend).toHaveBeenCalledWith("hello", "reviewer");
+    expect(screen.getByText("@Reviewer")).toBeInTheDocument();
   });
 });

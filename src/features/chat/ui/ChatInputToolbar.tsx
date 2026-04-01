@@ -2,7 +2,6 @@ import {
   Paperclip,
   Mic,
   ChevronDown,
-  FolderOpen,
   Check,
   ArrowUp,
   Square,
@@ -10,9 +9,10 @@ import {
 import type { AcpProvider } from "@/shared/api/acp";
 import type { Persona } from "@/shared/types/agents";
 import { cn } from "@/shared/lib/cn";
+import { ChatInputSelector } from "./ChatInputSelector";
 import { ContextRing } from "./ContextRing";
 import { PersonaPicker } from "./PersonaPicker";
-import type { ModelOption } from "./ChatInput";
+import type { ModelOption, ProjectOption } from "./ChatInput";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -21,7 +21,32 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/shared/ui/dropdown-menu";
+import { Button } from "@/shared/ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/shared/ui/tooltip";
+
+const NO_PROJECT_VALUE = "__no_project__";
+const CREATE_PROJECT_VALUE = "__create_project__";
+const CREATE_PROJECT_FROM_FOLDER_VALUE = "__create_project_from_folder__";
+
+function formatProviderLabel(providerId: string) {
+  const knownLabels: Record<string, string> = {
+    goose: "Goose",
+    openai: "OpenAI",
+    claude: "Claude",
+    ollama: "Ollama",
+    custom: "Custom",
+  };
+
+  if (knownLabels[providerId]) {
+    return knownLabels[providerId];
+  }
+
+  return providerId
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
 
 interface ChatInputToolbarProps {
   // Personas
@@ -37,10 +62,16 @@ interface ChatInputToolbarProps {
   currentModel: string;
   availableModels: ModelOption[];
   onModelChange?: (modelId: string) => void;
-  // Folder
-  folder: string | null;
-  availableFolders: Array<{ id: string; name: string; path?: string }>;
-  onFolderChange?: (folderId: string | null) => void;
+  // Project
+  selectedProjectId: string | null;
+  availableProjects: ProjectOption[];
+  onProjectChange?: (projectId: string | null) => void;
+  onCreateProject?: (options?: {
+    onCreated?: (projectId: string) => void;
+  }) => void;
+  onCreateProjectFromFolder?: (options?: {
+    onCreated?: (projectId: string) => void;
+  }) => void;
   // Context
   contextTokens: number;
   contextLimit: number;
@@ -64,9 +95,11 @@ export function ChatInputToolbar({
   currentModel,
   availableModels,
   onModelChange,
-  folder,
-  availableFolders,
-  onFolderChange,
+  selectedProjectId,
+  availableProjects,
+  onProjectChange,
+  onCreateProject,
+  onCreateProjectFromFolder,
   contextTokens,
   contextLimit,
   canSend,
@@ -75,66 +108,76 @@ export function ChatInputToolbar({
   onStop,
   isCompact,
 }: ChatInputToolbarProps) {
-  const selectedFolder = availableFolders.find((f) => f.id === folder);
-  const folderLabel = selectedFolder?.name ?? "Folder";
-  const folderTitle = selectedFolder?.path ?? undefined;
+  const availableProviderItems =
+    providers.length > 0
+      ? providers
+      : selectedProvider
+        ? [
+            {
+              id: selectedProvider,
+              label: formatProviderLabel(selectedProvider),
+            },
+          ]
+        : [];
+  const selectedProject = availableProjects.find(
+    (project) => project.id === selectedProjectId,
+  );
+  const projectLabel = selectedProject?.name ?? "No project";
+  const projectTitle = selectedProject?.workingDir ?? undefined;
+  const providerLabel =
+    availableProviderItems.find((provider) => provider.id === selectedProvider)
+      ?.label ?? formatProviderLabel(selectedProvider);
+  const actionButtonClass =
+    "rounded-lg text-foreground-secondary hover:bg-background-tertiary hover:text-foreground";
+  const disabledActionButtonClass =
+    "rounded-lg text-foreground-tertiary/35 hover:bg-transparent hover:text-foreground-tertiary/35";
+
+  const handleProjectValueChange = (value: string) => {
+    if (value === CREATE_PROJECT_VALUE) {
+      onCreateProject?.();
+      return;
+    }
+
+    if (value === CREATE_PROJECT_FROM_FOLDER_VALUE) {
+      onCreateProjectFromFolder?.();
+      return;
+    }
+
+    onProjectChange?.(value === NO_PROJECT_VALUE ? null : value);
+  };
 
   return (
     <div className="flex items-center justify-between gap-2">
       {/* Left side: pickers */}
       <div className="flex items-center gap-0.5">
-        {personas.length > 0 && (
-          <PersonaPicker
-            personas={personas}
-            selectedPersonaId={selectedPersonaId}
-            onPersonaChange={(id) => onPersonaChange?.(id)}
-            onCreatePersona={onCreatePersona}
-            compact={isCompact}
+        {availableProviderItems.length > 0 && (
+          <ChatInputSelector
+            ariaLabel="Override provider"
+            value={selectedProvider}
+            triggerLabel={providerLabel}
+            triggerVariant="toolbar"
+            triggerSize="sm"
+            menuLabel="Provider Override"
+            sections={[
+              {
+                items: availableProviderItems.map((provider) => ({
+                  value: provider.id,
+                  label: provider.label,
+                })),
+              },
+            ]}
+            onValueChange={onProviderChange}
           />
-        )}
-
-        {providers.length > 0 && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] text-foreground-tertiary transition-colors hover:bg-background-tertiary hover:text-foreground"
-                aria-label="Override provider"
-              >
-                {!isCompact && (
-                  <span>
-                    {providers.find((p) => p.id === selectedProvider)?.label ??
-                      selectedProvider}
-                  </span>
-                )}
-                <ChevronDown className="h-2.5 w-2.5 opacity-50" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
-              <DropdownMenuLabel>Provider Override</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {providers.map((provider) => (
-                <DropdownMenuItem
-                  key={provider.id}
-                  onSelect={() => onProviderChange(provider.id)}
-                  className="flex items-center justify-between"
-                >
-                  <span className="text-sm font-medium">{provider.label}</span>
-                  {provider.id === selectedProvider && (
-                    <Check className="h-4 w-4 shrink-0 text-foreground-secondary" />
-                  )}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
         )}
 
         {availableModels.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button
+              <Button
                 type="button"
-                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-foreground-tertiary transition-colors hover:bg-background-tertiary hover:text-foreground"
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 rounded-lg px-2.5 text-xs text-foreground-tertiary hover:bg-background-tertiary hover:text-foreground"
                 aria-label="Select model"
               >
                 {!isCompact && <span>{currentModel}</span>}
@@ -142,7 +185,7 @@ export function ChatInputToolbar({
                   <span className="max-w-[60px] truncate">{currentModel}</span>
                 )}
                 <ChevronDown className="h-3 w-3 opacity-50" />
-              </button>
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56">
               <DropdownMenuLabel>Model</DropdownMenuLabel>
@@ -172,67 +215,79 @@ export function ChatInputToolbar({
           </DropdownMenu>
         )}
 
-        <div className="mx-0.5 h-4 w-px bg-border" />
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-foreground-tertiary transition-colors hover:bg-background-tertiary hover:text-foreground"
-              aria-label="Select folder"
-              title={folderTitle}
-            >
-              <FolderOpen className="h-3.5 w-3.5" />
-              {!isCompact && <span>{folderLabel}</span>}
-              <ChevronDown className="h-3 w-3 opacity-50" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
-            <DropdownMenuLabel>Working Directory</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {availableFolders.length > 0 ? (
-              availableFolders.map((f) => (
-                <DropdownMenuItem
-                  key={f.id}
-                  onSelect={() => onFolderChange?.(f.id)}
-                  className="flex items-center justify-between"
-                >
-                  <div className="min-w-0 flex-1">
-                    <span className="block truncate text-sm">{f.name}</span>
-                    {f.path && (
-                      <span className="block truncate text-xs text-foreground-tertiary">
-                        {f.path}
-                      </span>
-                    )}
-                  </div>
-                  {f.id === folder && (
-                    <Check className="h-4 w-4 shrink-0 text-foreground-secondary" />
-                  )}
-                </DropdownMenuItem>
-              ))
-            ) : (
-              <DropdownMenuItem disabled>
-                <span className="text-xs text-foreground-tertiary">
-                  No folders available
-                </span>
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <ChatInputSelector
+          ariaLabel="Select project"
+          value={selectedProjectId ?? NO_PROJECT_VALUE}
+          triggerLabel={projectLabel}
+          triggerTitle={projectTitle}
+          triggerVariant="toolbar"
+          triggerSize="sm"
+          menuLabel="Project"
+          contentWidth="wide"
+          sections={[
+            {
+              items: [
+                {
+                  value: NO_PROJECT_VALUE,
+                  label: "No project",
+                  description: "General chat without project context",
+                },
+                ...availableProjects.map((project) => ({
+                  value: project.id,
+                  label: project.name,
+                  description: project.workingDir ?? undefined,
+                })),
+              ],
+            },
+            {
+              items: [
+                ...(onCreateProject
+                  ? [
+                      {
+                        value: CREATE_PROJECT_VALUE,
+                        label: "Create project...",
+                      },
+                    ]
+                  : []),
+                ...(onCreateProjectFromFolder
+                  ? [
+                      {
+                        value: CREATE_PROJECT_FROM_FOLDER_VALUE,
+                        label: "Create project from folder...",
+                      },
+                    ]
+                  : []),
+              ],
+            },
+          ].filter((section) => section.items.length > 0)}
+          onValueChange={handleProjectValueChange}
+        />
       </div>
 
       {/* Right side: actions */}
       <div className="flex items-center gap-1">
+        {personas.length > 0 && (
+          <PersonaPicker
+            personas={personas}
+            selectedPersonaId={selectedPersonaId}
+            onPersonaChange={(id) => onPersonaChange?.(id)}
+            onCreatePersona={onCreatePersona}
+            triggerVariant="icon"
+          />
+        )}
+
         {contextLimit > 0 && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
+              <Button
                 type="button"
-                className="rounded-lg p-2 text-foreground-tertiary transition-colors hover:bg-background-tertiary hover:text-foreground"
+                variant="ghost"
+                size="icon-sm"
+                className={actionButtonClass}
                 aria-label="Context usage"
               >
                 <ContextRing tokens={contextTokens} limit={contextLimit} />
-              </button>
+              </Button>
             </TooltipTrigger>
             <TooltipContent>
               {contextTokens.toLocaleString()} / {contextLimit.toLocaleString()}{" "}
@@ -243,55 +298,65 @@ export function ChatInputToolbar({
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
+            <Button
               type="button"
-              className="cursor-not-allowed rounded-lg p-2 text-foreground-tertiary/50 transition-colors"
+              variant="ghost"
+              size="icon-sm"
+              className={cn(
+                "cursor-not-allowed disabled:pointer-events-auto disabled:opacity-100",
+                disabledActionButtonClass,
+              )}
               disabled
               aria-label="Voice input (coming soon)"
             >
               <Mic className="h-3.5 w-3.5" />
-            </button>
+            </Button>
           </TooltipTrigger>
           <TooltipContent>Voice input (coming soon)</TooltipContent>
         </Tooltip>
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
+            <Button
               type="button"
-              className="rounded-lg p-2 text-foreground-tertiary transition-colors hover:bg-background-tertiary hover:text-foreground"
+              variant="ghost"
+              size="icon-sm"
+              className={actionButtonClass}
               aria-label="Attach file"
             >
               <Paperclip className="h-3.5 w-3.5" />
-            </button>
+            </Button>
           </TooltipTrigger>
           <TooltipContent>Attach file</TooltipContent>
         </Tooltip>
 
         {isStreaming ? (
-          <button
+          <Button
             type="button"
             onClick={onStop}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-background-danger/10 text-foreground-danger transition-colors hover:bg-background-danger/20"
+            variant="ghost"
+            size="icon-sm"
+            className="rounded-full bg-background-danger/10 text-foreground-danger hover:bg-background-danger/20 hover:text-foreground-danger"
             aria-label="Stop generation"
           >
             <Square className="h-3.5 w-3.5" />
-          </button>
+          </Button>
         ) : (
-          <button
+          <Button
             type="button"
             onClick={onSend}
             disabled={!canSend}
+            size="icon-sm"
             className={cn(
-              "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
+              "rounded-full",
               canSend
-                ? "bg-foreground text-background-primary hover:opacity-90"
-                : "cursor-default bg-foreground/10 text-foreground-tertiary",
+                ? "bg-foreground text-background-primary shadow-none hover:bg-foreground/90"
+                : "cursor-default bg-foreground/10 text-foreground-tertiary disabled:opacity-100",
             )}
             aria-label="Send message"
           >
             <ArrowUp className="h-4 w-4" />
-          </button>
+          </Button>
         )}
       </div>
     </div>

@@ -28,6 +28,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [createProjectOpen, setCreateProjectOpen] = useState(false);
+  const [createProjectInitialWorkingDir, setCreateProjectInitialWorkingDir] =
+    useState<string | null>(null);
   const [editingProject, setEditingProject] = useState<ProjectInfo | null>(
     null,
   );
@@ -43,6 +45,9 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   // Track in-flight message loads to avoid duplicate requests
   const loadingSessionsRef = useRef<Set<string>>(new Set());
+  const pendingProjectCreatedRef = useRef<((projectId: string) => void) | null>(
+    null,
+  );
 
   // Load messages from backend for a session if not already in the store
   const loadSessionMessages = useCallback(async (sessionId: string) => {
@@ -291,19 +296,68 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     createNewTab();
   }, [createNewTab]);
 
+  const openCreateProjectDialog = useCallback(
+    (options?: {
+      initialWorkingDir?: string | null;
+      onCreated?: (projectId: string) => void;
+    }) => {
+      setEditingProject(null);
+      setCreateProjectInitialWorkingDir(options?.initialWorkingDir ?? null);
+      pendingProjectCreatedRef.current = options?.onCreated ?? null;
+      setCreateProjectOpen(true);
+    },
+    [],
+  );
+
+  const handleCreateProjectFromFolder = useCallback(
+    async (options?: { onCreated?: (projectId: string) => void }) => {
+      try {
+        const { open } = await import("@tauri-apps/plugin-dialog");
+        const selected = await open({
+          directory: true,
+          multiple: false,
+          title: "Select Folder for New Project",
+        });
+
+        if (selected && typeof selected === "string") {
+          openCreateProjectDialog({
+            initialWorkingDir: selected,
+            onCreated: options?.onCreated,
+          });
+        }
+      } catch {
+        openCreateProjectDialog({ onCreated: options?.onCreated });
+      }
+    },
+    [openCreateProjectDialog],
+  );
+
   const handleHomeStartChat = useCallback(
-    (initialMessage?: string, providerId?: string, personaId?: string) => {
+    (
+      initialMessage?: string,
+      providerId?: string,
+      personaId?: string,
+      projectId?: string | null,
+    ) => {
       setHomeSelectedProvider(providerId);
       setHomeSelectedPersonaId(personaId);
       setPendingInitialMessage(initialMessage);
-      createNewTab(initialMessage?.slice(0, 40) || "New Chat").catch(() => {
+      const selectedProject =
+        projectId != null
+          ? projectStore.projects.find((project) => project.id === projectId)
+          : undefined;
+
+      createNewTab(
+        initialMessage?.slice(0, 40) || "New Chat",
+        selectedProject,
+      ).catch(() => {
         // Clear pending message if tab creation fails to avoid stale state
         setPendingInitialMessage(undefined);
         setHomeSelectedProvider(undefined);
         setHomeSelectedPersonaId(undefined);
       });
     },
-    [createNewTab],
+    [createNewTab, projectStore.projects],
   );
 
   const handleTabClose = closeAndCleanupTab;
@@ -374,6 +428,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             initialProvider={homeSelectedProvider}
             initialPersonaId={activeSessionPersonaId ?? homeSelectedPersonaId}
             initialMessage={pendingInitialMessage}
+            onCreateProject={openCreateProjectDialog}
+            onCreateProjectFromFolder={handleCreateProjectFromFolder}
             onInitialMessageConsumed={() => {
               setPendingInitialMessage(undefined);
               setHomeSelectedProvider(undefined);
@@ -381,7 +437,11 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             }}
           />
         ) : (
-          <HomeScreen onStartChat={handleHomeStartChat} />
+          <HomeScreen
+            onStartChat={handleHomeStartChat}
+            onCreateProject={openCreateProjectDialog}
+            onCreateProjectFromFolder={handleCreateProjectFromFolder}
+          />
         );
     }
   };
@@ -418,7 +478,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             onNavigate={handleNavigate}
             onNewChat={handleNewTab}
             onNewChatInProject={handleNewChatInProject}
-            onCreateProject={() => setCreateProjectOpen(true)}
+            onCreateProject={() => openCreateProjectDialog()}
             onEditProject={handleEditProject}
             onArchiveProject={handleArchiveProject}
             onArchiveChat={handleArchiveChat}
@@ -460,10 +520,16 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         onClose={() => {
           setCreateProjectOpen(false);
           setEditingProject(null);
+          setCreateProjectInitialWorkingDir(null);
+          pendingProjectCreatedRef.current = null;
         }}
-        onCreated={() => {
+        onCreated={(project) => {
           projectStore.fetchProjects();
+          pendingProjectCreatedRef.current?.(project.id);
+          pendingProjectCreatedRef.current = null;
+          setCreateProjectInitialWorkingDir(null);
         }}
+        initialWorkingDir={createProjectInitialWorkingDir}
         editingProject={
           editingProject
             ? {

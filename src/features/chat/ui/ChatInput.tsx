@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { X } from "lucide-react";
 import type { AcpProvider } from "@/shared/api/acp";
 import type { Persona } from "@/shared/types/agents";
@@ -9,6 +9,7 @@ import {
 } from "./MentionAutocomplete";
 import { ChatInputToolbar } from "./ChatInputToolbar";
 import { TooltipProvider } from "@/shared/ui/tooltip";
+import { PersonaAvatar } from "./PersonaPicker";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -19,6 +20,12 @@ export interface ModelOption {
   name: string;
   displayName?: string;
   provider?: string;
+}
+
+export interface ProjectOption {
+  id: string;
+  name: string;
+  workingDir?: string | null;
 }
 
 interface ChatInputProps {
@@ -41,10 +48,16 @@ interface ChatInputProps {
   currentModel?: string;
   availableModels?: ModelOption[];
   onModelChange?: (modelId: string) => void;
-  // Folder
-  folder?: string | null;
-  availableFolders?: Array<{ id: string; name: string; path?: string }>;
-  onFolderChange?: (folderId: string | null) => void;
+  // Project
+  selectedProjectId?: string | null;
+  availableProjects?: ProjectOption[];
+  onProjectChange?: (projectId: string | null) => void;
+  onCreateProject?: (options?: {
+    onCreated?: (projectId: string) => void;
+  }) => void;
+  onCreateProjectFromFolder?: (options?: {
+    onCreated?: (projectId: string) => void;
+  }) => void;
   // Context
   contextTokens?: number;
   contextLimit?: number;
@@ -71,17 +84,34 @@ export function ChatInput({
   currentModel = "Claude Sonnet 4",
   availableModels = [],
   onModelChange,
-  folder = null,
-  availableFolders = [],
-  onFolderChange,
+  selectedProjectId = null,
+  availableProjects = [],
+  onProjectChange,
+  onCreateProject,
+  onCreateProjectFromFolder,
   contextTokens = 0,
   contextLimit = 0,
 }: ChatInputProps) {
   const [text, setText] = useState("");
   const [isCompact, setIsCompact] = useState(false);
-  const [mentionPersonaId, setMentionPersonaId] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const defaultPersonaId = useMemo(
+    () =>
+      personas.find((persona) => persona.id === "builtin-goose")?.id ?? null,
+    [personas],
+  );
+  const activePersona = useMemo(
+    () => personas.find((persona) => persona.id === selectedPersonaId) ?? null,
+    [personas, selectedPersonaId],
+  );
+  const stickyPersona =
+    activePersona &&
+    selectedPersonaId !== null &&
+    selectedPersonaId !== defaultPersonaId
+      ? activePersona
+      : null;
 
   const canSend = text.trim().length > 0 && !isStreaming && !disabled;
 
@@ -110,23 +140,19 @@ export function ChatInput({
 
   const handleSend = useCallback(() => {
     if (!canSend) return;
-    const effectivePersonaId =
-      mentionPersonaId ?? selectedPersonaId ?? undefined;
-    onSend(text.trim(), effectivePersonaId ?? undefined);
+    onSend(text.trim(), selectedPersonaId ?? undefined);
     setText("");
-    setMentionPersonaId(null);
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
-  }, [canSend, text, onSend, mentionPersonaId, selectedPersonaId]);
+  }, [canSend, text, onSend, selectedPersonaId]);
 
   const handleMentionSelect = useCallback(
     (persona: Persona) => {
       const before = text.slice(0, mentionStartIndex);
       const after = text.slice(mentionStartIndex + 1 + mentionQuery.length);
-      const newText = `${before}@${persona.displayName} ${after}`;
+      const newText = `${before}${after}`.replace(/\s{2,}/g, " ");
       setText(newText);
-      setMentionPersonaId(persona.id);
       closeMention();
       onPersonaChange?.(persona.id);
 
@@ -134,7 +160,9 @@ export function ChatInput({
         const ta = textareaRef.current;
         if (ta) {
           ta.focus();
-          const cursorPos = before.length + persona.displayName.length + 2;
+          ta.style.height = "auto";
+          ta.style.height = `${Math.min(ta.scrollHeight, 200)}px`;
+          const cursorPos = Math.min(before.length, newText.length);
           ta.setSelectionRange(cursorPos, cursorPos);
         }
       });
@@ -179,12 +207,17 @@ export function ChatInput({
     textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
   };
 
-  const activePersona = personas.find((p) => p.id === selectedPersonaId);
   const personaDisplayName = activePersona?.displayName ?? "Goose";
   const effectivePlaceholder =
     placeholder === "Message Goose..."
       ? `Message ${personaDisplayName}... (type @ to mention)`
       : placeholder;
+
+  const handleClearStickyPersona = useCallback(() => {
+    if (defaultPersonaId) {
+      onPersonaChange?.(defaultPersonaId);
+    }
+  }, [defaultPersonaId, onPersonaChange]);
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -200,16 +233,16 @@ export function ChatInput({
               selectedIndex={mentionSelectedIndex}
             />
 
-            {mentionPersonaId && (
+            {stickyPersona && (
               <div className="mb-2 flex items-center gap-1.5">
-                <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-2.5 py-0.5 text-[11px] font-medium text-brand">
-                  @
-                  {personas.find((p) => p.id === mentionPersonaId)?.displayName}
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-2.5 py-1 text-[11px] font-medium text-brand">
+                  <PersonaAvatar persona={stickyPersona} size="sm" />
+                  <span>@{stickyPersona.displayName}</span>
                   <button
                     type="button"
                     className="ml-0.5 inline-flex items-center opacity-60 hover:opacity-100"
-                    onClick={() => setMentionPersonaId(null)}
-                    aria-label="Remove mention"
+                    onClick={handleClearStickyPersona}
+                    aria-label="Clear active assistant"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -240,9 +273,11 @@ export function ChatInput({
               currentModel={currentModel}
               availableModels={availableModels}
               onModelChange={onModelChange}
-              folder={folder}
-              availableFolders={availableFolders}
-              onFolderChange={onFolderChange}
+              selectedProjectId={selectedProjectId}
+              availableProjects={availableProjects}
+              onProjectChange={onProjectChange}
+              onCreateProject={onCreateProject}
+              onCreateProjectFromFolder={onCreateProjectFromFolder}
               contextTokens={contextTokens}
               contextLimit={contextLimit}
               canSend={canSend}
