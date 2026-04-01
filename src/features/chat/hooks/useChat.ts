@@ -1,5 +1,6 @@
 import { useCallback, useRef } from "react";
 import { useChatStore } from "../stores/chatStore";
+import { useChatSessionStore } from "../stores/chatSessionStore";
 import { createUserMessage } from "@/shared/types/messages";
 import type { Message } from "@/shared/types/messages";
 import type { ChatState, TokenState } from "@/shared/types/chat";
@@ -80,6 +81,19 @@ export function useChat(
       store.addMessage(sessionId, userMessage);
       store.setChatState(sessionId, "thinking");
       store.setError(sessionId, null);
+
+      // Immediately set the tab/sidebar title from the user's message when
+      // the session still has the default placeholder.  This gives instant
+      // feedback instead of waiting for acp:done or acp:session_info.
+      // A better backend-generated title will overwrite this if it arrives
+      // via the acp:session_info event.
+      const sessionStore = useChatSessionStore.getState();
+      const session = sessionStore.getSession(sessionId);
+      if (session && session.title === "New Chat") {
+        sessionStore.updateSession(sessionId, {
+          title: text.trim().slice(0, 40),
+        });
+      }
 
       // Create placeholder assistant message for streaming
       const assistantMessage: Message = {
