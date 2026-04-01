@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 fn skills_dir() -> Result<PathBuf, String> {
     let home = dirs::home_dir().ok_or("Could not determine home directory")?;
-    Ok(home.join(".goose").join("skills"))
+    Ok(home.join(".agents").join("skills"))
 }
 
 /// Validates that a skill name is kebab-case only: `^[a-z0-9]+(-[a-z0-9]+)*$`.
