@@ -9,6 +9,16 @@ import {
 } from "lucide-react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { cn } from "@/shared/lib/cn";
+import { Button } from "@/shared/ui/button";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/ui/alert-dialog";
 import { runDoctorFix, type DoctorCheck } from "@/shared/api/doctor";
 
 interface DoctorCheckRowProps {
@@ -103,51 +113,34 @@ export function DoctorCheckRow({ check, onFixed }: DoctorCheckRowProps) {
         )}
       </div>
 
-      {showFixDialog && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Run fix command"
-          className="fixed inset-0 z-[60] flex items-center justify-center"
-          onKeyDown={(e) => {
-            if (e.key === "Escape" && !fixing) setShowFixDialog(false);
-          }}
-        >
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => {
-              if (!fixing) setShowFixDialog(false);
-            }}
-            aria-hidden="true"
-          />
-          <div className="relative z-10 w-full max-w-sm rounded-xl border border-border bg-background p-6 shadow-card space-y-4">
-            <h3 className="text-sm font-semibold">Run fix command?</h3>
-            <p className="break-all font-mono text-xs text-muted-foreground">
+      <AlertDialog
+        open={showFixDialog}
+        onOpenChange={(open) => {
+          if (!open && !fixing) setShowFixDialog(false);
+        }}
+      >
+        <AlertDialogContent className="max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Run fix command?</AlertDialogTitle>
+            <AlertDialogDescription className="break-all font-mono">
               {check.fixCommand}
-            </p>
-            {fixError && <p className="text-xs text-destructive">{fixError}</p>}
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                disabled={fixing}
-                onClick={() => setShowFixDialog(false)}
-                className="px-3 py-1.5 text-xs font-medium rounded-md hover:bg-muted transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={fixing}
-                onClick={confirmFix}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-muted transition-colors disabled:opacity-50"
-              >
-                {fixing && <Loader2 className="h-3 w-3 animate-spin" />}
-                {fixing ? "Running" : fixError ? "Retry" : "Run"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {fixError && <p className="text-xs text-destructive">{fixError}</p>}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={fixing}>Cancel</AlertDialogCancel>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={fixing}
+              onClick={confirmFix}
+            >
+              {fixing && <Loader2 className="h-3 w-3 animate-spin" />}
+              {fixing ? "Running" : fixError ? "Retry" : "Run"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

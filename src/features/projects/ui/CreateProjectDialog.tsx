@@ -1,8 +1,25 @@
 import { useState, useEffect } from "react";
-import { X, FolderOpen } from "lucide-react";
+import { FolderOpen } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { getHomeDir } from "@/shared/api/system";
 import { Button } from "@/shared/ui/button";
+import { Checkbox } from "@/shared/ui/checkbox";
+import { Input } from "@/shared/ui/input";
+import { Label } from "@/shared/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
 import {
   createProject,
   updateProject,
@@ -197,77 +214,40 @@ export function CreateProjectDialog({
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={isEditing ? "Edit Project" : "New Project"}
-      className="fixed inset-0 z-50 flex items-center justify-center"
-    >
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/40 motion-safe:animate-in motion-safe:fade-in"
-        onClick={handleClose}
-        aria-hidden="true"
-      />
-
-      {/* Panel */}
-      <div
-        className={cn(
-          "relative z-10 w-full max-w-lg rounded-xl border border-border bg-background shadow-card",
-          "max-h-[85vh] flex flex-col",
-          "motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95",
-        )}
-      >
-        {/* Header */}
-        <div className="shrink-0 flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="text-sm font-semibold">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="max-w-lg max-h-[85vh] flex flex-col gap-0 p-0">
+        <DialogHeader className="shrink-0 px-5 py-4">
+          <DialogTitle className="text-sm">
             {isEditing ? "Edit Project" : "New Project"}
-          </h2>
-          <button
-            type="button"
-            aria-label="Close"
-            onClick={handleClose}
-            className="rounded-md p-1 text-muted-foreground hover:bg-muted transition-colors"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+          </DialogTitle>
+        </DialogHeader>
 
-        {/* Scrollable content */}
         <form
           id="project-form"
           onSubmit={handleSave}
-          className="min-h-0 flex-1 overflow-y-auto space-y-4 p-5"
+          className="min-h-0 flex-1 overflow-y-auto space-y-4 px-5 pb-5"
         >
           {/* Name */}
-          <label className="block space-y-1">
-            <span className="text-xs font-medium text-muted-foreground">
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-muted-foreground">
               Name <span className="text-destructive">*</span>
-            </span>
-            <input
-              type="text"
+            </Label>
+            <Input
               value={name}
               onChange={(e) => {
                 setName(e.target.value);
                 setError(null);
               }}
               placeholder="My Project"
-              className={cn(
-                "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm",
-                "placeholder:text-muted-foreground",
-                "focus:outline-none focus:ring-1 focus:ring-ring transition-colors",
-              )}
             />
-          </label>
+          </div>
 
           {/* Instructions */}
-          <div className="block space-y-1">
-            <span className="text-xs font-medium text-muted-foreground">
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-muted-foreground">
               Instructions
-            </span>
+            </Label>
             <PromptEditor
               value={prompt}
               onChange={setPrompt}
@@ -284,10 +264,10 @@ export function CreateProjectDialog({
           </div>
 
           {/* Color */}
-          <div className="block space-y-1">
-            <span className="text-xs font-medium text-muted-foreground">
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-muted-foreground">
               Color
-            </span>
+            </Label>
             <div className="flex flex-wrap gap-1.5 pt-1">
               {COLOR_OPTIONS.map((c) => (
                 <button
@@ -308,43 +288,50 @@ export function CreateProjectDialog({
           </div>
 
           {/* Provider */}
-          <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">
               Provider
-            </span>
-            <select
-              value={preferredProvider ?? ""}
-              onChange={(e) => setPreferredProvider(e.target.value || null)}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+            </Label>
+            <Select
+              value={preferredProvider ?? "__none__"}
+              onValueChange={(v) =>
+                setPreferredProvider(v === "__none__" ? null : v)
+              }
             >
-              <option value="">None (use default)</option>
-              {acpProviders.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
-          </label>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="None (use default)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">None (use default)</SelectItem>
+                {acpProviders.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Use Worktrees */}
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="use-worktrees"
               checked={useWorktrees}
-              onChange={(e) => setUseWorktrees(e.target.checked)}
-              className="h-4 w-4 rounded border-border accent-foreground"
+              onCheckedChange={(checked) => setUseWorktrees(checked === true)}
             />
-            <span className="text-xs font-medium text-muted-foreground">
+            <Label
+              htmlFor="use-worktrees"
+              className="text-xs font-medium text-muted-foreground cursor-pointer"
+            >
               Use git worktrees for branch isolation
-            </span>
-          </label>
+            </Label>
+          </div>
 
           {/* Error */}
           {error && <p className="text-xs text-destructive">{error}</p>}
         </form>
 
-        {/* Footer */}
-        <div className="shrink-0 border-t border-border px-5 py-4 flex items-center justify-end gap-2">
+        <DialogFooter className="shrink-0 border-t px-5 py-4">
           <Button
             type="button"
             variant="ghost"
@@ -368,8 +355,8 @@ export function CreateProjectDialog({
                 ? "Save Changes"
                 : "Create Project"}
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

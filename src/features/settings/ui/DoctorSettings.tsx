@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { RefreshCw, ClipboardCopy, Check, Loader2 } from "lucide-react";
+import { Separator } from "@/shared/ui/separator";
 import {
   runDoctor,
   type DoctorCheck,
@@ -135,7 +136,7 @@ export function DoctorSettings() {
         </div>
       </div>
 
-      <div className="my-4 border-t" />
+      <Separator className="my-4" />
 
       {loading ? (
         <div className="flex min-h-[160px] items-center justify-center gap-2 text-sm text-muted-foreground">

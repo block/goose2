@@ -148,7 +148,7 @@ export function Sidebar({
   return (
     <div
       className={cn(
-        "relative h-full overflow-hidden bg-background-alt border border-border",
+        "relative h-full overflow-hidden bg-background border border-border",
         "transition-[width] duration-300 ease-in-out",
         className,
       )}

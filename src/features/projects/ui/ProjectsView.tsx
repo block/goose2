@@ -9,6 +9,17 @@ import {
 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { SearchBar } from "@/shared/ui/SearchBar";
+import { buttonVariants } from "@/shared/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/ui/alert-dialog";
 import { CreateProjectDialog } from "./CreateProjectDialog";
 import { listProjects, deleteProject, type ProjectInfo } from "../api/projects";
 
@@ -311,38 +322,29 @@ export function ProjectsView({ onStartChat }: ProjectsViewProps) {
       />
 
       {/* Delete confirmation dialog */}
-      {deletingProject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setDeletingProject(null)}
-            aria-hidden="true"
-          />
-          <div className="relative z-10 w-full max-w-sm rounded-xl border border-border bg-background p-6 shadow-card space-y-4">
-            <h3 className="text-sm font-semibold">Delete project?</h3>
-            <p className="text-sm text-muted-foreground">
-              Are you sure you want to delete &quot;{deletingProject.name}
+      <AlertDialog
+        open={!!deletingProject}
+        onOpenChange={(open) => !open && setDeletingProject(null)}
+      >
+        <AlertDialogContent className="max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete project?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{deletingProject?.name}
               &quot;? This cannot be undone.
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setDeletingProject(null)}
-                className="px-3 py-1.5 text-xs font-medium rounded-md hover:bg-muted transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmDeleteProject}
-                className="px-3 py-1.5 text-xs font-medium rounded-md bg-destructive text-primary-foreground shadow-sm hover:bg-destructive/90 transition-colors"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className={buttonVariants({ variant: "destructive" })}
+              onClick={handleConfirmDeleteProject}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

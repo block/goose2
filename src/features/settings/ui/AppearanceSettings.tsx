@@ -1,4 +1,5 @@
 import { cn } from "@/shared/lib/cn";
+import { Separator } from "@/shared/ui/separator";
 import { useTheme } from "@/shared/theme/ThemeProvider";
 import { Sun, Moon, Monitor, Check } from "lucide-react";
 
@@ -58,7 +59,7 @@ export function AppearanceSettings() {
         Customize the look and feel of Goose
       </p>
 
-      <div className="my-4 border-t" />
+      <Separator className="my-4" />
 
       <SettingRow
         label="Theme"
@@ -84,7 +85,7 @@ export function AppearanceSettings() {
         </div>
       </SettingRow>
 
-      <div className="my-4 border-t" />
+      <Separator className="my-4" />
 
       <SettingRow label="Accent Color" description="Choose your accent color">
         <div className="grid grid-cols-4 gap-2">
@@ -109,7 +110,7 @@ export function AppearanceSettings() {
         </div>
       </SettingRow>
 
-      <div className="my-4 border-t" />
+      <Separator className="my-4" />
 
       <SettingRow
         label="Interface Density"

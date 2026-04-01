@@ -1,5 +1,15 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
+import { Label } from "@/shared/ui/label";
+import { Textarea } from "@/shared/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
 import type {
   Agent,
   Persona,
@@ -80,81 +90,85 @@ export function AgentConfig({
       className="space-y-4"
     >
       {/* Name */}
-      <label className="block space-y-1">
-        <span className="text-xs font-medium text-muted-foreground">
+      <div className="space-y-1">
+        <Label className="text-xs font-medium text-muted-foreground">
           Name <span className="text-destructive">*</span>
-        </span>
-        <input
-          type="text"
+        </Label>
+        <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
           placeholder="My Agent"
-          className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
         />
-      </label>
+      </div>
 
       {/* Persona selector */}
-      <label className="block space-y-1">
-        <span className="text-xs font-medium text-muted-foreground">
+      <div className="space-y-1">
+        <Label className="text-xs font-medium text-muted-foreground">
           Persona
-        </span>
-        <select
-          value={personaId}
-          onChange={(e) => setPersonaId(e.target.value)}
-          className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
+        </Label>
+        <Select
+          value={personaId || "__none__"}
+          onValueChange={(v) => setPersonaId(v === "__none__" ? "" : v)}
         >
-          <option value="">None</option>
-          {personas.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.displayName}
-              {p.isBuiltin ? " (built-in)" : ""}
-            </option>
-          ))}
-        </select>
-      </label>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="None" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">None</SelectItem>
+            {personas.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.displayName}
+                {p.isBuiltin ? " (built-in)" : ""}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       {/* Provider */}
-      <label className="block space-y-1">
-        <span className="text-xs font-medium text-muted-foreground">
+      <div className="space-y-1">
+        <Label className="text-xs font-medium text-muted-foreground">
           Provider
           {selectedPersona?.provider && (
             <span className="ml-1 text-muted-foreground">
               (from persona: {selectedPersona.provider})
             </span>
           )}
-        </span>
-        <select
+        </Label>
+        <Select
           value={provider}
-          onChange={(e) => setProvider(e.target.value as ProviderType)}
-          className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
+          onValueChange={(v) => setProvider(v as ProviderType)}
         >
-          {PROVIDER_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      </label>
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PROVIDER_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       {/* Model override */}
-      <label className="block space-y-1">
-        <span className="text-xs font-medium text-muted-foreground">
+      <div className="space-y-1">
+        <Label className="text-xs font-medium text-muted-foreground">
           Model
           {selectedPersona?.model && (
             <span className="ml-1 text-muted-foreground">
               (from persona: {selectedPersona.model})
             </span>
           )}
-        </span>
-        <input
-          type="text"
+        </Label>
+        <Input
           value={model}
           onChange={(e) => setModel(e.target.value)}
           placeholder="e.g. claude-sonnet-4-20250514"
-          className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
         />
-      </label>
+      </div>
 
       {/* System prompt override */}
       <div className="space-y-1">
@@ -166,12 +180,12 @@ export function AgentConfig({
           System Prompt Override {promptExpanded ? "[-]" : "[+]"}
         </button>
         {promptExpanded && (
-          <textarea
+          <Textarea
             value={systemPrompt}
             onChange={(e) => setSystemPrompt(e.target.value)}
             rows={5}
             placeholder="Override the persona system prompt..."
-            className="w-full resize-y rounded-lg border border-input bg-background px-3 py-2 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
+            className="leading-relaxed"
           />
         )}
       </div>
