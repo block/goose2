@@ -22,42 +22,84 @@ function renderLines(text: string): string {
     .join("");
 }
 
-/** Return the caret's character offset within the element's text. */
-function getCaretOffset(el: HTMLElement): number {
+/** Return the caret position as {line, col} relative to the div-per-line structure. */
+function getCaretPosition(el: HTMLElement): { line: number; col: number } {
   const sel = window.getSelection();
-  if (!sel || sel.rangeCount === 0) return 0;
-  const range = sel.getRangeAt(0).cloneRange();
-  range.selectNodeContents(el);
-  range.setEnd(sel.getRangeAt(0).startContainer, sel.getRangeAt(0).startOffset);
-  return range.toString().length;
+  if (!sel || sel.rangeCount === 0) return { line: 0, col: 0 };
+
+  const node: Node | null = sel.getRangeAt(0).startContainer;
+  const offset = sel.getRangeAt(0).startOffset;
+
+  // If the selection is directly on the contentEditable root, translate
+  // the child-index offset into a line number with col 0.
+  if (node === el) {
+    return { line: Math.min(offset, el.childNodes.length - 1), col: 0 };
+  }
+
+  // Walk up to find which direct-child div this node lives in.
+  let lineDiv: Node | null = node;
+  while (lineDiv && lineDiv.parentNode !== el) {
+    lineDiv = lineDiv.parentNode;
+  }
+  if (!lineDiv) return { line: 0, col: 0 };
+
+  const divs = Array.from(el.childNodes);
+  const line = divs.indexOf(lineDiv as ChildNode);
+
+  // Compute column: character offset within this line's text content.
+  // Walk text nodes inside the lineDiv in order, summing lengths until
+  // we reach the node that contains the selection.
+  let col = 0;
+  const walker = document.createTreeWalker(lineDiv, NodeFilter.SHOW_TEXT);
+  let textNode: Text | null;
+  // biome-ignore lint/suspicious/noAssignInExpressions: walker iteration
+  while ((textNode = walker.nextNode() as Text | null)) {
+    if (textNode === node) {
+      col += offset;
+      break;
+    }
+    col += textNode.length;
+  }
+  // If the selection container is an element (not text), offset is a child index
+  if (node.nodeType !== Node.TEXT_NODE) {
+    col = 0;
+  }
+
+  return { line: Math.max(line, 0), col };
 }
 
-/** Restore the caret to a given character offset inside the element. */
-function setCaretOffset(el: HTMLElement, offset: number) {
+/** Restore the caret to a given {line, col} inside the element's div children. */
+function setCaretPosition(el: HTMLElement, pos: { line: number; col: number }) {
   const sel = window.getSelection();
   if (!sel) return;
 
-  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-  let remaining = offset;
-  for (
-    let node = walker.nextNode() as Text | null;
-    node;
-    node = walker.nextNode() as Text | null
-  ) {
-    if (remaining <= node.length) {
+  const divs = el.childNodes;
+  if (divs.length === 0) return;
+
+  const lineIdx = Math.min(pos.line, divs.length - 1);
+  const lineDiv = divs[lineIdx];
+
+  // Find the text node and offset within this line div.
+  const walker = document.createTreeWalker(lineDiv, NodeFilter.SHOW_TEXT);
+  let remaining = pos.col;
+  let textNode: Text | null;
+  // biome-ignore lint/suspicious/noAssignInExpressions: walker iteration
+  while ((textNode = walker.nextNode() as Text | null)) {
+    if (remaining <= textNode.length) {
       const range = document.createRange();
-      range.setStart(node, remaining);
+      range.setStart(textNode, remaining);
       range.collapse(true);
       sel.removeAllRanges();
       sel.addRange(range);
       return;
     }
-    remaining -= node.length;
+    remaining -= textNode.length;
   }
-  // If offset exceeds text length, place caret at the end
+
+  // No text nodes (empty line with <br>): place caret at start of the div
   const range = document.createRange();
-  range.selectNodeContents(el);
-  range.collapse(false);
+  range.setStart(lineDiv, 0);
+  range.collapse(true);
   sel.removeAllRanges();
   sel.addRange(range);
 }
@@ -99,9 +141,9 @@ export function PromptEditor({
     lastPushedValue.current = normalized;
 
     // Re-render HTML so capsule styling is updated to match current text
-    const caret = getCaretOffset(el);
+    const caret = getCaretPosition(el);
     el.innerHTML = normalized === "" ? "" : renderLines(normalized);
-    setCaretOffset(el, caret);
+    setCaretPosition(el, caret);
 
     onChange(normalized);
   };
