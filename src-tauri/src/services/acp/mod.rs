@@ -38,11 +38,12 @@ impl AcpService {
         working_dir: PathBuf,
         system_prompt: Option<String>,
         persona_id: Option<String>,
+        persona_name: Option<String>,
     ) -> Result<(), String> {
         // Ensure the session exists in the SessionStore (create if needed)
         session_store.ensure_session(&session_id, Some(provider_id.clone()));
 
-        // Save the user message to SessionStore
+        // Save the user message to SessionStore, with persona metadata when targeted
         let user_message = crate::types::messages::Message {
             id: uuid::Uuid::new_v4().to_string(),
             role: MessageRole::User,
@@ -50,7 +51,15 @@ impl AcpService {
             content: vec![MessageContent::Text {
                 text: prompt.clone(),
             }],
-            metadata: None,
+            metadata: if persona_id.is_some() {
+                Some(crate::types::messages::MessageMetadata {
+                    target_persona_id: persona_id.clone(),
+                    target_persona_name: persona_name.clone(),
+                    ..Default::default()
+                })
+            } else {
+                None
+            },
         };
         if let Err(e) = session_store.add_message(&session_id, user_message) {
             eprintln!(
@@ -59,12 +68,22 @@ impl AcpService {
             );
         }
 
+        // Build catch-up context from intervening messages for this persona
+        let catchup_context = if let Some(ref pid) = persona_id {
+            let all_messages = session_store.get_messages(&session_id);
+            build_catchup_context(&all_messages, pid)
+        } else {
+            None
+        };
+
         let driver = AcpDriver::new(&provider_id)?;
 
         let writer: Arc<dyn MessageWriter> = Arc::new(TauriMessageWriter::new(
             app_handle.clone(),
             session_id.clone(),
             Arc::clone(&session_store),
+            persona_id.clone(),
+            persona_name.clone(),
         ));
         let tauri_store = TauriStore::new(
             Arc::clone(&session_store),
@@ -75,13 +94,29 @@ impl AcpService {
         let store: Arc<dyn Store> = Arc::new(tauri_store);
         let cancel_token = registry.register(&session_id, &provider_id);
 
-        // Prepend the effective system prompt so the agent sees persona and
-        // project instructions as context for this turn.
-        let effective_prompt = match &system_prompt {
-            Some(sp) if !sp.is_empty() => {
-                format!("<persona-instructions>\n{sp}\n</persona-instructions>\n\n{prompt}")
+        // Build the effective prompt, including persona instructions and
+        // catch-up context when available.  When there is no extra context we
+        // pass the raw prompt for backward compatibility.
+        let has_system = system_prompt.as_ref().map_or(false, |s| !s.is_empty());
+        let has_catchup = catchup_context.is_some();
+        let effective_prompt = if has_system || has_catchup {
+            let mut parts = Vec::new();
+            if let Some(ref sp) = system_prompt {
+                if !sp.is_empty() {
+                    parts.push(format!(
+                        "<persona-instructions>\n{sp}\n</persona-instructions>"
+                    ));
+                }
             }
-            _ => prompt.clone(),
+            if let Some(ref ctx) = catchup_context {
+                parts.push(format!(
+                    "<conversation-context>\n{ctx}\n</conversation-context>"
+                ));
+            }
+            parts.push(format!("<user-message>\n{prompt}\n</user-message>"));
+            parts.join("\n\n")
+        } else {
+            prompt.clone()
         };
 
         // AcpDriver::run may use !Send futures internally, so we run it on a
