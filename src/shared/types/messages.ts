@@ -98,6 +98,11 @@ export interface MessageMetadata {
   /** Persona that generated this assistant message (set on send). */
   personaId?: string;
   personaName?: string;
+  /** Which persona this user message is addressed to. */
+  targetPersonaId?: string;
+  targetPersonaName?: string;
+  /** Composite key used for ACP session lookup. */
+  acpSessionKey?: string;
 }
 
 export interface Message {
