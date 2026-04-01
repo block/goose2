@@ -23,7 +23,7 @@ fmt:
 
 # Check formatting without modifying
 fmt-check:
-    biome format .
+    npx biome format .
     cd src-tauri && cargo fmt --check
 
 # Run clippy on Tauri backend
