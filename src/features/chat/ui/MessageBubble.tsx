@@ -229,6 +229,7 @@ export function MessageBubble({
   }
 
   const isUser = role === "user";
+  const assistantDisplayName = message.metadata?.personaName ?? agentName;
 
   return (
     <div
@@ -261,10 +262,9 @@ export function MessageBubble({
           isUser ? "max-w-[80%] items-end" : "max-w-[85%] items-start",
         )}
       >
-        {/* Agent name */}
-        {!isUser && agentName && (
+        {!isUser && assistantDisplayName && (
           <span className="mb-0.5 text-xs font-medium text-foreground-secondary">
-            {agentName}
+            {assistantDisplayName}
           </span>
         )}
 

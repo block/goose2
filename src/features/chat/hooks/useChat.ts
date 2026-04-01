@@ -20,6 +20,7 @@ export function useChat(
 ) {
   const store = useChatStore();
   const abortRef = useRef<AbortController | null>(null);
+  const activeStreamingPersonaIdRef = useRef<string | null>(null);
 
   const messages = store.messagesBySession[sessionId] ?? [];
   const chatState = store.chatState;
@@ -28,16 +29,46 @@ export function useChat(
   const streamingMessageId = store.streamingMessageId;
   const isStreaming = streamingMessageId !== null;
 
+  const resolvePersonaInfo = useCallback(
+    (overridePersonaId?: string, overridePersonaName?: string) => {
+      if (overridePersonaId) {
+        // Read the latest persona snapshot at call time so override lookups
+        // still work even if the agent store changed after this hook rendered.
+        const personaName =
+          overridePersonaName ??
+          useAgentStore.getState().getPersonaById(overridePersonaId)
+            ?.displayName ??
+          overridePersonaId;
+        return { id: overridePersonaId, name: personaName };
+      }
+
+      return personaInfo;
+    },
+    [personaInfo],
+  );
+
   const sendMessage = useCallback(
-    async (text: string) => {
+    async (text: string, overridePersona?: { id: string; name?: string }) => {
       if (!text.trim() || chatState === "streaming" || chatState === "thinking")
         return;
+
+      const effectivePersonaInfo = resolvePersonaInfo(
+        overridePersona?.id,
+        overridePersona?.name,
+      );
 
       // Ensure active session
       store.setActiveSession(sessionId);
 
       // Create and add user message
       const userMessage = createUserMessage(text);
+      if (effectivePersonaInfo) {
+        userMessage.metadata = {
+          ...userMessage.metadata,
+          targetPersonaId: effectivePersonaInfo.id,
+          targetPersonaName: effectivePersonaInfo.name,
+        };
+      }
       store.addMessage(sessionId, userMessage);
       store.setChatState("thinking");
       store.setError(null);
@@ -51,8 +82,8 @@ export function useChat(
         metadata: {
           userVisible: true,
           agentVisible: true,
-          personaId: personaInfo?.id,
-          personaName: personaInfo?.name,
+          personaId: effectivePersonaInfo?.id,
+          personaName: effectivePersonaInfo?.name,
         },
       };
       store.addMessage(sessionId, assistantMessage);
@@ -60,6 +91,7 @@ export function useChat(
 
       const abort = new AbortController();
       abortRef.current = abort;
+      activeStreamingPersonaIdRef.current = effectivePersonaInfo?.id ?? null;
 
       try {
         const agent = useAgentStore.getState().getActiveAgent();
@@ -70,13 +102,12 @@ export function useChat(
         // Send via ACP — response streams back through Tauri events
         // which are handled by useAcpStream in ChatView.
         store.setChatState("streaming");
-        await acpSendMessage(
-          sessionId,
-          providerId,
-          text,
+        await acpSendMessage(sessionId, providerId, text, {
           systemPrompt,
-          workingDirOverride,
-        );
+          workingDir: workingDirOverride,
+          personaId: effectivePersonaInfo?.id,
+          personaName: effectivePersonaInfo?.name,
+        });
         // Note: setChatState("idle") is handled by useAcpStream on "acp:done"
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") {
@@ -90,6 +121,7 @@ export function useChat(
         }
       } finally {
         abortRef.current = null;
+        activeStreamingPersonaIdRef.current = null;
       }
     },
     [
@@ -98,17 +130,19 @@ export function useChat(
       store,
       providerOverride,
       systemPromptOverride,
-      personaInfo,
+      resolvePersonaInfo,
       workingDirOverride,
     ],
   );
 
   const stopGeneration = useCallback(() => {
     abortRef.current?.abort();
+    const activePersonaId = activeStreamingPersonaIdRef.current;
     store.setChatState("idle");
     store.setStreamingMessageId(null);
+    activeStreamingPersonaIdRef.current = null;
     // Cancel the backend ACP session to stop orphaned streaming events
-    acpCancelSession(sessionId).catch(() => {
+    acpCancelSession(sessionId, activePersonaId ?? undefined).catch(() => {
       // Best-effort cancellation — ignore errors
     });
   }, [store, sessionId]);
@@ -131,12 +165,20 @@ export function useChat(
     // Extract the text and resend
     const textContent = lastUserMessage.content.find((c) => c.type === "text");
     if (textContent && "text" in textContent) {
-      await sendMessage(textContent.text);
+      const targetPersonaId = lastUserMessage.metadata?.targetPersonaId;
+      const targetPersonaName = lastUserMessage.metadata?.targetPersonaName;
+      await sendMessage(
+        textContent.text,
+        targetPersonaId
+          ? { id: targetPersonaId, name: targetPersonaName }
+          : undefined,
+      );
     }
   }, [sessionId, store, sendMessage]);
 
   const clearChat = useCallback(() => {
     abortRef.current?.abort();
+    activeStreamingPersonaIdRef.current = null;
     store.clearMessages(sessionId);
     store.setChatState("idle");
     store.setStreamingMessageId(null);

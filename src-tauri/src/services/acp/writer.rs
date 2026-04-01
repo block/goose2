@@ -22,6 +22,9 @@ pub struct TauriMessageWriter {
     session_store: Arc<SessionStore>,
     /// Accumulated response text across all `append_text` calls.
     accumulated_text: std::sync::Mutex<String>,
+    /// Persona identity to stamp on the finalized assistant message.
+    persona_id: Option<String>,
+    persona_name: Option<String>,
 }
 
 impl TauriMessageWriter {
@@ -30,12 +33,16 @@ impl TauriMessageWriter {
         app_handle: tauri::AppHandle,
         session_id: String,
         session_store: Arc<SessionStore>,
+        persona_id: Option<String>,
+        persona_name: Option<String>,
     ) -> Self {
         Self {
             app_handle,
             session_id,
             session_store,
             accumulated_text: std::sync::Mutex::new(String::new()),
+            persona_id,
+            persona_name,
         }
     }
 }
@@ -71,7 +78,15 @@ impl MessageWriter for TauriMessageWriter {
                 role: MessageRole::Assistant,
                 created: chrono::Utc::now().timestamp(),
                 content: vec![MessageContent::Text { text }],
-                metadata: None,
+                metadata: if self.persona_id.is_some() || self.persona_name.is_some() {
+                    Some(crate::types::messages::MessageMetadata {
+                        persona_id: self.persona_id.clone(),
+                        persona_name: self.persona_name.clone(),
+                        ..Default::default()
+                    })
+                } else {
+                    None
+                },
             };
 
             if let Err(e) = self.session_store.add_message(&self.session_id, message) {

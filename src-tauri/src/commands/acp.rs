@@ -2,7 +2,7 @@ use serde::Serialize;
 use std::sync::Arc;
 use tauri::{AppHandle, State};
 
-use crate::services::acp::{AcpRunningSession, AcpService, AcpSessionRegistry};
+use crate::services::acp::{make_composite_key, AcpRunningSession, AcpService, AcpSessionRegistry};
 use crate::services::sessions::SessionStore;
 use acp_client::discover_providers;
 
@@ -41,6 +41,8 @@ pub async fn acp_send_message(
     prompt: String,
     system_prompt: Option<String>,
     working_dir: Option<String>,
+    persona_id: Option<String>,
+    persona_name: Option<String>,
 ) -> Result<(), String> {
     let working_dir = working_dir
         .map(|dir| dir.trim().to_string())
@@ -57,17 +59,24 @@ pub async fn acp_send_message(
         prompt,
         working_dir,
         system_prompt,
+        persona_id,
+        persona_name,
     )
     .await
 }
 
 /// Cancel a running ACP session.
+///
+/// When `persona_id` is provided the composite key `{session_id}__{persona_id}`
+/// is used so only that persona's stream is cancelled.
 #[tauri::command]
 pub async fn acp_cancel_session(
     registry: State<'_, Arc<AcpSessionRegistry>>,
     session_id: String,
+    persona_id: Option<String>,
 ) -> Result<bool, String> {
-    Ok(registry.cancel(&session_id))
+    let key = make_composite_key(&session_id, persona_id.as_deref());
+    Ok(registry.cancel(&key))
 }
 
 /// List all currently running ACP sessions.

@@ -3,11 +3,14 @@ use std::collections::HashMap;
 use serde::Serialize;
 use tokio_util::sync::CancellationToken;
 
+use super::split_composite_key;
+
 /// Info about a running ACP session, returned to the frontend.
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AcpRunningSession {
     pub session_id: String,
+    pub persona_id: Option<String>,
     pub provider_id: String,
     pub running_for_secs: u64,
 }
@@ -84,10 +87,14 @@ impl AcpSessionRegistry {
         let guard = self.sessions.lock().expect("session registry lock");
         guard
             .iter()
-            .map(|(id, entry)| AcpRunningSession {
-                session_id: id.clone(),
-                provider_id: entry.provider_id.clone(),
-                running_for_secs: entry.started_at.elapsed().as_secs(),
+            .map(|(id, entry)| {
+                let (session_id, persona_id) = split_composite_key(id);
+                AcpRunningSession {
+                    session_id: session_id.to_string(),
+                    persona_id: persona_id.map(str::to_string),
+                    provider_id: entry.provider_id.clone(),
+                    running_for_secs: entry.started_at.elapsed().as_secs(),
+                }
             })
             .collect()
     }
