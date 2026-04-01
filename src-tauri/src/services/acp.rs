@@ -232,13 +232,10 @@ impl TauriStore {
 
     /// Look up a previously stored agent session ID, or `None` for new sessions.
     pub fn get_agent_session_id(&self, session_id: &str) -> Option<String> {
-        #[derive(Deserialize)]
-        struct SessionMapping { agent_session_id: String }
-
         let path = self.sessions_dir.join(format!("{session_id}.json"));
         let json = std::fs::read_to_string(&path).ok()?;
-        let mapping: SessionMapping = serde_json::from_str(&json).ok()?;
-        Some(mapping.agent_session_id)
+        let mapping: serde_json::Value = serde_json::from_str(&json).ok()?;
+        mapping["agent_session_id"].as_str().map(String::from)
     }
 
     /// Remove session files that are older than the given duration.
