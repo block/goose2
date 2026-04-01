@@ -56,7 +56,7 @@ interface ChatSessionStoreActions {
 
   // Persistence (stubs for Phase 2b)
   persistTabState: () => void;
-  loadTabState: () => Promise<void>;
+  loadTabState: () => Promise<boolean>;
 
   // Helpers
   getSession: (id: string) => ChatSession | undefined;
@@ -64,6 +64,10 @@ interface ChatSessionStoreActions {
 }
 
 export type ChatSessionStore = ChatSessionStoreState & ChatSessionStoreActions;
+
+function tabIdsMatch(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((id, index) => id === b[index]);
+}
 
 function loadCachedSessions(): ChatSession[] {
   if (typeof window === "undefined") return [];
@@ -292,9 +296,24 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
   },
 
   loadTabState: async () => {
+    const baselineOpenTabIds = get().openTabIds;
+    const baselineActiveTabId = get().activeTabId;
     try {
       const { openTabIds, activeTabId } = await apiLoadUiState();
-      const { sessions } = get();
+      const {
+        sessions,
+        openTabIds: currentOpenTabIds,
+        activeTabId: currentActiveTabId,
+      } = get();
+
+      const userChangedTabs =
+        currentActiveTabId !== baselineActiveTabId ||
+        !tabIdsMatch(currentOpenTabIds, baselineOpenTabIds);
+
+      if (userChangedTabs) {
+        return false;
+      }
+
       const sessionIds = new Set(sessions.map((s) => s.id));
 
       // Filter to only tabs whose sessions still exist
@@ -308,8 +327,10 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
         openTabIds: validTabIds,
         activeTabId: validActiveTabId,
       });
+      return true;
     } catch (err) {
       console.error("Failed to load tab state:", err);
+      return false;
     }
   },
 
