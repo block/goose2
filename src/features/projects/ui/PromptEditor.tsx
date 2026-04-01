@@ -118,13 +118,12 @@ export function PromptEditor({
   placeholder,
 }: PromptEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const lastPushedValue = useRef(value);
+  const lastPushedValue = useRef<string | null>(null);
 
-  // Sync HTML when value changes externally
+  // Sync HTML when value changes externally (including initial mount)
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    // Only update DOM when the change came from outside (e.g. directory button)
     if (value !== lastPushedValue.current) {
       lastPushedValue.current = value;
       el.innerHTML = value === "" ? "" : renderLines(value);

@@ -187,7 +187,7 @@ export function CreateProjectDialog({
         );
       }
       onCreated();
-      onClose();
+      handleClose();
     } catch (err) {
       setError(String(err));
     } finally {
