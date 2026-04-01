@@ -36,6 +36,7 @@ interface ChatInputSelectorProps {
   sections: ChatInputSelectorSection[];
   onValueChange: (value: string) => void;
   contentWidth?: "trigger" | "wide";
+  disabled?: boolean;
 }
 
 export function ChatInputSelector({
@@ -50,6 +51,7 @@ export function ChatInputSelector({
   sections,
   onValueChange,
   contentWidth = "trigger",
+  disabled,
 }: ChatInputSelectorProps) {
   const buttonSize = triggerSize === "sm" ? "xs" : "sm";
 
@@ -62,6 +64,7 @@ export function ChatInputSelector({
           size={buttonSize}
           aria-label={ariaLabel}
           title={triggerTitle}
+          disabled={disabled}
           className={cn(
             "min-w-0",
             triggerVariant === "default" && "justify-between",

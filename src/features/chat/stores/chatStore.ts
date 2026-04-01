@@ -78,7 +78,14 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   isConnected: false,
 
   // Session management
-  setActiveSession: (sessionId) => set({ activeSessionId: sessionId }),
+  setActiveSession: (sessionId) =>
+    set((state) => ({
+      activeSessionId: sessionId,
+      chatState: state.activeSessionId !== sessionId ? "idle" : state.chatState,
+      streamingMessageId:
+        state.activeSessionId !== sessionId ? null : state.streamingMessageId,
+      error: state.activeSessionId !== sessionId ? null : state.error,
+    })),
 
   // Message management
   addMessage: (sessionId, message) =>

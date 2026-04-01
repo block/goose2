@@ -29,18 +29,6 @@ const CREATE_PROJECT_VALUE = "__create_project__";
 const CREATE_PROJECT_FROM_FOLDER_VALUE = "__create_project_from_folder__";
 
 function formatProviderLabel(providerId: string) {
-  const knownLabels: Record<string, string> = {
-    goose: "Goose",
-    openai: "OpenAI",
-    claude: "Claude",
-    ollama: "Ollama",
-    custom: "Custom",
-  };
-
-  if (knownLabels[providerId]) {
-    return knownLabels[providerId];
-  }
-
   return providerId
     .split(/[-_\s]+/)
     .filter(Boolean)
@@ -56,6 +44,7 @@ interface ChatInputToolbarProps {
   onCreatePersona?: () => void;
   // Provider
   providers: AcpProvider[];
+  providersLoading?: boolean;
   selectedProvider: string;
   onProviderChange: (providerId: string) => void;
   // Model
@@ -90,6 +79,7 @@ export function ChatInputToolbar({
   onPersonaChange,
   onCreatePersona,
   providers,
+  providersLoading,
   selectedProvider,
   onProviderChange,
   currentModel,
@@ -150,14 +140,15 @@ export function ChatInputToolbar({
     <div className="flex items-center justify-between gap-2">
       {/* Left side: pickers */}
       <div className="flex items-center gap-0.5">
-        {availableProviderItems.length > 0 && (
+        {(availableProviderItems.length > 0 || providersLoading) && (
           <ChatInputSelector
             ariaLabel="Override provider"
             value={selectedProvider}
-            triggerLabel={providerLabel}
+            triggerLabel={providersLoading ? "Loading..." : providerLabel}
             triggerVariant="toolbar"
             triggerSize="sm"
             menuLabel="Provider Override"
+            disabled={providersLoading}
             sections={[
               {
                 items: availableProviderItems.map((provider) => ({

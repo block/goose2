@@ -42,6 +42,7 @@ interface ChatInputProps {
   onCreatePersona?: () => void;
   // Provider (secondary -- auto-set by persona but overridable)
   providers?: AcpProvider[];
+  providersLoading?: boolean;
   selectedProvider?: string;
   onProviderChange?: (providerId: string) => void;
   // Model
@@ -79,6 +80,7 @@ export function ChatInput({
   onPersonaChange,
   onCreatePersona,
   providers = [],
+  providersLoading = false,
   selectedProvider = "goose",
   onProviderChange,
   currentModel = "Claude Sonnet 4",
@@ -256,6 +258,7 @@ export function ChatInput({
               onPersonaChange={onPersonaChange}
               onCreatePersona={onCreatePersona}
               providers={providers}
+              providersLoading={providersLoading}
               selectedProvider={selectedProvider}
               onProviderChange={(id) => onProviderChange?.(id)}
               currentModel={currentModel}
