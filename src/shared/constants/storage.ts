@@ -19,3 +19,12 @@ export const SESSIONS_DIR = `${GOOSE_DIR}/sessions`;
 
 /** Subdirectory for extension state. */
 export const EXTENSIONS_DIR = `${GOOSE_DIR}/extensions`;
+
+/**
+ * Cross-agent standard directory for skills and agents.
+ * See https://agentskills.io
+ */
+export const AGENTS_STANDARD_DIR = ".agents";
+
+/** Subdirectory for skills (under ~/.agents/). */
+export const SKILLS_DIR = `${AGENTS_STANDARD_DIR}/skills`;
