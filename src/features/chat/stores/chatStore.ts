@@ -206,22 +206,23 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       const current = state.tokenState;
       const inputTokens = partial.inputTokens ?? current.inputTokens;
       const outputTokens = partial.outputTokens ?? current.outputTokens;
+      const accumulatedInput =
+        partial.accumulatedInput ??
+        current.accumulatedInput + (partial.inputTokens ?? 0);
+      const accumulatedOutput =
+        partial.accumulatedOutput ??
+        current.accumulatedOutput + (partial.outputTokens ?? 0);
+      const accumulatedTotal =
+        partial.accumulatedTotal ?? accumulatedInput + accumulatedOutput;
       return {
         tokenState: {
           inputTokens,
           outputTokens,
           totalTokens: inputTokens + outputTokens,
-          accumulatedInput:
-            partial.accumulatedInput ??
-            current.accumulatedInput + (partial.inputTokens ?? 0),
-          accumulatedOutput:
-            partial.accumulatedOutput ??
-            current.accumulatedOutput + (partial.outputTokens ?? 0),
-          accumulatedTotal:
-            (partial.accumulatedInput ??
-              current.accumulatedInput + (partial.inputTokens ?? 0)) +
-            (partial.accumulatedOutput ??
-              current.accumulatedOutput + (partial.outputTokens ?? 0)),
+          accumulatedInput,
+          accumulatedOutput,
+          accumulatedTotal,
+          contextLimit: partial.contextLimit ?? current.contextLimit,
         },
       };
     }),

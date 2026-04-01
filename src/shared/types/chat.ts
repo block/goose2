@@ -18,6 +18,7 @@ export interface TokenState {
   accumulatedInput: number;
   accumulatedOutput: number;
   accumulatedTotal: number;
+  contextLimit: number;
 }
 
 export const INITIAL_TOKEN_STATE: TokenState = {
@@ -27,6 +28,7 @@ export const INITIAL_TOKEN_STATE: TokenState = {
   accumulatedInput: 0,
   accumulatedOutput: 0,
   accumulatedTotal: 0,
+  contextLimit: 0,
 };
 
 // Session

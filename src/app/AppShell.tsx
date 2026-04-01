@@ -134,9 +134,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     : undefined;
   const modelName = activeSession?.modelName;
   const tokenCount = chatStore.tokenState.totalTokens;
-  const connectionStatus = chatStore.isConnected
-    ? ("connected" as const)
-    : ("disconnected" as const);
 
   const [pendingInitialMessage, setPendingInitialMessage] = useState<
     string | undefined
@@ -507,7 +504,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           modelName={modelName}
           sessionId={activeTabId ?? undefined}
           tokenCount={tokenCount}
-          status={connectionStatus}
         />
       </div>
 

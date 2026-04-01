@@ -47,6 +47,12 @@ interface AcpModelStatePayload {
   currentModelName?: string;
 }
 
+interface AcpUsageUpdatePayload {
+  sessionId: string;
+  used: number;
+  size: number;
+}
+
 function findLatestUnpairedToolRequest(
   content: MessageContent[],
 ): ToolRequestContent | null {
@@ -216,6 +222,18 @@ export function useAcpStream(sessionId: string, enabled: boolean): void {
         useChatSessionStore
           .getState()
           .updateSession(event.payload.sessionId, { modelName });
+      }),
+    );
+
+    // acp:usage_update — update context window token usage
+    unlisteners.push(
+      listen<AcpUsageUpdatePayload>("acp:usage_update", (event) => {
+        if (!active) return;
+        if (event.payload.sessionId !== sessionIdRef.current) return;
+        useChatStore.getState().updateTokenState({
+          accumulatedTotal: event.payload.used,
+          contextLimit: event.payload.size,
+        });
       }),
     );
 

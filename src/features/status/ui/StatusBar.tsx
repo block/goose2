@@ -1,25 +1,17 @@
 import { useState } from "react";
-import { Copy, Check } from "lucide-react";
+import { Bot, Copy, Check } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 
 interface StatusBarProps {
   modelName?: string;
   sessionId?: string;
   tokenCount?: number;
-  status?: "connected" | "disconnected" | "loading";
 }
-
-const statusColor = {
-  connected: "bg-green-500",
-  disconnected: "bg-red-500",
-  loading: "bg-yellow-500",
-} as const;
 
 export function StatusBar({
   modelName,
   sessionId,
   tokenCount = 0,
-  status = "disconnected",
 }: StatusBarProps) {
   const [copied, setCopied] = useState(false);
 
@@ -37,28 +29,32 @@ export function StatusBar({
         "bg-background/80 px-3 text-xs text-foreground-secondary",
       )}
     >
-      {modelName ? <span>{modelName}</span> : <span />}
+      <div className="flex items-center gap-1.5 min-w-0">
+        <div className="flex items-center gap-1 min-w-0">
+          <Bot className="h-3.5 w-3.5 flex-shrink-0 text-foreground-tertiary" />
+          <span className="truncate text-foreground-secondary">
+            {modelName ?? "No model"}
+          </span>
+        </div>
+      </div>
 
       <div className="flex items-center gap-2">
         {sessionId && (
-          <div className="flex items-center gap-0.5">
-            <span className="text-foreground-tertiary">{sessionId}</span>
-            <button
-              type="button"
-              onClick={handleCopySessionId}
-              className="rounded p-0.5 text-foreground-tertiary hover:text-foreground-primary transition-colors"
-              aria-label={copied ? "Copied" : "Copy session ID"}
-            >
-              {copied ? <Check size={10} /> : <Copy size={10} />}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handleCopySessionId}
+            className="flex items-center gap-1 rounded px-1 py-0.5 text-foreground-tertiary hover:text-foreground-secondary transition-colors"
+            title={`Session: ${sessionId}`}
+          >
+            <span className="font-mono">{sessionId.slice(0, 8)}</span>
+            {copied ? <Check size={10} /> : <Copy size={10} />}
+          </button>
         )}
-        {tokenCount > 0 && <span>{tokenCount.toLocaleString()} tokens</span>}
-        <div
-          role="status"
-          aria-label={status}
-          className={cn("h-1.5 w-1.5 rounded-full", statusColor[status])}
-        />
+        {tokenCount > 0 && (
+          <span className="text-foreground-tertiary">
+            {tokenCount.toLocaleString()} tokens
+          </span>
+        )}
       </div>
     </div>
   );
