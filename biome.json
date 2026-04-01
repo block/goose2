@@ -7,7 +7,7 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["**", "!src-tauri/gen", "!.agents"]
+    "includes": ["**", "!src-tauri/gen"]
   },
   "formatter": {
     "enabled": true,

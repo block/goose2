@@ -8,7 +8,7 @@ use commands::sidecar::SidecarState;
 use services::acp::AcpSessionRegistry;
 use services::personas::PersonaStore;
 use services::sessions::SessionStore;
-use tauri::Manager;
+use tauri_plugin_window_state::StateFlags;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -21,6 +21,11 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(StateFlags::all() & !StateFlags::VISIBLE)
+                .build(),
+        )
         .manage(SidecarState::default())
         .manage(PersonaStore::new())
         .manage(Arc::new(SessionStore::new()))
@@ -71,13 +76,6 @@ pub fn run() {
             commands::doctor::run_doctor,
             commands::doctor::run_doctor_fix,
         ])
-        .setup(|app| {
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.maximize();
-            }
-
-            Ok(())
-        })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(move |_app, event| {
