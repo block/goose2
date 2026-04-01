@@ -16,7 +16,7 @@ import type { Persona } from "@/shared/types/agents";
 interface PersonaPickerProps {
   personas: Persona[];
   selectedPersonaId: string | null;
-  onPersonaChange: (personaId: string) => void;
+  onPersonaChange: (personaId: string | null) => void;
   onCreatePersona?: () => void;
   compact?: boolean;
   className?: string;
@@ -33,7 +33,10 @@ export function PersonaPicker({
   triggerVariant = "default",
 }: PersonaPickerProps) {
   const selected = useMemo(
-    () => personas.find((p) => p.id === selectedPersonaId) ?? personas[0],
+    () =>
+      selectedPersonaId
+        ? personas.find((p) => p.id === selectedPersonaId)
+        : undefined,
     [personas, selectedPersonaId],
   );
 
@@ -46,7 +49,7 @@ export function PersonaPicker({
     [personas],
   );
 
-  const label = selected?.displayName ?? "Select persona";
+  const label = selected?.displayName ?? "Goose";
 
   return (
     <DropdownMenu>
@@ -85,6 +88,24 @@ export function PersonaPicker({
         align="start"
         className="max-h-[min(70vh,32rem)] w-[22rem] overflow-y-auto"
       >
+        <DropdownMenuItem
+          onSelect={() => onPersonaChange(null)}
+          className="flex items-start gap-2.5 py-2"
+        >
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-foreground/10 text-foreground">
+            <Sparkles className="h-3.5 w-3.5" />
+          </div>
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className="text-sm font-medium">Goose</span>
+            <span className="text-[11px] leading-snug text-foreground-tertiary">
+              No persona — chat directly with the agent
+            </span>
+          </div>
+          {selectedPersonaId === null && (
+            <Check className="mt-0.5 h-4 w-4 shrink-0 text-foreground-secondary" />
+          )}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         {builtinPersonas.length > 0 && (
           <>
             <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-foreground-tertiary">

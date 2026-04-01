@@ -29,7 +29,9 @@ function StatefulChatInput({
 }: {
   onSend?: (text: string, personaId?: string) => void;
 }) {
-  const [selectedPersonaId, setSelectedPersonaId] = useState("builtin-solo");
+  const [selectedPersonaId, setSelectedPersonaId] = useState<string | null>(
+    "builtin-solo",
+  );
 
   return (
     <ChatInput

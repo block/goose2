@@ -57,10 +57,10 @@ describe("HomeScreen", () => {
     expect(screen.getByText("Good afternoon")).toBeInTheDocument();
   });
 
-  it("renders the chat input placeholder with persona name", () => {
+  it("renders the chat input placeholder with default agent name when no persona selected", () => {
     render(<HomeScreen />);
     expect(
-      screen.getByPlaceholderText("Message Solo... (type @ to mention)"),
+      screen.getByPlaceholderText("Message Goose... (type @ to mention)"),
     ).toBeInTheDocument();
   });
 

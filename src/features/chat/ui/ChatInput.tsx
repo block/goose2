@@ -38,7 +38,7 @@ interface ChatInputProps {
   // Personas
   personas?: Persona[];
   selectedPersonaId?: string | null;
-  onPersonaChange?: (personaId: string) => void;
+  onPersonaChange?: (personaId: string | null) => void;
   onCreatePersona?: () => void;
   // Provider (secondary -- auto-set by persona but overridable)
   providers?: AcpProvider[];
@@ -97,20 +97,11 @@ export function ChatInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const defaultPersonaId = useMemo(
-    () => personas.find((persona) => persona.id === "builtin-solo")?.id ?? null,
-    [personas],
-  );
   const activePersona = useMemo(
     () => personas.find((persona) => persona.id === selectedPersonaId) ?? null,
     [personas, selectedPersonaId],
   );
-  const stickyPersona =
-    activePersona &&
-    selectedPersonaId !== null &&
-    selectedPersonaId !== defaultPersonaId
-      ? activePersona
-      : null;
+  const stickyPersona = activePersona;
 
   const canSend = text.trim().length > 0 && !isStreaming && !disabled;
 
@@ -213,10 +204,8 @@ export function ChatInput({
       : placeholder;
 
   const handleClearStickyPersona = useCallback(() => {
-    if (defaultPersonaId) {
-      onPersonaChange?.(defaultPersonaId);
-    }
-  }, [defaultPersonaId, onPersonaChange]);
+    onPersonaChange?.(null);
+  }, [onPersonaChange]);
 
   return (
     <TooltipProvider delayDuration={300}>

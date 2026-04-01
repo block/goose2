@@ -52,7 +52,7 @@ interface ChatInputToolbarProps {
   // Personas
   personas: Persona[];
   selectedPersonaId: string | null;
-  onPersonaChange?: (personaId: string) => void;
+  onPersonaChange?: (personaId: string | null) => void;
   onCreatePersona?: () => void;
   // Provider
   providers: AcpProvider[];

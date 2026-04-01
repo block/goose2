@@ -49,8 +49,8 @@ export function ChatView({
 
   // Persona state
   const personas = useAgentStore((s) => s.personas);
-  const [selectedPersonaId, setSelectedPersonaId] = useState<string>(
-    initialPersonaId ?? "builtin-solo",
+  const [selectedPersonaId, setSelectedPersonaId] = useState<string | null>(
+    initialPersonaId ?? null,
   );
   const session = useChatSessionStore((s) =>
     s.sessions.find((candidate) => candidate.id === activeSessionId),
@@ -171,7 +171,7 @@ export function ChatView({
 
   // When persona changes, update the provider to match persona's default
   const handlePersonaChange = useCallback(
-    (personaId: string) => {
+    (personaId: string | null) => {
       setSelectedPersonaId(personaId);
       const persona = personas.find((p) => p.id === personaId);
       if (persona?.provider) {
@@ -197,7 +197,7 @@ export function ChatView({
       // Persist persona selection to session store
       useChatSessionStore
         .getState()
-        .updateSession(activeSessionId, { personaId });
+        .updateSession(activeSessionId, { personaId: personaId ?? undefined });
     },
     [personas, providers, activeSessionId, handleProviderChange],
   );
@@ -205,19 +205,14 @@ export function ChatView({
   // Validate persona still exists — fall back to default if deleted
   useEffect(() => {
     if (
+      selectedPersonaId !== null &&
       personas.length > 0 &&
       !personas.find((p) => p.id === selectedPersonaId)
     ) {
-      const fallback =
-        personas.find((p) => p.id === "builtin-solo") ?? personas[0];
-      if (fallback) {
-        setSelectedPersonaId(fallback.id);
-        useChatSessionStore
-          .getState()
-          .updateSession(activeSessionId, { personaId: fallback.id });
-      }
+      // Selected persona was deleted — reset to no persona
+      setSelectedPersonaId(null);
     }
-  }, [personas, selectedPersonaId, activeSessionId]);
+  }, [personas, selectedPersonaId]);
 
   const displayAgentName = selectedPersona?.displayName ?? agentName;
   const personaAvatarSrc = useAvatarSrc(selectedPersona?.avatar);

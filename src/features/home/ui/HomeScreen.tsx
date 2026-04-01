@@ -61,7 +61,9 @@ export function HomeScreen({
 
   const personas = useAgentStore((s) => s.personas);
   const projects = useProjectStore((s) => s.projects);
-  const [selectedPersonaId, setSelectedPersonaId] = useState("builtin-solo");
+  const [selectedPersonaId, setSelectedPersonaId] = useState<string | null>(
+    null,
+  );
   const [providers, setProviders] = useState<AcpProvider[]>([]);
   const [selectedProvider, setSelectedProvider] = useState("goose");
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
@@ -96,7 +98,7 @@ export function HomeScreen({
 
   const handleSend = useCallback(
     (message: string, personaId?: string) => {
-      const effectivePersonaId = personaId ?? selectedPersonaId;
+      const effectivePersonaId = personaId ?? selectedPersonaId ?? undefined;
 
       onStartChat?.(
         message,
