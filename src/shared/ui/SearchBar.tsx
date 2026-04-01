@@ -20,7 +20,7 @@ export function SearchBar({
 }: SearchBarProps) {
   return (
     <div className={cn("relative", className)}>
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-secondary/60" />
+      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <input
         type="search"
         autoComplete="off"
@@ -28,7 +28,7 @@ export function SearchBar({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full pl-9 pr-3 py-2 text-sm bg-background-secondary border border-border-secondary/50 rounded-lg placeholder:text-foreground-secondary/40 focus:outline-none focus:ring-1 focus:ring-ring focus:border-border-primary transition-colors"
+        className="w-full rounded-lg border border-input bg-secondary py-2 pr-3 pl-9 text-sm placeholder:text-muted-foreground transition-colors focus:outline-none focus:ring-1 focus:ring-ring"
       />
     </div>
   );

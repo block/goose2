@@ -171,7 +171,7 @@ function PersonaAvatar({
         "flex items-center justify-center rounded-full",
         isBuiltin
           ? "bg-foreground/10 text-foreground"
-          : "bg-accent/10 text-accent",
+          : "bg-brand/10 text-brand",
       )}
     >
       {isBuiltin ? (

@@ -26,6 +26,27 @@ export default {
         lg: "var(--shadow-lg)",
       },
       colors: {
+        card: "var(--card)",
+        "card-foreground": "var(--card-foreground)",
+        popover: "var(--popover)",
+        "popover-foreground": "var(--popover-foreground)",
+        primary: {
+          DEFAULT: "var(--primary)",
+          foreground: "var(--primary-foreground)",
+        },
+        secondary: {
+          DEFAULT: "var(--secondary)",
+          foreground: "var(--secondary-foreground)",
+        },
+        muted: {
+          DEFAULT: "var(--muted)",
+          foreground: "var(--muted-foreground)",
+        },
+        destructive: {
+          DEFAULT: "var(--destructive)",
+          foreground: "var(--destructive-foreground)",
+        },
+        input: "var(--input)",
         background: {
           DEFAULT: "var(--color-background-primary)",
           primary: "var(--color-background-primary)",
@@ -78,6 +99,10 @@ export default {
         accent: {
           DEFAULT: "var(--color-accent)",
           foreground: "var(--color-accent-foreground)",
+        },
+        brand: {
+          DEFAULT: "var(--color-brand)",
+          foreground: "var(--color-brand-foreground)",
         },
         // Semantic status colors for inline use (status dots, badges)
         green: { 500: "#91cb80" },

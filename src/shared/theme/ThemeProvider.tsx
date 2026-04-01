@@ -32,6 +32,15 @@ function resolveTheme(preference: ThemePreference): ResolvedTheme {
   return preference;
 }
 
+function getContrastColor(hexColor: string): string {
+  const hex = hexColor.replace("#", "");
+  const r = Number.parseInt(hex.slice(0, 2), 16);
+  const g = Number.parseInt(hex.slice(2, 4), 16);
+  const b = Number.parseInt(hex.slice(4, 6), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.5 ? "#000000" : "#ffffff";
+}
+
 export function ThemeProvider({
   children,
   defaultTheme = "system",
@@ -96,8 +105,11 @@ export function ThemeProvider({
 
   React.useEffect(() => {
     const root = window.document.documentElement;
-    root.style.setProperty("--color-accent", accentColor);
-    root.style.setProperty("--color-accent-foreground", "#ffffff");
+    root.style.setProperty("--color-brand", accentColor);
+    root.style.setProperty(
+      "--color-brand-foreground",
+      getContrastColor(accentColor),
+    );
 
     const spacingScale: Record<Density, string> = {
       compact: "0.75",
