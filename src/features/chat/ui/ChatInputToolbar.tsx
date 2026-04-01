@@ -338,12 +338,6 @@ export function ChatInputToolbar({
             onClick={onSend}
             disabled={!canSend}
             size="icon-sm"
-            className={cn(
-              "rounded-full",
-              canSend
-                ? "bg-foreground text-background-primary shadow-none hover:bg-foreground/90"
-                : "cursor-default bg-foreground/10 text-muted-foreground disabled:opacity-100",
-            )}
             aria-label="Send message"
           >
             <ArrowUp className="h-4 w-4" />

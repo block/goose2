@@ -302,7 +302,7 @@ export function SkillsView() {
               <button
                 type="button"
                 onClick={() => importInputRef.current?.click()}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-accent transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-accent/50 transition-colors"
               >
                 <Upload className="w-3.5 h-3.5" />
                 Import
@@ -310,7 +310,7 @@ export function SkillsView() {
               <button
                 type="button"
                 onClick={handleNewSkill}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-accent transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-accent/50 transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />
                 New Skill
@@ -362,7 +362,7 @@ export function SkillsView() {
                   "flex w-full items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-3 transition-colors",
                   isDragOver
                     ? "border-ring bg-muted"
-                    : "border-border hover:border-border hover:bg-muted/50",
+                    : "border-border hover:border-border hover:bg-accent/50",
                 )}
               >
                 <Plus className="h-4 w-4 text-muted-foreground" />
@@ -398,7 +398,7 @@ export function SkillsView() {
                 <button
                   type="button"
                   onClick={handleNewSkill}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-accent transition-colors mt-2"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-accent/50 transition-colors mt-2"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   New Skill

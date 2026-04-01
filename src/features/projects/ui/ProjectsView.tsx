@@ -220,7 +220,7 @@ export function ProjectsView({ onStartChat }: ProjectsViewProps) {
               <button
                 type="button"
                 onClick={handleNewProject}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-accent transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-accent/50 transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />
                 New Project
@@ -272,7 +272,7 @@ export function ProjectsView({ onStartChat }: ProjectsViewProps) {
               <button
                 type="button"
                 onClick={handleNewProject}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border px-4 py-3 transition-colors hover:border-border hover:bg-muted/50"
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border px-4 py-3 transition-colors hover:border-border hover:bg-accent/50"
               >
                 <Plus className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">
@@ -302,7 +302,7 @@ export function ProjectsView({ onStartChat }: ProjectsViewProps) {
                 <button
                   type="button"
                   onClick={handleNewProject}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-accent transition-colors mt-2"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-accent/50 transition-colors mt-2"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   New Project

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { MoreVertical, Copy, Pencil, Trash2, Download } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import { Badge } from "@/shared/ui/badge";
 import { useAvatarSrc } from "@/shared/hooks/useAvatarSrc";
 import type { Persona } from "@/shared/types/agents";
 
@@ -55,7 +56,7 @@ export function PersonaCard({
       className={cn(
         "group relative flex flex-col items-center gap-3 rounded-xl border p-5 cursor-pointer",
         "bg-background transition-colors duration-200 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2",
-        "hover:bg-accent",
+        "hover:bg-accent/50",
         isActive ? "border-border ring-1 ring-ring" : "border-border",
       )}
     >
@@ -165,9 +166,9 @@ export function PersonaCard({
 
       {/* Built-in badge */}
       {persona.isBuiltin && (
-        <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+        <Badge variant="secondary" className="text-[10px]">
           Built-in
-        </span>
+        </Badge>
       )}
 
       {/* System prompt preview */}
@@ -177,13 +178,13 @@ export function PersonaCard({
 
       {/* Provider/model badge */}
       {(persona.provider || persona.model) && (
-        <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+        <Badge variant="secondary" className="text-[10px]">
           {persona.provider && <span>{persona.provider}</span>}
           {persona.provider && persona.model && (
             <span aria-hidden="true">/</span>
           )}
           {persona.model && <span>{persona.model}</span>}
-        </span>
+        </Badge>
       )}
     </section>
   );

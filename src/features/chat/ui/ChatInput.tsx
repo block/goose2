@@ -248,7 +248,7 @@ export function ChatInput({
               placeholder={effectivePlaceholder}
               disabled={disabled || isStreaming}
               rows={1}
-              className="mb-3 min-h-[36px] max-h-[200px] w-full resize-none bg-transparent px-1 text-[14px] leading-relaxed text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-60"
+              className="mb-3 min-h-[36px] max-h-[200px] w-full resize-none bg-transparent px-1 text-[14px] leading-relaxed text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 disabled:opacity-60"
               aria-label="Chat message input"
             />
 

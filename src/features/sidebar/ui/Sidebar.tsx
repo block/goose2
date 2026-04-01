@@ -84,7 +84,7 @@ export function Sidebar({
     prevCollapsed.current = collapsed;
   }, [collapsed]);
 
-  const labelTransition = "transition-all duration-300 ease-out";
+  const labelTransition = "transition-[opacity,width] duration-300 ease-out";
   const labelVisible = expanded && !collapsed;
 
   const MAX_RECENTS = 20;
@@ -362,7 +362,7 @@ export function Sidebar({
           <button
             type="button"
             onClick={onSettingsClick}
-            className="w-7 h-7 rounded-full bg-accent flex items-center justify-center overflow-hidden hover:bg-accent/80 transition-colors cursor-pointer"
+            className="w-7 h-7 rounded-full bg-accent flex items-center justify-center overflow-hidden hover:bg-accent/50/80 transition-colors cursor-pointer"
             title="Settings"
           >
             <User className="w-3.5 h-3.5 text-muted-foreground" />

@@ -97,7 +97,7 @@ export function PersonaGallery({
         className={cn(
           "flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-5",
           "text-muted-foreground transition-colors",
-          "hover:border-border hover:text-muted-foreground hover:bg-muted/50",
+          "hover:border-border hover:text-muted-foreground hover:bg-accent/50",
           isDragOver
             ? "border-border bg-muted/50 text-muted-foreground"
             : "border-border",

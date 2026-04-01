@@ -27,7 +27,7 @@ export function TabBar({
       <button
         type="button"
         onClick={onHomeClick}
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
         aria-label="Home"
       >
         <Home className="h-4 w-4" />
@@ -54,7 +54,7 @@ export function TabBar({
               "group flex h-7 cursor-pointer items-center gap-1.5 rounded-md pl-3 pr-1.5 text-xs transition-colors",
               tab.id === activeTabId
                 ? "bg-muted text-foreground"
-                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
             )}
           >
             <span className="truncate">{tab.title}</span>
@@ -77,7 +77,7 @@ export function TabBar({
       <button
         type="button"
         onClick={onNewTab}
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
         aria-label="New tab"
       >
         <Plus className="h-4 w-4" />

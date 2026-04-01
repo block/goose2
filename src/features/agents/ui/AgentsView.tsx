@@ -36,7 +36,7 @@ const STATUS_STYLES: Record<AgentStatus, { dot: string; label: string }> = {
 function AgentRow({ agent }: { agent: Agent }) {
   const status = STATUS_STYLES[agent.status];
   return (
-    <li className="flex items-center justify-between rounded-lg border border-border px-4 py-3 transition-colors hover:bg-muted/50">
+    <li className="flex items-center justify-between rounded-lg border border-border px-4 py-3 transition-colors hover:bg-accent/50">
       <div className="flex items-center gap-3 min-w-0">
         <Bot className="h-5 w-5 shrink-0 text-muted-foreground" />
         <div className="min-w-0">

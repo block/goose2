@@ -167,7 +167,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                   "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-all duration-600 ease-out",
                   activeSection === item.id
                     ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground duration-300",
+                    : "text-muted-foreground hover:bg-accent/50 hover:text-foreground duration-300",
                   isLoaded
                     ? "opacity-100 translate-x-0"
                     : "opacity-0 translate-x-4",
@@ -259,7 +259,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                           <button
                             type="button"
                             onClick={() => handleRestoreProject(project.id)}
-                            className="px-2 py-1 text-xs font-medium rounded-md border border-border hover:bg-accent transition-colors"
+                            className="px-2 py-1 text-xs font-medium rounded-md border border-border hover:bg-accent/50 transition-colors"
                           >
                             Restore
                           </button>
@@ -314,7 +314,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                         <button
                           type="button"
                           onClick={() => handleRestoreChat(session.id)}
-                          className="flex-shrink-0 rounded-md border border-border px-2 py-1 text-xs font-medium transition-colors hover:bg-accent"
+                          className="flex-shrink-0 rounded-md border border-border px-2 py-1 text-xs font-medium transition-colors hover:bg-accent/50"
                         >
                           Restore
                         </button>
