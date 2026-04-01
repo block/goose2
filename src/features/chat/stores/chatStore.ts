@@ -86,10 +86,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   setActiveSession: (sessionId) =>
     set((state) => ({
       activeSessionId: sessionId,
-      chatState: state.activeSessionId !== sessionId ? "idle" : state.chatState,
-      streamingMessageId:
-        state.activeSessionId !== sessionId ? null : state.streamingMessageId,
-      error: state.activeSessionId !== sessionId ? null : state.error,
+      sessionStateById: state.sessionStateById[sessionId]
+        ? state.sessionStateById
+        : {
+            ...state.sessionStateById,
+            [sessionId]: createInitialSessionRuntime(),
+          },
     })),
 
   // Message management
