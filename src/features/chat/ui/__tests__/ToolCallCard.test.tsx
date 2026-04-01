@@ -1,11 +1,22 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { Message } from "@/shared/types/messages";
+import { ArtifactPolicyProvider } from "../../hooks/ArtifactPolicyContext";
 import { ToolCallCard } from "../ToolCallCard";
+
+const { openPathMock } = vi.hoisted(() => ({
+  openPathMock: vi.fn(),
+}));
+
+vi.mock("@tauri-apps/plugin-opener", () => ({
+  openPath: openPathMock,
+}));
 
 describe("ToolCallCard", () => {
   afterEach(() => {
     vi.useRealTimers();
+    openPathMock.mockReset();
   });
 
   it("renders tool name", () => {
@@ -144,5 +155,149 @@ describe("ToolCallCard", () => {
       screen.getByText("veryLongToolNameThatShouldNotWrapAcrossMultiple…"),
     ).toBeInTheDocument();
     expect(screen.getByRole("button")).toHaveAttribute("title", longName);
+  });
+
+  it("shows artifact open action only on the primary host tool card", async () => {
+    const user = userEvent.setup();
+    const readArgs = { path: "/Users/test/project-a/notes.md" };
+    const writeArgs = {
+      paths: [
+        "/Users/test/project-a/output/final_report.md",
+        "/Users/test/project-a/output/extra_notes.md",
+      ],
+    };
+    const messages: Message[] = [
+      {
+        id: "assistant-1",
+        role: "assistant",
+        created: Date.now(),
+        content: [
+          {
+            type: "toolRequest",
+            id: "tool-read",
+            name: "read_file",
+            arguments: readArgs,
+            status: "completed",
+          },
+          {
+            type: "toolRequest",
+            id: "tool-write",
+            name: "write_file",
+            arguments: writeArgs,
+            status: "completed",
+          },
+        ],
+      },
+    ];
+
+    render(
+      <ArtifactPolicyProvider
+        messages={messages}
+        allowedRoots={["/Users/test/project-a", "/Users/test/.goose/artifacts"]}
+      >
+        <div>
+          <ToolCallCard
+            name="read_file"
+            arguments={readArgs}
+            status="completed"
+          />
+          <ToolCallCard
+            name="write_file"
+            arguments={writeArgs}
+            status="completed"
+          />
+        </div>
+      </ArtifactPolicyProvider>,
+    );
+
+    expect(screen.getByText("More outputs (1)")).toBeInTheDocument();
+    expect(screen.getAllByText("Open file")).toHaveLength(1);
+
+    await user.click(screen.getByText("Open file"));
+    expect(openPathMock).toHaveBeenCalledWith(
+      "/Users/test/project-a/output/final_report.md",
+    );
+  });
+
+  it("keeps secondary outputs collapsed until expanded", async () => {
+    const user = userEvent.setup();
+    const writeArgs = {
+      paths: [
+        "/Users/test/project-a/output/final_report.md",
+        "/Users/test/project-a/output/extra_notes.md",
+      ],
+    };
+    const messages: Message[] = [
+      {
+        id: "assistant-1",
+        role: "assistant",
+        created: Date.now(),
+        content: [
+          {
+            type: "toolRequest",
+            id: "tool-write",
+            name: "write_file",
+            arguments: writeArgs,
+            status: "completed",
+          },
+        ],
+      },
+    ];
+
+    render(
+      <ArtifactPolicyProvider
+        messages={messages}
+        allowedRoots={["/Users/test/project-a", "/Users/test/.goose/artifacts"]}
+      >
+        <ToolCallCard
+          name="write_file"
+          arguments={writeArgs}
+          status="completed"
+        />
+      </ArtifactPolicyProvider>,
+    );
+
+    expect(screen.getAllByText("Open file")).toHaveLength(1);
+    await user.click(screen.getByText("More outputs (1)"));
+    expect(screen.getAllByText("Open file")).toHaveLength(2);
+  });
+
+  it("renders blocked candidate as disabled with reason", () => {
+    const writeArgs = { path: "/Users/test/outside/final_report.md" };
+    const messages: Message[] = [
+      {
+        id: "assistant-1",
+        role: "assistant",
+        created: Date.now(),
+        content: [
+          {
+            type: "toolRequest",
+            id: "tool-write",
+            name: "write_file",
+            arguments: writeArgs,
+            status: "completed",
+          },
+        ],
+      },
+    ];
+
+    render(
+      <ArtifactPolicyProvider
+        messages={messages}
+        allowedRoots={["/Users/test/project-a", "/Users/test/.goose/artifacts"]}
+      >
+        <ToolCallCard
+          name="write_file"
+          arguments={writeArgs}
+          status="completed"
+        />
+      </ArtifactPolicyProvider>,
+    );
+
+    const openButton = screen.getByText("Open file").closest("button");
+    expect(openButton).toBeDisabled();
+    expect(
+      screen.getByText("Path is outside allowed project/artifacts roots."),
+    ).toBeInTheDocument();
   });
 });

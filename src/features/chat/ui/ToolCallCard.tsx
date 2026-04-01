@@ -1,7 +1,19 @@
-import { useState, useEffect, useRef } from "react";
-import { Wrench, Loader2, Check, XCircle, ChevronRight } from "lucide-react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import {
+  Wrench,
+  Loader2,
+  Check,
+  XCircle,
+  ChevronRight,
+  FolderOpen,
+} from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import type { ToolCallStatus } from "@/shared/types/messages";
+import type {
+  ArtifactPathCandidate,
+  ArtifactCandidateKind,
+} from "@/features/chat/lib/artifactPathPolicy";
+import { useArtifactPolicyContext } from "@/features/chat/hooks/ArtifactPolicyContext";
 
 interface ToolCallCardProps {
   name: string;
@@ -9,6 +21,8 @@ interface ToolCallCardProps {
   status: ToolCallStatus;
   result?: string;
   isError?: boolean;
+  variant?: "default" | "subtle";
+  expandable?: boolean;
 }
 
 const pillColors: Record<ToolCallStatus, string> = {
@@ -72,23 +86,65 @@ export function ToolCallCard({
   status,
   result,
   isError,
+  variant = "default",
+  expandable = true,
 }: ToolCallCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const [moreOutputsOpen, setMoreOutputsOpen] = useState(false);
+  const [openError, setOpenError] = useState<string | null>(null);
   const elapsed = useElapsedTime(status);
   const displayName = formatToolName(name);
+  const { resolveToolCardDisplay, openResolvedPath } =
+    useArtifactPolicyContext();
 
   const hasContent = Object.keys(args).length > 0 || result != null;
+  const canExpand = expandable && hasContent;
+  const display = useMemo(
+    () => resolveToolCardDisplay(args, name, result),
+    [args, name, resolveToolCardDisplay, result],
+  );
+  const canShowArtifactActions =
+    display.role === "primary_host" && Boolean(display.primaryCandidate);
+
+  const labelForCandidate = (candidate: ArtifactPathCandidate): string => {
+    const kindToLabel: Record<ArtifactCandidateKind, string> = {
+      file: "Open file",
+      folder: "Open folder",
+      path: "Open path",
+    };
+    return kindToLabel[candidate.kind];
+  };
+
+  const displayPath = (candidate: ArtifactPathCandidate): string =>
+    candidate.rawPath || candidate.resolvedPath;
+
+  const openCandidate = async (candidate: ArtifactPathCandidate) => {
+    if (!candidate.allowed) {
+      setOpenError(
+        candidate.blockedReason ||
+          "Path is outside allowed project/artifacts roots.",
+      );
+      return;
+    }
+    try {
+      setOpenError(null);
+      await openResolvedPath(candidate.resolvedPath);
+    } catch (error) {
+      setOpenError(error instanceof Error ? error.message : String(error));
+    }
+  };
 
   return (
     <div className="my-1">
       <button
         type="button"
-        onClick={() => hasContent && setExpanded(!expanded)}
+        onClick={() => canExpand && setExpanded(!expanded)}
         title={name}
         className={cn(
           "inline-flex max-w-full items-center justify-start gap-1.5 rounded-md border px-2.5 py-1 text-left text-xs transition-all duration-150",
-          hasContent && "cursor-pointer",
-          !hasContent && "cursor-default",
+          canExpand && "cursor-pointer",
+          !canExpand && "cursor-default",
+          variant === "subtle" && "opacity-80",
           pillColors[status] ?? pillColors.pending,
         )}
       >
@@ -102,7 +158,7 @@ export function ToolCallCard({
             {elapsed}s
           </span>
         )}
-        {hasContent && (
+        {canExpand && (
           <ChevronRight
             className={cn(
               "w-3 h-3 shrink-0 transition-transform duration-150",
@@ -112,7 +168,105 @@ export function ToolCallCard({
         )}
       </button>
 
-      {expanded && hasContent && (
+      {canShowArtifactActions && display.primaryCandidate && (
+        <div className="mt-1.5 ml-1 space-y-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              if (!display.primaryCandidate) return;
+              void openCandidate(display.primaryCandidate);
+            }}
+            className={cn(
+              "inline-flex max-w-full items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs transition-colors",
+              display.primaryCandidate.allowed
+                ? "border-accent/45 bg-accent/20 text-accent-foreground shadow-sm hover:bg-accent/30"
+                : "cursor-not-allowed border-red-500/30 bg-red-500/[0.04] text-red-500/70",
+            )}
+            disabled={!display.primaryCandidate.allowed}
+            title={display.primaryCandidate.resolvedPath}
+          >
+            <FolderOpen className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">
+              {labelForCandidate(display.primaryCandidate)}
+            </span>
+            <span className="truncate text-[10px] text-foreground-tertiary">
+              {displayPath(display.primaryCandidate)}
+            </span>
+            {display.primaryCandidate.confidence === "low" && (
+              <span className="text-[10px] text-foreground-tertiary">
+                detected
+              </span>
+            )}
+          </button>
+
+          {display.primaryCandidate.blockedReason && (
+            <p className="text-[11px] text-red-500/80">
+              {display.primaryCandidate.blockedReason}
+            </p>
+          )}
+
+          {display.secondaryCandidates.length > 0 && (
+            <div className="space-y-1">
+              <button
+                type="button"
+                onClick={() => setMoreOutputsOpen((prev) => !prev)}
+                className="inline-flex items-center gap-1 text-[11px] text-foreground-tertiary hover:text-foreground-secondary"
+              >
+                <ChevronRight
+                  className={cn(
+                    "h-3 w-3 transition-transform",
+                    moreOutputsOpen && "rotate-90",
+                  )}
+                />
+                More outputs ({display.secondaryCandidates.length})
+              </button>
+
+              {moreOutputsOpen && (
+                <div className="space-y-1.5 pl-4">
+                  {display.secondaryCandidates.map((candidate) => (
+                    <div key={candidate.id} className="space-y-0.5">
+                      <button
+                        type="button"
+                        onClick={() => void openCandidate(candidate)}
+                        className={cn(
+                          "inline-flex max-w-full items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] transition-colors",
+                          candidate.allowed
+                            ? "border-border bg-background-tertiary text-foreground-tertiary hover:bg-background-secondary hover:text-foreground-secondary"
+                            : "cursor-not-allowed border-red-500/20 bg-red-500/[0.03] text-red-500/70",
+                        )}
+                        disabled={!candidate.allowed}
+                        title={candidate.resolvedPath}
+                      >
+                        <FolderOpen className="h-3 w-3 shrink-0" />
+                        <span className="truncate">
+                          {labelForCandidate(candidate)}
+                        </span>
+                        <span className="truncate text-[10px] text-foreground-tertiary">
+                          {displayPath(candidate)}
+                        </span>
+                        {candidate.confidence === "low" && (
+                          <span className="text-[10px] text-foreground-tertiary">
+                            detected
+                          </span>
+                        )}
+                      </button>
+                      {candidate.blockedReason && (
+                        <p className="text-[11px] text-red-500/80">
+                          {candidate.blockedReason}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {openError && <p className="text-[11px] text-red-500">{openError}</p>}
+        </div>
+      )}
+
+      {expanded && canExpand && (
         <div className="mt-1.5 p-3 rounded-md bg-background-tertiary border border-border">
           {Object.keys(args).length > 0 && (
             <div>
