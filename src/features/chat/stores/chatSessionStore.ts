@@ -22,6 +22,7 @@ export interface ChatSession {
   createdAt: string; // ISO timestamp
   updatedAt: string;
   archivedAt?: string;
+  messageCount: number;
 }
 
 interface ChatSessionStoreState {
@@ -74,6 +75,7 @@ function sessionToChatSession(session: Session): ChatSession {
     createdAt: session.createdAt,
     updatedAt: session.updatedAt,
     archivedAt: session.archivedAt,
+    messageCount: session.messageCount,
   };
 }
 
@@ -100,6 +102,7 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
       personaId: opts?.personaId,
       createdAt: backendSession.createdAt ?? now,
       updatedAt: backendSession.updatedAt ?? now,
+      messageCount: backendSession.messageCount ?? 0,
     };
     // Persist initial metadata (title, persona, provider) to backend
     const initialUpdate: Record<string, string> = {};
