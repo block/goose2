@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, memo, useMemo } from "react";
+import { useState, useEffect, useRef, memo, useMemo, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
@@ -6,6 +6,11 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Check, Copy } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import {
+  isExternalHref,
+  type ArtifactPathCandidate,
+} from "@/features/chat/lib/artifactPathPolicy";
+import { useArtifactPolicyContext } from "@/features/chat/hooks/ArtifactPolicyContext";
 
 const customOneDarkTheme = {
   ...oneDark,
@@ -133,6 +138,39 @@ export const MarkdownContent = memo(function MarkdownContent({
   content,
   className = "",
 }: MarkdownContentProps) {
+  const [pathNotice, setPathNotice] = useState<string | null>(null);
+  const { resolveMarkdownHref, openResolvedPath } = useArtifactPolicyContext();
+
+  const handleLocalPath = useCallback(
+    async (candidate: ArtifactPathCandidate) => {
+      if (!candidate.allowed) {
+        setPathNotice(
+          candidate.blockedReason ||
+            "Path is outside allowed project/artifacts roots.",
+        );
+        return;
+      }
+      try {
+        setPathNotice(null);
+        await openResolvedPath(candidate.resolvedPath);
+      } catch (error) {
+        setPathNotice(error instanceof Error ? error.message : String(error));
+      }
+    },
+    [openResolvedPath],
+  );
+
+  const handleLinkClick = useCallback(
+    (event: React.MouseEvent<HTMLAnchorElement>, href?: string) => {
+      if (!href || isExternalHref(href)) return;
+      const resolved = resolveMarkdownHref(href);
+      if (!resolved) return;
+      event.preventDefault();
+      void handleLocalPath(resolved);
+    },
+    [handleLocalPath, resolveMarkdownHref],
+  );
+
   return (
     <div
       className={cn(
@@ -159,14 +197,27 @@ export const MarkdownContent = memo(function MarkdownContent({
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkBreaks]}
         components={{
-          a: (props) => (
-            <a {...props} target="_blank" rel="noopener noreferrer" />
+          a: ({ href, children, ...props }) => (
+            <a
+              {...props}
+              href={href}
+              target={isExternalHref(href) ? "_blank" : undefined}
+              rel={isExternalHref(href) ? "noopener noreferrer" : undefined}
+              onClick={(event) => handleLinkClick(event, href)}
+            >
+              {children}
+            </a>
           ),
           code: MarkdownCode,
         }}
       >
         {content}
       </ReactMarkdown>
+      {pathNotice && (
+        <p className="mt-2 text-xs text-red-500" role="status">
+          {pathNotice}
+        </p>
+      )}
     </div>
   );
 });
