@@ -262,12 +262,6 @@ export function MessageBubble({
           isUser ? "max-w-[80%] items-end" : "max-w-[85%] items-start",
         )}
       >
-        {/* Persona attribution */}
-        {isUser && message.metadata?.targetPersonaName && (
-          <span className="mb-0.5 text-[11px] font-medium text-foreground-tertiary">
-            You &rarr; {message.metadata.targetPersonaName}
-          </span>
-        )}
         {!isUser && assistantDisplayName && (
           <span className="mb-0.5 text-xs font-medium text-foreground-secondary">
             {assistantDisplayName}
