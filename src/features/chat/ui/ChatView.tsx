@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { MessageTimeline } from "./MessageTimeline";
-import { ChatInput } from "./ChatInput";
+import { ChatInput, type PastedImage } from "./ChatInput";
 import { LoadingGoose } from "./LoadingGoose";
 import { useChat } from "../hooks/useChat";
 import { useChatStore } from "../stores/chatStore";
@@ -252,12 +252,14 @@ export function ChatView({
   );
 
   // Ref for deferred sends after persona switch (Bug 1 fix: avoid stale system prompt)
-  const deferredSend = useRef<string | null>(null);
+  const deferredSend = useRef<{ text: string; images?: PastedImage[] } | null>(
+    null,
+  );
 
   // Wrap sendMessage to handle @ mentioned persona overrides
   const chatStore = useChatStore();
   const handleSend = useCallback(
-    (text: string, personaId?: string) => {
+    (text: string, personaId?: string, images?: PastedImage[]) => {
       if (personaId && personaId !== selectedPersonaId) {
         const newPersona = personas.find((p) => p.id === personaId);
         if (newPersona) {
@@ -278,10 +280,10 @@ export function ChatView({
         }
         handlePersonaChange(personaId);
         // Defer the send until after persona state updates
-        deferredSend.current = text;
+        deferredSend.current = { text, images };
         return;
       }
-      sendMessage(text);
+      sendMessage(text, undefined, images);
     },
     [
       sendMessage,
@@ -296,9 +298,9 @@ export function ChatView({
   // Effect to send deferred message after persona switch completes
   useEffect(() => {
     if (deferredSend.current && selectedPersona) {
-      const text = deferredSend.current;
+      const { text, images } = deferredSend.current;
       deferredSend.current = null;
-      sendMessage(text);
+      sendMessage(text, undefined, images);
     }
   }, [sendMessage, selectedPersona]);
 

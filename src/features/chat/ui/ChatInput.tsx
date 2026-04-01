@@ -10,10 +10,17 @@ import {
 import { ChatInputToolbar } from "./ChatInputToolbar";
 import { TooltipProvider } from "@/shared/ui/tooltip";
 import { PersonaAvatar } from "./PersonaPicker";
+import { ImageLightbox } from "@/shared/ui/ImageLightbox";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+
+export interface PastedImage {
+  base64: string;
+  mimeType: string;
+  objectUrl: string;
+}
 
 export interface ModelOption {
   id: string;
@@ -29,7 +36,7 @@ export interface ProjectOption {
 }
 
 interface ChatInputProps {
-  onSend: (text: string, personaId?: string) => void;
+  onSend: (text: string, personaId?: string, images?: PastedImage[]) => void;
   onStop?: () => void;
   isStreaming?: boolean;
   disabled?: boolean;
@@ -65,6 +72,55 @@ interface ChatInputProps {
 }
 
 // ---------------------------------------------------------------------------
+// PastedImageThumb
+// ---------------------------------------------------------------------------
+
+function PastedImageThumb({
+  objectUrl,
+  index,
+  onRemove,
+}: {
+  objectUrl: string;
+  index: number;
+  onRemove: (index: number) => void;
+}) {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
+  return (
+    <>
+      <div className="group relative inline-block">
+        <button
+          type="button"
+          onClick={() => setLightboxOpen(true)}
+          className="block cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={`View attachment ${index + 1}`}
+        >
+          <img
+            src={objectUrl}
+            alt={`Attachment ${index + 1}`}
+            className="h-16 w-16 rounded-lg object-cover border border-border"
+          />
+        </button>
+        <button
+          type="button"
+          onClick={() => onRemove(index)}
+          className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-foreground text-background opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+          aria-label="Remove image"
+        >
+          <X className="h-2.5 w-2.5" />
+        </button>
+      </div>
+      <ImageLightbox
+        src={objectUrl}
+        alt={`Attachment ${index + 1}`}
+        open={lightboxOpen}
+        onOpenChange={setLightboxOpen}
+      />
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // ChatInput
 // ---------------------------------------------------------------------------
 
@@ -95,6 +151,7 @@ export function ChatInput({
   contextLimit = 0,
 }: ChatInputProps) {
   const [text, setText] = useState("");
+  const [images, setImages] = useState<PastedImage[]>([]);
   const [isCompact, setIsCompact] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -105,7 +162,8 @@ export function ChatInput({
   );
   const stickyPersona = activePersona;
 
-  const canSend = text.trim().length > 0 && !isStreaming && !disabled;
+  const canSend =
+    (text.trim().length > 0 || images.length > 0) && !isStreaming && !disabled;
 
   const {
     mentionOpen,
@@ -130,14 +188,31 @@ export function ChatInput({
     return () => observer.disconnect();
   }, []);
 
+  // Revoke object URLs on unmount to avoid memory leaks
+  useEffect(() => {
+    return () => {
+      for (const img of images) {
+        URL.revokeObjectURL(img.objectUrl);
+      }
+    };
+  }, [images]);
+
   const handleSend = useCallback(() => {
     if (!canSend) return;
-    onSend(text.trim(), selectedPersonaId ?? undefined);
+    onSend(
+      text.trim(),
+      selectedPersonaId ?? undefined,
+      images.length > 0 ? images : undefined,
+    );
     setText("");
+    setImages((prev) => {
+      for (const img of prev) URL.revokeObjectURL(img.objectUrl);
+      return [];
+    });
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
-  }, [canSend, text, onSend, selectedPersonaId]);
+  }, [canSend, text, images, onSend, selectedPersonaId]);
 
   const handleMentionSelect = useCallback(
     (persona: Persona) => {
@@ -199,6 +274,38 @@ export function ChatInput({
     textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
   };
 
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const items = Array.from(e.clipboardData.items);
+      const imageItems = items.filter((item) => item.type.startsWith("image/"));
+      if (imageItems.length === 0) return;
+
+      e.preventDefault();
+      for (const item of imageItems) {
+        const file = item.getAsFile();
+        if (!file) continue;
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = reader.result as string;
+          // dataUrl is "data:<mimeType>;base64,<data>"
+          const [header, base64] = dataUrl.split(",");
+          const mimeType = header.replace("data:", "").replace(";base64", "");
+          const objectUrl = URL.createObjectURL(file);
+          setImages((prev) => [...prev, { base64, mimeType, objectUrl }]);
+        };
+        reader.readAsDataURL(file);
+      }
+    },
+    [],
+  );
+
+  const removeImage = useCallback((index: number) => {
+    setImages((prev) => {
+      URL.revokeObjectURL(prev[index].objectUrl);
+      return prev.filter((_, i) => i !== index);
+    });
+  }, []);
+
   const personaDisplayName = activePersona?.displayName ?? "Goose";
   const effectivePlaceholder =
     placeholder === "Message Goose..."
@@ -223,6 +330,19 @@ export function ChatInput({
               selectedIndex={mentionSelectedIndex}
             />
 
+            {images.length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-2">
+                {images.map((img, i) => (
+                  <PastedImageThumb
+                    key={img.objectUrl}
+                    objectUrl={img.objectUrl}
+                    index={i}
+                    onRemove={removeImage}
+                  />
+                ))}
+              </div>
+            )}
+
             {stickyPersona && (
               <div className="mb-2 flex items-center gap-1.5">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-2.5 py-1 text-[11px] font-medium text-brand">
@@ -245,6 +365,7 @@ export function ChatInput({
               value={text}
               onChange={handleInput}
               onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
               placeholder={effectivePlaceholder}
               disabled={disabled || isStreaming}
               rows={1}

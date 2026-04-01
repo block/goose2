@@ -51,6 +51,7 @@ pub async fn acp_send_message(
     working_dir: Option<String>,
     persona_id: Option<String>,
     persona_name: Option<String>,
+    images: Vec<(String, String)>,
 ) -> Result<(), String> {
     let working_dir = working_dir
         .map(|dir| dir.trim().to_string())
@@ -76,6 +77,7 @@ pub async fn acp_send_message(
         system_prompt,
         persona_id,
         persona_name,
+        images,
     )
     .await
 }

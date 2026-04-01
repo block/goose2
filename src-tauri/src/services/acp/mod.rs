@@ -57,6 +57,7 @@ impl AcpService {
         system_prompt: Option<String>,
         persona_id: Option<String>,
         persona_name: Option<String>,
+        images: Vec<(String, String)>,
     ) -> Result<(), String> {
         // Ensure the session exists in the SessionStore (create if needed)
         session_store.ensure_session(&session_id, Some(provider_id.clone()));
@@ -152,7 +153,7 @@ impl AcpService {
                     .run(
                         &session_id_inner,
                         &effective_prompt,
-                        &[],
+                        &images,
                         &working_dir,
                         &store,
                         &writer,
