@@ -35,6 +35,7 @@ impl AcpService {
         prompt: String,
         working_dir: PathBuf,
         system_prompt: Option<String>,
+        persona_id: Option<String>,
     ) -> Result<(), String> {
         // Ensure the session exists in the SessionStore (create if needed)
         session_store.ensure_session(&session_id, Some(provider_id.clone()));
@@ -63,8 +64,12 @@ impl AcpService {
             session_id.clone(),
             Arc::clone(&session_store),
         ));
-        let tauri_store = TauriStore::new(Arc::clone(&session_store));
-        let agent_session_id = tauri_store.get_agent_session_id(&session_id);
+        let tauri_store = TauriStore::new(
+            Arc::clone(&session_store),
+            session_id.clone(),
+            persona_id,
+        );
+        let agent_session_id = tauri_store.get_agent_session_id();
         let store: Arc<dyn Store> = Arc::new(tauri_store);
         let cancel_token = registry.register(&session_id, &provider_id);
 
