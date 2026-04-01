@@ -66,7 +66,7 @@ impl AcpService {
         let user_message = crate::types::messages::Message {
             id: user_message_id.clone(),
             role: MessageRole::User,
-            created: chrono::Utc::now().timestamp(),
+            created: chrono::Utc::now().timestamp_millis(),
             content: vec![MessageContent::Text {
                 text: prompt.clone(),
             }],
