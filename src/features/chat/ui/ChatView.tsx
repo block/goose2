@@ -3,7 +3,6 @@ import { MessageTimeline } from "./MessageTimeline";
 import { ChatInput } from "./ChatInput";
 import { LoadingGoose } from "./LoadingGoose";
 import { useChat } from "../hooks/useChat";
-import { useAcpStream } from "../hooks/useAcpStream";
 import { useChatStore } from "../stores/chatStore";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { useProviderSelection } from "@/features/agents/hooks/useProviderSelection";
@@ -208,6 +207,7 @@ export function ChatView({
   const {
     messages,
     chatState,
+    tokenState,
     sendMessage,
     stopStreaming,
     streamingMessageId,
@@ -219,15 +219,11 @@ export function ChatView({
     projectFolders[0]?.path,
   );
 
-  // Listen for ACP streaming events
-  useAcpStream(activeSessionId, true);
-
   // Ref for deferred sends after persona switch (Bug 1 fix: avoid stale system prompt)
   const deferredSend = useRef<string | null>(null);
 
   // Wrap sendMessage to handle @ mentioned persona overrides
   const chatStore = useChatStore();
-  const tokenState = useChatStore((s) => s.tokenState);
   const handleSend = useCallback(
     (text: string, personaId?: string) => {
       if (personaId && personaId !== selectedPersonaId) {

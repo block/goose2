@@ -20,6 +20,16 @@ const pillColors: Record<ToolCallStatus, string> = {
   stopped: "bg-background-tertiary text-foreground-secondary border-border",
 } as Record<string, string>;
 
+const MAX_TOOL_NAME_LENGTH = 48;
+
+function formatToolName(name: string): string {
+  if (name.length <= MAX_TOOL_NAME_LENGTH) {
+    return name;
+  }
+
+  return `${name.slice(0, MAX_TOOL_NAME_LENGTH - 1)}…`;
+}
+
 function StatusIndicator({ status }: { status: ToolCallStatus }) {
   switch (status) {
     case "executing":
@@ -65,6 +75,7 @@ export function ToolCallCard({
 }: ToolCallCardProps) {
   const [expanded, setExpanded] = useState(false);
   const elapsed = useElapsedTime(status);
+  const displayName = formatToolName(name);
 
   const hasContent = Object.keys(args).length > 0 || result != null;
 
@@ -73,15 +84,18 @@ export function ToolCallCard({
       <button
         type="button"
         onClick={() => hasContent && setExpanded(!expanded)}
+        title={name}
         className={cn(
-          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs border transition-all duration-150",
+          "inline-flex max-w-full items-center justify-start gap-1.5 rounded-md border px-2.5 py-1 text-left text-xs transition-all duration-150",
           hasContent && "cursor-pointer",
           !hasContent && "cursor-default",
           pillColors[status] ?? pillColors.pending,
         )}
       >
         <Wrench className="w-3 h-3 shrink-0" />
-        <span className="text-xs font-medium">{name}</span>
+        <span className="max-w-[12rem] truncate text-left text-xs font-medium sm:max-w-[18rem] md:max-w-[22rem]">
+          {displayName}
+        </span>
         <StatusIndicator status={status} />
         {status === "executing" && elapsed >= 3 && (
           <span className="text-[10px] tabular-nums text-foreground-tertiary">

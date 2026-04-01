@@ -9,6 +9,7 @@ import {
 import { cn } from "@/shared/lib/cn";
 import type { AppView } from "@/app/AppShell";
 import type { ProjectInfo } from "@/features/projects/api/projects";
+import { SessionActivityIndicator } from "@/shared/ui/SessionActivityIndicator";
 import { SidebarChatRow } from "./SidebarChatRow";
 
 const MAX_VISIBLE_CHATS = 3;
@@ -22,6 +23,8 @@ interface TabInfo {
   projectId?: string;
   isOpenTab?: boolean;
   updatedAt?: string;
+  isRunning?: boolean;
+  hasUnread?: boolean;
 }
 
 interface SidebarProjectsSectionProps {
@@ -223,6 +226,8 @@ function ProjectSection({
                 title={tab.title}
                 isActive={isActive}
                 isOpen={isOpen}
+                isRunning={tab.isRunning ?? false}
+                hasUnread={tab.hasUnread ?? false}
                 className="pl-5"
                 onSelect={onSelectTab}
                 onRename={onRenameChat}
@@ -409,13 +414,18 @@ export function SidebarProjectsSection({
                   title={tab.title}
                   onClick={() => onSelectTab?.(tab.id)}
                   className={cn(
-                    "flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-200",
+                    "relative flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-200",
                     activeTabId === tab.id
                       ? "bg-background-tertiary/70 text-foreground"
                       : "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
                   )}
                 >
                   <MessageSquare className="w-4 h-4" />
+                  <SessionActivityIndicator
+                    isRunning={tab.isRunning}
+                    hasUnread={tab.hasUnread}
+                    variant="overlay"
+                  />
                 </button>
               ))}
             </div>
@@ -431,6 +441,8 @@ export function SidebarProjectsSection({
                     title={tab.title}
                     isActive={isActive}
                     isOpen={isOpen}
+                    isRunning={tab.isRunning ?? false}
+                    hasUnread={tab.hasUnread ?? false}
                     onSelect={onSelectTab}
                     onRename={onRenameChat}
                     onArchive={onArchiveChat}

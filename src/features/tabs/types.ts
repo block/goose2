@@ -4,4 +4,6 @@ export interface Tab {
   sessionId: string;
   agentId?: string;
   projectId?: string;
+  isRunning?: boolean;
+  hasUnread?: boolean;
 }

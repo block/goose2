@@ -13,6 +13,8 @@ import type { ProjectInfo } from "@/features/projects/api/projects";
 import { SettingsModal } from "@/features/settings/ui/SettingsModal";
 import { useChatStore } from "@/features/chat/stores/chatStore";
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
+import { useAcpStream } from "@/features/chat/hooks/useAcpStream";
+import { isSessionRunning } from "@/features/chat/lib/sessionActivity";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
 import { findReusableNewChatSession } from "@/features/chat/lib/newChat";
@@ -44,13 +46,13 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const agentStore = useAgentStore();
   const projectStore = useProjectStore();
 
-  // Track in-flight message loads to avoid duplicate requests
+  useAcpStream(true);
+
   const loadingSessionsRef = useRef<Set<string>>(new Set());
   const pendingProjectCreatedRef = useRef<((projectId: string) => void) | null>(
     null,
   );
 
-  // Load messages from backend for a session if not already in the store
   const loadSessionMessages = useCallback(async (sessionId: string) => {
     const { messagesBySession, setMessages } = useChatStore.getState();
     const existing = messagesBySession[sessionId];
@@ -82,18 +84,26 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     projectStore.fetchProjects();
   }, [projectStore.fetchProjects]);
 
-  // Derive tab objects from session store for TabBar and Sidebar compatibility
   const { sessions, openTabIds, activeTabId } = sessionStore;
+
+  useEffect(() => {
+    if (activeView === "chat" && activeTabId) {
+      useChatStore.getState().markSessionRead(activeTabId);
+    }
+  }, [activeTabId, activeView]);
 
   const tabs: Tab[] = useMemo(() => {
     const sessionMap = new Map(sessions.map((s) => [s.id, s]));
     return openTabIds.reduce<Tab[]>((acc, id) => {
       const session = sessionMap.get(id);
       if (session) {
+        const runtime = chatStore.getSessionRuntime(session.id);
         const tab: Tab = {
           id: session.id,
           title: session.title,
           sessionId: session.id, // tab ID === session ID in new model
+          isRunning: isSessionRunning(runtime.chatState),
+          hasUnread: runtime.hasUnread,
         };
         if (session.agentId) tab.agentId = session.agentId;
         if (session.projectId) tab.projectId = session.projectId;
@@ -101,17 +111,18 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       }
       return acc;
     }, []);
-  }, [openTabIds, sessions]);
+  }, [chatStore, openTabIds, sessions]);
 
   const isHome = activeTabId === null && activeView === "home";
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
 
-  // Derive status bar values from stores
   const activeSession = activeTabId
     ? sessionStore.getSession(activeTabId)
     : undefined;
   const modelName = activeSession?.modelName;
-  const tokenCount = chatStore.tokenState.totalTokens;
+  const tokenCount = activeTabId
+    ? chatStore.getSessionRuntime(activeTabId).tokenState.totalTokens
+    : 0;
 
   const [pendingInitialMessage, setPendingInitialMessage] = useState<
     string | undefined
@@ -158,7 +169,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       sessionStore.openTab(session.id);
       setActiveView("chat");
 
-      // Set the active session in chatStore
       chatStore.setActiveSession(session.id);
 
       return session;
@@ -326,7 +336,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         initialMessage?.slice(0, 40) || "New Chat",
         selectedProject,
       ).catch(() => {
-        // Clear pending message if tab creation fails to avoid stale state
         setPendingInitialMessage(undefined);
         setHomeSelectedProvider(undefined);
         setHomeSelectedPersonaId(undefined);
@@ -339,7 +348,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   const handleTabSelect = useCallback(
     (id: string) => {
-      // Open the tab if it's not already open (e.g. clicking a recent session)
       const { openTabIds: currentOpenTabIds } = useChatSessionStore.getState();
       if (!currentOpenTabIds.includes(id)) {
         sessionStore.openTab(id);
@@ -347,9 +355,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         sessionStore.setActiveTab(id);
       }
       setActiveView("chat");
-      // Sync chatStore's active session (id === sessionId in new model)
       chatStore.setActiveSession(id);
-      // Load historical messages from backend if not already in store
+      useChatStore.getState().markSessionRead(id);
       loadSessionMessages(id);
     },
     [sessionStore, chatStore, loadSessionMessages],
@@ -381,7 +388,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  // Derive stored persona for active session
   const activeSessionPersonaId = activeTab
     ? sessionStore.getSession(activeTab.sessionId)?.personaId
     : undefined;
@@ -423,7 +429,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
-      {/* Tab bar — full width across the top */}
       <TabBar
         tabs={tabs}
         activeTabId={activeTabId}
@@ -433,9 +438,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         onHomeClick={() => handleNavigate("home")}
       />
 
-      {/* Main content area — sidebar + content as flex row */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Sidebar wrapper — padding creates the floating effect */}
         <div
           className="flex-shrink-0 h-full py-3 pl-3"
           style={{
@@ -466,13 +469,11 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           />
         </div>
 
-        {/* Content area */}
         <main className="min-h-0 min-w-0 flex-1">
           {children ?? renderContent()}
         </main>
       </div>
 
-      {/* Status bar — conditional with animation */}
       <div
         className={`overflow-hidden transition-all duration-300 ease-in-out ${
           isHome ? "max-h-0 opacity-0" : "max-h-8 opacity-100"
@@ -485,10 +486,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         />
       </div>
 
-      {/* Settings modal */}
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
 
-      {/* Create project dialog */}
       <CreateProjectDialog
         isOpen={createProjectOpen}
         onClose={() => {

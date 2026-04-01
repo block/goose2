@@ -1,6 +1,7 @@
 import { Home, Plus, X } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import type { Tab } from "@/features/tabs/types";
+import { SessionActivityIndicator } from "@/shared/ui/SessionActivityIndicator";
 
 interface TabBarProps {
   tabs: Tab[];
@@ -58,6 +59,10 @@ export function TabBar({
             )}
           >
             <span className="truncate">{tab.title}</span>
+            <SessionActivityIndicator
+              isRunning={tab.isRunning}
+              hasUnread={tab.hasUnread}
+            />
             {/* biome-ignore lint/a11y/useKeyWithClickEvents: close is a secondary action inside an interactive tab, keyboard users close tabs via other means */}
             {/* biome-ignore lint/a11y/noStaticElementInteractions: cannot use button inside a tab element, span with click is intentional */}
             <span

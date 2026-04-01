@@ -2,7 +2,6 @@ import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { useChatStore } from "../../stores/chatStore";
-import { INITIAL_TOKEN_STATE } from "@/shared/types/chat";
 
 const mockAcpSendMessage = vi.fn();
 const mockAcpCancelSession = vi.fn();
@@ -23,17 +22,12 @@ function createDeferredPromise() {
 }
 
 describe("useChat", () => {
-  const sessionId = "session-1";
-
   beforeEach(() => {
     vi.clearAllMocks();
     useChatStore.setState({
       messagesBySession: {},
+      sessionStateById: {},
       activeSessionId: null,
-      chatState: "idle",
-      streamingMessageId: null,
-      tokenState: { ...INITIAL_TOKEN_STATE },
-      error: null,
       isConnected: true,
     });
     useAgentStore.setState({
@@ -71,7 +65,7 @@ describe("useChat", () => {
     mockAcpSendMessage.mockReturnValue(deferred.promise);
 
     const { result } = renderHook(() =>
-      useChat(sessionId, undefined, undefined, {
+      useChat("session-1", undefined, undefined, {
         id: "persona-a",
         name: "Persona A",
       }),
@@ -91,7 +85,7 @@ describe("useChat", () => {
     });
 
     expect(mockAcpSendMessage).toHaveBeenCalledWith(
-      sessionId,
+      "session-1",
       "goose",
       "Hello",
       {
@@ -101,11 +95,102 @@ describe("useChat", () => {
         personaName: "Persona B",
       },
     );
-    expect(mockAcpCancelSession).toHaveBeenCalledWith(sessionId, "persona-b");
+    expect(mockAcpCancelSession).toHaveBeenCalledWith("session-1", "persona-b");
 
     deferred.resolve();
     await act(async () => {
       await sendPromise;
+    });
+  });
+
+  it("keeps persona-aware cancellation working after remount", async () => {
+    const deferred = createDeferredPromise();
+    mockAcpSendMessage.mockReturnValue(deferred.promise);
+
+    const firstMount = renderHook(() =>
+      useChat("session-1", undefined, undefined, {
+        id: "persona-a",
+        name: "Persona A",
+      }),
+    );
+
+    let sendPromise!: Promise<void>;
+    await act(async () => {
+      sendPromise = firstMount.result.current.sendMessage("Hello", {
+        id: "persona-b",
+        name: "Persona B",
+      });
+      await Promise.resolve();
+    });
+
+    firstMount.unmount();
+
+    const secondMount = renderHook(() =>
+      useChat("session-1", undefined, undefined, {
+        id: "persona-a",
+        name: "Persona A",
+      }),
+    );
+
+    act(() => {
+      secondMount.result.current.stopGeneration();
+    });
+
+    expect(mockAcpCancelSession).toHaveBeenCalledWith("session-1", "persona-b");
+
+    deferred.resolve();
+    await act(async () => {
+      await sendPromise;
+    });
+  });
+
+  it("allows another session to send while a different session is streaming", async () => {
+    const deferred = createDeferredPromise();
+    mockAcpSendMessage
+      .mockReturnValueOnce(deferred.promise)
+      .mockResolvedValueOnce(undefined);
+
+    const firstSession = renderHook(() => useChat("session-1"));
+    const secondSession = renderHook(() => useChat("session-2"));
+
+    let firstPromise!: Promise<void>;
+    await act(async () => {
+      firstPromise = firstSession.result.current.sendMessage("First");
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await secondSession.result.current.sendMessage("Second");
+    });
+
+    expect(mockAcpSendMessage).toHaveBeenNthCalledWith(
+      1,
+      "session-1",
+      "goose",
+      "First",
+      {
+        systemPrompt: undefined,
+        workingDir: undefined,
+        personaId: undefined,
+        personaName: undefined,
+      },
+    );
+    expect(mockAcpSendMessage).toHaveBeenNthCalledWith(
+      2,
+      "session-2",
+      "goose",
+      "Second",
+      {
+        systemPrompt: undefined,
+        workingDir: undefined,
+        personaId: undefined,
+        personaName: undefined,
+      },
+    );
+
+    deferred.resolve();
+    await act(async () => {
+      await firstPromise;
     });
   });
 });
