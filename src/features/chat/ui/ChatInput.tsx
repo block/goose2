@@ -202,7 +202,7 @@ export function ChatInput({
 
             {mentionPersonaId && (
               <div className="mb-2 flex items-center gap-1.5">
-                <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2.5 py-0.5 text-[11px] font-medium text-accent">
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-2.5 py-0.5 text-[11px] font-medium text-brand">
                   @
                   {personas.find((p) => p.id === mentionPersonaId)?.displayName}
                   <button

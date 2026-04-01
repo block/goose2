@@ -316,7 +316,7 @@ export function CreateProjectDialog({
               type="checkbox"
               checked={useWorktrees}
               onChange={(e) => setUseWorktrees(e.target.checked)}
-              className="h-4 w-4 rounded border-border accent-foreground"
+              className="h-4 w-4 rounded border-border accent-brand"
             />
             <span className="text-xs font-medium text-foreground-secondary">
               Use git worktrees for branch isolation

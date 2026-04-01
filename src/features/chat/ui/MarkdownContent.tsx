@@ -140,7 +140,7 @@ export const MarkdownContent = memo(function MarkdownContent({
         prose-pre:p-0 prose-pre:m-0 !p-0
         prose-code:before:content-none prose-code:after:content-none
         prose-code:break-all prose-code:whitespace-pre-wrap prose-code:font-mono
-        prose-a:break-all prose-a:text-accent prose-a:underline
+        prose-a:break-all prose-a:text-brand prose-a:underline
         prose-table:table prose-table:w-full
         prose-blockquote:text-inherit prose-blockquote:border-border
         prose-td:border prose-td:border-border prose-td:p-2

@@ -97,9 +97,30 @@
     --radius-xl: 16px;
     --radius-full: 9999px;
 
-    --color-accent: #3b82f6;
-    --color-accent-foreground: #ffffff;
+    --color-accent: #f5f5f5;
+    --color-accent-foreground: #0a0a0a;
+    --color-brand: #3b82f6;
+    --color-brand-foreground: #ffffff;
     --density-spacing: 1;
+
+    /* shadcn compatibility layer */
+    --background: var(--color-background-primary);
+    --foreground: var(--color-text-primary);
+    --card: var(--color-background-primary);
+    --card-foreground: var(--color-text-primary);
+    --popover: var(--color-background-primary);
+    --popover-foreground: var(--color-text-primary);
+    --primary: var(--color-background-inverse);
+    --primary-foreground: var(--color-text-inverse);
+    --secondary: var(--color-background-secondary);
+    --secondary-foreground: var(--color-text-primary);
+    --muted: var(--color-background-secondary);
+    --muted-foreground: var(--color-text-secondary);
+    --destructive: var(--color-background-danger);
+    --destructive-foreground: var(--color-text-inverse);
+    --border: var(--color-border-primary);
+    --input: var(--color-border-primary);
+    --ring: var(--color-ring-primary);
   }
 
   .dark {
@@ -156,9 +177,30 @@
     --shadow-lg:
       0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
 
-    --color-accent: #3b82f6;
-    --color-accent-foreground: #ffffff;
+    --color-accent: #262626;
+    --color-accent-foreground: #fafafa;
+    --color-brand: #3b82f6;
+    --color-brand-foreground: #ffffff;
     --density-spacing: 1;
+
+    /* shadcn compatibility layer */
+    --background: var(--color-background-primary);
+    --foreground: var(--color-text-primary);
+    --card: var(--color-background-secondary);
+    --card-foreground: var(--color-text-primary);
+    --popover: var(--color-background-secondary);
+    --popover-foreground: var(--color-text-primary);
+    --primary: var(--color-background-inverse);
+    --primary-foreground: var(--color-text-inverse);
+    --secondary: var(--color-background-tertiary);
+    --secondary-foreground: var(--color-text-primary);
+    --muted: var(--color-background-tertiary);
+    --muted-foreground: var(--color-text-secondary);
+    --destructive: var(--color-background-danger);
+    --destructive-foreground: var(--color-text-inverse);
+    --border: var(--color-border-primary);
+    --input: var(--color-border-secondary);
+    --ring: var(--color-ring-primary);
   }
 }
 

@@ -114,7 +114,7 @@ function MentionAvatar({ persona }: { persona: Persona }) {
         "flex h-7 w-7 items-center justify-center rounded-full",
         persona.isBuiltin
           ? "bg-foreground/10 text-foreground"
-          : "bg-accent/10 text-accent",
+          : "bg-brand/10 text-brand",
       )}
     >
       {persona.isBuiltin ? (
