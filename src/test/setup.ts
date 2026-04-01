@@ -1,6 +1,6 @@
 import React from "react";
 import "@testing-library/jest-dom/vitest";
-import { vi } from "vitest";
+import { beforeEach, vi } from "vitest";
 
 vi.mock("react-syntax-highlighter", () => ({
   Prism: ({ children }: { children: React.ReactNode }) =>
@@ -28,4 +28,54 @@ Object.defineProperty(window, "matchMedia", {
     removeEventListener: () => {},
     dispatchEvent: () => false,
   }),
+});
+
+function createInMemoryStorage(): Storage {
+  const store = new Map<string, string>();
+  return {
+    get length() {
+      return store.size;
+    },
+    clear: () => {
+      store.clear();
+    },
+    getItem: (key: string) => store.get(key) ?? null,
+    key: (index: number) => Array.from(store.keys())[index] ?? null,
+    removeItem: (key: string) => {
+      store.delete(key);
+    },
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+  };
+}
+
+function hasCompleteStorageApi(
+  maybeStorage: Partial<Storage> | undefined,
+): maybeStorage is Storage {
+  return Boolean(
+    maybeStorage &&
+      typeof maybeStorage.getItem === "function" &&
+      typeof maybeStorage.setItem === "function" &&
+      typeof maybeStorage.removeItem === "function" &&
+      typeof maybeStorage.clear === "function" &&
+      typeof maybeStorage.key === "function",
+  );
+}
+
+function ensureLocalStorage() {
+  if (hasCompleteStorageApi(globalThis.localStorage)) {
+    return;
+  }
+
+  const fallbackStorage = createInMemoryStorage();
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    writable: true,
+    value: fallbackStorage,
+  });
+}
+
+beforeEach(() => {
+  ensureLocalStorage();
 });
