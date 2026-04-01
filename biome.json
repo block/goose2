@@ -6,8 +6,8 @@
     "useIgnoreFile": true
   },
   "files": {
-    "ignoreUnknown": false,
-    "includes": ["**", "!src-tauri/gen"]
+    "ignoreUnknown": true,
+    "includes": ["**", "!src-tauri/gen", "!.agents"]
   },
   "formatter": {
     "enabled": true,
