@@ -6,20 +6,12 @@ interface StatusBarProps {
   modelName?: string;
   sessionId?: string;
   tokenCount?: number;
-  status?: "connected" | "disconnected" | "loading";
 }
-
-const statusColor = {
-  connected: "bg-green-500",
-  disconnected: "bg-red-500",
-  loading: "bg-yellow-500",
-} as const;
 
 export function StatusBar({
   modelName,
   sessionId,
   tokenCount = 0,
-  status = "disconnected",
 }: StatusBarProps) {
   const [copied, setCopied] = useState(false);
 
@@ -63,11 +55,6 @@ export function StatusBar({
             {tokenCount.toLocaleString()} tokens
           </span>
         )}
-        <div
-          role="status"
-          aria-label={status}
-          className={cn("h-1.5 w-1.5 rounded-full", statusColor[status])}
-        />
       </div>
     </div>
   );
