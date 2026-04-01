@@ -5,11 +5,21 @@ import type { AcpProvider } from "@/shared/api/acp";
 const PROVIDER_STORAGE_KEY = "goose:defaultProvider";
 const FALLBACK_PROVIDER = "goose";
 
-function getStoredProvider(): string {
+export function getStoredProvider(providers: AcpProvider[] = []): string {
   try {
-    return localStorage.getItem(PROVIDER_STORAGE_KEY) ?? FALLBACK_PROVIDER;
+    const storedProvider =
+      localStorage.getItem(PROVIDER_STORAGE_KEY) ?? FALLBACK_PROVIDER;
+
+    if (
+      providers.length === 0 ||
+      providers.some((provider) => provider.id === storedProvider)
+    ) {
+      return storedProvider;
+    }
+
+    return providers[0]?.id ?? FALLBACK_PROVIDER;
   } catch {
-    return FALLBACK_PROVIDER;
+    return providers[0]?.id ?? FALLBACK_PROVIDER;
   }
 }
 

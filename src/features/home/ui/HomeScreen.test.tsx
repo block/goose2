@@ -1,12 +1,29 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { HomeScreen } from "./HomeScreen";
+
+const setSelectedProvider = vi.fn();
+const setSelectedProviderWithoutPersist = vi.fn();
 
 vi.mock("@/shared/api/acp", () => ({
   discoverAcpProviders: vi.fn().mockResolvedValue([
     { id: "goose", label: "Goose" },
     { id: "openai", label: "OpenAI" },
   ]),
+}));
+
+vi.mock("@/features/agents/hooks/useProviderSelection", () => ({
+  useProviderSelection: () => ({
+    providers: [
+      { id: "goose", label: "Goose" },
+      { id: "openai", label: "OpenAI" },
+    ],
+    providersLoading: false,
+    selectedProvider: "goose",
+    setSelectedProvider,
+    setSelectedProviderWithoutPersist,
+  }),
 }));
 
 // HomeScreen now reads personas from the agent store, not from ACP providers
@@ -25,7 +42,29 @@ vi.mock("@/features/agents/stores/agentStore", async (importOriginal) => {
               id: "builtin-solo",
               displayName: "Solo",
               systemPrompt: "You are Solo.",
+              provider: "openai",
+              description: null,
+              avatar: null,
+              createdBy: null,
+              source: "custom",
+              extensions: [],
+              metadata: null,
+              sortOrder: 0,
+              isDefault: false,
+            },
+            {
+              id: "builtin-goose",
+              displayName: "Goosey",
+              systemPrompt: "You are Goosey.",
               isBuiltin: true,
+              description: null,
+              avatar: null,
+              createdBy: null,
+              source: "custom",
+              extensions: [],
+              metadata: null,
+              sortOrder: 1,
+              isDefault: false,
               createdAt: "",
               updatedAt: "",
             },
@@ -44,6 +83,10 @@ describe("HomeScreen", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 2, 29, 14, 30, 0)); // 2:30 PM
+    localStorage.clear();
+    localStorage.setItem("goose:defaultProvider", "goose");
+    setSelectedProvider.mockReset();
+    setSelectedProviderWithoutPersist.mockReset();
   });
 
   it("renders the clock", () => {
@@ -79,5 +122,25 @@ describe("HomeScreen", () => {
     expect(
       screen.getByRole("button", { name: /select project/i }),
     ).toBeInTheDocument();
+  });
+
+  it("reverts to the stored provider when a persona override is cleared", async () => {
+    vi.useRealTimers();
+    const user = userEvent.setup();
+
+    render(<HomeScreen />);
+
+    await user.click(screen.getByRole("button", { name: /choose assistant/i }));
+    await user.click(screen.getByRole("menuitem", { name: /solo/i }));
+
+    expect(setSelectedProviderWithoutPersist).toHaveBeenLastCalledWith(
+      "openai",
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /clear active assistant/i }),
+    );
+
+    expect(setSelectedProviderWithoutPersist).toHaveBeenLastCalledWith("goose");
   });
 });

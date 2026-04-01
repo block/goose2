@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { useAgentStore } from "@/features/agents/stores/agentStore";
+import {
+  getStoredProvider,
+  useAgentStore,
+} from "@/features/agents/stores/agentStore";
 import { useProviderSelection } from "@/features/agents/hooks/useProviderSelection";
 import { ChatInput } from "@/features/chat/ui/ChatInput";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
@@ -78,14 +81,14 @@ export function HomeScreen({
   const handlePersonaChange = useCallback(
     (personaId: string | null) => {
       setSelectedPersonaId(personaId);
-      if (personaId) {
-        const persona = personas.find((p) => p.id === personaId);
-        if (persona?.provider) {
-          setSelectedProviderWithoutPersist(persona.provider);
-        }
-      }
+      const persona = personaId
+        ? personas.find((candidate) => candidate.id === personaId)
+        : null;
+      const nextProvider = persona?.provider ?? getStoredProvider(providers);
+
+      setSelectedProviderWithoutPersist(nextProvider);
     },
-    [personas, setSelectedProviderWithoutPersist],
+    [personas, providers, setSelectedProviderWithoutPersist],
   );
 
   const handleCreatePersona = useCallback(() => {
