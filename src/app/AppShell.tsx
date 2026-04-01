@@ -18,6 +18,7 @@ import { useProjectStore } from "@/features/projects/stores/projectStore";
 import { findReusableNewChatSession } from "@/features/chat/lib/newChat";
 import { getSessionMessages } from "@/shared/api/chat";
 import type { Tab } from "@/features/tabs/types";
+import { useAppStartup } from "./hooks/useAppStartup";
 
 export type AppView = "home" | "chat" | "skills" | "agents" | "projects";
 
@@ -75,30 +76,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     }
   }, []);
 
-  // Load sessions, personas, and tab state on mount
-  useEffect(() => {
-    (async () => {
-      // Load personas eagerly so they're available in HomeScreen and ChatView
-      const personaStore = useAgentStore.getState();
-      personaStore.setPersonasLoading(true);
-      try {
-        const { listPersonas } = await import("@/shared/api/agents");
-        const personas = await listPersonas();
-        personaStore.setPersonas(personas);
-      } catch (err) {
-        console.error("Failed to load personas on startup:", err);
-      } finally {
-        personaStore.setPersonasLoading(false);
-      }
-
-      const { loadSessions, loadTabState } = useChatSessionStore.getState();
-      await loadSessions();
-      await loadTabState();
-      // Always start on the Home screen — tabs are restored in the tab bar
-      // but no tab is selected until the user clicks one.
-      useChatSessionStore.getState().setActiveTab(null);
-    })();
-  }, []);
+  useAppStartup();
 
   useEffect(() => {
     projectStore.fetchProjects();

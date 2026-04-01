@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { useAgentStore } from "@/features/agents/stores/agentStore";
+import {
+  getStoredProvider,
+  useAgentStore,
+} from "@/features/agents/stores/agentStore";
+import { useProviderSelection } from "@/features/agents/hooks/useProviderSelection";
 import { ChatInput } from "@/features/chat/ui/ChatInput";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
-import { discoverAcpProviders, type AcpProvider } from "@/shared/api/acp";
 
 function HomeClock() {
   const [time, setTime] = useState(new Date());
@@ -60,37 +63,33 @@ export function HomeScreen({
   const greeting = getGreeting(hour);
 
   const personas = useAgentStore((s) => s.personas);
+  const {
+    providers,
+    providersLoading,
+    selectedProvider,
+    setSelectedProvider,
+    setSelectedProviderWithoutPersist,
+  } = useProviderSelection();
   const projects = useProjectStore((s) => s.projects);
   const [selectedPersonaId, setSelectedPersonaId] = useState<string | null>(
     null,
   );
-  const [providers, setProviders] = useState<AcpProvider[]>([]);
-  const [selectedProvider, setSelectedProvider] = useState("goose");
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     null,
   );
-  const selectedPersona = personas.find((p) => p.id === selectedPersonaId);
 
-  useEffect(() => {
-    discoverAcpProviders()
-      .then((discovered) => {
-        setProviders(discovered);
-        setSelectedProvider((current) => {
-          if (
-            discovered.length > 0 &&
-            !discovered.some((provider) => provider.id === current)
-          ) {
-            return discovered[0].id;
-          }
-          return current;
-        });
-      })
-      .catch(() => setProviders([]));
-  }, []);
+  const handlePersonaChange = useCallback(
+    (personaId: string | null) => {
+      setSelectedPersonaId(personaId);
+      const persona = personaId
+        ? personas.find((candidate) => candidate.id === personaId)
+        : null;
+      const nextProvider = persona?.provider ?? getStoredProvider(providers);
 
-  useEffect(() => {
-    setSelectedProvider(selectedPersona?.provider ?? "goose");
-  }, [selectedPersona?.provider]);
+      setSelectedProviderWithoutPersist(nextProvider);
+    },
+    [personas, providers, setSelectedProviderWithoutPersist],
+  );
 
   const handleCreatePersona = useCallback(() => {
     useAgentStore.getState().openPersonaEditor();
@@ -127,9 +126,10 @@ export function HomeScreen({
             onSend={handleSend}
             personas={personas}
             selectedPersonaId={selectedPersonaId}
-            onPersonaChange={setSelectedPersonaId}
+            onPersonaChange={handlePersonaChange}
             onCreatePersona={handleCreatePersona}
             providers={providers}
+            providersLoading={providersLoading}
             selectedProvider={selectedProvider}
             onProviderChange={setSelectedProvider}
             selectedProjectId={selectedProjectId}

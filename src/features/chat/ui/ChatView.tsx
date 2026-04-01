@@ -5,8 +5,8 @@ import { LoadingGoose } from "./LoadingGoose";
 import { useChat } from "../hooks/useChat";
 import { useAcpStream } from "../hooks/useAcpStream";
 import { useChatStore } from "../stores/chatStore";
-import { discoverAcpProviders, type AcpProvider } from "@/shared/api/acp";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
+import { useProviderSelection } from "@/features/agents/hooks/useProviderSelection";
 import { useChatSessionStore } from "../stores/chatSessionStore";
 import { getProject, type ProjectInfo } from "@/features/projects/api/projects";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
@@ -45,7 +45,14 @@ export function ChatView({
   onCreateProjectFromFolder,
 }: ChatViewProps) {
   const [activeSessionId] = useState(() => sessionId ?? crypto.randomUUID());
-  const [providers, setProviders] = useState<AcpProvider[]>([]);
+
+  // Provider state from shared store
+  const {
+    providers,
+    providersLoading,
+    selectedProvider: globalSelectedProvider,
+    setSelectedProvider: setGlobalSelectedProvider,
+  } = useProviderSelection();
 
   // Persona state
   const personas = useAgentStore((s) => s.personas);
@@ -76,12 +83,12 @@ export function ChatView({
         })),
     [projects],
   );
-  const effectiveProvider =
+  // For existing sessions, use their saved provider; otherwise use global selection
+  const selectedProvider =
     session?.providerId ??
     initialProvider ??
     project?.preferredProvider ??
-    "goose";
-  const [selectedProvider, setSelectedProvider] = useState(effectiveProvider);
+    globalSelectedProvider;
 
   const selectedPersona = personas.find((p) => p.id === selectedPersonaId);
   const projectFolders = useMemo(
@@ -123,41 +130,18 @@ export function ChatView({
     };
   }, [session?.projectId, storedProject]);
 
-  useEffect(() => {
-    discoverAcpProviders()
-      .then((discovered) => {
-        setProviders(discovered);
-        setSelectedProvider((current) => {
-          if (
-            discovered.length > 0 &&
-            !discovered.some((p) => p.id === current)
-          ) {
-            return discovered[0].id;
-          }
-          return current;
-        });
-      })
-      .catch(() => setProviders([]));
-  }, []);
-
-  useEffect(() => {
-    setSelectedProvider((current) =>
-      current === effectiveProvider ? current : effectiveProvider,
-    );
-  }, [effectiveProvider]);
-
   const handleProviderChange = useCallback(
     (providerId: string) => {
       if (providerId === selectedProvider) {
         return;
       }
 
-      setSelectedProvider(providerId);
+      setGlobalSelectedProvider(providerId);
       useChatSessionStore
         .getState()
         .updateSession(activeSessionId, { providerId });
     },
-    [activeSessionId, selectedProvider],
+    [activeSessionId, selectedProvider, setGlobalSelectedProvider],
   );
 
   const handleProjectChange = useCallback(
@@ -342,6 +326,7 @@ export function ChatView({
         onCreatePersona={handleCreatePersona}
         // Providers (secondary)
         providers={providers}
+        providersLoading={providersLoading}
         selectedProvider={selectedProvider}
         onProviderChange={handleProviderChange}
         selectedProjectId={session?.projectId ?? null}
