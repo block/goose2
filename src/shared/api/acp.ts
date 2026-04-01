@@ -17,6 +17,8 @@ export async function acpSendMessage(
   prompt: string,
   systemPrompt?: string,
   workingDir?: string,
+  personaId?: string,
+  personaName?: string,
 ): Promise<void> {
   return invoke("acp_send_message", {
     sessionId,
@@ -24,6 +26,8 @@ export async function acpSendMessage(
     prompt,
     systemPrompt: systemPrompt ?? null,
     workingDir: workingDir ?? null,
+    personaId: personaId ?? null,
+    personaName: personaName ?? null,
   });
 }
 
