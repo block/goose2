@@ -22,9 +22,9 @@ vi.mock("@/features/agents/stores/agentStore", async (importOriginal) => {
         const state = {
           personas: [
             {
-              id: "builtin-goose",
-              displayName: "Goose",
-              systemPrompt: "You are Goose.",
+              id: "builtin-solo",
+              displayName: "Solo",
+              systemPrompt: "You are Solo.",
               isBuiltin: true,
               createdAt: "",
               updatedAt: "",

@@ -61,7 +61,7 @@ export function HomeScreen({
 
   const personas = useAgentStore((s) => s.personas);
   const projects = useProjectStore((s) => s.projects);
-  const [selectedPersonaId, setSelectedPersonaId] = useState("builtin-goose");
+  const [selectedPersonaId, setSelectedPersonaId] = useState("builtin-solo");
   const [providers, setProviders] = useState<AcpProvider[]>([]);
   const [selectedProvider, setSelectedProvider] = useState("goose");
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(

@@ -98,8 +98,7 @@ export function ChatInput({
   const containerRef = useRef<HTMLDivElement>(null);
 
   const defaultPersonaId = useMemo(
-    () =>
-      personas.find((persona) => persona.id === "builtin-goose")?.id ?? null,
+    () => personas.find((persona) => persona.id === "builtin-solo")?.id ?? null,
     [personas],
   );
   const activePersona = useMemo(
