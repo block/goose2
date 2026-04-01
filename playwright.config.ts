@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const previewPort = 4173;
+
 export default defineConfig({
   testDir: "./tests/e2e",
   timeout: 30_000,
@@ -10,7 +12,7 @@ export default defineConfig({
     ["html", { open: "never", outputFolder: "playwright-report" }],
   ],
   use: {
-    baseURL: "http://127.0.0.1:4173",
+    baseURL: `http://127.0.0.1:${previewPort}`,
     screenshot: "only-on-failure",
     trace: "on-first-retry",
     video: "retain-on-failure",
@@ -23,11 +25,27 @@ export default defineConfig({
         ...devices["Desktop Chrome"],
       },
     },
+    {
+      name: "personas",
+      testMatch: ["**/personas.spec.ts"],
+      use: {
+        ...devices["Desktop Chrome"],
+      },
+    },
+    {
+      name: "skills",
+      testMatch: ["**/skills.spec.ts"],
+      use: {
+        ...devices["Desktop Chrome"],
+      },
+    },
   ],
   webServer: {
-    command: "python3 -m http.server 4173 -d dist",
+    // Opt-in reuse only. Reusing arbitrary local processes makes the suite
+    // flaky when another test run or dev server happens to be bound here.
+    command: `python3 -m http.server ${previewPort} -d dist`,
     cwd: ".",
-    reuseExistingServer: !process.env.CI,
-    url: "http://127.0.0.1:4173",
+    reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === "1",
+    url: `http://127.0.0.1:${previewPort}`,
   },
 });
