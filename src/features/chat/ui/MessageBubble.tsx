@@ -1,5 +1,13 @@
 import { useState } from "react";
-import { Copy, Check, RotateCcw, Pencil, Bot, User } from "lucide-react";
+import {
+  Copy,
+  Check,
+  RotateCcw,
+  Pencil,
+  Bot,
+  User,
+  ChevronRight,
+} from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { ToolCallCard } from "./ToolCallCard";
 import { ThinkingBlock } from "./ThinkingBlock";
@@ -56,6 +64,155 @@ interface ToolChainItem {
   key: string;
   request?: ToolRequestContent;
   response?: ToolResponseContent;
+}
+
+const INTERNAL_TOOL_PREFIXES = new Set([
+  "awk",
+  "bash",
+  "cat",
+  "chmod",
+  "cp",
+  "echo",
+  "find",
+  "grep",
+  "head",
+  "ls",
+  "mv",
+  "open",
+  "pip",
+  "pip3",
+  "python",
+  "python3",
+  "rm",
+  "sed",
+  "sh",
+  "tail",
+  "wc",
+  "which",
+  "zsh",
+]);
+
+function getToolItemName(item: ToolChainItem): string {
+  return item.request?.name || item.response?.name || "Tool result";
+}
+
+function getToolItemStatus(item: ToolChainItem) {
+  if (item.response) {
+    return item.response.isError ? "error" : "completed";
+  }
+  return item.request?.status ?? "completed";
+}
+
+function isLowSignalToolStep(item: ToolChainItem): boolean {
+  if (getToolItemStatus(item) !== "completed") {
+    return false;
+  }
+  if (item.response?.isError) {
+    return false;
+  }
+
+  const name = getToolItemName(item).trim();
+  if (!name) return false;
+
+  const lower = name.toLowerCase();
+  const firstToken = lower.split(/\s+/)[0];
+  if (INTERNAL_TOOL_PREFIXES.has(firstToken)) {
+    return true;
+  }
+  if (name.length > 88) {
+    return true;
+  }
+  return (
+    lower.includes("&&") ||
+    lower.includes("||") ||
+    lower.includes("2>&1") ||
+    lower.includes("|")
+  );
+}
+
+function partitionToolSteps(toolItems: ToolChainItem[]) {
+  if (toolItems.length <= 3) {
+    return { primaryItems: toolItems, hiddenItems: [] as ToolChainItem[] };
+  }
+
+  const primaryItems: ToolChainItem[] = [];
+  const hiddenItems: ToolChainItem[] = [];
+
+  for (const item of toolItems) {
+    if (isLowSignalToolStep(item)) {
+      hiddenItems.push(item);
+      continue;
+    }
+    primaryItems.push(item);
+  }
+
+  if (primaryItems.length === 0) {
+    return { primaryItems: toolItems, hiddenItems: [] as ToolChainItem[] };
+  }
+
+  if (hiddenItems.length < 2) {
+    return { primaryItems: toolItems, hiddenItems: [] as ToolChainItem[] };
+  }
+
+  return { primaryItems, hiddenItems };
+}
+
+function ToolChainCards({ toolItems }: { toolItems: ToolChainItem[] }) {
+  const [showInternalSteps, setShowInternalSteps] = useState(false);
+  const { primaryItems, hiddenItems } = partitionToolSteps(toolItems);
+
+  const renderToolItem = (
+    item: ToolChainItem,
+    options?: { variant?: "default" | "subtle"; expandable?: boolean },
+  ) => {
+    const name = getToolItemName(item);
+    const status = getToolItemStatus(item);
+    const { request, response } = item;
+
+    return (
+      <ToolCallCard
+        key={item.key}
+        name={name}
+        arguments={request?.arguments ?? {}}
+        status={status}
+        result={response?.result}
+        isError={response?.isError}
+        variant={options?.variant}
+        expandable={options?.expandable}
+      />
+    );
+  };
+
+  return (
+    <div className="my-1 flex flex-col items-start gap-1.5">
+      {primaryItems.map((item) => renderToolItem(item))}
+
+      {hiddenItems.length > 0 && (
+        <div className="ml-1 flex flex-col items-start gap-1.5">
+          <button
+            type="button"
+            onClick={() => setShowInternalSteps((prev) => !prev)}
+            className="inline-flex items-center gap-1 text-xs text-foreground-tertiary hover:text-foreground-secondary"
+          >
+            <ChevronRight
+              className={cn(
+                "h-3 w-3 transition-transform",
+                showInternalSteps && "rotate-90",
+              )}
+            />
+            {showInternalSteps
+              ? `Hide internal steps (${hiddenItems.length})`
+              : `Show internal steps (${hiddenItems.length})`}
+          </button>
+
+          {showInternalSteps &&
+            hiddenItems.map((item) =>
+              renderToolItem(item, { variant: "subtle", expandable: false }),
+            )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function findMatchingToolChainIndex(
@@ -272,32 +429,7 @@ export function MessageBubble({
           {groupContentSections(content).map((section, sectionIdx) => {
             if (section.type === "toolChain") {
               const toolItems = section.items as ToolChainItem[];
-              return (
-                <div
-                  key={section.key}
-                  className="my-1 flex flex-col items-start gap-1.5"
-                >
-                  {toolItems.map((item) => {
-                    const { request, response } = item;
-                    return (
-                      <ToolCallCard
-                        key={item.key}
-                        name={request?.name || response?.name || "Tool result"}
-                        arguments={request?.arguments ?? {}}
-                        status={
-                          response
-                            ? response.isError
-                              ? "error"
-                              : "completed"
-                            : (request?.status ?? "completed")
-                        }
-                        result={response?.result}
-                        isError={response?.isError}
-                      />
-                    );
-                  })}
-                </div>
-              );
+              return <ToolChainCards key={section.key} toolItems={toolItems} />;
             }
             const block = section.items[0] as MessageContent;
             return (
