@@ -383,10 +383,18 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         e.preventDefault();
         setSidebarCollapsed((prev) => !prev);
       }
+      // Cmd+W closes the active tab instead of the window
+      if (e.key === "w" && e.metaKey) {
+        e.preventDefault();
+        const { activeTabId } = useChatSessionStore.getState();
+        if (activeTabId) {
+          closeAndCleanupTab(activeTabId);
+        }
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, []);
+  }, [closeAndCleanupTab]);
 
   const activeSessionPersonaId = activeTab
     ? sessionStore.getSession(activeTab.sessionId)?.personaId
