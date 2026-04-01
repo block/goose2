@@ -14,6 +14,10 @@ use acp_client::{
 use crate::services::sessions::SessionStore;
 use crate::types::messages::{MessageContent, MessageRole};
 
+// ---------------------------------------------------------------------------
+// Event payload types
+// ---------------------------------------------------------------------------
+
 /// Payload for the `acp:text` event.
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -69,6 +73,10 @@ struct ModelStatePayload {
     current_model_id: String,
     current_model_name: Option<String>,
 }
+
+// ---------------------------------------------------------------------------
+// TauriMessageWriter
+// ---------------------------------------------------------------------------
 
 /// A [`MessageWriter`] implementation that streams ACP output to the frontend
 /// via Tauri events, and saves the final assistant message to the
@@ -206,7 +214,9 @@ impl MessageWriter for TauriMessageWriter {
     }
 }
 
+// ---------------------------------------------------------------------------
 // TauriStore
+// ---------------------------------------------------------------------------
 
 /// A [`Store`] implementation that persists ACP session mappings to disk
 /// under `~/.goose/acp_sessions/` and reads conversation history from the
@@ -303,7 +313,9 @@ impl Store for TauriStore {
     }
 }
 
+// ---------------------------------------------------------------------------
 // AcpSessionRegistry
+// ---------------------------------------------------------------------------
 
 /// Info about a running ACP session, returned to the frontend.
 #[derive(Clone, Serialize)]
@@ -395,7 +407,9 @@ impl AcpSessionRegistry {
     }
 }
 
+// ---------------------------------------------------------------------------
 // AcpService
+// ---------------------------------------------------------------------------
 
 /// High-level service for running ACP prompts through an agent driver.
 ///
