@@ -139,15 +139,19 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
           : s,
       ),
     }));
-    // Persist persistable fields to the backend
-    const backendPatch: Record<string, string> = {};
+    const backendPatch: {
+      title?: string;
+      providerId?: string;
+      personaId?: string;
+      modelName?: string;
+      projectId?: string | null;
+    } = {};
     if (patch.title) backendPatch.title = patch.title;
     if (patch.providerId) backendPatch.providerId = patch.providerId;
     if (patch.personaId) backendPatch.personaId = patch.personaId;
     if (patch.modelName) backendPatch.modelName = patch.modelName;
     if ("projectId" in patch) {
-      (backendPatch as Record<string, string | null>).projectId =
-        patch.projectId ?? null;
+      backendPatch.projectId = patch.projectId ?? null;
     }
     if (Object.keys(backendPatch).length > 0) {
       apiUpdateSession(id, backendPatch).catch((err) => {

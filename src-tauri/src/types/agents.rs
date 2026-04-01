@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use serde::Deserializer;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -105,9 +105,7 @@ pub struct SessionUpdate {
     pub project_id: Option<Option<String>>,
 }
 
-fn deserialize_nullable_field<'de, D, T>(
-    deserializer: D,
-) -> Result<Option<Option<T>>, D::Error>
+fn deserialize_nullable_field<'de, D, T>(deserializer: D) -> Result<Option<Option<T>>, D::Error>
 where
     D: Deserializer<'de>,
     T: Deserialize<'de>,
