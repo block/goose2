@@ -22,6 +22,46 @@ function renderLines(text: string): string {
     .join("");
 }
 
+/** Return the caret's character offset within the element's text. */
+function getCaretOffset(el: HTMLElement): number {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return 0;
+  const range = sel.getRangeAt(0).cloneRange();
+  range.selectNodeContents(el);
+  range.setEnd(sel.getRangeAt(0).startContainer, sel.getRangeAt(0).startOffset);
+  return range.toString().length;
+}
+
+/** Restore the caret to a given character offset inside the element. */
+function setCaretOffset(el: HTMLElement, offset: number) {
+  const sel = window.getSelection();
+  if (!sel) return;
+
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  let remaining = offset;
+  for (
+    let node = walker.nextNode() as Text | null;
+    node;
+    node = walker.nextNode() as Text | null
+  ) {
+    if (remaining <= node.length) {
+      const range = document.createRange();
+      range.setStart(node, remaining);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      return;
+    }
+    remaining -= node.length;
+  }
+  // If offset exceeds text length, place caret at the end
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  range.collapse(false);
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, "&amp;")
@@ -57,6 +97,12 @@ export function PromptEditor({
     // contentEditable may add a trailing newline; normalise it
     const normalized = text.replace(/\n$/, "");
     lastPushedValue.current = normalized;
+
+    // Re-render HTML so capsule styling is updated to match current text
+    const caret = getCaretOffset(el);
+    el.innerHTML = normalized === "" ? "" : renderLines(normalized);
+    setCaretOffset(el, caret);
+
     onChange(normalized);
   };
 
