@@ -16,6 +16,7 @@ import type {
   Message,
   MessageContent,
   TextContent,
+  ImageContent,
   ToolRequestContent,
   ToolResponseContent,
   ThinkingContent,
@@ -307,6 +308,21 @@ function renderContentBlock(content: MessageContent, index: number) {
           key={`text-${index}`}
           content={tc.text}
           className="text-sm leading-relaxed"
+        />
+      );
+    }
+    case "image": {
+      const ic = content as ImageContent;
+      const src =
+        ic.source.type === "base64"
+          ? `data:${ic.source.mediaType};base64,${ic.source.data}`
+          : ic.source.url;
+      return (
+        <img
+          key={`image-${index}`}
+          src={src}
+          alt="Attached"
+          className="max-h-48 max-w-xs rounded-lg object-contain"
         />
       );
     }
