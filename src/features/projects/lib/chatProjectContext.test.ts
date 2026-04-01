@@ -17,7 +17,7 @@ describe("chatProjectContext", () => {
       color: "#000000",
       preferredProvider: "goose",
       preferredModel: "claude-sonnet-4",
-      workingDir: "/Users/wesb/dev/goose2",
+      workingDirs: ["/Users/wesb/dev/goose2"],
       useWorktrees: true,
       order: 0,
       archivedAt: null,
@@ -27,7 +27,7 @@ describe("chatProjectContext", () => {
 
     expect(systemPrompt).toContain("<project-settings>");
     expect(systemPrompt).toContain("Project name: Goose2");
-    expect(systemPrompt).toContain("Working directory: /Users/wesb/dev/goose2");
+    expect(systemPrompt).toContain("Working directories: /Users/wesb/dev/goose2");
     expect(systemPrompt).toContain("Preferred provider: goose");
     expect(systemPrompt).toContain(
       "Use git worktrees for branch isolation: yes",
@@ -47,15 +47,30 @@ describe("chatProjectContext", () => {
     expect(getProjectFolderName("C:\\Users\\wesb\\goose2\\")).toBe("goose2");
   });
 
-  it("creates a folder option from the project's working directory", () => {
+  it("creates folder options from the project's working directories", () => {
     expect(
       getProjectFolderOption({
-        workingDir: "/Users/wesb/dev/goose2",
+        workingDirs: ["/Users/wesb/dev/goose2", "/Users/wesb/dev/other"],
       }),
-    ).toEqual({
-      id: "/Users/wesb/dev/goose2",
-      name: "goose2",
-      path: "/Users/wesb/dev/goose2",
-    });
+    ).toEqual([
+      {
+        id: "/Users/wesb/dev/goose2",
+        name: "goose2",
+        path: "/Users/wesb/dev/goose2",
+      },
+      {
+        id: "/Users/wesb/dev/other",
+        name: "other",
+        path: "/Users/wesb/dev/other",
+      },
+    ]);
+  });
+
+  it("returns an empty array when workingDirs is empty", () => {
+    expect(getProjectFolderOption({ workingDirs: [] })).toEqual([]);
+  });
+
+  it("returns an empty array when project is null", () => {
+    expect(getProjectFolderOption(null)).toEqual([]);
   });
 });
