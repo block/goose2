@@ -229,6 +229,7 @@ export function MessageBubble({
   }
 
   const isUser = role === "user";
+  const assistantDisplayName = message.metadata?.personaName ?? agentName;
 
   return (
     <div
@@ -267,14 +268,11 @@ export function MessageBubble({
             You &rarr; {message.metadata.targetPersonaName}
           </span>
         )}
-        {!isUser && (agentName || message.metadata?.personaName) && (
+        {!isUser && assistantDisplayName && (
           <span className="mb-0.5 inline-flex items-center gap-1.5 text-xs font-medium text-foreground-secondary">
-            {agentName && <span>{agentName}</span>}
-            {message.metadata?.personaName && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">
-                {message.metadata.personaName}
-              </span>
-            )}
+            <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">
+              {assistantDisplayName}
+            </span>
           </span>
         )}
 

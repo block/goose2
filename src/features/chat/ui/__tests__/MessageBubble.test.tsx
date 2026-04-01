@@ -206,4 +206,29 @@ describe("MessageBubble", () => {
     render(<MessageBubble message={msg} />);
     expect(screen.getByText(/thinking/i)).toBeInTheDocument();
   });
+
+  it("prefers the message persona name over the current agent name", () => {
+    render(
+      <MessageBubble
+        message={assistantMessage([{ type: "text", text: "hi" }], {
+          metadata: { personaName: "Builder" },
+        })}
+        agentName="Solo"
+      />,
+    );
+
+    expect(screen.getByText("Builder")).toBeInTheDocument();
+    expect(screen.queryByText("Solo")).not.toBeInTheDocument();
+  });
+
+  it("falls back to the current agent name when persona metadata is missing", () => {
+    render(
+      <MessageBubble
+        message={assistantMessage([{ type: "text", text: "hi" }])}
+        agentName="Solo"
+      />,
+    );
+
+    expect(screen.getByText("Solo")).toBeInTheDocument();
+  });
 });
