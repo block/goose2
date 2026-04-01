@@ -4,14 +4,7 @@ import { join, relative } from "node:path";
 const DEFAULT_LIMIT = 500;
 
 // Add narrowly scoped exceptions here with justification
-const EXCEPTIONS = {
-  // Ported from staged app — cohesive health-check module with many repetitive
-  // per-dependency check functions that share the same structure.
-  "src-tauri/src/commands/doctor.rs": { limit: 1000 },
-  // ACP service module — five cohesive sections (payloads, writer, store,
-  // registry, service) that share types and are tightly coupled.
-  "src-tauri/src/services/acp.rs": { limit: 550 },
-};
+const EXCEPTIONS = {};
 
 const DIRS_TO_CHECK = [
   { dir: "src/app", glob: /\.[jt]sx?$/ },
