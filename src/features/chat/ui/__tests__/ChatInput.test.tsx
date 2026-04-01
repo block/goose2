@@ -7,9 +7,9 @@ import type { Persona } from "@/shared/types/agents";
 
 const TEST_PERSONAS: Persona[] = [
   {
-    id: "builtin-goose",
-    displayName: "Goose",
-    systemPrompt: "You are Goose.",
+    id: "builtin-solo",
+    displayName: "Solo",
+    systemPrompt: "You are Solo.",
     isBuiltin: true,
     createdAt: "",
     updatedAt: "",
@@ -29,7 +29,7 @@ function StatefulChatInput({
 }: {
   onSend?: (text: string, personaId?: string) => void;
 }) {
-  const [selectedPersonaId, setSelectedPersonaId] = useState("builtin-goose");
+  const [selectedPersonaId, setSelectedPersonaId] = useState("builtin-solo");
 
   return (
     <ChatInput

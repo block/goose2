@@ -50,7 +50,7 @@ export function ChatView({
   // Persona state
   const personas = useAgentStore((s) => s.personas);
   const [selectedPersonaId, setSelectedPersonaId] = useState<string>(
-    initialPersonaId ?? "builtin-goose",
+    initialPersonaId ?? "builtin-solo",
   );
   const session = useChatSessionStore((s) =>
     s.sessions.find((candidate) => candidate.id === activeSessionId),
@@ -209,7 +209,7 @@ export function ChatView({
       !personas.find((p) => p.id === selectedPersonaId)
     ) {
       const fallback =
-        personas.find((p) => p.id === "builtin-goose") ?? personas[0];
+        personas.find((p) => p.id === "builtin-solo") ?? personas[0];
       if (fallback) {
         setSelectedPersonaId(fallback.id);
         useChatSessionStore

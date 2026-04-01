@@ -22,9 +22,9 @@ vi.mock("@/features/agents/stores/agentStore", async (importOriginal) => {
         const state = {
           personas: [
             {
-              id: "builtin-goose",
-              displayName: "Goose",
-              systemPrompt: "You are Goose.",
+              id: "builtin-solo",
+              displayName: "Solo",
+              systemPrompt: "You are Solo.",
               isBuiltin: true,
               createdAt: "",
               updatedAt: "",
@@ -60,7 +60,7 @@ describe("HomeScreen", () => {
   it("renders the chat input placeholder with persona name", () => {
     render(<HomeScreen />);
     expect(
-      screen.getByPlaceholderText("Message Goose... (type @ to mention)"),
+      screen.getByPlaceholderText("Message Solo... (type @ to mention)"),
     ).toBeInTheDocument();
   });
 
