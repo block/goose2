@@ -146,10 +146,9 @@ function isLikelyAbsoluteFilesystemPath(candidate: string): boolean {
   if (/^[a-zA-Z]:[\\/]/.test(candidate)) return true;
   if (!candidate.startsWith("/")) return false;
   const firstSegment = candidate.replace(/^\/+/, "").split("/")[0];
+  if (!firstSegment) return true;
   if (ROUTE_SEGMENTS.has(firstSegment.toLowerCase())) return false;
-  return ["users", "home", "tmp", "var", "private", "volumes", "mnt"].includes(
-    firstSegment.toLowerCase(),
-  );
+  return true;
 }
 
 function isLikelyLocalPath(candidate: string): boolean {
@@ -240,6 +239,7 @@ function resolveRelativeToBase(base: string, relativePath: string): string {
   if (!normalizedRelative || normalizedRelative === ".") return normalizedBase;
 
   const stack = normalizedBase.split("/").filter(Boolean);
+  const hasWindowsDriveRoot = /^[a-zA-Z]:$/.test(stack[0] ?? "");
   for (const segment of normalizedRelative.split("/")) {
     if (!segment || segment === ".") continue;
     if (segment === "..") {
@@ -248,7 +248,10 @@ function resolveRelativeToBase(base: string, relativePath: string): string {
     }
     stack.push(segment);
   }
-  return `/${stack.join("/")}`;
+
+  const resolved = stack.join("/");
+  if (hasWindowsDriveRoot) return resolved;
+  return `/${resolved}`;
 }
 
 function pickBaseRoot(allowedRoots: string[]): string | null {

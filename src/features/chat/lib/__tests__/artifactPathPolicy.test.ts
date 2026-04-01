@@ -221,4 +221,23 @@ describe("artifactPathPolicy", () => {
       ),
     ).toBe(true);
   });
+
+  it("treats unix absolute paths outside the previous whitelist as absolute", () => {
+    const resolved = resolvePathCandidate("/opt/workspace/report.md", roots);
+    expect(resolved).toBe("/opt/workspace/report.md");
+  });
+
+  it("preserves Windows drive roots when resolving relative paths", () => {
+    const windowsRoots = [
+      "C:/Users/test/project-a",
+      "C:/Users/test/.goose/artifacts",
+    ];
+    const resolved = resolvePathCandidate(
+      "output/final_report.md",
+      windowsRoots,
+    );
+
+    expect(resolved).toBe("C:/Users/test/project-a/output/final_report.md");
+    expect(evaluatePathScope(resolved, windowsRoots).allowed).toBe(true);
+  });
 });
