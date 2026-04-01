@@ -38,6 +38,13 @@ export function useChat(
 
       // Create and add user message
       const userMessage = createUserMessage(text);
+      if (personaInfo) {
+        userMessage.metadata = {
+          ...userMessage.metadata,
+          targetPersonaId: personaInfo.id,
+          targetPersonaName: personaInfo.name,
+        };
+      }
       store.addMessage(sessionId, userMessage);
       store.setChatState("thinking");
       store.setError(null);
