@@ -475,7 +475,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
                 color: editingProject.color,
                 preferredProvider: editingProject.preferredProvider,
                 preferredModel: editingProject.preferredModel,
-                workingDir: editingProject.workingDir,
+                workingDirs: editingProject.workingDirs,
                 useWorktrees: editingProject.useWorktrees,
               }
             : undefined

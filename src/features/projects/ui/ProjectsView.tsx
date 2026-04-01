@@ -119,7 +119,7 @@ export function ProjectsView({ onStartChat }: ProjectsViewProps) {
         color: string;
         preferredProvider: string | null;
         preferredModel: string | null;
-        workingDir: string | null;
+        workingDirs: string[];
         useWorktrees: boolean;
       }
     | undefined
@@ -171,7 +171,7 @@ export function ProjectsView({ onStartChat }: ProjectsViewProps) {
       color: project.color,
       preferredProvider: project.preferredProvider,
       preferredModel: project.preferredModel,
-      workingDir: project.workingDir,
+      workingDirs: project.workingDirs,
       useWorktrees: project.useWorktrees,
     });
     setDialogOpen(true);
