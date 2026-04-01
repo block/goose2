@@ -52,7 +52,7 @@ export function TabBar({
               }
             }}
             className={cn(
-              "group flex h-7 cursor-pointer items-center gap-1.5 rounded-md pl-3 pr-1.5 text-xs transition-colors",
+              "group flex h-7 cursor-pointer select-none items-center gap-1.5 rounded-md pl-3 pr-1.5 text-xs transition-colors",
               tab.id === activeTabId
                 ? "bg-background-secondary text-foreground"
                 : "text-foreground-secondary hover:bg-background-secondary/50 hover:text-foreground",
