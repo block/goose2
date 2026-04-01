@@ -2,6 +2,13 @@ import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { HomeScreen } from "./HomeScreen";
 
+vi.mock("@/shared/api/acp", () => ({
+  discoverAcpProviders: vi.fn().mockResolvedValue([
+    { id: "goose", label: "Goose" },
+    { id: "openai", label: "OpenAI" },
+  ]),
+}));
+
 // HomeScreen now reads personas from the agent store, not from ACP providers
 vi.mock("@/features/agents/stores/agentStore", async (importOriginal) => {
   const actual =
@@ -53,12 +60,24 @@ describe("HomeScreen", () => {
   it("renders the chat input placeholder with persona name", () => {
     render(<HomeScreen />);
     expect(
-      screen.getByPlaceholderText("Ask Goose anything... (type @ to mention)"),
+      screen.getByPlaceholderText("Message Goose... (type @ to mention)"),
     ).toBeInTheDocument();
   });
 
-  it("renders the persona picker with default persona", () => {
+  it("renders the assistant chooser affordance", () => {
     render(<HomeScreen />);
-    expect(screen.getByText("Goose")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /choose assistant/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("renders the provider and project controls on the home screen", () => {
+    render(<HomeScreen />);
+    expect(
+      screen.getByRole("button", { name: /override provider/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /select project/i }),
+    ).toBeInTheDocument();
   });
 });

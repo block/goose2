@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde::Deserializer;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -100,6 +101,18 @@ pub struct SessionUpdate {
     pub provider_id: Option<String>,
     pub persona_id: Option<String>,
     pub model_name: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_nullable_field")]
+    pub project_id: Option<Option<String>>,
+}
+
+fn deserialize_nullable_field<'de, D, T>(
+    deserializer: D,
+) -> Result<Option<Option<T>>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    Option::<Option<T>>::deserialize(deserializer)
 }
 
 /// Built-in persona definitions

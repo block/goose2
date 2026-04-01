@@ -254,6 +254,9 @@ impl SessionStore {
         if let Some(model_name) = update.model_name {
             session.model_name = Some(model_name);
         }
+        if let Some(project_id) = update.project_id {
+            session.project_id = project_id;
+        }
         session.updated_at = chrono::Utc::now().to_rfc3339();
         self.save_metadata(&sessions);
         Ok(())
