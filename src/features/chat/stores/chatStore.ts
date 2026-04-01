@@ -1,26 +1,31 @@
 import { create } from "zustand";
 import type { Message, MessageContent } from "@/shared/types/messages";
-import type { ChatState, TokenState } from "@/shared/types/chat";
-import { INITIAL_TOKEN_STATE } from "@/shared/types/chat";
+import type {
+  ChatState,
+  SessionChatRuntime,
+  TokenState,
+} from "@/shared/types/chat";
+import {
+  INITIAL_SESSION_CHAT_RUNTIME,
+  INITIAL_TOKEN_STATE,
+} from "@/shared/types/chat";
+
+function createInitialSessionRuntime(): SessionChatRuntime {
+  return {
+    ...INITIAL_SESSION_CHAT_RUNTIME,
+    tokenState: { ...INITIAL_TOKEN_STATE },
+  };
+}
 
 interface ChatStoreState {
   // Per-session messages
   messagesBySession: Record<string, Message[]>;
 
+  // Per-session runtime state
+  sessionStateById: Record<string, SessionChatRuntime>;
+
   // Current session
   activeSessionId: string | null;
-
-  // Chat state
-  chatState: ChatState;
-
-  // Streaming
-  streamingMessageId: string | null;
-
-  // Token usage
-  tokenState: TokenState;
-
-  // Error
-  error: string | null;
 
   // Connection
   isConnected: boolean;
@@ -43,9 +48,10 @@ interface ChatStoreActions {
 
   // Active session helpers (operate on activeSessionId)
   getActiveMessages: () => Message[];
+  getSessionRuntime: (sessionId: string) => SessionChatRuntime;
 
   // Streaming
-  setStreamingMessageId: (id: string | null) => void;
+  setStreamingMessageId: (sessionId: string, id: string | null) => void;
   appendToStreamingMessage: (
     sessionId: string,
     content: MessageContent,
@@ -53,13 +59,15 @@ interface ChatStoreActions {
   updateStreamingText: (sessionId: string, text: string) => void;
 
   // State
-  setChatState: (state: ChatState) => void;
-  setError: (error: string | null) => void;
+  setChatState: (sessionId: string, state: ChatState) => void;
+  setError: (sessionId: string, error: string | null) => void;
   setConnected: (connected: boolean) => void;
+  markSessionRead: (sessionId: string) => void;
+  markSessionUnread: (sessionId: string) => void;
 
   // Token tracking
-  updateTokenState: (state: Partial<TokenState>) => void;
-  resetTokenState: () => void;
+  updateTokenState: (sessionId: string, state: Partial<TokenState>) => void;
+  resetTokenState: (sessionId: string) => void;
 
   // Cleanup
   cleanupSession: (sessionId: string) => void;
@@ -70,11 +78,8 @@ export type ChatStore = ChatStoreState & ChatStoreActions;
 export const useChatStore = create<ChatStore>((set, get) => ({
   // State
   messagesBySession: {},
+  sessionStateById: {},
   activeSessionId: null,
-  chatState: "idle",
-  streamingMessageId: null,
-  tokenState: { ...INITIAL_TOKEN_STATE },
-  error: null,
   isConnected: false,
 
   // Session management
@@ -136,7 +141,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         ...state.messagesBySession,
         [sessionId]: [],
       },
-      tokenState: { ...INITIAL_TOKEN_STATE },
+      sessionStateById: {
+        ...state.sessionStateById,
+        [sessionId]: createInitialSessionRuntime(),
+      },
     })),
 
   // Active session helpers
@@ -147,12 +155,26 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     return messages.filter((m) => m.metadata?.userVisible);
   },
 
+  getSessionRuntime: (sessionId) =>
+    get().sessionStateById[sessionId] ?? createInitialSessionRuntime(),
+
   // Streaming
-  setStreamingMessageId: (id) => set({ streamingMessageId: id }),
+  setStreamingMessageId: (sessionId, id) =>
+    set((state) => ({
+      sessionStateById: {
+        ...state.sessionStateById,
+        [sessionId]: {
+          ...(state.sessionStateById[sessionId] ??
+            createInitialSessionRuntime()),
+          streamingMessageId: id,
+        },
+      },
+    })),
 
   appendToStreamingMessage: (sessionId, content) =>
     set((state) => {
-      const { streamingMessageId } = state;
+      const streamingMessageId =
+        state.sessionStateById[sessionId]?.streamingMessageId ?? null;
       if (!streamingMessageId) return state;
       const messages = state.messagesBySession[sessionId];
       if (!messages) return state;
@@ -170,7 +192,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   updateStreamingText: (sessionId, text) =>
     set((state) => {
-      const { streamingMessageId } = state;
+      const streamingMessageId =
+        state.sessionStateById[sessionId]?.streamingMessageId ?? null;
       if (!streamingMessageId) return state;
       const messages = state.messagesBySession[sessionId];
       if (!messages) return state;
@@ -200,17 +223,77 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }),
 
   // State
-  setChatState: (chatState) => set({ chatState }),
+  setChatState: (sessionId, chatState) =>
+    set((state) => ({
+      sessionStateById: {
+        ...state.sessionStateById,
+        [sessionId]: {
+          ...(state.sessionStateById[sessionId] ??
+            createInitialSessionRuntime()),
+          chatState,
+        },
+      },
+    })),
 
-  setError: (error) =>
-    set({ error, chatState: error ? ("error" as const) : get().chatState }),
+  setError: (sessionId, error) =>
+    set((state) => {
+      const current =
+        state.sessionStateById[sessionId] ?? createInitialSessionRuntime();
+      return {
+        sessionStateById: {
+          ...state.sessionStateById,
+          [sessionId]: {
+            ...current,
+            error,
+            chatState: error ? ("error" as const) : current.chatState,
+          },
+        },
+      };
+    }),
 
   setConnected: (isConnected) => set({ isConnected }),
 
-  // Token tracking
-  updateTokenState: (partial) =>
+  markSessionRead: (sessionId) =>
     set((state) => {
-      const current = state.tokenState;
+      const current =
+        state.sessionStateById[sessionId] ?? createInitialSessionRuntime();
+      if (!current.hasUnread) {
+        return state;
+      }
+      return {
+        sessionStateById: {
+          ...state.sessionStateById,
+          [sessionId]: {
+            ...current,
+            hasUnread: false,
+          },
+        },
+      };
+    }),
+
+  markSessionUnread: (sessionId) =>
+    set((state) => {
+      const current =
+        state.sessionStateById[sessionId] ?? createInitialSessionRuntime();
+      if (current.hasUnread) {
+        return state;
+      }
+      return {
+        sessionStateById: {
+          ...state.sessionStateById,
+          [sessionId]: {
+            ...current,
+            hasUnread: true,
+          },
+        },
+      };
+    }),
+
+  // Token tracking
+  updateTokenState: (sessionId, partial) =>
+    set((state) => {
+      const current =
+        state.sessionStateById[sessionId]?.tokenState ?? INITIAL_TOKEN_STATE;
       const inputTokens = partial.inputTokens ?? current.inputTokens;
       const outputTokens = partial.outputTokens ?? current.outputTokens;
       const accumulatedInput =
@@ -222,30 +305,48 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       const accumulatedTotal =
         partial.accumulatedTotal ?? accumulatedInput + accumulatedOutput;
       return {
-        tokenState: {
-          inputTokens,
-          outputTokens,
-          totalTokens: inputTokens + outputTokens,
-          accumulatedInput,
-          accumulatedOutput,
-          accumulatedTotal,
-          contextLimit: partial.contextLimit ?? current.contextLimit,
+        sessionStateById: {
+          ...state.sessionStateById,
+          [sessionId]: {
+            ...(state.sessionStateById[sessionId] ??
+              createInitialSessionRuntime()),
+            tokenState: {
+              inputTokens,
+              outputTokens,
+              totalTokens: inputTokens + outputTokens,
+              accumulatedInput,
+              accumulatedOutput,
+              accumulatedTotal,
+              contextLimit: partial.contextLimit ?? current.contextLimit,
+            },
+          },
         },
       };
     }),
 
-  resetTokenState: () => set({ tokenState: { ...INITIAL_TOKEN_STATE } }),
+  resetTokenState: (sessionId) =>
+    set((state) => ({
+      sessionStateById: {
+        ...state.sessionStateById,
+        [sessionId]: {
+          ...(state.sessionStateById[sessionId] ??
+            createInitialSessionRuntime()),
+          tokenState: { ...INITIAL_TOKEN_STATE },
+        },
+      },
+    })),
 
   // Cleanup
   cleanupSession: (sessionId) =>
     set((state) => {
       const { [sessionId]: _, ...rest } = state.messagesBySession;
+      const { [sessionId]: __, ...remainingSessionState } =
+        state.sessionStateById;
       return {
         messagesBySession: rest,
+        sessionStateById: remainingSessionState,
         activeSessionId:
           state.activeSessionId === sessionId ? null : state.activeSessionId,
-        streamingMessageId:
-          state.activeSessionId === sessionId ? null : state.streamingMessageId,
       };
     }),
 }));

@@ -133,4 +133,16 @@ describe("ToolCallCard", () => {
     expect(screen.getByText("Error")).toBeInTheDocument();
     expect(screen.getByText("something went wrong")).toBeInTheDocument();
   });
+
+  it("truncates long tool names and preserves the full name in the tooltip", () => {
+    const longName =
+      "veryLongToolNameThatShouldNotWrapAcrossMultipleLinesInTheChatUI";
+
+    render(<ToolCallCard name={longName} arguments={{}} status="pending" />);
+
+    expect(
+      screen.getByText("veryLongToolNameThatShouldNotWrapAcrossMultiple…"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button")).toHaveAttribute("title", longName);
+  });
 });

@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import { SessionActivityIndicator } from "@/shared/ui/SessionActivityIndicator";
 
 interface SidebarChatRowProps {
   id: string;
   title: string;
   isActive: boolean;
   isOpen: boolean;
+  isRunning?: boolean;
+  hasUnread?: boolean;
   className?: string;
   onSelect?: (id: string) => void;
   onRename?: (id: string, nextTitle: string) => void;
@@ -18,6 +21,8 @@ export function SidebarChatRow({
   title,
   isActive,
   isOpen,
+  isRunning = false,
+  hasUnread = false,
   className,
   onSelect,
   onRename,
@@ -122,6 +127,7 @@ export function SidebarChatRow({
         )}
       >
         <span className="flex-1 min-w-0 truncate">{title}</span>
+        <SessionActivityIndicator isRunning={isRunning} hasUnread={hasUnread} />
       </button>
 
       <div ref={menuRef} className="relative shrink-0">

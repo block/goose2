@@ -12,7 +12,9 @@ import { cn } from "@/shared/lib/cn";
 import { GooseIcon } from "@/shared/ui/icons/GooseIcon";
 import type { AppView } from "@/app/AppShell";
 import type { ProjectInfo } from "@/features/projects/api/projects";
+import { useChatStore } from "@/features/chat/stores/chatStore";
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
+import { isSessionRunning } from "@/features/chat/lib/sessionActivity";
 import { SidebarProjectsSection } from "./SidebarProjectsSection";
 
 interface SidebarProps {
@@ -69,6 +71,7 @@ export function Sidebar({
   >({});
 
   // Read all sessions and open tab IDs from the store
+  const chatStore = useChatStore();
   const { sessions, openTabIds } = useChatSessionStore();
   const openTabIdSet = useMemo(() => new Set(openTabIds), [openTabIds]);
 
@@ -97,10 +100,13 @@ export function Sidebar({
       projectId?: string;
       isOpenTab: boolean;
       updatedAt: string;
+      isRunning: boolean;
+      hasUnread: boolean;
     };
     const byProject: Record<string, SessionItem[]> = {};
     const standalone: SessionItem[] = [];
     for (const session of sessions) {
+      const runtime = chatStore.getSessionRuntime(session.id);
       const item: SessionItem = {
         id: session.id,
         title: session.title,
@@ -108,6 +114,8 @@ export function Sidebar({
         projectId: session.projectId ?? undefined,
         isOpenTab: openTabIdSet.has(session.id),
         updatedAt: session.updatedAt,
+        isRunning: isSessionRunning(runtime.chatState),
+        hasUnread: runtime.hasUnread,
       };
       if (session.projectId) {
         if (!byProject[session.projectId]) byProject[session.projectId] = [];
@@ -123,7 +131,7 @@ export function Sidebar({
     );
     const limitedStandalone = standalone.slice(0, MAX_RECENTS);
     return { byProject, standalone: limitedStandalone };
-  }, [sessions, openTabIdSet]);
+  }, [chatStore, sessions, openTabIdSet]);
 
   // Auto-expand the project containing the active tab
   useEffect(() => {

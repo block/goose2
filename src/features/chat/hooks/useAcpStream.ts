@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useChatStore } from "../stores/chatStore";
 import { useChatSessionStore } from "../stores/chatSessionStore";
@@ -79,15 +79,11 @@ function findLatestUnpairedToolRequest(
  * Hook that listens to Tauri events for ACP streaming responses.
  *
  * Subscribes to `acp:text`, `acp:done`, `acp:tool_call`, `acp:tool_title`,
- * and `acp:tool_result` events, filtering by `sessionId`. Updates the chat
- * store as streaming data arrives.
+ * and `acp:tool_result` events, updating whichever session the event targets.
  */
-export function useAcpStream(sessionId: string, enabled: boolean): void {
-  const sessionIdRef = useRef(sessionId);
-  sessionIdRef.current = sessionId;
-
+export function useAcpStream(enabled: boolean): void {
   useEffect(() => {
-    if (!enabled || !sessionId) return;
+    if (!enabled) return;
 
     // Guard against duplicate listeners from React StrictMode double-mounting.
     // Each listener checks this flag before acting; cleanup sets it immediately.
@@ -99,7 +95,6 @@ export function useAcpStream(sessionId: string, enabled: boolean): void {
     unlisteners.push(
       listen<AcpTextPayload>("acp:text", (event) => {
         if (!active) return;
-        if (event.payload.sessionId !== sessionIdRef.current) return;
         useChatStore
           .getState()
           .updateStreamingText(event.payload.sessionId, event.payload.text);
@@ -110,10 +105,14 @@ export function useAcpStream(sessionId: string, enabled: boolean): void {
     unlisteners.push(
       listen<AcpDonePayload>("acp:done", (event) => {
         if (!active) return;
-        if (event.payload.sessionId !== sessionIdRef.current) return;
         const store = useChatStore.getState();
-        store.setStreamingMessageId(null);
-        store.setChatState("idle");
+        store.setStreamingMessageId(event.payload.sessionId, null);
+        store.setChatState(event.payload.sessionId, "idle");
+        if (
+          useChatSessionStore.getState().activeTabId !== event.payload.sessionId
+        ) {
+          store.markSessionUnread(event.payload.sessionId);
+        }
 
         // Generate a title from the first user message if the session still
         // has the default "New Chat" title (i.e. no ACP title was received).
@@ -139,7 +138,6 @@ export function useAcpStream(sessionId: string, enabled: boolean): void {
     unlisteners.push(
       listen<AcpToolCallPayload>("acp:tool_call", (event) => {
         if (!active) return;
-        if (event.payload.sessionId !== sessionIdRef.current) return;
         const toolRequest: ToolRequestContent = {
           type: "toolRequest",
           id: event.payload.toolCallId,
@@ -157,11 +155,11 @@ export function useAcpStream(sessionId: string, enabled: boolean): void {
     unlisteners.push(
       listen<AcpToolTitlePayload>("acp:tool_title", (event) => {
         if (!active) return;
-        if (event.payload.sessionId !== sessionIdRef.current) return;
         const { sessionId: sid, toolCallId, title } = event.payload;
         const store = useChatStore.getState();
-        if (!store.streamingMessageId) return;
-        store.updateMessage(sid, store.streamingMessageId, (msg) => ({
+        const { streamingMessageId } = store.getSessionRuntime(sid);
+        if (!streamingMessageId) return;
+        store.updateMessage(sid, streamingMessageId, (msg) => ({
           ...msg,
           content: msg.content.map((c) =>
             c.type === "toolRequest" && c.id === toolCallId
@@ -176,11 +174,13 @@ export function useAcpStream(sessionId: string, enabled: boolean): void {
     unlisteners.push(
       listen<AcpToolResultPayload>("acp:tool_result", (event) => {
         if (!active) return;
-        if (event.payload.sessionId !== sessionIdRef.current) return;
         const store = useChatStore.getState();
-        const streamingMessage = store.streamingMessageId
+        const { streamingMessageId } = store.getSessionRuntime(
+          event.payload.sessionId,
+        );
+        const streamingMessage = streamingMessageId
           ? store.messagesBySession[event.payload.sessionId]?.find(
-              (message) => message.id === store.streamingMessageId,
+              (message) => message.id === streamingMessageId,
             )
           : undefined;
         const toolRequest = streamingMessage
@@ -201,7 +201,6 @@ export function useAcpStream(sessionId: string, enabled: boolean): void {
     unlisteners.push(
       listen<AcpSessionInfoPayload>("acp:session_info", (event) => {
         if (!active) return;
-        if (event.payload.sessionId !== sessionIdRef.current) return;
         if (event.payload.title) {
           useChatSessionStore
             .getState()
@@ -216,7 +215,6 @@ export function useAcpStream(sessionId: string, enabled: boolean): void {
     unlisteners.push(
       listen<AcpModelStatePayload>("acp:model_state", (event) => {
         if (!active) return;
-        if (event.payload.sessionId !== sessionIdRef.current) return;
         const modelName =
           event.payload.currentModelName ?? event.payload.currentModelId;
         useChatSessionStore
@@ -229,8 +227,7 @@ export function useAcpStream(sessionId: string, enabled: boolean): void {
     unlisteners.push(
       listen<AcpUsageUpdatePayload>("acp:usage_update", (event) => {
         if (!active) return;
-        if (event.payload.sessionId !== sessionIdRef.current) return;
-        useChatStore.getState().updateTokenState({
+        useChatStore.getState().updateTokenState(event.payload.sessionId, {
           accumulatedTotal: event.payload.used,
           contextLimit: event.payload.size,
         });
@@ -245,5 +242,5 @@ export function useAcpStream(sessionId: string, enabled: boolean): void {
         unlistenPromise.then((unlisten) => unlisten());
       }
     };
-  }, [sessionId, enabled]);
+  }, [enabled]);
 }

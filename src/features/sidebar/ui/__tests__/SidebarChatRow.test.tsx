@@ -83,4 +83,32 @@ describe("SidebarChatRow", () => {
 
     expect(onRename).not.toHaveBeenCalled();
   });
+
+  it("shows a spinner when the chat is active", () => {
+    render(
+      <SidebarChatRow
+        id="session-1"
+        title="Busy Chat"
+        isActive={false}
+        isOpen
+        isRunning
+      />,
+    );
+
+    expect(screen.getByLabelText(/chat active/i)).toBeInTheDocument();
+  });
+
+  it("shows an unread dot when the chat has unread output", () => {
+    render(
+      <SidebarChatRow
+        id="session-1"
+        title="Unread Chat"
+        isActive={false}
+        isOpen
+        hasUnread
+      />,
+    );
+
+    expect(screen.getByLabelText(/unread messages/i)).toBeInTheDocument();
+  });
 });
