@@ -91,6 +91,8 @@ pub struct MessageMetadata {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub persona_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub persona_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub target_persona_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub target_persona_name: Option<String>,

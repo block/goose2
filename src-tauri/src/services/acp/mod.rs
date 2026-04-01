@@ -1,8 +1,10 @@
+mod catchup;
 mod payloads;
 mod registry;
 mod store;
 mod writer;
 
+pub use catchup::build_catchup_context;
 pub use registry::{AcpRunningSession, AcpSessionRegistry};
 pub use store::TauriStore;
 pub use writer::TauriMessageWriter;
