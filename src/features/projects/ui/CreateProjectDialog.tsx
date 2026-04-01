@@ -1,9 +1,17 @@
 import { useState, useEffect } from "react";
 import { X, FolderOpen } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import { getHomeDir } from "@/shared/api/system";
 import { Button } from "@/shared/ui/button";
 import { createProject, updateProject } from "../api/projects";
 import { discoverAcpProviders, type AcpProvider } from "@/shared/api/acp";
+import {
+  buildEditorText,
+  hasEquivalentWorkingDir,
+  insertWorkingDir,
+  parseEditorText,
+} from "../lib/projectPromptText";
+import { PromptEditor } from "./PromptEditor";
 
 const COLOR_OPTIONS = [
   "#64748b",
@@ -35,7 +43,7 @@ interface CreateProjectDialogProps {
     color: string;
     preferredProvider: string | null;
     preferredModel: string | null;
-    workingDir: string | null;
+    workingDirs: string[];
     useWorktrees: boolean;
   };
 }
@@ -54,7 +62,6 @@ export function CreateProjectDialog({
     null,
   );
   const preferredModel: string | null = null;
-  const [workingDir, setWorkingDir] = useState<string | null>(null);
   const [useWorktrees, setUseWorktrees] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,19 +75,27 @@ export function CreateProjectDialog({
       .catch(() => setAcpProviders([]));
   }, []);
 
-  const handleBrowseFolder = async () => {
+  const handleAddDirectory = async () => {
     try {
       const { open } = await import("@tauri-apps/plugin-dialog");
       const selected = await open({
         directory: true,
         multiple: false,
-        title: "Select Working Directory",
+        title: "Select Directory",
       });
       if (selected && typeof selected === "string") {
-        setWorkingDir(selected);
+        const homeDir = await getHomeDir().catch(() => null);
+
+        setPrompt((prev) => {
+          if (hasEquivalentWorkingDir(prev, selected, homeDir)) {
+            return prev;
+          }
+
+          return insertWorkingDir(prev, selected);
+        });
       }
     } catch {
-      // Dialog plugin not available — user can type manually
+      // Dialog plugin not available
     }
   };
 
@@ -88,10 +103,11 @@ export function CreateProjectDialog({
   useEffect(() => {
     if (isOpen && editingProject) {
       setName(editingProject.name);
-      setPrompt(editingProject.prompt);
+      setPrompt(
+        buildEditorText(editingProject.workingDirs, editingProject.prompt),
+      );
       setColor(editingProject.color);
       setPreferredProvider(editingProject.preferredProvider ?? null);
-      setWorkingDir(editingProject.workingDir ?? null);
       setUseWorktrees(editingProject.useWorktrees);
       setError(null);
     } else if (isOpen) {
@@ -99,7 +115,6 @@ export function CreateProjectDialog({
       setPrompt("");
       setColor(COLOR_OPTIONS[0]);
       setPreferredProvider(null);
-      setWorkingDir(null);
       setUseWorktrees(false);
       setError(null);
     }
@@ -112,7 +127,6 @@ export function CreateProjectDialog({
     setPrompt("");
     setColor(COLOR_OPTIONS[0]);
     setPreferredProvider(null);
-    setWorkingDir(null);
     setUseWorktrees(false);
     setError(null);
     onClose();
@@ -123,35 +137,38 @@ export function CreateProjectDialog({
     if (!canSave) return;
     setSaving(true);
     setError(null);
+
+    const { prompt: parsedPrompt, workingDirs } = parseEditorText(prompt);
+
     try {
       if (isEditing) {
         await updateProject(
           editingProject.id,
           name.trim(),
           "",
-          prompt,
+          parsedPrompt,
           icon,
           color,
           preferredProvider || null,
           preferredModel,
-          workingDir?.trim() || null,
+          workingDirs,
           useWorktrees,
         );
       } else {
         await createProject(
           name.trim(),
           "",
-          prompt,
+          parsedPrompt,
           icon,
           color,
           preferredProvider || null,
           preferredModel,
-          workingDir?.trim() || null,
+          workingDirs,
           useWorktrees,
         );
       }
       onCreated();
-      onClose();
+      handleClose();
     } catch (err) {
       setError(String(err));
     } finally {
@@ -225,23 +242,25 @@ export function CreateProjectDialog({
             />
           </label>
 
-          {/* Prompt */}
-          <label className="block space-y-1">
+          {/* Instructions */}
+          <div className="block space-y-1">
             <span className="text-xs font-medium text-foreground-secondary">
-              Prompt
+              Instructions
             </span>
-            <textarea
+            <PromptEditor
               value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              rows={8}
+              onChange={setPrompt}
               placeholder="System prompt or context for agents working in this project..."
-              className={cn(
-                "w-full resize-y rounded-lg border border-border bg-background-secondary px-3 py-2 text-xs font-mono leading-relaxed",
-                "placeholder:text-foreground-secondary/40",
-                "focus:outline-none focus:ring-1 focus:ring-ring transition-colors",
-              )}
             />
-          </label>
+            <button
+              type="button"
+              onClick={handleAddDirectory}
+              className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded-md border border-border hover:bg-background-tertiary transition-colors mt-1.5"
+            >
+              <FolderOpen className="w-3.5 h-3.5" />
+              Add directory
+            </button>
+          </div>
 
           {/* Color */}
           <div className="block space-y-1">
@@ -284,30 +303,6 @@ export function CreateProjectDialog({
                 </option>
               ))}
             </select>
-          </label>
-
-          {/* Working Directory */}
-          <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-foreground-secondary">
-              Working Directory
-            </span>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={workingDir ?? ""}
-                onChange={(e) => setWorkingDir(e.target.value || null)}
-                placeholder="/path/to/project"
-                className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-foreground-tertiary focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
-              />
-              <button
-                type="button"
-                onClick={handleBrowseFolder}
-                className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-md border border-border hover:bg-background-tertiary transition-colors"
-              >
-                <FolderOpen className="w-3.5 h-3.5" />
-                Browse
-              </button>
-            </div>
           </label>
 
           {/* Use Worktrees */}

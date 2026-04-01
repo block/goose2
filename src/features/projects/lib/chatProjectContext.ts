@@ -22,18 +22,17 @@ export function getProjectFolderName(path: string): string {
 }
 
 export function getProjectFolderOption(
-  project: Pick<ProjectInfo, "workingDir"> | null | undefined,
-): ProjectFolderOption | null {
-  const workingDir = trimValue(project?.workingDir);
-  if (!workingDir) {
-    return null;
-  }
-
-  return {
-    id: workingDir,
-    name: getProjectFolderName(workingDir),
-    path: workingDir,
-  };
+  project: Pick<ProjectInfo, "workingDirs"> | null | undefined,
+): ProjectFolderOption[] {
+  const dirs = project?.workingDirs ?? [];
+  return dirs
+    .map((d) => trimValue(d))
+    .filter((d): d is string => d !== null)
+    .map((d) => ({
+      id: d,
+      name: getProjectFolderName(d),
+      path: d,
+    }));
 }
 
 export function buildProjectSystemPrompt(
@@ -45,14 +44,16 @@ export function buildProjectSystemPrompt(
 
   const settings: string[] = [`Project name: ${project.name}`];
   const description = trimValue(project.description);
-  const workingDir = trimValue(project.workingDir);
+  const workingDirs = (project.workingDirs ?? [])
+    .map((d) => trimValue(d))
+    .filter((d): d is string => d !== null);
   const prompt = trimValue(project.prompt);
 
   if (description) {
     settings.push(`Project description: ${description}`);
   }
-  if (workingDir) {
-    settings.push(`Working directory: ${workingDir}`);
+  if (workingDirs.length > 0) {
+    settings.push(`Working directories: ${workingDirs.join(", ")}`);
   }
   if (project.preferredProvider) {
     settings.push(`Preferred provider: ${project.preferredProvider}`);

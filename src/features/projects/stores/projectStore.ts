@@ -22,7 +22,7 @@ interface ProjectState {
     color: string,
     preferredProvider: string | null,
     preferredModel: string | null,
-    workingDir: string | null,
+    workingDirs: string[],
     useWorktrees: boolean,
   ) => Promise<ProjectInfo>;
   editProject: (
@@ -34,7 +34,7 @@ interface ProjectState {
     color: string,
     preferredProvider: string | null,
     preferredModel: string | null,
-    workingDir: string | null,
+    workingDirs: string[],
     useWorktrees: boolean,
   ) => Promise<ProjectInfo>;
   removeProject: (id: string) => Promise<void>;
@@ -65,7 +65,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     color,
     preferredProvider,
     preferredModel,
-    workingDir,
+    workingDirs,
     useWorktrees,
   ) => {
     const project = await createProject(
@@ -76,7 +76,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       color,
       preferredProvider,
       preferredModel,
-      workingDir,
+      workingDirs,
       useWorktrees,
     );
     set((state) => ({ projects: [...state.projects, project] }));
@@ -92,7 +92,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     color,
     preferredProvider,
     preferredModel,
-    workingDir,
+    workingDirs,
     useWorktrees,
   ) => {
     const project = await updateProject(
@@ -104,7 +104,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       color,
       preferredProvider,
       preferredModel,
-      workingDir,
+      workingDirs,
       useWorktrees,
     );
     set((state) => ({

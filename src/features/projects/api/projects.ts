@@ -9,7 +9,7 @@ export interface ProjectInfo {
   color: string;
   preferredProvider: string | null;
   preferredModel: string | null;
-  workingDir: string | null;
+  workingDirs: string[];
   useWorktrees: boolean;
   order: number;
   archivedAt: string | null;
@@ -29,7 +29,7 @@ export async function createProject(
   color: string,
   preferredProvider: string | null,
   preferredModel: string | null,
-  workingDir: string | null,
+  workingDirs: string[],
   useWorktrees: boolean,
 ): Promise<ProjectInfo> {
   return invoke("create_project", {
@@ -40,7 +40,7 @@ export async function createProject(
     color,
     preferredProvider,
     preferredModel,
-    workingDir,
+    workingDirs,
     useWorktrees,
   });
 }
@@ -54,7 +54,7 @@ export async function updateProject(
   color: string,
   preferredProvider: string | null,
   preferredModel: string | null,
-  workingDir: string | null,
+  workingDirs: string[],
   useWorktrees: boolean,
 ): Promise<ProjectInfo> {
   return invoke("update_project", {
@@ -66,7 +66,7 @@ export async function updateProject(
     color,
     preferredProvider,
     preferredModel,
-    workingDir,
+    workingDirs,
     useWorktrees,
   });
 }

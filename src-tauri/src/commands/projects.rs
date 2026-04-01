@@ -1,3 +1,4 @@
+use serde::Deserialize;
 use std::fs;
 use std::path::PathBuf;
 
@@ -93,7 +94,7 @@ fn find_project_by_id(id: &str) -> Result<(PathBuf, ProjectInfo), String> {
     Err(format!("Project with id \"{}\" not found", id))
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
+#[derive(serde::Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectInfo {
     pub id: String,
@@ -104,7 +105,8 @@ pub struct ProjectInfo {
     pub color: String,
     pub preferred_provider: Option<String>,
     pub preferred_model: Option<String>,
-    pub working_dir: Option<String>,
+    #[serde(default)]
+    pub working_dirs: Vec<String>,
     pub use_worktrees: bool,
     #[serde(default)]
     pub order: i32,
@@ -193,7 +195,7 @@ pub fn create_project(
     color: String,
     preferred_provider: Option<String>,
     preferred_model: Option<String>,
-    working_dir: Option<String>,
+    working_dirs: Vec<String>,
     use_worktrees: bool,
 ) -> Result<ProjectInfo, String> {
     if name.trim().is_empty() {
@@ -237,7 +239,7 @@ pub fn create_project(
         color,
         preferred_provider,
         preferred_model,
-        working_dir,
+        working_dirs,
         use_worktrees,
         order: existing_count as i32,
         archived_at: None,
@@ -264,7 +266,7 @@ pub fn update_project(
     color: String,
     preferred_provider: Option<String>,
     preferred_model: Option<String>,
-    working_dir: Option<String>,
+    working_dirs: Vec<String>,
     use_worktrees: bool,
 ) -> Result<ProjectInfo, String> {
     if name.trim().is_empty() {
@@ -282,7 +284,7 @@ pub fn update_project(
         color,
         preferred_provider,
         preferred_model,
-        working_dir,
+        working_dirs,
         use_worktrees,
         order: existing.order,
         archived_at: existing.archived_at,

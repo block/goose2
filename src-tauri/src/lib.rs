@@ -53,6 +53,7 @@ pub fn run() {
             commands::sessions::unarchive_session,
             commands::ui_state::save_ui_state,
             commands::ui_state::load_ui_state,
+            commands::ui_state::get_home_dir,
             commands::chat::chat_send_message,
             commands::acp::discover_acp_providers,
             commands::acp::acp_send_message,

@@ -63,7 +63,7 @@ export function ChatView({
   const [selectedProvider, setSelectedProvider] = useState(effectiveProvider);
 
   const selectedPersona = personas.find((p) => p.id === selectedPersonaId);
-  const projectFolder = useMemo(
+  const projectFolders = useMemo(
     () => getProjectFolderOption(project),
     [project],
   );
@@ -206,7 +206,7 @@ export function ChatView({
     selectedProvider,
     effectiveSystemPrompt,
     personaInfo,
-    projectFolder?.path,
+    projectFolders[0]?.path,
   );
 
   // Listen for ACP streaming events
@@ -317,8 +317,8 @@ export function ChatView({
         providers={providers}
         selectedProvider={selectedProvider}
         onProviderChange={handleProviderChange}
-        folder={projectFolder?.id ?? null}
-        availableFolders={projectFolder ? [projectFolder] : []}
+        folder={projectFolders[0]?.id ?? null}
+        availableFolders={projectFolders}
       />
     </div>
   );

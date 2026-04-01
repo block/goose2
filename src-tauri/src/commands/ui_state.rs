@@ -51,3 +51,9 @@ pub fn load_ui_state() -> Result<UiState, String> {
     let json = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub fn get_home_dir() -> Result<String, String> {
+    let home_dir = dirs::home_dir().ok_or("Could not determine home directory")?;
+    Ok(home_dir.to_string_lossy().into_owned())
+}
