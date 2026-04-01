@@ -243,6 +243,7 @@ export function ChatView({
 
   // Wrap sendMessage to handle @ mentioned persona overrides
   const chatStore = useChatStore();
+  const tokenState = useChatStore((s) => s.tokenState);
   const handleSend = useCallback(
     (text: string, personaId?: string) => {
       if (personaId && personaId !== selectedPersonaId) {
@@ -362,6 +363,8 @@ export function ChatView({
             },
           })
         }
+        contextTokens={tokenState.accumulatedTotal}
+        contextLimit={tokenState.contextLimit}
       />
     </div>
   );

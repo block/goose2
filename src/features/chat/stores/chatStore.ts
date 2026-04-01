@@ -222,6 +222,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
               current.accumulatedInput + (partial.inputTokens ?? 0)) +
             (partial.accumulatedOutput ??
               current.accumulatedOutput + (partial.outputTokens ?? 0)),
+          contextLimit: partial.contextLimit ?? current.contextLimit,
         },
       };
     }),
