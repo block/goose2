@@ -29,8 +29,9 @@ function getCaretPosition(el: HTMLElement): { line: number; col: number } {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0) return { line: 0, col: 0 };
 
-  const node: Node | null = sel.getRangeAt(0).startContainer;
-  const offset = sel.getRangeAt(0).startOffset;
+  const range = sel.getRangeAt(0);
+  const node: Node | null = range.startContainer;
+  const offset = range.startOffset;
 
   // If the selection is directly on the contentEditable root, translate
   // the child-index offset into a line number with col 0.
@@ -48,24 +49,12 @@ function getCaretPosition(el: HTMLElement): { line: number; col: number } {
   const divs = Array.from(el.childNodes);
   const line = divs.indexOf(lineDiv as ChildNode);
 
-  // Compute column: character offset within this line's text content.
-  // Walk text nodes inside the lineDiv in order, summing lengths until
-  // we reach the node that contains the selection.
-  let col = 0;
-  const walker = document.createTreeWalker(lineDiv, NodeFilter.SHOW_TEXT);
-  let textNode: Text | null;
-  // biome-ignore lint/suspicious/noAssignInExpressions: walker iteration
-  while ((textNode = walker.nextNode() as Text | null)) {
-    if (textNode === node) {
-      col += offset;
-      break;
-    }
-    col += textNode.length;
-  }
-  // If the selection container is an element (not text), offset is a child index
-  if (node.nodeType !== Node.TEXT_NODE) {
-    col = 0;
-  }
+  // Measure the visible text from the start of the line up to the caret.
+  // This works for both text-node and element-node selection containers.
+  const lineRange = document.createRange();
+  lineRange.selectNodeContents(lineDiv);
+  lineRange.setEnd(node, offset);
+  const col = lineRange.toString().length;
 
   return { line: Math.max(line, 0), col };
 }
