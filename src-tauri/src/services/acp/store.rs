@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use acp_client::Store;
 
+use super::make_composite_key;
 use crate::services::sessions::SessionStore;
 use crate::types::messages::{Message, MessageContent, MessageRole};
 
@@ -55,10 +56,7 @@ impl TauriStore {
     /// Returns `"{session_id}__{persona_id}"` when a persona is set,
     /// otherwise plain `"{session_id}"`.
     fn effective_key(&self) -> String {
-        match &self.persona_id {
-            Some(pid) => format!("{}__{}", self.session_id, pid),
-            None => self.session_id.clone(),
-        }
+        make_composite_key(&self.session_id, self.persona_id.as_deref())
     }
 
     /// Look up a previously stored agent session ID, or `None` for new sessions.

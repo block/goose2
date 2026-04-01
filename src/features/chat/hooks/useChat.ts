@@ -83,6 +83,8 @@ export function useChat(
           text,
           systemPrompt,
           workingDirOverride,
+          personaInfo?.id,
+          personaInfo?.name,
         );
         // Note: setChatState("idle") is handled by useAcpStream on "acp:done"
       } catch (err) {

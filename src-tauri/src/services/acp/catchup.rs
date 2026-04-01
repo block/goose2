@@ -40,11 +40,7 @@ pub fn build_catchup_context(
     };
 
     // Exclude the last message (the current user prompt)
-    let end_idx = if messages.len() > 0 {
-        messages.len() - 1
-    } else {
-        0
-    };
+    let end_idx = messages.len() - 1;
 
     if start_idx >= end_idx {
         return None;
@@ -119,11 +115,10 @@ fn extract_text(msg: &Message) -> String {
         .join(" ")
 }
 
-/// Truncate text to `max_len` characters, appending "..." if truncated.
-fn truncate_text(text: &str, max_len: usize) -> String {
-    if text.len() <= max_len {
-        text.to_string()
-    } else {
-        format!("{}...", &text[..max_len])
+/// Truncate text to `max_chars` characters, appending "..." if truncated.
+fn truncate_text(text: &str, max_chars: usize) -> String {
+    match text.char_indices().nth(max_chars) {
+        Some((byte_idx, _)) => format!("{}...", &text[..byte_idx]),
+        None => text.to_string(),
     }
 }
