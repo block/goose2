@@ -5,6 +5,7 @@ import { Button } from "@/shared/ui/button";
 import { createProject, updateProject } from "../api/projects";
 import { discoverAcpProviders, type AcpProvider } from "@/shared/api/acp";
 import { PromptEditor } from "./PromptEditor";
+import { INCLUDE_RE } from "../lib/includePattern";
 
 const COLOR_OPTIONS = [
   "#64748b",
@@ -22,8 +23,6 @@ const COLOR_OPTIONS = [
   "#ec4899",
   "#f43f5e",
 ];
-
-const INCLUDE_RE = /^include:\s*(.+)$/;
 
 interface CreateProjectDialogProps {
   isOpen: boolean;
@@ -50,24 +49,26 @@ function buildEditorText(workingDirs: string[], prompt: string): string {
   return [...includeLines, "", prompt].join("\n");
 }
 
-/** Parse editor text into { prompt, workingDirs }. */
+/** Parse editor text into { prompt, workingDirs }.
+ *  Only `include:` lines at the top of the text (before the first
+ *  non-include, non-blank line) are treated as working directories. */
 function parseEditorText(text: string): {
   prompt: string;
   workingDirs: string[];
 } {
   const lines = text.split("\n");
   const workingDirs: string[] = [];
-  const remaining: string[] = [];
-  for (const line of lines) {
-    const match = line.match(INCLUDE_RE);
+  let i = 0;
+  // Consume include: and blank lines from the top
+  for (; i < lines.length; i++) {
+    const match = lines[i].match(INCLUDE_RE);
     if (match) {
       workingDirs.push(match[1].trim());
-    } else {
-      remaining.push(line);
+    } else if (lines[i].trim() !== "") {
+      break;
     }
   }
-  // Strip leading blank lines that were separators between include lines and prompt
-  const prompt = remaining.join("\n").replace(/^\n+/, "");
+  const prompt = lines.slice(i).join("\n");
   return { prompt, workingDirs };
 }
 
@@ -107,7 +108,7 @@ export function CreateProjectDialog({
         title: "Select Directory",
       });
       if (selected && typeof selected === "string") {
-        setPrompt((prev) => (prev ? prev + "\n" : "") + `include: ${selected}`);
+        setPrompt((prev) => `${prev ? `${prev}\n` : ""}include: ${selected}`);
       }
     } catch {
       // Dialog plugin not available

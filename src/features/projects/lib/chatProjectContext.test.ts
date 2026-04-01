@@ -27,7 +27,9 @@ describe("chatProjectContext", () => {
 
     expect(systemPrompt).toContain("<project-settings>");
     expect(systemPrompt).toContain("Project name: Goose2");
-    expect(systemPrompt).toContain("Working directories: /Users/wesb/dev/goose2");
+    expect(systemPrompt).toContain(
+      "Working directories: /Users/wesb/dev/goose2",
+    );
     expect(systemPrompt).toContain("Preferred provider: goose");
     expect(systemPrompt).toContain(
       "Use git worktrees for branch isolation: yes",
