@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { MessageTimeline } from "./MessageTimeline";
 import { ChatInput } from "./ChatInput";
 import { LoadingGoose } from "./LoadingGoose";
+import { ContextPanel } from "./ContextPanel";
 import { useChat } from "../hooks/useChat";
 import { useChatStore } from "../stores/chatStore";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
@@ -329,7 +330,15 @@ export function ChatView({
       messages={messages}
       allowedRoots={allowedArtifactRoots}
     >
-      <div className="flex h-full flex-col">
+      <div className="relative flex h-full flex-col">
+        <div className="absolute right-4 top-3 z-20">
+          <ContextPanel
+            projectName={project?.name}
+            projectColor={project?.color}
+            projectWorkingDir={project?.workingDirs[0] ?? null}
+          />
+        </div>
+
         <MessageTimeline
           messages={messages}
           streamingMessageId={streamingMessageId}
