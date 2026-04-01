@@ -91,8 +91,8 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Run E2E smoke tests
-        run: pnpm exec playwright test --project=smoke
+      - name: Run E2E tests
+        run: pnpm exec playwright test
 
       - name: Upload test artifacts
         if: failure()

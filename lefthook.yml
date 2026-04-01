@@ -1,7 +1,7 @@
 pre-commit:
   commands:
     format:
-      run: biome format --write . && biome check --fix . && git add -u
+      run: npx biome format --write . && npx biome check --fix . && git add -u
     check:
       run: just check
 
