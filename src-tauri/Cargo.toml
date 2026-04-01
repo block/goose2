@@ -31,3 +31,4 @@ tokio-stream = "0.1"
 tokio-util = { version = "0.7", features = ["rt"] }
 async-trait = "0.1"
 acp-client = { git = "https://github.com/block/builderbot", rev = "dbd5bc9c0cd559c7a67ab2d56545dba110f4a4cb" }
+doctor = { git = "https://github.com/block/builderbot", branch = "doctor" }
