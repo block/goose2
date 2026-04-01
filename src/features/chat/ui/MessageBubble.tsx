@@ -261,10 +261,21 @@ export function MessageBubble({
           isUser ? "max-w-[80%] items-end" : "max-w-[85%] items-start",
         )}
       >
-        {/* Agent name */}
+        {/* Persona attribution */}
+        {isUser && message.metadata?.targetPersonaName && (
+          <span className="mb-0.5 text-[11px] font-medium text-foreground-tertiary">
+            You &rarr; {message.metadata.targetPersonaName}
+          </span>
+        )}
         {!isUser && agentName && (
-          <span className="mb-0.5 text-xs font-medium text-foreground-secondary">
-            {agentName}
+          <span className="mb-0.5 inline-flex items-center gap-1.5 text-xs font-medium text-foreground-secondary">
+            {message.metadata?.personaName ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">
+                {message.metadata.personaName}
+              </span>
+            ) : (
+              agentName
+            )}
           </span>
         )}
 
