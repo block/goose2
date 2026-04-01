@@ -12,6 +12,8 @@ function renderLines(text: string): string {
   return text
     .split("\n")
     .map((line) => {
+      // We visually highlight include lines anywhere in the editor, even though
+      // only the leading include block is treated as working directory metadata.
       const match = line.match(INCLUDE_RE);
       if (match) {
         return `<div><span class="bg-blue-500/15 text-blue-600 dark:text-blue-400 rounded px-1.5 py-0.5 font-mono text-xs">${escapeHtml(line)}</span></div>`;
@@ -138,6 +140,7 @@ export function PromptEditor({
   const ref = useRef<HTMLDivElement>(null);
   const lastPushedValue = useRef<string | null>(null);
   const includeLines = useRef<Set<number>>(new Set());
+  const isComposing = useRef(false);
 
   // Sync HTML when value changes externally (including initial mount)
   useEffect(() => {
@@ -150,34 +153,76 @@ export function PromptEditor({
     }
   }, [value]);
 
-  const handleInput = () => {
+  const syncFromDom = (skipRerender: boolean) => {
     const el = ref.current;
     if (!el) return;
-    // innerText preserves newlines from contentEditable divs
+
     const text = el.innerText;
-    // contentEditable may add a trailing newline; normalise it
     const normalized = text.replace(/\n$/, "");
     lastPushedValue.current = normalized;
 
-    // Only re-render innerHTML when include-line state changes (lines
-    // gained or lost the include: pattern). This avoids destroying and
-    // recreating DOM nodes on every keystroke, which caused characters
-    // to be reordered when typing quickly.
     const newIncludeLines = getIncludeLineSet(normalized);
-    if (!setsEqual(newIncludeLines, includeLines.current)) {
+    if (!skipRerender && !setsEqual(newIncludeLines, includeLines.current)) {
       includeLines.current = newIncludeLines;
       const caret = getCaretPosition(el);
       el.innerHTML = normalized === "" ? "" : renderLines(normalized);
       setCaretPosition(el, caret);
+    } else {
+      includeLines.current = newIncludeLines;
     }
 
     onChange(normalized);
   };
 
+  const handleInput = () => {
+    syncFromDom(isComposing.current);
+  };
+
+  const handleCompositionStart = () => {
+    isComposing.current = true;
+  };
+
+  const handleCompositionEnd = () => {
+    isComposing.current = false;
+    syncFromDom(false);
+  };
+
+  const insertTextAtSelection = (text: string) => {
+    const el = ref.current;
+    if (!el) return;
+
+    const selection = window.getSelection();
+    if (!selection) {
+      el.focus();
+      return;
+    }
+
+    if (selection.rangeCount === 0) {
+      el.focus();
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    const range = selection.getRangeAt(0);
+    range.deleteContents();
+
+    const textNode = document.createTextNode(text);
+    range.insertNode(textNode);
+
+    range.setStartAfter(textNode);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  };
+
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
     const text = e.clipboardData.getData("text/plain");
-    document.execCommand("insertText", false, text);
+    insertTextAtSelection(text);
+    syncFromDom(isComposing.current);
   };
 
   const showPlaceholder = value === "";
@@ -190,6 +235,8 @@ export function PromptEditor({
       suppressContentEditableWarning
       onInput={handleInput}
       onPaste={handlePaste}
+      onCompositionStart={handleCompositionStart}
+      onCompositionEnd={handleCompositionEnd}
       role="textbox"
       tabIndex={0}
       aria-multiline="true"

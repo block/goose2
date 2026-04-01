@@ -4,8 +4,12 @@ import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
 import { createProject, updateProject } from "../api/projects";
 import { discoverAcpProviders, type AcpProvider } from "@/shared/api/acp";
+import {
+  buildEditorText,
+  insertWorkingDir,
+  parseEditorText,
+} from "../lib/projectPromptText";
 import { PromptEditor } from "./PromptEditor";
-import { INCLUDE_RE } from "../lib/includePattern";
 
 const COLOR_OPTIONS = [
   "#64748b",
@@ -40,36 +44,6 @@ interface CreateProjectDialogProps {
     workingDirs: string[];
     useWorktrees: boolean;
   };
-}
-
-/** Build the editor text from separate workingDirs + prompt. */
-function buildEditorText(workingDirs: string[], prompt: string): string {
-  const includeLines = workingDirs.map((d) => `include: ${d}`);
-  if (includeLines.length === 0) return prompt;
-  return [...includeLines, "", prompt].join("\n");
-}
-
-/** Parse editor text into { prompt, workingDirs }.
- *  Only `include:` lines at the top of the text (before the first
- *  non-include, non-blank line) are treated as working directories. */
-function parseEditorText(text: string): {
-  prompt: string;
-  workingDirs: string[];
-} {
-  const lines = text.split("\n");
-  const workingDirs: string[] = [];
-  let i = 0;
-  // Consume include: and blank lines from the top
-  for (; i < lines.length; i++) {
-    const match = lines[i].match(INCLUDE_RE);
-    if (match) {
-      workingDirs.push(match[1].trim());
-    } else if (lines[i].trim() !== "") {
-      break;
-    }
-  }
-  const prompt = lines.slice(i).join("\n");
-  return { prompt, workingDirs };
 }
 
 export function CreateProjectDialog({
@@ -108,7 +82,7 @@ export function CreateProjectDialog({
         title: "Select Directory",
       });
       if (selected && typeof selected === "string") {
-        setPrompt((prev) => `${prev ? `${prev}\n` : ""}include: ${selected}`);
+        setPrompt((prev) => insertWorkingDir(prev, selected));
       }
     } catch {
       // Dialog plugin not available
@@ -120,10 +94,7 @@ export function CreateProjectDialog({
     if (isOpen && editingProject) {
       setName(editingProject.name);
       setPrompt(
-        buildEditorText(
-          editingProject.workingDirs ?? [],
-          editingProject.prompt,
-        ),
+        buildEditorText(editingProject.workingDirs, editingProject.prompt),
       );
       setColor(editingProject.color);
       setPreferredProvider(editingProject.preferredProvider ?? null);
