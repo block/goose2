@@ -19,11 +19,16 @@ export interface ModelInfo {
   supportsThinking: boolean;
 }
 
+// Avatar type — either a remote URL or a local file in ~/.goose/avatars/
+export type Avatar =
+  | { type: "url"; value: string }
+  | { type: "local"; value: string };
+
 // Persona types (from sprout)
 export interface Persona {
   id: string;
   displayName: string;
-  avatarUrl?: string;
+  avatar?: Avatar | null;
   systemPrompt: string;
   provider?: ProviderType;
   model?: string;
@@ -35,7 +40,7 @@ export interface Persona {
 
 export interface CreatePersonaRequest {
   displayName: string;
-  avatarUrl?: string;
+  avatar?: Avatar | null;
   systemPrompt: string;
   provider?: ProviderType;
   model?: string;
@@ -43,7 +48,7 @@ export interface CreatePersonaRequest {
 
 export interface UpdatePersonaRequest {
   displayName?: string;
-  avatarUrl?: string;
+  avatar?: Avatar | null;
   systemPrompt?: string;
   provider?: ProviderType;
   model?: string;

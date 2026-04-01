@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { MoreVertical, Copy, Pencil, Trash2, Download } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import { useAvatarSrc } from "@/shared/hooks/useAvatarSrc";
 import type { Persona } from "@/shared/types/agents";
 
 interface PersonaCardProps {
@@ -37,6 +38,7 @@ export function PersonaCard({
   }, [menuOpen]);
 
   const initials = persona.displayName.charAt(0).toUpperCase();
+  const avatarSrc = useAvatarSrc(persona.avatar);
 
   return (
     <section
@@ -143,9 +145,9 @@ export function PersonaCard({
       </div>
 
       {/* Avatar */}
-      {persona.avatarUrl ? (
+      {avatarSrc ? (
         <img
-          src={persona.avatarUrl}
+          src={avatarSrc}
           alt=""
           className="h-12 w-12 rounded-full object-cover"
         />

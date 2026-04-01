@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Sparkles, User } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import { useAvatarSrc } from "@/shared/hooks/useAvatarSrc";
 import type { Persona } from "@/shared/types/agents";
 
 interface MentionAutocompleteProps {
@@ -98,10 +99,11 @@ export function MentionAutocomplete({
 }
 
 function MentionAvatar({ persona }: { persona: Persona }) {
-  if (persona.avatarUrl) {
+  const avatarSrc = useAvatarSrc(persona.avatar);
+  if (avatarSrc) {
     return (
       <img
-        src={persona.avatarUrl}
+        src={avatarSrc}
         alt={persona.displayName}
         className="h-7 w-7 rounded-full object-cover"
       />
