@@ -60,7 +60,7 @@ describe("HomeScreen", () => {
   it("renders the chat input placeholder with persona name", () => {
     render(<HomeScreen />);
     expect(
-      screen.getByPlaceholderText("Message Goose... (type @ to mention)"),
+      screen.getByPlaceholderText("Message Solo... (type @ to mention)"),
     ).toBeInTheDocument();
   });
 
