@@ -12,6 +12,7 @@ import { cn } from "@/shared/lib/cn";
 import { ToolCallCard } from "./ToolCallCard";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { MarkdownContent } from "./MarkdownContent";
+import { ImageLightbox } from "@/shared/ui/ImageLightbox";
 import type {
   Message,
   MessageContent,
@@ -317,14 +318,7 @@ function renderContentBlock(content: MessageContent, index: number) {
         ic.source.type === "base64"
           ? `data:${ic.source.mediaType};base64,${ic.source.data}`
           : ic.source.url;
-      return (
-        <img
-          key={`image-${index}`}
-          src={src}
-          alt="Attached"
-          className="max-h-48 max-w-xs rounded-lg object-contain"
-        />
-      );
+      return <ClickableImage key={`image-${index}`} src={src} alt="Attached" />;
     }
     case "toolRequest":
     case "toolResponse":
@@ -373,6 +367,27 @@ function renderContentBlock(content: MessageContent, index: number) {
     default:
       return null;
   }
+}
+
+function ClickableImage({ src, alt }: { src: string; alt: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label={`View ${alt}`}
+      >
+        <img
+          src={src}
+          alt={alt}
+          className="max-h-48 max-w-xs rounded-lg object-contain"
+        />
+      </button>
+      <ImageLightbox src={src} alt={alt} open={open} onOpenChange={setOpen} />
+    </>
+  );
 }
 
 export function MessageBubble({

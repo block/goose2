@@ -144,7 +144,10 @@ export function useChat(
         // Send via ACP — response streams back through Tauri events
         // which are handled by the global useAcpStream listener in AppShell.
         store.setChatState(sessionId, "streaming");
-        await acpSendMessage(sessionId, providerId, text, {
+        // When images are present with no text, pass a single space so the ACP
+        // driver doesn't send an empty text content block that goose rejects.
+        const acpPrompt = text.trim() || (images?.length ? " " : text);
+        await acpSendMessage(sessionId, providerId, acpPrompt, {
           systemPrompt,
           workingDir: workingDirOverride,
           personaId: effectivePersonaInfo?.id,

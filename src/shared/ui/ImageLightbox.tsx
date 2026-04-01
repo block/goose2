@@ -18,6 +18,7 @@ export function ImageLightbox({
       <DialogContent
         className="w-auto flex items-center justify-center border-none bg-transparent p-0 shadow-none sm:max-w-[90vw]"
         showCloseButton={false}
+        aria-describedby={undefined}
       >
         {/* Visually hidden title for accessibility */}
         <DialogTitle className="sr-only">{alt}</DialogTitle>
