@@ -39,7 +39,8 @@ export function TabBar({
   const handleClearTabs = () => {
     if (dismissingTabs || tabs.length === 0) return;
     setDismissingTabs(true);
-    const totalMs = (tabs.length - 1) * DISMISS_STAGGER_MS + DISMISS_DURATION_MS;
+    const totalMs =
+      (tabs.length - 1) * DISMISS_STAGGER_MS + DISMISS_DURATION_MS;
     dismissTimerRef.current = setTimeout(() => {
       dismissTimerRef.current = null;
       onClearAllTabs();
@@ -58,7 +59,7 @@ export function TabBar({
         onClick={onHomeClick}
         aria-label="Home"
       >
-        <Home  />
+        <Home />
       </Button>
 
       <div
@@ -121,7 +122,7 @@ export function TabBar({
           onClick={onNewTab}
           aria-label="New tab"
         >
-          <Plus  />
+          <Plus />
         </Button>
         {tabs.length > 0 && (
           <Button
@@ -131,7 +132,7 @@ export function TabBar({
             aria-label="Close all tabs"
             title="Close all tabs"
           >
-            <X  />
+            <X />
           </Button>
         )}
       </div>
