@@ -14,10 +14,10 @@ impl SessionStore {
     fn message_preview(message: &Message) -> Option<String> {
         for content in &message.content {
             if let crate::types::messages::MessageContent::Text { text } = content {
-                return Some(if text.len() > 100 {
-                    format!("{}...", &text[..100])
-                } else {
-                    text.clone()
+                let cutoff = text.char_indices().nth(100).map(|(index, _)| index);
+                return Some(match cutoff {
+                    Some(index) => format!("{}...", &text[..index]),
+                    None => text.clone(),
                 });
             }
         }

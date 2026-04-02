@@ -18,13 +18,18 @@ use super::payloads::{
 /// A [`MessageWriter`] implementation that streams ACP output to the frontend
 /// via Tauri events, and saves the final assistant message to the
 /// [`SessionStore`] on finalization.
+struct PersistedMessageState {
+    content: Vec<MessageContent>,
+    has_unflushed_changes: bool,
+}
+
 pub struct TauriMessageWriter {
     app_handle: tauri::AppHandle,
     session_id: String,
     session_store: Arc<SessionStore>,
     assistant_message_id: String,
     /// Accumulated structured content (text + tool calls/results) for persistence.
-    accumulated_content: std::sync::Mutex<Vec<MessageContent>>,
+    state: std::sync::Mutex<PersistedMessageState>,
 }
 
 impl TauriMessageWriter {
@@ -74,7 +79,10 @@ impl TauriMessageWriter {
             session_id,
             session_store,
             assistant_message_id,
-            accumulated_content: std::sync::Mutex::new(Vec::new()),
+            state: std::sync::Mutex::new(PersistedMessageState {
+                content: Vec::new(),
+                has_unflushed_changes: false,
+            }),
         }
     }
 
@@ -83,11 +91,18 @@ impl TauriMessageWriter {
     }
 
     fn persist_snapshot(&self, completion_status: Option<MessageCompletionStatus>) {
-        let content = self
-            .accumulated_content
-            .lock()
-            .expect("accumulated_content lock")
-            .clone();
+        let (should_persist_content, content) = {
+            let mut state = self.state.lock().expect("state lock");
+            let should_persist = state.has_unflushed_changes || completion_status.is_some();
+            if should_persist {
+                state.has_unflushed_changes = false;
+            }
+            (should_persist, state.content.clone())
+        };
+
+        if !should_persist_content {
+            return;
+        }
 
         if let Err(error) = self.session_store.update_message(
             &self.session_id,
@@ -156,14 +171,22 @@ fn find_latest_unpaired_tool_request(
 #[async_trait]
 impl MessageWriter for TauriMessageWriter {
     async fn append_text(&self, text: &str) {
-        {
-            let mut content = self
-                .accumulated_content
-                .lock()
-                .expect("accumulated_content lock");
-            append_text_block(&mut content, text);
+        if text.is_empty() {
+            return;
         }
-        self.persist_snapshot(None);
+
+        {
+            let mut state = self.state.lock().expect("state lock");
+            let starts_new_text_block =
+                !matches!(state.content.last(), Some(MessageContent::Text { .. }));
+            if starts_new_text_block {
+                drop(state);
+                self.persist_snapshot(None);
+                state = self.state.lock().expect("state lock");
+            }
+            append_text_block(&mut state.content, text);
+            state.has_unflushed_changes = true;
+        }
 
         let _ = self.app_handle.emit(
             "acp:text",
@@ -188,19 +211,18 @@ impl MessageWriter for TauriMessageWriter {
     }
 
     async fn record_tool_call(&self, tool_call_id: &str, title: &str) {
+        self.persist_snapshot(None);
+
         {
-            let mut content = self
-                .accumulated_content
-                .lock()
-                .expect("accumulated_content lock");
-            content.push(MessageContent::ToolRequest {
+            let mut state = self.state.lock().expect("state lock");
+            state.content.push(MessageContent::ToolRequest {
                 id: tool_call_id.to_string(),
                 name: title.to_string(),
                 arguments: serde_json::json!({}),
                 status: ToolCallStatus::Executing,
             });
+            state.has_unflushed_changes = true;
         }
-        self.persist_snapshot(None);
 
         let _ = self.app_handle.emit(
             "acp:tool_call",
@@ -215,11 +237,8 @@ impl MessageWriter for TauriMessageWriter {
 
     async fn update_tool_call_title(&self, tool_call_id: &str, title: &str) {
         {
-            let mut content = self
-                .accumulated_content
-                .lock()
-                .expect("accumulated_content lock");
-            for block in content.iter_mut().rev() {
+            let mut state = self.state.lock().expect("state lock");
+            for block in state.content.iter_mut().rev() {
                 if let MessageContent::ToolRequest { id, name, .. } = block {
                     if id == tool_call_id {
                         *name = title.to_string();
@@ -227,6 +246,7 @@ impl MessageWriter for TauriMessageWriter {
                     }
                 }
             }
+            state.has_unflushed_changes = true;
         }
         self.persist_snapshot(None);
 
@@ -242,36 +262,36 @@ impl MessageWriter for TauriMessageWriter {
     }
 
     async fn record_tool_result(&self, content: &str) {
-        {
-            let mut accumulated = self
-                .accumulated_content
-                .lock()
-                .expect("accumulated_content lock");
+        self.persist_snapshot(None);
 
-            let paired_request = find_latest_unpaired_tool_request(&accumulated);
+        {
+            let mut state = self.state.lock().expect("state lock");
+
+            let paired_request = find_latest_unpaired_tool_request(&state.content);
 
             if let Some((request_index, tool_call_id, tool_name)) = paired_request {
-                if let MessageContent::ToolRequest { status, .. } = &mut accumulated[request_index]
+                if let MessageContent::ToolRequest { status, .. } =
+                    &mut state.content[request_index]
                 {
                     *status = ToolCallStatus::Completed;
                 }
 
-                accumulated.push(MessageContent::ToolResponse {
+                state.content.push(MessageContent::ToolResponse {
                     id: tool_call_id,
                     name: tool_name,
                     result: content.to_string(),
                     is_error: false,
                 });
             } else {
-                accumulated.push(MessageContent::ToolResponse {
+                state.content.push(MessageContent::ToolResponse {
                     id: uuid::Uuid::new_v4().to_string(),
                     name: String::new(),
                     result: content.to_string(),
                     is_error: false,
                 });
             }
+            state.has_unflushed_changes = true;
         }
-        self.persist_snapshot(None);
 
         let _ = self.app_handle.emit(
             "acp:tool_result",
