@@ -147,7 +147,7 @@ function ToolGroupRow({
   const label = getToolLabel(group.type, group.items.length);
 
   return (
-    <div className="flex flex-col items-start">
+    <div className="w-full flex flex-col">
       <button
         type="button"
         onClick={() => setExpanded((prev) => !prev)}
@@ -164,7 +164,7 @@ function ToolGroupRow({
         />
       </button>
       {expanded && (
-        <div className="ml-[7px] mt-1 flex flex-col items-start gap-3 border-l border-border pl-4">
+        <div className="ml-[7px] mt-1 flex flex-col gap-3 border-l border-border pl-4">
           {group.items.map((item) => renderToolItem(item, true))}
         </div>
       )}
@@ -202,7 +202,7 @@ export function ToolChainCards({ toolItems }: { toolItems: ToolChainItem[] }) {
   const groups = groupByConsecutiveType(primaryItems);
 
   return (
-    <div className="flex flex-col items-start gap-3">
+    <div className="w-full flex flex-col gap-3">
       {groups.flatMap((group) => {
         if (group.items.length > 1 && group.type !== undefined) {
           const groupKey = group.items.map((i) => i.key).join(":");
@@ -218,7 +218,7 @@ export function ToolChainCards({ toolItems }: { toolItems: ToolChainItem[] }) {
       })}
 
       {hiddenItems.length > 0 && (
-        <div className="ml-1 flex flex-col items-start gap-1.5">
+        <div className="ml-1 flex flex-col gap-1.5">
           <button
             type="button"
             onClick={() => setShowInternalSteps((prev) => !prev)}

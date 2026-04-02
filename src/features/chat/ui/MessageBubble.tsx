@@ -274,7 +274,7 @@ export function MessageBubble({
       <div
         className={cn(
           "min-w-0 flex flex-col gap-1",
-          isUser ? "max-w-[80%] items-end" : "max-w-[85%] items-start",
+          isUser ? "max-w-[80%] items-end" : "w-full max-w-[85%] items-start",
         )}
       >
         {!isUser && assistantDisplayName && (
