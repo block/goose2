@@ -256,7 +256,7 @@ export function Sidebar({
             className={cn(
               "rounded-md transition-all duration-300 ease-out",
               collapsed
-                ? "mx-auto text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                ? "mx-auto gap-0 text-muted-foreground hover:text-foreground hover:bg-accent/50"
                 : "w-full gap-2 border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:border-border hover:bg-transparent",
             )}
             title={collapsed ? "Search ⌘K" : undefined}
@@ -300,7 +300,7 @@ export function Sidebar({
                 "w-full rounded-md text-[13px]",
                 SIDEBAR_NAV_TEXT_CLASS,
                 collapsed
-                  ? "justify-center px-0 py-1.5"
+                  ? "justify-center gap-0 px-0 py-1.5"
                   : "justify-start gap-2.5 px-3 py-1.5",
               )}
             >
