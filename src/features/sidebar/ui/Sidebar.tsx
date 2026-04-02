@@ -134,6 +134,14 @@ export function Sidebar({
         standalone.push(item);
       }
     }
+    // Sort project chats by updatedAt descending (newest first)
+    for (const chats of Object.values(byProject)) {
+      chats.sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      );
+    }
+
     // Sort standalone by updatedAt descending, limit to MAX_RECENTS
     standalone.sort(
       (a, b) =>

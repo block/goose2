@@ -12,7 +12,7 @@ import type { ProjectInfo } from "@/features/projects/api/projects";
 import { SessionActivityIndicator } from "@/shared/ui/SessionActivityIndicator";
 import { SidebarChatRow } from "./SidebarChatRow";
 
-const MAX_VISIBLE_CHATS = 3;
+const MAX_VISIBLE_CHATS = 5;
 const PROJECT_ROW_TEXT_CLASS =
   "text-foreground-subtle group-hover:text-foreground";
 
