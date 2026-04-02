@@ -1,12 +1,39 @@
 import { useCallback, useRef } from "react";
 import { useChatStore } from "../stores/chatStore";
 import { useChatSessionStore } from "../stores/chatSessionStore";
-import { createUserMessage } from "@/shared/types/messages";
+import {
+  createSystemNotificationMessage,
+  createUserMessage,
+} from "@/shared/types/messages";
 import type { Message } from "@/shared/types/messages";
 import type { ChatState, TokenState } from "@/shared/types/chat";
 import { acpSendMessage, acpCancelSession } from "@/shared/api/acp";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { findLastIndex } from "@/shared/lib/arrays";
+
+function getErrorMessage(error: unknown): string {
+  // Tauri command rejections typically arrive as plain strings, so handle
+  // that shape first before falling back to standard Error objects.
+  if (typeof error === "string" && error.trim()) {
+    return error;
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof error.message === "string" &&
+    error.message.trim()
+  ) {
+    return error.message;
+  }
+
+  return "Unknown error";
+}
 
 /**
  * Hook for managing a chat session -- sending messages, handling streaming,
@@ -161,8 +188,23 @@ export function useChat(
         if (err instanceof DOMException && err.name === "AbortError") {
           store.setChatState(sessionId, "idle");
         } else {
-          const errorMessage =
-            err instanceof Error ? err.message : "Unknown error";
+          const errorMessage = getErrorMessage(err);
+          const liveStore = useChatStore.getState();
+          const { streamingMessageId } = liveStore.getSessionRuntime(sessionId);
+          const streamingMessage = streamingMessageId
+            ? liveStore.messagesBySession[sessionId]?.find(
+                (message) => message.id === streamingMessageId,
+              )
+            : undefined;
+
+          if (streamingMessageId && streamingMessage?.content.length === 0) {
+            liveStore.removeMessage(sessionId, streamingMessageId);
+          }
+
+          liveStore.addMessage(
+            sessionId,
+            createSystemNotificationMessage(errorMessage, "error"),
+          );
           store.setError(sessionId, errorMessage);
           store.setChatState(sessionId, "idle");
           store.setStreamingMessageId(sessionId, null);

@@ -158,3 +158,19 @@ export function createUserMessage(
     metadata: attachments ? { attachments } : undefined,
   };
 }
+
+export function createSystemNotificationMessage(
+  text: string,
+  notificationType: SystemNotificationContent["notificationType"] = "info",
+): Message {
+  return {
+    id: crypto.randomUUID(),
+    role: "system",
+    created: Date.now(),
+    content: [{ type: "systemNotification", notificationType, text }],
+    metadata: {
+      userVisible: true,
+      agentVisible: false,
+    },
+  };
+}
