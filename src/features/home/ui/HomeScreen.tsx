@@ -4,7 +4,7 @@ import {
   useAgentStore,
 } from "@/features/agents/stores/agentStore";
 import { useProviderSelection } from "@/features/agents/hooks/useProviderSelection";
-import { ChatInput } from "@/features/chat/ui/ChatInput";
+import { ChatInput, type PastedImage } from "@/features/chat/ui/ChatInput";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
 
 function HomeClock() {
@@ -45,6 +45,7 @@ interface HomeScreenProps {
     providerId?: string,
     personaId?: string,
     projectId?: string | null,
+    images?: PastedImage[],
   ) => void;
   onCreateProject?: (options?: {
     onCreated?: (projectId: string) => void;
@@ -96,7 +97,7 @@ export function HomeScreen({
   }, []);
 
   const handleSend = useCallback(
-    (message: string, personaId?: string) => {
+    (message: string, personaId?: string, images?: PastedImage[]) => {
       const effectivePersonaId = personaId ?? selectedPersonaId ?? undefined;
 
       onStartChat?.(
@@ -104,6 +105,7 @@ export function HomeScreen({
         selectedProvider,
         effectivePersonaId,
         selectedProjectId,
+        images,
       );
     },
     [onStartChat, selectedPersonaId, selectedProjectId, selectedProvider],

@@ -25,6 +25,7 @@ interface ChatViewProps {
   initialProvider?: string;
   initialPersonaId?: string;
   initialMessage?: string;
+  initialImages?: PastedImage[];
   onInitialMessageConsumed?: () => void;
   onCreateProject?: (options?: {
     onCreated?: (projectId: string) => void;
@@ -41,6 +42,7 @@ export function ChatView({
   initialProvider,
   initialPersonaId,
   initialMessage,
+  initialImages,
   onInitialMessageConsumed,
   onCreateProject,
   onCreateProjectFromFolder,
@@ -310,10 +312,10 @@ export function ChatView({
   useEffect(() => {
     if (initialMessage && !initialMessageSent.current) {
       initialMessageSent.current = true;
-      handleSend(initialMessage);
+      handleSend(initialMessage, undefined, initialImages);
       onInitialMessageConsumed?.();
     }
-  }, [initialMessage, handleSend, onInitialMessageConsumed]);
+  }, [initialMessage, initialImages, handleSend, onInitialMessageConsumed]);
 
   const isStreaming = chatState === "streaming";
   const showIndicator =
