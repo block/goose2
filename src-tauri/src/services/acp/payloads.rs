@@ -1,10 +1,21 @@
 use serde::Serialize;
 
+/// Payload for the `acp:message_created` event.
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct MessageCreatedPayload {
+    pub session_id: String,
+    pub message_id: String,
+    pub persona_id: Option<String>,
+    pub persona_name: Option<String>,
+}
+
 /// Payload for the `acp:text` event.
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct TextPayload {
     pub session_id: String,
+    pub message_id: String,
     pub text: String,
 }
 
@@ -13,6 +24,7 @@ pub(super) struct TextPayload {
 #[serde(rename_all = "camelCase")]
 pub(super) struct DonePayload {
     pub session_id: String,
+    pub message_id: String,
 }
 
 /// Payload for the `acp:tool_call` event.
@@ -20,6 +32,7 @@ pub(super) struct DonePayload {
 #[serde(rename_all = "camelCase")]
 pub(super) struct ToolCallPayload {
     pub session_id: String,
+    pub message_id: String,
     pub tool_call_id: String,
     pub title: String,
 }
@@ -29,6 +42,7 @@ pub(super) struct ToolCallPayload {
 #[serde(rename_all = "camelCase")]
 pub(super) struct ToolTitlePayload {
     pub session_id: String,
+    pub message_id: String,
     pub tool_call_id: String,
     pub title: String,
 }
@@ -38,6 +52,7 @@ pub(super) struct ToolTitlePayload {
 #[serde(rename_all = "camelCase")]
 pub(super) struct ToolResultPayload {
     pub session_id: String,
+    pub message_id: String,
     pub content: String,
 }
 

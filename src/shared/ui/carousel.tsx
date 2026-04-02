@@ -180,7 +180,7 @@ function CarouselPrevious({
     <Button
       data-slot="carousel-previous"
       variant={variant}
-      appearance="icon"
+      size="icon-sm"
       className={cn(
         "absolute size-8 rounded-full",
         orientation === "horizontal"
@@ -209,7 +209,7 @@ function CarouselNext({
     <Button
       data-slot="carousel-next"
       variant={variant}
-      appearance="icon"
+      size="icon-sm"
       className={cn(
         "absolute size-8 rounded-full",
         orientation === "horizontal"

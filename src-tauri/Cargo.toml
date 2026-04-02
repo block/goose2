@@ -5,6 +5,10 @@ description = "Goose desktop app"
 authors = ["you"]
 edition = "2021"
 
+[[bin]]
+name = "Goose"
+path = "src/main.rs"
+
 [lib]
 name = "goose2_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
@@ -31,3 +35,6 @@ tokio-util = { version = "0.7", features = ["rt"] }
 async-trait = "0.1"
 acp-client = { git = "https://github.com/block/builderbot", rev = "dbd5bc9c0cd559c7a67ab2d56545dba110f4a4cb" }
 doctor = { git = "https://github.com/block/builderbot", rev = "bfce29264181236a2e5b4fd903ace6291f6a7594" }
+
+[dev-dependencies]
+tempfile = "3"

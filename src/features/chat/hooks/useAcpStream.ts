@@ -3,6 +3,8 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useChatStore } from "../stores/chatStore";
 import { useChatSessionStore } from "../stores/chatSessionStore";
 import type {
+  Message,
+  MessageCompletionStatus,
   MessageContent,
   ToolRequestContent,
   ToolResponseContent,
@@ -10,29 +12,41 @@ import type {
 
 // --- Event payload types ---
 
+interface AcpMessageCreatedPayload {
+  sessionId: string;
+  messageId: string;
+  personaId?: string;
+  personaName?: string;
+}
+
 interface AcpTextPayload {
   sessionId: string;
+  messageId: string;
   text: string;
 }
 
 interface AcpDonePayload {
   sessionId: string;
+  messageId: string;
 }
 
 interface AcpToolCallPayload {
   sessionId: string;
+  messageId: string;
   toolCallId: string;
   title: string;
 }
 
 interface AcpToolTitlePayload {
   sessionId: string;
+  messageId: string;
   toolCallId: string;
   title: string;
 }
 
 interface AcpToolResultPayload {
   sessionId: string;
+  messageId: string;
   content: string;
 }
 
@@ -75,6 +89,53 @@ function findLatestUnpairedToolRequest(
   return null;
 }
 
+function updateCompletionStatus(
+  message: Message,
+  completionStatus: MessageCompletionStatus,
+): Message {
+  if (
+    completionStatus === "completed" &&
+    (message.metadata?.completionStatus === "stopped" ||
+      message.metadata?.completionStatus === "error")
+  ) {
+    return message;
+  }
+
+  return {
+    ...message,
+    metadata: {
+      ...message.metadata,
+      completionStatus,
+    },
+  };
+}
+
+function shouldTrackStreamingEvent(
+  store: ReturnType<typeof useChatStore.getState>,
+  sessionId: string,
+  messageId: string,
+): boolean {
+  const runtime = store.getSessionRuntime(sessionId);
+  const existingMessage = store.messagesBySession[sessionId]?.find(
+    (message) => message.id === messageId,
+  );
+
+  if (
+    existingMessage &&
+    (existingMessage.metadata?.completionStatus === "completed" ||
+      existingMessage.metadata?.completionStatus === "stopped" ||
+      existingMessage.metadata?.completionStatus === "error")
+  ) {
+    return false;
+  }
+
+  if (existingMessage || runtime.streamingMessageId === messageId) {
+    return true;
+  }
+
+  return runtime.chatState === "thinking" || runtime.chatState === "streaming";
+}
+
 /**
  * Hook that listens to Tauri events for ACP streaming responses.
  *
@@ -91,13 +152,66 @@ export function useAcpStream(enabled: boolean): void {
 
     const unlisteners: Promise<UnlistenFn>[] = [];
 
+    unlisteners.push(
+      listen<AcpMessageCreatedPayload>("acp:message_created", (event) => {
+        if (!active) return;
+        const store = useChatStore.getState();
+        if (
+          !shouldTrackStreamingEvent(
+            store,
+            event.payload.sessionId,
+            event.payload.messageId,
+          )
+        ) {
+          return;
+        }
+
+        const existing = store.messagesBySession[event.payload.sessionId]?.find(
+          (message) => message.id === event.payload.messageId,
+        );
+
+        if (!existing) {
+          store.addMessage(event.payload.sessionId, {
+            id: event.payload.messageId,
+            role: "assistant",
+            created: Date.now(),
+            content: [],
+            metadata: {
+              userVisible: true,
+              agentVisible: true,
+              personaId: event.payload.personaId,
+              personaName: event.payload.personaName,
+              completionStatus: "inProgress",
+            },
+          });
+        }
+
+        store.setStreamingMessageId(
+          event.payload.sessionId,
+          event.payload.messageId,
+        );
+      }),
+    );
+
     // acp:text — append streamed text to the current trailing text segment
     unlisteners.push(
       listen<AcpTextPayload>("acp:text", (event) => {
         if (!active) return;
-        useChatStore
-          .getState()
-          .updateStreamingText(event.payload.sessionId, event.payload.text);
+        const store = useChatStore.getState();
+        if (
+          !shouldTrackStreamingEvent(
+            store,
+            event.payload.sessionId,
+            event.payload.messageId,
+          )
+        ) {
+          return;
+        }
+        store.setStreamingMessageId(
+          event.payload.sessionId,
+          event.payload.messageId,
+        );
+        store.updateStreamingText(event.payload.sessionId, event.payload.text);
       }),
     );
 
@@ -106,6 +220,11 @@ export function useAcpStream(enabled: boolean): void {
       listen<AcpDonePayload>("acp:done", (event) => {
         if (!active) return;
         const store = useChatStore.getState();
+        store.updateMessage(
+          event.payload.sessionId,
+          event.payload.messageId,
+          (message) => updateCompletionStatus(message, "completed"),
+        );
         store.setStreamingMessageId(event.payload.sessionId, null);
         store.setChatState(event.payload.sessionId, "idle");
         if (
@@ -139,6 +258,17 @@ export function useAcpStream(enabled: boolean): void {
     unlisteners.push(
       listen<AcpToolCallPayload>("acp:tool_call", (event) => {
         if (!active) return;
+        const store = useChatStore.getState();
+        if (
+          !shouldTrackStreamingEvent(
+            store,
+            event.payload.sessionId,
+            event.payload.messageId,
+          )
+        ) {
+          return;
+        }
+
         const toolRequest: ToolRequestContent = {
           type: "toolRequest",
           id: event.payload.toolCallId,
@@ -146,9 +276,11 @@ export function useAcpStream(enabled: boolean): void {
           arguments: {},
           status: "executing",
         };
-        useChatStore
-          .getState()
-          .appendToStreamingMessage(event.payload.sessionId, toolRequest);
+        store.setStreamingMessageId(
+          event.payload.sessionId,
+          event.payload.messageId,
+        );
+        store.appendToStreamingMessage(event.payload.sessionId, toolRequest);
       }),
     );
 
@@ -156,11 +288,12 @@ export function useAcpStream(enabled: boolean): void {
     unlisteners.push(
       listen<AcpToolTitlePayload>("acp:tool_title", (event) => {
         if (!active) return;
-        const { sessionId: sid, toolCallId, title } = event.payload;
+        const { sessionId: sid, messageId, toolCallId, title } = event.payload;
         const store = useChatStore.getState();
-        const { streamingMessageId } = store.getSessionRuntime(sid);
-        if (!streamingMessageId) return;
-        store.updateMessage(sid, streamingMessageId, (msg) => ({
+        if (!shouldTrackStreamingEvent(store, sid, messageId)) {
+          return;
+        }
+        store.updateMessage(sid, messageId, (msg) => ({
           ...msg,
           content: msg.content.map((c) =>
             c.type === "toolRequest" && c.id === toolCallId
@@ -176,17 +309,35 @@ export function useAcpStream(enabled: boolean): void {
       listen<AcpToolResultPayload>("acp:tool_result", (event) => {
         if (!active) return;
         const store = useChatStore.getState();
-        const { streamingMessageId } = store.getSessionRuntime(
-          event.payload.sessionId,
-        );
-        const streamingMessage = streamingMessageId
+        if (
+          !shouldTrackStreamingEvent(
+            store,
+            event.payload.sessionId,
+            event.payload.messageId,
+          )
+        ) {
+          return;
+        }
+        const streamingMessage = event.payload.messageId
           ? store.messagesBySession[event.payload.sessionId]?.find(
-              (message) => message.id === streamingMessageId,
+              (message) => message.id === event.payload.messageId,
             )
           : undefined;
         const toolRequest = streamingMessage
           ? findLatestUnpairedToolRequest(streamingMessage.content)
           : null;
+        store.updateMessage(
+          event.payload.sessionId,
+          event.payload.messageId,
+          (message) => ({
+            ...message,
+            content: message.content.map((block) =>
+              block.type === "toolRequest" && block.id === toolRequest?.id
+                ? { ...block, status: "completed" }
+                : block,
+            ),
+          }),
+        );
         const toolResponse: ToolResponseContent = {
           type: "toolResponse",
           id: toolRequest?.id ?? crypto.randomUUID(),
@@ -194,6 +345,10 @@ export function useAcpStream(enabled: boolean): void {
           result: event.payload.content,
           isError: false,
         };
+        store.setStreamingMessageId(
+          event.payload.sessionId,
+          event.payload.messageId,
+        );
         store.appendToStreamingMessage(event.payload.sessionId, toolResponse);
       }),
     );

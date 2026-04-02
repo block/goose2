@@ -22,11 +22,11 @@ function Calendar({
         caption_label: "text-sm font-medium",
         nav: "flex items-center gap-1",
         button_previous: cn(
-          buttonVariants({ variant: "outline", appearance: "icon" }),
+          buttonVariants({ variant: "outline", size: "icon-xs" }),
           "size-7 bg-transparent p-0 absolute left-1",
         ),
         button_next: cn(
-          buttonVariants({ variant: "outline", appearance: "icon" }),
+          buttonVariants({ variant: "outline", size: "icon-xs" }),
           "size-7 bg-transparent p-0 absolute right-1",
         ),
         month_grid: "w-full border-collapse space-x-1",

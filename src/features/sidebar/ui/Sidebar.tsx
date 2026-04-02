@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
+import { GooseIcon } from "@/shared/ui/icons/GooseIcon";
 import type { AppView } from "@/app/AppShell";
 import type { ProjectInfo } from "@/features/projects/api/projects";
 import { useChatStore } from "@/features/chat/stores/chatStore";
@@ -201,23 +202,39 @@ export function Sidebar({
       <div className="flex flex-col h-full">
         {/* Header */}
         <div
-          className="flex items-center justify-end px-3 py-3 border-b border-border flex-shrink-0"
+          className={cn(
+            "flex items-center px-3 py-3 border-b border-border flex-shrink-0",
+            collapsed ? "justify-center" : "justify-between",
+          )}
           data-tauri-drag-region
         >
           <Button
             type="button"
             variant="ghost"
             size="icon-xs"
-            onClick={onCollapse}
-            className={cn(
-              "rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50",
-              "transition-opacity duration-200",
-              collapsed ? "opacity-0 pointer-events-none" : "opacity-100",
-            )}
-            aria-label="Collapse sidebar"
+            onClick={() => onNavigate?.("home")}
+            className="flex shrink-0 items-center justify-center transition-opacity hover:opacity-70"
+            aria-label="Home"
+            title="Home"
           >
-            <PanelLeftClose className="size-4" />
+            <GooseIcon className="h-[18px] w-[18px]" />
           </Button>
+
+          {!collapsed && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              onClick={onCollapse}
+              className={cn(
+                "rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50",
+                "transition-opacity duration-200",
+              )}
+              aria-label="Collapse sidebar"
+            >
+              <PanelLeftClose className="size-4" />
+            </Button>
+          )}
         </div>
 
         {/* Expand button (collapsed only) */}
@@ -332,7 +349,7 @@ export function Sidebar({
                   className={cn(
                     "w-full rounded-md text-[13px] transition-all duration-200",
                     collapsed
-                      ? "justify-center px-0 py-1.5"
+                      ? "justify-center gap-0 px-0 py-1.5"
                       : "justify-start gap-2.5 px-3 py-1.5",
                     isActive
                       ? "bg-muted text-foreground hover:bg-muted"

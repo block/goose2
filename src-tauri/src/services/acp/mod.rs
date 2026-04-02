@@ -15,8 +15,9 @@ use std::sync::Arc;
 use acp_client::{AcpDriver, AgentDriver, MessageWriter, Store};
 
 use crate::services::sessions::SessionStore;
-use crate::types::messages::{MessageContent, MessageRole};
-
+use crate::types::messages::{
+    MessageCompletionStatus, MessageContent, MessageMetadata, MessageRole, ToolCallStatus,
+};
 /// Build a composite registry key: `{session_id}__{persona_id}` when a
 /// persona is active, or plain `session_id` for backward compatibility.
 ///
@@ -97,20 +98,25 @@ impl AcpService {
         };
 
         let driver = AcpDriver::new(&provider_id)?;
+        let registry_key = make_composite_key(&session_id, persona_id.as_deref());
+        let cancel_token = registry.register(&registry_key, &provider_id);
 
-        let writer: Arc<dyn MessageWriter> = Arc::new(TauriMessageWriter::new(
+        let writer_impl = Arc::new(TauriMessageWriter::new(
             app_handle.clone(),
             session_id.clone(),
             Arc::clone(&session_store),
             persona_id.clone(),
             persona_name.clone(),
         ));
-        let registry_key = make_composite_key(&session_id, persona_id.as_deref());
+        registry.set_assistant_message_id(
+            &registry_key,
+            writer_impl.assistant_message_id().to_string(),
+        );
         let tauri_store =
             TauriStore::new(Arc::clone(&session_store), session_id.clone(), persona_id);
         let agent_session_id = tauri_store.get_agent_session_id();
         let store: Arc<dyn Store> = Arc::new(tauri_store);
-        let cancel_token = registry.register(&registry_key, &provider_id);
+        let writer: Arc<dyn MessageWriter> = writer_impl.clone();
 
         // Build the effective prompt, including persona instructions and
         // catch-up context when available.  When there is no extra context we
@@ -168,6 +174,49 @@ impl AcpService {
         // Always deregister, even on panic/JoinError
         registry_inner.deregister(&registry_key);
 
-        join_result.map_err(|e| format!("ACP task panicked: {e}"))?
+        let result = join_result.map_err(|e| format!("ACP task panicked: {e}"))?;
+
+        if let Err(ref error) = result {
+            let _ = session_store.update_message(
+                &session_id,
+                writer_impl.assistant_message_id(),
+                |message| {
+                    for block in &mut message.content {
+                        if let MessageContent::ToolRequest { status, .. } = block {
+                            *status = ToolCallStatus::Error;
+                        }
+                    }
+
+                    let metadata = message
+                        .metadata
+                        .get_or_insert_with(MessageMetadata::default);
+                    metadata.completion_status = Some(MessageCompletionStatus::Error);
+                },
+            );
+
+            let error_message = crate::types::messages::Message {
+                id: uuid::Uuid::new_v4().to_string(),
+                role: MessageRole::System,
+                created: chrono::Utc::now().timestamp_millis(),
+                content: vec![MessageContent::SystemNotification {
+                    notification_type: "error".to_string(),
+                    text: error.clone(),
+                }],
+                metadata: Some(crate::types::messages::MessageMetadata {
+                    user_visible: Some(true),
+                    agent_visible: Some(false),
+                    ..Default::default()
+                }),
+            };
+
+            if let Err(save_error) = session_store.add_message(&session_id, error_message) {
+                eprintln!(
+                    "Failed to save ACP error message for session {}: {}",
+                    session_id, save_error
+                );
+            }
+        }
+
+        result
     }
 }

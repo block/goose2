@@ -55,7 +55,7 @@ function PaginationLink({
       className={cn(
         buttonVariants({
           variant: isActive ? "outline" : "ghost",
-          appearance: "icon",
+          size: "icon",
         }),
         className,
       )}

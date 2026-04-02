@@ -137,6 +137,7 @@ export function HomeScreen({
               id: project.id,
               name: project.name,
               workingDir: project.workingDirs[0] ?? null,
+              color: project.color,
             }))}
             onProjectChange={setSelectedProjectId}
             onCreateProject={(options) =>

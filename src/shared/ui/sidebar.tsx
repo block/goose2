@@ -263,7 +263,7 @@ function SidebarTrigger({
       data-sidebar="trigger"
       data-slot="sidebar-trigger"
       variant="ghost"
-      appearance="icon"
+      size="icon-xs"
       className={cn("size-7", className)}
       onClick={(event) => {
         onClick?.(event);

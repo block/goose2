@@ -34,6 +34,7 @@ export interface ProjectOption {
   id: string;
   name: string;
   workingDir?: string | null;
+  color?: string | null;
 }
 
 interface ChatInputProps {

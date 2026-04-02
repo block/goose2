@@ -7,6 +7,7 @@ import {
   isActionRequired,
   isSystemNotification,
   getTextContent,
+  createSystemNotificationMessage,
   createUserMessage,
 } from "../messages";
 import type {
@@ -162,5 +163,24 @@ describe("createUserMessage", () => {
     const msg = createUserMessage("check this", attachments);
     expect(msg.metadata).toBeDefined();
     expect(msg.metadata?.attachments).toEqual(attachments);
+  });
+});
+
+describe("createSystemNotificationMessage", () => {
+  it("creates a visible system notification message", () => {
+    const message = createSystemNotificationMessage("boom", "error");
+
+    expect(message.role).toBe("system");
+    expect(message.content).toEqual([
+      {
+        type: "systemNotification",
+        notificationType: "error",
+        text: "boom",
+      },
+    ]);
+    expect(message.metadata).toEqual({
+      userVisible: true,
+      agentVisible: false,
+    });
   });
 });

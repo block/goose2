@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { AtSign, ChevronDown, Check, Plus, Sparkles, User } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
-import { Avatar, AvatarImage, AvatarFallback } from "@/shared/ui/avatar";
 import { useAvatarSrc } from "@/shared/hooks/useAvatarSrc";
 import {
   DropdownMenu,
@@ -60,13 +59,11 @@ export function PersonaPicker({
             type="button"
             variant="ghost"
             size="icon-sm"
-            className={cn(
-              "rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground",
-              className,
-            )}
+            className={className}
             aria-label="Choose assistant"
+            title="Choose assistant"
           >
-            <AtSign className="h-4 w-4" />
+            <AtSign />
           </Button>
         ) : (
           <Button
@@ -74,7 +71,7 @@ export function PersonaPicker({
             variant="ghost"
             size="sm"
             className={cn(
-              "gap-1.5 rounded-lg px-2.5 font-medium text-foreground hover:bg-accent",
+              "gap-1.5 rounded-lg px-2.5 font-medium text-foreground hover:bg-background-tertiary",
               className,
             )}
             aria-label="Select persona"
@@ -98,18 +95,18 @@ export function PersonaPicker({
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <span className="text-sm font-medium">Goose</span>
-            <span className="text-[11px] leading-snug text-muted-foreground">
+            <span className="text-[11px] leading-snug text-foreground-tertiary">
               No persona — chat directly with the agent
             </span>
           </div>
           {selectedPersonaId === null && (
-            <Check className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+            <Check className="mt-0.5 h-4 w-4 shrink-0 text-foreground-secondary" />
           )}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         {builtinPersonas.length > 0 && (
           <>
-            <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-foreground-tertiary">
               Built-in
             </DropdownMenuLabel>
             {builtinPersonas.map((persona) => (
@@ -125,7 +122,7 @@ export function PersonaPicker({
         {customPersonas.length > 0 && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-foreground-tertiary">
               Custom
             </DropdownMenuLabel>
             {customPersonas.map((persona) => (
@@ -142,7 +139,7 @@ export function PersonaPicker({
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={onCreatePersona}>
-              <Plus className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+              <Plus className="mr-2 h-3.5 w-3.5 text-foreground-tertiary" />
               <span className="text-sm">Create persona...</span>
             </DropdownMenuItem>
           </>
@@ -176,13 +173,13 @@ function PersonaMenuItem({
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="text-sm font-medium">{persona.displayName}</span>
         {shortDesc && (
-          <span className="text-[11px] leading-snug text-muted-foreground">
+          <span className="text-[11px] leading-snug text-foreground-tertiary">
             {shortDesc}
           </span>
         )}
       </div>
       {isSelected && (
-        <Check className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+        <Check className="mt-0.5 h-4 w-4 shrink-0 text-foreground-secondary" />
       )}
     </DropdownMenuItem>
   );
@@ -197,31 +194,36 @@ function PersonaAvatar({
 }) {
   const dim = size === "sm" ? "h-4 w-4" : "h-6 w-6";
   const iconDim = size === "sm" ? "h-2.5 w-2.5" : "h-3.5 w-3.5";
-  const isBuiltin = persona?.isBuiltin ?? true;
 
   const avatarSrc = useAvatarSrc(persona?.avatar);
+  if (avatarSrc) {
+    return (
+      <img
+        src={avatarSrc}
+        alt={persona?.displayName ?? ""}
+        className={cn(dim, "rounded-full object-cover")}
+      />
+    );
+  }
+
+  const isBuiltin = persona?.isBuiltin ?? true;
 
   return (
-    <Avatar className={dim}>
-      <AvatarImage
-        src={avatarSrc ?? undefined}
-        alt={persona?.displayName ?? ""}
-      />
-      <AvatarFallback
-        className={cn(
-          "text-[0px]",
-          isBuiltin
-            ? "bg-foreground/10 text-foreground"
-            : "bg-brand/10 text-brand",
-        )}
-      >
-        {isBuiltin ? (
-          <Sparkles className={iconDim} />
-        ) : (
-          <User className={iconDim} />
-        )}
-      </AvatarFallback>
-    </Avatar>
+    <div
+      className={cn(
+        dim,
+        "flex items-center justify-center rounded-full",
+        isBuiltin
+          ? "bg-foreground/10 text-foreground"
+          : "bg-brand/10 text-brand",
+      )}
+    >
+      {isBuiltin ? (
+        <Sparkles className={iconDim} />
+      ) : (
+        <User className={iconDim} />
+      )}
+    </div>
   );
 }
 

@@ -86,8 +86,8 @@ describe("useAcpStream", () => {
     await vi.waitFor(() => expect(listeners.get("acp:text")).toBeDefined());
 
     act(() => {
-      emit("acp:text", { sessionId, text: "Hello" });
-      emit("acp:text", { sessionId, text: " world" });
+      emit("acp:text", { sessionId, messageId: "msg-1", text: "Hello" });
+      emit("acp:text", { sessionId, messageId: "msg-1", text: " world" });
     });
 
     const messages = useChatStore.getState().messagesBySession[sessionId];
@@ -104,14 +104,16 @@ describe("useAcpStream", () => {
     await vi.waitFor(() => expect(listeners.get("acp:done")).toBeDefined());
 
     act(() => {
-      emit("acp:text", { sessionId, text: "partial" });
-      emit("acp:done", { sessionId });
+      emit("acp:text", { sessionId, messageId: "msg-1", text: "partial" });
+      emit("acp:done", { sessionId, messageId: "msg-1" });
     });
 
     const runtime = useChatStore.getState().getSessionRuntime(sessionId);
+    const message = useChatStore.getState().messagesBySession[sessionId][0];
     expect(runtime.chatState).toBe("idle");
     expect(runtime.streamingMessageId).toBeNull();
     expect(runtime.hasUnread).toBe(false);
+    expect(message.metadata?.completionStatus).toBe("completed");
   });
 
   it("marks a background session unread when it completes", async () => {
@@ -137,7 +139,7 @@ describe("useAcpStream", () => {
     await vi.waitFor(() => expect(listeners.get("acp:done")).toBeDefined());
 
     act(() => {
-      emit("acp:done", { sessionId: backgroundSessionId });
+      emit("acp:done", { sessionId: backgroundSessionId, messageId: "msg-1" });
     });
 
     expect(
@@ -158,9 +160,13 @@ describe("useAcpStream", () => {
     await vi.waitFor(() => expect(listeners.get("acp:text")).toBeDefined());
 
     act(() => {
-      emit("acp:text", { sessionId, text: "Alpha" });
-      emit("acp:text", { sessionId: otherSessionId, text: "Beta" });
-      emit("acp:done", { sessionId: otherSessionId });
+      emit("acp:text", { sessionId, messageId: "msg-1", text: "Alpha" });
+      emit("acp:text", {
+        sessionId: otherSessionId,
+        messageId: "msg-2",
+        text: "Beta",
+      });
+      emit("acp:done", { sessionId: otherSessionId, messageId: "msg-2" });
     });
 
     const primary = useChatStore.getState().messagesBySession[sessionId];
@@ -192,6 +198,62 @@ describe("useAcpStream", () => {
     expect(listeners.size).toBe(0);
   });
 
+  it("creates the streaming assistant message from backend metadata", async () => {
+    useChatStore.getState().setChatState(sessionId, "streaming");
+
+    renderHook(() => useAcpStream(true));
+    await vi.waitFor(() =>
+      expect(listeners.get("acp:message_created")).toBeDefined(),
+    );
+
+    act(() => {
+      emit("acp:message_created", {
+        sessionId,
+        messageId: "msg-created",
+        personaId: "persona-1",
+        personaName: "Planner",
+      });
+    });
+
+    const messages = useChatStore.getState().messagesBySession[sessionId];
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toMatchObject({
+      id: "msg-created",
+      role: "assistant",
+      metadata: {
+        personaId: "persona-1",
+        personaName: "Planner",
+        completionStatus: "inProgress",
+      },
+    });
+    expect(
+      useChatStore.getState().getSessionRuntime(sessionId).streamingMessageId,
+    ).toBe("msg-created");
+  });
+
+  it("ignores late message_created events after local streaming state is cleared", async () => {
+    renderHook(() => useAcpStream(true));
+    await vi.waitFor(() =>
+      expect(listeners.get("acp:message_created")).toBeDefined(),
+    );
+
+    act(() => {
+      emit("acp:message_created", {
+        sessionId,
+        messageId: "late-msg",
+        personaId: "persona-1",
+        personaName: "Planner",
+      });
+    });
+
+    expect(
+      useChatStore.getState().messagesBySession[sessionId],
+    ).toBeUndefined();
+    expect(
+      useChatStore.getState().getSessionRuntime(sessionId).streamingMessageId,
+    ).toBeNull();
+  });
+
   it("unregisters listeners on unmount", async () => {
     const { unmount } = renderHook(() => useAcpStream(true));
     await vi.waitFor(() => expect(listeners.get("acp:text")).toBeDefined());
@@ -203,5 +265,93 @@ describe("useAcpStream", () => {
     await vi.waitFor(() =>
       expect(listeners.get("acp:text")?.length ?? 0).toBe(0),
     );
+  });
+
+  it("ignores late tool title updates after a message is completed", async () => {
+    const store = useChatStore.getState();
+    store.addMessage(sessionId, {
+      id: "msg-1",
+      role: "assistant",
+      created: Date.now(),
+      content: [
+        {
+          type: "toolRequest",
+          id: "tool-1",
+          name: "Original title",
+          arguments: {},
+          status: "executing",
+        },
+      ],
+      metadata: {
+        userVisible: true,
+        completionStatus: "completed",
+      },
+    });
+
+    renderHook(() => useAcpStream(true));
+    await vi.waitFor(() =>
+      expect(listeners.get("acp:tool_title")).toBeDefined(),
+    );
+
+    act(() => {
+      emit("acp:tool_title", {
+        sessionId,
+        messageId: "msg-1",
+        toolCallId: "tool-1",
+        title: "Late title",
+      });
+    });
+
+    const message = useChatStore.getState().messagesBySession[sessionId][0];
+    expect(message.content).toContainEqual({
+      type: "toolRequest",
+      id: "tool-1",
+      name: "Original title",
+      arguments: {},
+      status: "executing",
+    });
+  });
+
+  it("ignores late tool results after a message is stopped", async () => {
+    const store = useChatStore.getState();
+    store.addMessage(sessionId, {
+      id: "msg-1",
+      role: "assistant",
+      created: Date.now(),
+      content: [
+        {
+          type: "toolRequest",
+          id: "tool-1",
+          name: "Lookup",
+          arguments: {},
+          status: "executing",
+        },
+      ],
+      metadata: {
+        userVisible: true,
+        completionStatus: "stopped",
+      },
+    });
+
+    renderHook(() => useAcpStream(true));
+    await vi.waitFor(() =>
+      expect(listeners.get("acp:tool_result")).toBeDefined(),
+    );
+
+    act(() => {
+      emit("acp:tool_result", {
+        sessionId,
+        messageId: "msg-1",
+        content: "late result",
+      });
+    });
+
+    const message = useChatStore.getState().messagesBySession[sessionId][0];
+    expect(message.content).toHaveLength(1);
+    expect(message.content[0]).toMatchObject({
+      type: "toolRequest",
+      id: "tool-1",
+      status: "executing",
+    });
   });
 });

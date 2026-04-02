@@ -1499,6 +1499,7 @@ dependencies = [
  "tauri-plugin-dialog",
  "tauri-plugin-opener",
  "tauri-plugin-window-state",
+ "tempfile",
  "tokio",
  "tokio-stream",
  "tokio-util",

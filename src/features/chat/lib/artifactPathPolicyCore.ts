@@ -1,3 +1,8 @@
+import {
+  collectCommandArgPathCandidates,
+  extractToolNamePathCandidates,
+} from "@/features/chat/lib/artifactPathCommandExtraction";
+
 export type ArtifactCandidateSource =
   | "arg_key"
   | "result_regex"
@@ -205,23 +210,6 @@ function extractResultPathCandidates(result: string): string[] {
   return matches;
 }
 
-function extractToolNamePathCandidates(toolName: string): string[] {
-  const trimmed = toolName.trim();
-  if (!trimmed) return [];
-
-  const match = trimmed.match(/^(write|create|save)\s+(.+)$/i);
-  if (!match) return [];
-
-  const remainder = match[2].trim();
-  if (!remainder) return [];
-
-  const quoted = remainder.match(/^["'`](.+?)["'`]$/);
-  const token = quoted ? quoted[1] : remainder.split(/\s+/)[0];
-  const cleaned = stripTokenPunctuation(token);
-  if (!isLikelyLocalPath(cleaned)) return [];
-  return [cleaned];
-}
-
 function inferHomeDirFromRoots(allowedRoots: string[]): string | null {
   for (const root of allowedRoots) {
     const normalized = normalizePath(root);
@@ -290,7 +278,12 @@ export function resolvePathCandidate(
 export function evaluatePathScope(
   resolvedPath: string,
   allowedRoots: string[],
+  options?: { allowOutsideRoots?: boolean },
 ): { allowed: boolean; blockedReason: string | null } {
+  if (options?.allowOutsideRoots) {
+    return { allowed: true, blockedReason: null };
+  }
+
   const normalizedPath = normalizeComparablePath(resolvedPath);
   const roots = allowedRoots
     .map((root) => normalizeComparablePath(root))
@@ -304,6 +297,15 @@ export function evaluatePathScope(
     allowed: false,
     blockedReason: "Path is outside allowed project/artifacts roots.",
   };
+}
+
+function shouldAllowOutsideRootsForToolCandidate(
+  input: ToolCallArtifactInput,
+  candidate: {
+    fromResultText: boolean;
+  },
+): boolean {
+  return isWriteOrientedTool(input.toolName) && candidate.fromResultText;
 }
 
 function collectArgPathCandidates(args: Record<string, unknown>): string[] {
@@ -361,6 +363,7 @@ export function extractToolCallCandidates(
     rawPath: string;
     source: ArtifactCandidateSource;
     confidence: ArtifactCandidateConfidence;
+    fromResultText: boolean;
   }> = [];
 
   for (const rawPath of collectArgPathCandidates(input.args)) {
@@ -368,14 +371,28 @@ export function extractToolCallCandidates(
       rawPath,
       source: "arg_key",
       confidence: "high",
+      fromResultText: false,
     });
   }
 
-  for (const rawPath of extractToolNamePathCandidates(input.toolName)) {
+  for (const candidate of extractToolNamePathCandidates(
+    input.toolName,
+    isLikelyLocalPath,
+    stripTokenPunctuation,
+  )) {
+    rawCandidates.push(candidate);
+  }
+
+  for (const rawPath of collectCommandArgPathCandidates(
+    input.args,
+    isLikelyLocalPath,
+    stripTokenPunctuation,
+  )) {
     rawCandidates.push({
       rawPath,
-      source: "arg_key",
-      confidence: "high",
+      source: "result_regex",
+      confidence: "low",
+      fromResultText: false,
     });
   }
 
@@ -389,15 +406,21 @@ export function extractToolCallCandidates(
         rawPath,
         source: "result_regex",
         confidence: "low",
+        fromResultText: true,
       });
     }
   }
 
   return rawCandidates.map((raw, idx) => {
     const resolvedPath = resolvePathCandidate(raw.rawPath, allowedRoots);
+    const allowOutsideRoots = shouldAllowOutsideRootsForToolCandidate(
+      input,
+      raw,
+    );
     const { allowed, blockedReason } = evaluatePathScope(
       resolvedPath,
       allowedRoots,
+      { allowOutsideRoots },
     );
     const appearanceIndex = startingAppearanceIndex + idx;
     return {
