@@ -34,6 +34,31 @@ function getErrorMessage(error: unknown): string {
   return "Unknown error";
 }
 
+function markMessageStopped(sessionId: string, messageId: string) {
+  useChatStore.getState().updateMessage(sessionId, messageId, (message) => {
+    if (
+      message.metadata?.completionStatus === "completed" ||
+      message.metadata?.completionStatus === "error" ||
+      message.metadata?.completionStatus === "stopped"
+    ) {
+      return message;
+    }
+
+    return {
+      ...message,
+      metadata: {
+        ...message.metadata,
+        completionStatus: "stopped",
+      },
+      content: message.content.map((block) =>
+        block.type === "toolRequest" && block.status === "executing"
+          ? { ...block, status: "stopped" }
+          : block,
+      ),
+    };
+  });
+}
+
 /**
  * Hook for managing a chat session -- sending messages, handling streaming,
  * and managing chat lifecycle.
@@ -221,28 +246,19 @@ export function useChat(
     const activeStreamingMessageId = useChatStore
       .getState()
       .getSessionRuntime(sessionId).streamingMessageId;
-    if (activeStreamingMessageId) {
-      useChatStore
-        .getState()
-        .updateMessage(sessionId, activeStreamingMessageId, (message) => ({
-          ...message,
-          metadata: {
-            ...message.metadata,
-            completionStatus: "stopped",
-          },
-          content: message.content.map((block) =>
-            block.type === "toolRequest" && block.status === "executing"
-              ? { ...block, status: "stopped" }
-              : block,
-          ),
-        }));
-    }
+
     store.setChatState(sessionId, "idle");
     store.setStreamingMessageId(sessionId, null);
     // Cancel the backend ACP session to stop orphaned streaming events
-    acpCancelSession(sessionId, activePersonaId ?? undefined).catch(() => {
-      // Best-effort cancellation — ignore errors
-    });
+    acpCancelSession(sessionId, activePersonaId ?? undefined)
+      .then(() => {
+        if (activeStreamingMessageId) {
+          markMessageStopped(sessionId, activeStreamingMessageId);
+        }
+      })
+      .catch(() => {
+        // Best-effort cancellation — ignore errors
+      });
   }, [getStreamingPersonaId, store, sessionId]);
 
   const retryLastMessage = useCallback(async () => {

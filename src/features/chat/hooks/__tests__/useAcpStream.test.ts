@@ -199,6 +199,8 @@ describe("useAcpStream", () => {
   });
 
   it("creates the streaming assistant message from backend metadata", async () => {
+    useChatStore.getState().setChatState(sessionId, "streaming");
+
     renderHook(() => useAcpStream(true));
     await vi.waitFor(() =>
       expect(listeners.get("acp:message_created")).toBeDefined(),
@@ -227,6 +229,29 @@ describe("useAcpStream", () => {
     expect(
       useChatStore.getState().getSessionRuntime(sessionId).streamingMessageId,
     ).toBe("msg-created");
+  });
+
+  it("ignores late message_created events after local streaming state is cleared", async () => {
+    renderHook(() => useAcpStream(true));
+    await vi.waitFor(() =>
+      expect(listeners.get("acp:message_created")).toBeDefined(),
+    );
+
+    act(() => {
+      emit("acp:message_created", {
+        sessionId,
+        messageId: "late-msg",
+        personaId: "persona-1",
+        personaName: "Planner",
+      });
+    });
+
+    expect(
+      useChatStore.getState().messagesBySession[sessionId],
+    ).toBeUndefined();
+    expect(
+      useChatStore.getState().getSessionRuntime(sessionId).streamingMessageId,
+    ).toBeNull();
   });
 
   it("unregisters listeners on unmount", async () => {
