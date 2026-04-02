@@ -4,11 +4,12 @@ import { INCLUDE_RE } from "./includePattern";
 export function buildEditorText(workingDirs: string[], prompt: string): string {
   const includeLines = workingDirs.map((directory) => `include: ${directory}`);
   if (includeLines.length === 0) return prompt;
-  return [...includeLines, "", prompt].join("\n");
+  if (prompt === "") return includeLines.join("\n");
+  return [prompt, "", ...includeLines].join("\n");
 }
 
 /** Parse editor text into { prompt, workingDirs }.
- *  Only `include:` lines at the top of the text (before the first
+ *  Only `include:` lines at the bottom of the text (after the last
  *  non-include, non-blank line) are treated as working directories. */
 export function parseEditorText(text: string): {
   prompt: string;
@@ -16,27 +17,39 @@ export function parseEditorText(text: string): {
 } {
   const lines = text.split("\n");
   const workingDirs: string[] = [];
-  const promptLines: string[] = [];
-  let parsingIncludeBlock = true;
 
-  for (const line of lines) {
-    const match = line.match(INCLUDE_RE);
-    if (parsingIncludeBlock && match) {
-      workingDirs.push(match[1].trim());
+  // Walk backwards from the end to find the trailing include block.
+  // The block may contain include lines and blank lines, but ends as
+  // soon as we hit a non-include, non-blank line.
+  let trailingStart = lines.length;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const match = lines[i].match(INCLUDE_RE);
+    if (match) {
+      trailingStart = i;
       continue;
     }
-
-    if (line.trim() !== "") {
-      parsingIncludeBlock = false;
+    if (lines[i].trim() === "") {
+      continue;
     }
-
-    promptLines.push(line);
+    // Hit a non-include, non-blank line — stop.
+    break;
   }
 
+  // Collect working dirs from the trailing block (in forward order).
+  for (let i = trailingStart; i < lines.length; i++) {
+    const match = lines[i].match(INCLUDE_RE);
+    if (match) {
+      workingDirs.push(match[1].trim());
+    }
+  }
+
+  // Everything before the trailing block is the prompt.
+  const promptLines = lines.slice(0, trailingStart);
+
+  // Trim leading/trailing blank lines from the prompt.
   while (promptLines[0]?.trim() === "") {
     promptLines.shift();
   }
-
   while (promptLines[promptLines.length - 1]?.trim() === "") {
     promptLines.pop();
   }
