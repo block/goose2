@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@plugin "@tailwindcss/typography";
 
 @source "../../../node_modules/streamdown/dist";
 
@@ -448,13 +449,13 @@
       height: 0;
     }
     to {
-      height: var(--bits-accordion-content-height);
+      height: var(--radix-accordion-content-height);
     }
   }
 
   @keyframes accordion-up {
     from {
-      height: var(--bits-accordion-content-height);
+      height: var(--radix-accordion-content-height);
     }
     to {
       height: 0;

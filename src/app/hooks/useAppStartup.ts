@@ -33,13 +33,10 @@ export function useAppStartup() {
       };
 
       const loadSessionState = async () => {
-        const { loadSessions, loadTabState, setActiveTab } =
+        const { loadSessions, setActiveSession } =
           useChatSessionStore.getState();
         await loadSessions();
-        const hydratedTabState = await loadTabState();
-        if (hydratedTabState) {
-          setActiveTab(null);
-        }
+        setActiveSession(null);
       };
 
       await Promise.allSettled([

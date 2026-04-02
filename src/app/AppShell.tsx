@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { TabBar } from "@/features/tabs/ui/TabBar";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Sidebar } from "@/features/sidebar/ui/Sidebar";
 import { StatusBar } from "@/features/status/ui/StatusBar";
 import { HomeScreen } from "@/features/home/ui/HomeScreen";
@@ -11,15 +10,14 @@ import { CreateProjectDialog } from "@/features/projects/ui/CreateProjectDialog"
 import { archiveProject } from "@/features/projects/api/projects";
 import type { ProjectInfo } from "@/features/projects/api/projects";
 import { SettingsModal } from "@/features/settings/ui/SettingsModal";
+import { TopBar } from "./ui/TopBar";
 import { useChatStore } from "@/features/chat/stores/chatStore";
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
 import { useAcpStream } from "@/features/chat/hooks/useAcpStream";
-import { isSessionRunning } from "@/features/chat/lib/sessionActivity";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
 import { findReusableNewChatSession } from "@/features/chat/lib/newChat";
 import { getSessionMessages } from "@/shared/api/chat";
-import type { Tab } from "@/features/tabs/types";
 import { useAppStartup } from "./hooks/useAppStartup";
 
 export type AppView = "home" | "chat" | "skills" | "agents" | "projects";
@@ -84,44 +82,22 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     projectStore.fetchProjects();
   }, [projectStore.fetchProjects]);
 
-  const { sessions, openTabIds, activeTabId } = sessionStore;
+  const { activeSessionId } = sessionStore;
 
   useEffect(() => {
-    if (activeView === "chat" && activeTabId) {
-      useChatStore.getState().markSessionRead(activeTabId);
+    if (activeView === "chat" && activeSessionId) {
+      useChatStore.getState().markSessionRead(activeSessionId);
     }
-  }, [activeTabId, activeView]);
+  }, [activeSessionId, activeView]);
 
-  const tabs: Tab[] = useMemo(() => {
-    const sessionMap = new Map(sessions.map((s) => [s.id, s]));
-    return openTabIds.reduce<Tab[]>((acc, id) => {
-      const session = sessionMap.get(id);
-      if (session) {
-        const runtime = chatStore.getSessionRuntime(session.id);
-        const tab: Tab = {
-          id: session.id,
-          title: session.title,
-          sessionId: session.id, // tab ID === session ID in new model
-          isRunning: isSessionRunning(runtime.chatState),
-          hasUnread: runtime.hasUnread,
-        };
-        if (session.agentId) tab.agentId = session.agentId;
-        if (session.projectId) tab.projectId = session.projectId;
-        acc.push(tab);
-      }
-      return acc;
-    }, []);
-  }, [chatStore, openTabIds, sessions]);
+  const isHome = activeSessionId === null && activeView === "home";
 
-  const isHome = activeTabId === null && activeView === "home";
-  const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
-
-  const activeSession = activeTabId
-    ? sessionStore.getSession(activeTabId)
+  const activeSession = activeSessionId
+    ? sessionStore.getSession(activeSessionId)
     : undefined;
   const modelName = activeSession?.modelName;
-  const tokenCount = activeTabId
-    ? chatStore.getSessionRuntime(activeTabId).tokenState.totalTokens
+  const tokenCount = activeSessionId
+    ? chatStore.getSessionRuntime(activeSessionId).tokenState.totalTokens
     : 0;
 
   const [pendingInitialMessage, setPendingInitialMessage] = useState<
@@ -139,8 +115,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       const sessionState = useChatSessionStore.getState();
       const reusableSession = findReusableNewChatSession({
         sessions: sessionState.sessions,
-        activeTabId: sessionState.activeTabId,
-        openTabIds: sessionState.openTabIds,
+        activeSessionId: sessionState.activeSessionId,
         messagesBySession: useChatStore.getState().messagesBySession,
         request: {
           title,
@@ -152,7 +127,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       });
 
       if (reusableSession) {
-        sessionState.openTab(reusableSession.id);
+        sessionState.setActiveSession(reusableSession.id);
         setActiveView("chat");
         chatStore.setActiveSession(reusableSession.id);
         return reusableSession;
@@ -166,7 +141,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         personaId,
       });
 
-      sessionStore.openTab(session.id);
+      sessionStore.setActiveSession(session.id);
       setActiveView("chat");
 
       chatStore.setActiveSession(session.id);
@@ -213,49 +188,36 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     [projectStore.fetchProjects],
   );
 
-  const closeAndCleanupTab = useCallback(
-    (tabId: string) => {
-      chatStore.cleanupSession(tabId);
-      sessionStore.closeTab(tabId);
-
-      const { activeTabId: newActiveTabId } = useChatSessionStore.getState();
-      if (newActiveTabId) {
-        chatStore.setActiveSession(newActiveTabId);
-        setActiveView("chat");
-      } else {
-        setActiveView("home");
-      }
+  const clearActiveSession = useCallback(
+    (sessionId: string) => {
+      chatStore.cleanupSession(sessionId);
+      sessionStore.setActiveSession(null);
+      setActiveView("home");
     },
     [chatStore, sessionStore],
   );
 
   const handleArchiveChat = useCallback(
-    async (tabId: string) => {
-      const { activeTabId: currentActiveTabId } =
+    async (sessionId: string) => {
+      const { activeSessionId: currentActiveSessionId } =
         useChatSessionStore.getState();
-      const wasActiveTab = currentActiveTabId === tabId;
+      const wasActiveSession = currentActiveSessionId === sessionId;
 
       try {
-        await sessionStore.archiveSession(tabId);
-        chatStore.cleanupSession(tabId);
+        await sessionStore.archiveSession(sessionId);
+        chatStore.cleanupSession(sessionId);
 
-        if (!wasActiveTab) {
+        if (!wasActiveSession) {
           return;
         }
 
-        const { activeTabId: newActiveTabId } = useChatSessionStore.getState();
-        if (newActiveTabId) {
-          chatStore.setActiveSession(newActiveTabId);
-          setActiveView("chat");
-          loadSessionMessages(newActiveTabId);
-        } else {
-          setActiveView("home");
-        }
+        sessionStore.setActiveSession(null);
+        setActiveView("home");
       } catch {
         // best-effort
       }
     },
-    [chatStore, loadSessionMessages, sessionStore],
+    [chatStore, sessionStore],
   );
 
   const handleEditProject = useCallback(
@@ -270,13 +232,13 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   );
 
   const handleRenameChat = useCallback(
-    (tabId: string, nextTitle: string) => {
-      sessionStore.updateSession(tabId, { title: nextTitle });
+    (sessionId: string, nextTitle: string) => {
+      sessionStore.updateSession(sessionId, { title: nextTitle });
     },
     [sessionStore],
   );
 
-  const handleNewTab = useCallback(() => {
+  const handleNewChat = useCallback(() => {
     setHomeSelectedProvider(undefined);
     createNewTab();
   }, [createNewTab]);
@@ -344,16 +306,9 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     [createNewTab, projectStore.projects],
   );
 
-  const handleTabClose = closeAndCleanupTab;
-
-  const handleTabSelect = useCallback(
+  const handleSelectSession = useCallback(
     (id: string) => {
-      const { openTabIds: currentOpenTabIds } = useChatSessionStore.getState();
-      if (!currentOpenTabIds.includes(id)) {
-        sessionStore.openTab(id);
-      } else {
-        sessionStore.setActiveTab(id);
-      }
+      sessionStore.setActiveSession(id);
       setActiveView("chat");
       chatStore.setActiveSession(id);
       useChatStore.getState().markSessionRead(id);
@@ -365,7 +320,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const handleNavigate = (view: AppView) => {
     setActiveView(view);
     if (view !== "chat") {
-      sessionStore.setActiveTab(null);
+      sessionStore.setActiveSession(null);
     }
   };
 
@@ -383,22 +338,20 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         e.preventDefault();
         setSidebarCollapsed((prev) => !prev);
       }
-      // Cmd+W closes the active tab instead of the window
+      // Cmd+W returns to home instead of closing the window
       if (e.key === "w" && e.metaKey) {
         e.preventDefault();
-        const { activeTabId } = useChatSessionStore.getState();
-        if (activeTabId) {
-          closeAndCleanupTab(activeTabId);
+        const { activeSessionId } = useChatSessionStore.getState();
+        if (activeSessionId) {
+          clearActiveSession(activeSessionId);
         }
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [closeAndCleanupTab]);
+  }, [clearActiveSession]);
 
-  const activeSessionPersonaId = activeTab
-    ? sessionStore.getSession(activeTab.sessionId)?.personaId
-    : undefined;
+  const activeSessionPersonaId = activeSession?.personaId;
 
   const renderContent = () => {
     switch (activeView) {
@@ -410,10 +363,10 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         return <ProjectsView onStartChat={handleStartChatFromProject} />;
       case "chat":
       case "home":
-        return activeTab ? (
+        return activeSession ? (
           <ChatView
-            key={activeTab.sessionId}
-            sessionId={activeTab.sessionId}
+            key={activeSession.id}
+            sessionId={activeSession.id}
             initialProvider={homeSelectedProvider}
             initialPersonaId={activeSessionPersonaId ?? homeSelectedPersonaId}
             initialMessage={pendingInitialMessage}
@@ -437,14 +390,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
-      <TabBar
-        tabs={tabs}
-        activeTabId={activeTabId}
-        onTabSelect={handleTabSelect}
-        onTabClose={handleTabClose}
-        onNewTab={handleNewTab}
-        onHomeClick={() => handleNavigate("home")}
-      />
+      <TopBar onHomeClick={() => handleNavigate("home")} />
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <div
@@ -462,16 +408,16 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             onCollapse={toggleSidebar}
             onSettingsClick={() => setSettingsOpen(true)}
             onNavigate={handleNavigate}
-            onNewChat={handleNewTab}
+            onNewChat={handleNewChat}
             onNewChatInProject={handleNewChatInProject}
             onCreateProject={() => openCreateProjectDialog()}
             onEditProject={handleEditProject}
             onArchiveProject={handleArchiveProject}
             onArchiveChat={handleArchiveChat}
             onRenameChat={handleRenameChat}
-            onSelectTab={handleTabSelect}
+            onSelectSession={handleSelectSession}
             activeView={activeView}
-            activeTabId={activeTabId}
+            activeSessionId={activeSessionId}
             projects={projectStore.projects}
             className="h-full rounded-xl"
           />
@@ -489,7 +435,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       >
         <StatusBar
           modelName={modelName}
-          sessionId={activeTabId ?? undefined}
+          sessionId={activeSessionId ?? undefined}
           tokenCount={tokenCount}
         />
       </div>

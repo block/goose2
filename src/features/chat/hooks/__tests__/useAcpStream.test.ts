@@ -74,8 +74,7 @@ describe("useAcpStream", () => {
           messageCount: 0,
         },
       ],
-      openTabIds: [sessionId],
-      activeTabId: sessionId,
+      activeSessionId: sessionId,
       isLoading: false,
     });
   });
@@ -131,8 +130,7 @@ describe("useAcpStream", () => {
           messageCount: 0,
         },
       ],
-      openTabIds: [...state.openTabIds, backgroundSessionId],
-      activeTabId: sessionId,
+      activeSessionId: sessionId,
     }));
 
     renderHook(() => useAcpStream(true));

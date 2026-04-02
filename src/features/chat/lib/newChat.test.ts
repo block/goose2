@@ -14,7 +14,7 @@ function makeSession(overrides: Partial<ChatSession> = {}): ChatSession {
 }
 
 describe("findReusableNewChatSession", () => {
-  it("prefers the active empty New Chat tab", () => {
+  it("reuses the active empty New Chat session", () => {
     const activeSession = makeSession({ id: "active-session" });
     const olderSession = makeSession({
       id: "older-session",
@@ -23,8 +23,7 @@ describe("findReusableNewChatSession", () => {
 
     const session = findReusableNewChatSession({
       sessions: [olderSession, activeSession],
-      activeTabId: activeSession.id,
-      openTabIds: [olderSession.id, activeSession.id],
+      activeSessionId: activeSession.id,
       messagesBySession: {},
       request: { title: "New Chat" },
     });
@@ -35,8 +34,7 @@ describe("findReusableNewChatSession", () => {
   it("does not reuse sessions that already have messages", () => {
     const session = findReusableNewChatSession({
       sessions: [makeSession({ id: "used-session", messageCount: 1 })],
-      activeTabId: "used-session",
-      openTabIds: ["used-session"],
+      activeSessionId: "used-session",
       messagesBySession: {},
       request: { title: "New Chat" },
     });
@@ -47,8 +45,7 @@ describe("findReusableNewChatSession", () => {
   it("does not reuse sessions with local in-memory messages", () => {
     const session = findReusableNewChatSession({
       sessions: [makeSession({ id: "streaming-session" })],
-      activeTabId: "streaming-session",
-      openTabIds: ["streaming-session"],
+      activeSessionId: "streaming-session",
       messagesBySession: {
         "streaming-session": [
           {
@@ -73,8 +70,7 @@ describe("findReusableNewChatSession", () => {
 
     const session = findReusableNewChatSession({
       sessions: [projectSession],
-      activeTabId: projectSession.id,
-      openTabIds: [projectSession.id],
+      activeSessionId: projectSession.id,
       messagesBySession: {},
       request: { title: "New Chat", projectId: "project-2" },
     });
@@ -85,8 +81,7 @@ describe("findReusableNewChatSession", () => {
   it("does not reuse sessions when creating a titled chat", () => {
     const session = findReusableNewChatSession({
       sessions: [makeSession()],
-      activeTabId: "session-1",
-      openTabIds: ["session-1"],
+      activeSessionId: "session-1",
       messagesBySession: {},
       request: { title: "What day is it?" },
     });
@@ -94,11 +89,10 @@ describe("findReusableNewChatSession", () => {
     expect(session).toBeUndefined();
   });
 
-  it("does not reuse closed historical empty chats", () => {
+  it("does not reuse inactive historical empty chats", () => {
     const session = findReusableNewChatSession({
       sessions: [makeSession({ id: "closed-session" })],
-      activeTabId: null,
-      openTabIds: [],
+      activeSessionId: null,
       messagesBySession: {},
       request: { title: "New Chat" },
     });
