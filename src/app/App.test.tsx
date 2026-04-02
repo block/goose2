@@ -14,14 +14,18 @@ describe("App", () => {
 
   it("prevents default window navigation when files are dragged into the app", () => {
     vi.stubGlobal("__TAURI_INTERNALS__", undefined);
+    vi.stubGlobal(
+      "DragEvent",
+      window.DragEvent ?? class DragEvent extends Event {},
+    );
 
     render(<App />);
 
-    const dragOverEvent = new Event("dragover", {
+    const dragOverEvent = new DragEvent("dragover", {
       bubbles: true,
       cancelable: true,
     });
-    const dropEvent = new Event("drop", {
+    const dropEvent = new DragEvent("drop", {
       bubbles: true,
       cancelable: true,
     });
