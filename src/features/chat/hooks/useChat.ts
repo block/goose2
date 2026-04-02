@@ -12,6 +12,8 @@ import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { findLastIndex } from "@/shared/lib/arrays";
 
 function getErrorMessage(error: unknown): string {
+  // Tauri command rejections typically arrive as plain strings, so handle
+  // that shape first before falling back to standard Error objects.
   if (typeof error === "string" && error.trim()) {
     return error;
   }

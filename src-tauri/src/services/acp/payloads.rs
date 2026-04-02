@@ -15,14 +15,6 @@ pub(super) struct DonePayload {
     pub session_id: String,
 }
 
-/// Payload for the `acp:error` event.
-#[derive(Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub(super) struct ErrorPayload {
-    pub session_id: String,
-    pub error: String,
-}
-
 /// Payload for the `acp:tool_call` event.
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]

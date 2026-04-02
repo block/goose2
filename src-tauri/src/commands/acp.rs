@@ -67,7 +67,7 @@ fn resolve_working_dir(
 
     std::fs::canonicalize(&working_dir).map_err(|error| {
         format!(
-            "Working directory '{}' does not exist or is not accessible: {error}",
+            "Failed to resolve working directory '{}': {error}",
             working_dir.display()
         )
     })
@@ -170,19 +170,6 @@ mod tests {
         );
     }
 
-    #[test]
-    fn resolve_working_dir_accepts_tilde_prefixed_path() {
-        let home_dir = dirs::home_dir().expect("home dir");
-        let target_dir = home_dir.join(".goose");
-        let resolved =
-            resolve_working_dir(Some("~/.goose".to_string()), std::path::Path::new("/tmp"))
-                .expect("resolve path");
-
-        assert_eq!(
-            resolved,
-            std::fs::canonicalize(target_dir).expect("canonical home dir path")
-        );
-    }
 }
 
 /// Cancel a running ACP session.

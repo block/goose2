@@ -16,10 +16,6 @@ use acp_client::{AcpDriver, AgentDriver, MessageWriter, Store};
 
 use crate::services::sessions::SessionStore;
 use crate::types::messages::{MessageContent, MessageRole};
-use tauri::Emitter;
-
-use self::payloads::ErrorPayload;
-
 /// Build a composite registry key: `{session_id}__{persona_id}` when a
 /// persona is active, or plain `session_id` for backward compatibility.
 ///
@@ -196,13 +192,6 @@ impl AcpService {
                 );
             }
 
-            let _ = app_handle.emit(
-                "acp:error",
-                ErrorPayload {
-                    session_id: session_id.clone(),
-                    error: error.clone(),
-                },
-            );
         }
 
         result

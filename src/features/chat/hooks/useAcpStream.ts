@@ -7,7 +7,6 @@ import type {
   ToolRequestContent,
   ToolResponseContent,
 } from "@/shared/types/messages";
-import { createSystemNotificationMessage } from "@/shared/types/messages";
 
 // --- Event payload types ---
 
@@ -18,11 +17,6 @@ interface AcpTextPayload {
 
 interface AcpDonePayload {
   sessionId: string;
-}
-
-interface AcpErrorPayload {
-  sessionId: string;
-  error: string;
 }
 
 interface AcpToolCallPayload {
@@ -137,36 +131,6 @@ export function useAcpStream(enabled: boolean): void {
               sessionStore.updateSession(event.payload.sessionId, { title });
             }
           }
-        }
-      }),
-    );
-
-    unlisteners.push(
-      listen<AcpErrorPayload>("acp:error", (event) => {
-        if (!active) return;
-        const store = useChatStore.getState();
-        const { sessionId, error } = event.payload;
-        const { streamingMessageId } = store.getSessionRuntime(sessionId);
-        const streamingMessage = streamingMessageId
-          ? store.messagesBySession[sessionId]?.find(
-              (message) => message.id === streamingMessageId,
-            )
-          : undefined;
-
-        if (streamingMessageId && streamingMessage?.content.length === 0) {
-          store.removeMessage(sessionId, streamingMessageId);
-        }
-
-        store.addMessage(
-          sessionId,
-          createSystemNotificationMessage(error, "error"),
-        );
-        store.setError(sessionId, error);
-        store.setStreamingMessageId(sessionId, null);
-        store.setChatState(sessionId, "idle");
-
-        if (useChatSessionStore.getState().activeSessionId !== sessionId) {
-          store.markSessionUnread(sessionId);
         }
       }),
     );
