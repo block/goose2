@@ -1,16 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   BookOpen,
   Bot,
-  PanelLeft,
-  PanelLeftClose,
+  ChevronLeft,
+  ChevronRight,
+  Home,
   Plus,
-  Search,
-  User,
 } from "lucide-react";
-import { cn } from "@/shared/lib/cn";
-import { Button } from "@/shared/ui/button";
 import { GooseIcon } from "@/shared/ui/icons/GooseIcon";
+import { cn } from "@/shared/lib/cn";
 import type { AppView } from "@/app/AppShell";
 import type { ProjectInfo } from "@/features/projects/api/projects";
 import { useChatStore } from "@/features/chat/stores/chatStore";
@@ -18,12 +16,75 @@ import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
 import { isSessionRunning } from "@/features/chat/lib/sessionActivity";
 import { SidebarProjectsSection } from "./SidebarProjectsSection";
 
+interface HighlightRect {
+  top: number;
+  height: number;
+  width: number;
+}
+
+function useSidebarHighlight(navRef: React.RefObject<HTMLElement | null>) {
+  const [hoveredRect, setHoveredRect] = useState<HighlightRect | null>(null);
+  const [activeRect, setActiveRect] = useState<HighlightRect | null>(null);
+  const [isHovering, setIsHovering] = useState(false);
+  const activeElRef = useRef<HTMLElement | null>(null);
+
+  const measureElement = useCallback(
+    (el: HTMLElement): HighlightRect | null => {
+      const nav = navRef.current;
+      if (!nav || !el) return null;
+      const navRect = nav.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      return {
+        top: elRect.top - navRect.top + nav.scrollTop,
+        height: elRect.height,
+        width: elRect.width,
+      };
+    },
+    [navRef],
+  );
+
+  const onItemMouseEnter = useCallback(
+    (e: React.MouseEvent<HTMLElement>) => {
+      setIsHovering(true);
+      const rect = measureElement(e.currentTarget);
+      if (rect) setHoveredRect(rect);
+    },
+    [measureElement],
+  );
+
+  const onNavMouseLeave = useCallback(() => {
+    setIsHovering(false);
+    setHoveredRect(null);
+  }, []);
+
+  const updateActiveRect = useCallback(
+    (el: HTMLElement | null) => {
+      activeElRef.current = el;
+      if (el) {
+        const rect = measureElement(el);
+        if (rect) setActiveRect(rect);
+      } else {
+        setActiveRect(null);
+      }
+    },
+    [measureElement],
+  );
+
+  const currentRect = isHovering && hoveredRect ? hoveredRect : activeRect;
+
+  return {
+    currentRect,
+    isHovering,
+    onItemMouseEnter,
+    onNavMouseLeave,
+    updateActiveRect,
+  };
+}
+
 interface SidebarProps {
   collapsed: boolean;
   width?: number;
   onCollapse: () => void;
-  onSettingsClick?: () => void;
-  onSearchClick?: () => void;
   onNewChat?: () => void;
   onNewChatInProject?: (projectId: string) => void;
   onCreateProject?: () => void;
@@ -45,16 +106,12 @@ const NAV_ITEMS: readonly { id: AppView; label: string; icon: typeof Bot }[] = [
   { id: "skills", label: "Skills", icon: BookOpen },
 ];
 
-const SIDEBAR_NAV_TEXT_CLASS =
-  "text-foreground-subtle hover:text-foreground hover:bg-accent/50";
 const EXPANDED_PROJECTS_STORAGE_KEY = "goose:sidebar:expanded-projects";
 
 export function Sidebar({
   collapsed,
   width = 240,
   onCollapse,
-  onSettingsClick,
-  onSearchClick,
   onNewChat,
   onNewChatInProject,
   onCreateProject,
@@ -198,140 +255,171 @@ export function Sidebar({
     }));
   };
 
+  const navRef = useRef<HTMLElement>(null);
+  const homeRef = useRef<HTMLButtonElement>(null);
+  const navItemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  const {
+    currentRect,
+    isHovering,
+    onItemMouseEnter,
+    onNavMouseLeave,
+    updateActiveRect,
+  } = useSidebarHighlight(navRef);
+
+  // Update active rect when activeView/activeSessionId changes
+  useEffect(() => {
+    if (activeView === "home") {
+      updateActiveRect(homeRef.current);
+    } else if (activeView && navItemRefs.current[activeView]) {
+      updateActiveRect(navItemRefs.current[activeView]);
+    } else {
+      updateActiveRect(null);
+    }
+  }, [activeView, activeSessionId, updateActiveRect, expanded]);
+
+  // Callback for SidebarProjectsSection to register active session refs
+  const activeSessionRefCallback = useCallback(
+    (el: HTMLElement | null) => {
+      if (activeSessionId && el) {
+        updateActiveRect(el);
+      }
+    },
+    [activeSessionId, updateActiveRect],
+  );
+
   return (
     <div
       className={cn(
-        "relative h-full overflow-hidden bg-background border border-border",
+        "relative h-full",
         "transition-[width] duration-300 ease-in-out",
         className,
       )}
-      style={{ width: collapsed ? 48 : width }}
+      style={{ width: collapsed ? 54 : width }}
     >
-      <div className="flex flex-col h-full">
-        {/* Header */}
-        <div
-          className={cn(
-            "flex items-center px-3 py-3 border-b border-border flex-shrink-0",
-            collapsed ? "justify-center" : "justify-between",
-          )}
-          data-tauri-drag-region
-        >
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            onClick={() => onNavigate?.("home")}
-            className="flex shrink-0 items-center justify-center transition-opacity hover:opacity-70"
-            aria-label="Home"
-            title="Home"
-          >
-            <GooseIcon className="h-[18px] w-[18px]" />
-          </Button>
+      {/* Collapse toggle — vertically centered, half outside the right edge */}
+      <button
+        type="button"
+        onClick={onCollapse}
+        className={cn(
+          "absolute top-1/2 -translate-y-1/2 -right-3.5 z-50",
+          "flex items-center justify-center w-8 h-8 rounded-full",
+          "bg-background border border-border",
+          "text-muted-foreground hover:text-foreground hover:scale-110",
+          "transition-transform duration-200",
+        )}
+        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+      >
+        {collapsed ? (
+          <ChevronRight className="size-3.5" />
+        ) : (
+          <ChevronLeft className="size-3.5" />
+        )}
+      </button>
 
-          {!collapsed && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              onClick={onCollapse}
-              className={cn(
-                "rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50",
-                "transition-opacity duration-200",
-              )}
-              aria-label="Collapse sidebar"
-            >
-              <PanelLeftClose className="size-4" />
-            </Button>
-          )}
-        </div>
-
-        {/* Expand button (collapsed only) */}
-        <div
-          className={cn(
-            "flex justify-center py-1.5 flex-shrink-0 transition-all duration-300",
-            collapsed
-              ? "opacity-100 h-auto"
-              : "opacity-0 h-0 overflow-hidden pointer-events-none",
-          )}
-        >
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            onClick={onCollapse}
-            className="rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50"
-            aria-label="Expand sidebar"
-          >
-            <PanelLeft className="size-4" />
-          </Button>
-        </div>
-
-        {/* Search bar */}
-        <div
-          className={cn(
-            "flex-shrink-0 transition-all duration-300 ease-out",
-            collapsed ? "px-0 py-1.5 flex justify-center" : "px-3 py-2",
-          )}
-        >
-          <Button
-            type="button"
-            variant="ghost"
-            size={collapsed ? "icon-xs" : "sm"}
-            onClick={onSearchClick}
-            className={cn(
-              "rounded-md transition-all duration-300 ease-out",
-              collapsed
-                ? "mx-auto gap-0 text-muted-foreground hover:text-foreground hover:bg-accent/50"
-                : "w-full gap-2 border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:border-border hover:bg-transparent",
-            )}
-            title={collapsed ? "Search ⌘K" : undefined}
-          >
-            <Search className="size-3.5 flex-shrink-0" />
-            <span
-              className={cn(
-                labelTransition,
-                labelVisible
-                  ? "opacity-100 w-auto flex-1 text-left"
-                  : "opacity-0 w-0 overflow-hidden",
-              )}
-            >
-              Search...
-            </span>
-            <kbd
-              className={cn(
-                "text-[10px] text-muted-foreground px-1 py-0.5 rounded font-mono flex-shrink-0",
-                labelTransition,
-                labelVisible
-                  ? "opacity-100 w-auto"
-                  : "opacity-0 w-0 overflow-hidden px-0",
-              )}
-            >
-              ⌘K
-            </kbd>
-          </Button>
-        </div>
-
+      <div className="flex flex-col h-full overflow-hidden bg-background border border-border rounded-xl">
         {/* Navigation (scrollable) */}
-        <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-1.5 py-1">
-          <div className="space-y-0.5">
-            {/* New Chat */}
-            <Button
+        <nav
+          ref={navRef}
+          className="relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-1.5 py-1 pt-1.5"
+          onMouseLeave={onNavMouseLeave}
+        >
+          {/* Sliding highlight */}
+          {currentRect && (
+            <div
+              className="absolute left-1.5 right-1.5 rounded-lg bg-accent/50 pointer-events-none z-0"
+              style={{
+                top: currentRect.top,
+                height: currentRect.height,
+                transition: isHovering
+                  ? "top 150ms ease, height 150ms ease"
+                  : "top 200ms ease, height 200ms ease, opacity 200ms ease",
+              }}
+            />
+          )}
+
+          <div className="relative z-10 space-y-0.5">
+            {/* TODO: Search bar — uncomment when onSearchClick is wired up */}
+            {/* <button
               type="button"
-              variant="ghost"
-              size="sm"
+              onClick={onSearchClick}
+              title={collapsed ? "Search ⌘K" : undefined}
+              className={cn(
+                "flex items-center w-full rounded-md transition-all duration-300 ease-out",
+                collapsed
+                  ? "justify-center p-3 text-muted-foreground"
+                  : "gap-2 border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-transparent",
+              )}
+            >
+              <Search className="size-3.5 flex-shrink-0" />
+              <span
+                className={cn(
+                  "whitespace-nowrap",
+                  labelTransition,
+                  labelVisible
+                    ? "opacity-100 w-auto flex-1 text-left"
+                    : "opacity-0 w-0 overflow-hidden",
+                )}
+              >
+                Search...
+              </span>
+              <kbd
+                className={cn(
+                  "text-[10px] text-muted-foreground px-1 py-0.5 rounded font-mono flex-shrink-0",
+                  labelTransition,
+                  labelVisible
+                    ? "opacity-100 w-auto"
+                    : "opacity-0 w-0 overflow-hidden px-0",
+                )}
+              >
+                ⌘K
+              </kbd>
+            </button> */}
+
+            {/* Home */}
+            <button
+              ref={homeRef}
+              type="button"
+              onClick={() => onNavigate?.("home")}
+              onMouseEnter={onItemMouseEnter}
+              title={collapsed ? "Home" : undefined}
+              className={cn(
+                "flex items-center w-full text-[13px] transition-colors duration-200 rounded-md",
+                "gap-2.5 p-3",
+                activeView === "home"
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Home className="size-4 flex-shrink-0" />
+              <span
+                className={cn(
+                  "whitespace-nowrap",
+                  labelTransition,
+                  labelVisible
+                    ? "opacity-100 w-auto"
+                    : "opacity-0 w-0 overflow-hidden",
+                )}
+              >
+                Home
+              </span>
+            </button>
+
+            {/* New Chat */}
+            <button
+              type="button"
               onClick={onNewChat}
+              onMouseEnter={onItemMouseEnter}
               title={collapsed ? "New Chat" : undefined}
               className={cn(
-                "w-full rounded-md text-[13px]",
-                SIDEBAR_NAV_TEXT_CLASS,
-                collapsed
-                  ? "justify-center gap-0 px-0 py-1.5"
-                  : "justify-start gap-2.5 px-3 py-1.5",
+                "flex items-center w-full text-[13px] transition-colors duration-200 rounded-md text-muted-foreground hover:text-foreground",
+                "gap-2.5 p-3",
               )}
             >
               <Plus className="size-4 flex-shrink-0" />
               <span
                 className={cn(
+                  "whitespace-nowrap",
                   labelTransition,
                   labelVisible
                     ? "opacity-100 w-auto"
@@ -340,93 +428,90 @@ export function Sidebar({
               >
                 New Chat
               </span>
-            </Button>
+            </button>
 
             {/* Nav items */}
-            {NAV_ITEMS.map((item) => {
+            {NAV_ITEMS.map((item, index) => {
               const Icon = item.icon;
               const isActive = activeView === item.id;
               return (
-                <Button
+                <button
                   key={item.id}
+                  ref={(el) => {
+                    navItemRefs.current[item.id] = el;
+                  }}
                   type="button"
-                  variant="ghost"
-                  size="sm"
                   onClick={() => onNavigate?.(item.id)}
+                  onMouseEnter={onItemMouseEnter}
                   title={collapsed ? item.label : undefined}
                   className={cn(
-                    "w-full rounded-md text-[13px] transition-all duration-200",
-                    collapsed
-                      ? "justify-center gap-0 px-0 py-1.5"
-                      : "justify-start gap-2.5 px-3 py-1.5",
+                    "flex items-center w-full text-[13px] transition-colors duration-200 rounded-md",
+                    "gap-2.5 p-3",
                     isActive
-                      ? "bg-muted text-foreground hover:bg-muted"
-                      : SIDEBAR_NAV_TEXT_CLASS,
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                   aria-current={isActive ? "page" : undefined}
+                  style={{
+                    transitionDelay:
+                      !collapsed && expanded ? `${index * 30}ms` : "0ms",
+                  }}
                 >
                   <Icon className="size-4 flex-shrink-0" />
                   <span
                     className={cn(
+                      "whitespace-nowrap",
                       labelTransition,
                       labelVisible
                         ? "opacity-100 w-auto"
                         : "opacity-0 w-0 overflow-hidden",
                     )}
+                    style={{
+                      transitionDelay: labelVisible
+                        ? `${index * 30 + 60}ms`
+                        : "0ms",
+                    }}
                   >
                     {item.label}
                   </span>
-                </Button>
+                </button>
               );
             })}
           </div>
 
-          {/* Divider */}
-          <div
-            className={cn(
-              "my-2 mx-auto bg-border transition-all duration-300",
-              collapsed ? "w-5 h-px" : "w-full h-px mx-1.5",
-            )}
-          />
+          {!collapsed && (
+            <>
+              {/* Divider */}
+              <div className="relative z-10 my-2 -mx-1.5 bg-border h-px" />
 
-          {/* Projects + Chats section */}
-          <SidebarProjectsSection
-            projects={projects}
-            projectSessions={projectSessions}
-            expandedProjects={expandedProjects}
-            toggleProject={toggleProject}
-            collapsed={collapsed}
-            labelTransition={labelTransition}
-            labelVisible={labelVisible}
-            activeSessionId={activeSessionId}
-            onNavigate={onNavigate}
-            onSelectSession={onSelectSession}
-            onNewChatInProject={onNewChatInProject}
-            onCreateProject={onCreateProject}
-            onEditProject={onEditProject}
-            onArchiveProject={onArchiveProject}
-            onArchiveChat={onArchiveChat}
-            onRenameChat={onRenameChat}
-          />
+              {/* Projects + Chats section */}
+              <SidebarProjectsSection
+                projects={projects}
+                projectSessions={projectSessions}
+                expandedProjects={expandedProjects}
+                toggleProject={toggleProject}
+                collapsed={collapsed}
+                labelTransition={labelTransition}
+                labelVisible={labelVisible}
+                activeSessionId={activeSessionId}
+                onNavigate={onNavigate}
+                onSelectSession={onSelectSession}
+                onNewChatInProject={onNewChatInProject}
+                onCreateProject={onCreateProject}
+                onEditProject={onEditProject}
+                onArchiveProject={onArchiveProject}
+                onArchiveChat={onArchiveChat}
+                onRenameChat={onRenameChat}
+                onItemMouseEnter={onItemMouseEnter}
+                activeSessionRefCallback={activeSessionRefCallback}
+              />
+            </>
+          )}
         </nav>
 
-        {/* Footer */}
-        <div
-          className={cn(
-            "flex items-center border-t border-border flex-shrink-0 transition-all duration-300",
-            collapsed ? "justify-center px-0 py-2" : "px-3 py-2",
-          )}
-        >
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            onClick={onSettingsClick}
-            className="bg-accent text-muted-foreground hover:bg-accent/80"
-            title="Settings"
-          >
-            <User className="size-3.5" />
-          </Button>
+        {/* Goose logo — pinned bottom-left */}
+        <div className="flex-shrink-0 px-3 py-2 mb-2">
+          <GooseIcon className="text-foreground-muted" />
         </div>
       </div>
     </div>

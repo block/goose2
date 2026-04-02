@@ -399,7 +399,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
-      <TopBar onHomeClick={() => handleNavigate("home")} />
+      <TopBar onSettingsClick={() => setSettingsOpen(true)} />
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <div
@@ -415,7 +415,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             collapsed={sidebarCollapsed}
             width={SIDEBAR_WIDTH}
             onCollapse={toggleSidebar}
-            onSettingsClick={() => setSettingsOpen(true)}
             onNavigate={handleNavigate}
             onNewChat={handleNewChat}
             onNewChatInProject={handleNewChatInProject}
@@ -432,7 +431,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           />
         </div>
 
-        <main className="min-h-0 min-w-0 flex-1 overflow-hidden">
+        <main className="min-h-0 min-w-0 flex-1">
           {children ?? renderContent()}
         </main>
       </div>

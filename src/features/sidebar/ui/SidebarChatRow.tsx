@@ -5,8 +5,8 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { SessionActivityIndicator } from "@/shared/ui/SessionActivityIndicator";
 
-const INACTIVE_CHAT_ROW_CLASS = "text-foreground group-hover:text-foreground";
-const ACTIVE_CHAT_ROW_CLASS = "bg-accent text-foreground";
+const INACTIVE_CHAT_ROW_CLASS = "text-muted-foreground hover:bg-transparent hover:text-foreground group-hover:text-foreground";
+const ACTIVE_CHAT_ROW_CLASS = "text-foreground";
 
 interface SidebarChatRowProps {
   id: string;
@@ -18,6 +18,8 @@ interface SidebarChatRowProps {
   onSelect?: (id: string) => void;
   onRename?: (id: string, nextTitle: string) => void;
   onArchive?: (id: string) => void;
+  onMouseEnter?: (e: React.MouseEvent<HTMLElement>) => void;
+  activeRef?: (el: HTMLElement | null) => void;
 }
 
 export function SidebarChatRow({
@@ -30,6 +32,8 @@ export function SidebarChatRow({
   onSelect,
   onRename,
   onArchive,
+  onMouseEnter,
+  activeRef,
 }: SidebarChatRowProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -110,11 +114,12 @@ export function SidebarChatRow({
 
   return (
     <div
+      ref={activeRef}
       className={cn(
-        "flex items-center group rounded-md transition-colors duration-150",
-        isActive ? "bg-accent" : "hover:bg-accent/50",
+        "flex items-center group rounded-md transition-colors duration-200",
         className,
       )}
+      onMouseEnter={onMouseEnter}
     >
       <Button
         type="button"
@@ -128,11 +133,11 @@ export function SidebarChatRow({
         }}
         title="Double-click to rename"
         className={cn(
-          "flex-1 min-w-0 justify-start gap-2 rounded-md px-2.5 py-1.5 text-[13px] bg-transparent hover:bg-transparent",
+          "flex-1 min-w-0 justify-start gap-2 rounded-md px-3 py-2 text-[13px] font-light",
           isActive ? ACTIVE_CHAT_ROW_CLASS : INACTIVE_CHAT_ROW_CLASS,
         )}
       >
-        <span className="flex-1 min-w-0 truncate">{title}</span>
+        <span className="flex-1 min-w-0 truncate text-left">{title}</span>
         <SessionActivityIndicator isRunning={isRunning} hasUnread={hasUnread} />
       </Button>
 
