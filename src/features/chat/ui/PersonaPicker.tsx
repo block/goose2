@@ -71,7 +71,7 @@ export function PersonaPicker({
             variant="ghost"
             size="sm"
             className={cn(
-              "gap-1.5 rounded-lg px-2.5 font-medium text-foreground hover:bg-background-tertiary",
+              "gap-1.5 rounded-lg px-2.5 font-medium text-foreground hover:bg-accent",
               className,
             )}
             aria-label="Select persona"
@@ -95,18 +95,18 @@ export function PersonaPicker({
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <span className="text-sm font-medium">Goose</span>
-            <span className="text-[11px] leading-snug text-foreground-tertiary">
+            <span className="text-[11px] leading-snug text-muted-foreground">
               No persona — chat directly with the agent
             </span>
           </div>
           {selectedPersonaId === null && (
-            <Check className="mt-0.5 h-4 w-4 shrink-0 text-foreground-secondary" />
+            <Check className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
           )}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         {builtinPersonas.length > 0 && (
           <>
-            <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-foreground-tertiary">
+            <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground">
               Built-in
             </DropdownMenuLabel>
             {builtinPersonas.map((persona) => (
@@ -122,7 +122,7 @@ export function PersonaPicker({
         {customPersonas.length > 0 && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-foreground-tertiary">
+            <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground">
               Custom
             </DropdownMenuLabel>
             {customPersonas.map((persona) => (
@@ -139,7 +139,7 @@ export function PersonaPicker({
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={onCreatePersona}>
-              <Plus className="mr-2 h-3.5 w-3.5 text-foreground-tertiary" />
+              <Plus className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-sm">Create persona...</span>
             </DropdownMenuItem>
           </>
@@ -173,13 +173,13 @@ function PersonaMenuItem({
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="text-sm font-medium">{persona.displayName}</span>
         {shortDesc && (
-          <span className="text-[11px] leading-snug text-foreground-tertiary">
+          <span className="text-[11px] leading-snug text-muted-foreground">
             {shortDesc}
           </span>
         )}
       </div>
       {isSelected && (
-        <Check className="mt-0.5 h-4 w-4 shrink-0 text-foreground-secondary" />
+        <Check className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
       )}
     </DropdownMenuItem>
   );

@@ -176,7 +176,7 @@ function ToolChainCards({ toolItems }: { toolItems: ToolChainItem[] }) {
           <button
             type="button"
             onClick={() => setShowInternalSteps((prev) => !prev)}
-            className="inline-flex items-center gap-1 text-xs text-foreground-tertiary hover:text-foreground-secondary"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-muted-foreground"
           >
             <ChevronRight
               className={cn(
@@ -350,7 +350,7 @@ function renderContentBlock(
             "rounded-md border p-2 text-xs",
             isError
               ? "border-danger/30 bg-danger/10 text-danger"
-              : "border-border-secondary bg-background-tertiary text-foreground-secondary",
+              : "border-border bg-accent text-muted-foreground",
           )}
         >
           {sn.text}
@@ -396,7 +396,7 @@ export function MessageBubble({
   if (role === "system") {
     return (
       <div className="flex justify-center px-4 py-2">
-        <div className="w-full max-w-md text-center text-xs text-foreground-tertiary">
+        <div className="w-full max-w-md text-center text-xs text-muted-foreground">
           {content.map((c, i) => renderContentBlock(c, i))}
         </div>
       </div>
