@@ -94,7 +94,7 @@ export function ToolCallCard({
   const [openError, setOpenError] = useState<string | null>(null);
   const elapsed = useElapsedTime(status);
   const displayName = formatToolName(name);
-  const { resolveToolCardDisplay, openResolvedPath } =
+  const { resolveToolCardDisplay, pathExists, openResolvedPath } =
     useArtifactPolicyContext();
 
   const hasContent = Object.keys(args).length > 0 || result != null;
@@ -119,16 +119,47 @@ export function ToolCallCard({
     candidate.rawPath || candidate.resolvedPath;
 
   const openCandidate = async (candidate: ArtifactPathCandidate) => {
-    if (!candidate.allowed) {
+    const orderedCandidates = [
+      candidate,
+      ...display.secondaryCandidates.filter(
+        (secondaryCandidate) => secondaryCandidate.id !== candidate.id,
+      ),
+    ];
+
+    try {
+      setOpenError(null);
+
+      for (const orderedCandidate of orderedCandidates) {
+        const exists = await pathExists(orderedCandidate.resolvedPath);
+        if (orderedCandidate.allowed && exists) {
+          await openResolvedPath(orderedCandidate.resolvedPath);
+          return;
+        }
+      }
+
+      for (const orderedCandidate of orderedCandidates) {
+        const exists = await pathExists(orderedCandidate.resolvedPath);
+        if (exists && !orderedCandidate.allowed) {
+          setOpenError(
+            orderedCandidate.blockedReason ||
+              "Path is outside allowed project/artifacts roots.",
+          );
+          return;
+        }
+      }
+
+      const firstAllowedCandidate = orderedCandidates.find(
+        (orderedCandidate) => orderedCandidate.allowed,
+      );
+      if (firstAllowedCandidate) {
+        setOpenError(`File not found: ${firstAllowedCandidate.resolvedPath}`);
+        return;
+      }
+
       setOpenError(
         candidate.blockedReason ||
           "Path is outside allowed project/artifacts roots.",
       );
-      return;
-    }
-    try {
-      setOpenError(null);
-      await openResolvedPath(candidate.resolvedPath);
     } catch (error) {
       setOpenError(error instanceof Error ? error.message : String(error));
     }

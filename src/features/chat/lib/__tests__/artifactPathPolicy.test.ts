@@ -116,6 +116,27 @@ describe("artifactPathPolicy", () => {
     expect(blocked.blockedReason).toContain("outside allowed");
   });
 
+  it("allows explicit write outputs outside default roots", () => {
+    const ranking = rankMessageToolArtifacts(
+      [
+        {
+          toolCallId: "write-1",
+          toolName: "Write coffee_shop_inventory.csv",
+          args: {},
+          result: "/Users/test/Desktop/coffee_shop_inventory.csv (new)",
+          toolCallIndex: 0,
+        },
+      ],
+      ["/Users/test/.goose/artifacts"],
+    );
+
+    expect(ranking.primaryCandidate?.resolvedPath).toBe(
+      "/Users/test/Desktop/coffee_shop_inventory.csv",
+    );
+    expect(ranking.primaryCandidate?.allowed).toBe(true);
+    expect(ranking.primaryCandidate?.blockedReason).toBeNull();
+  });
+
   it("keeps write-origin candidates and drops noisy non-write regex candidates", () => {
     const ranking = rankMessageToolArtifacts(
       [
@@ -146,6 +167,47 @@ describe("artifactPathPolicy", () => {
         candidate.resolvedPath.includes("small_business_issues_report.md"),
       ),
     ).toBe(false);
+  });
+
+  it("extracts command-style output paths from tool titles", () => {
+    const ranking = rankMessageToolArtifacts(
+      [
+        {
+          toolCallId: "cmd-1",
+          toolName:
+            "python3 scripts/build_dashboard.py --output output/table.csv",
+          args: {},
+          toolCallIndex: 0,
+        },
+      ],
+      roots,
+    );
+
+    expect(ranking.primaryCandidate?.resolvedPath).toBe(
+      "/Users/test/project-a/output/table.csv",
+    );
+    expect(ranking.primaryCandidate?.allowed).toBe(true);
+  });
+
+  it("extracts command-style output paths from command args", () => {
+    const ranking = rankMessageToolArtifacts(
+      [
+        {
+          toolCallId: "cmd-1",
+          toolName: "functions.exec_command",
+          args: {
+            cmd: "python3 scripts/export.py > output/weather-dashboard.html",
+          },
+          toolCallIndex: 0,
+        },
+      ],
+      roots,
+    );
+
+    expect(ranking.primaryCandidate?.resolvedPath).toBe(
+      "/Users/test/project-a/output/weather-dashboard.html",
+    );
+    expect(ranking.primaryCandidate?.allowed).toBe(true);
   });
 
   it("does not treat html tags as local paths", () => {
@@ -211,15 +273,8 @@ describe("artifactPathPolicy", () => {
 
     expect(ranking.primaryCandidate?.allowed).toBe(true);
     expect(ranking.primaryCandidate?.resolvedPath).toBe(
-      "/Users/test/.goose/artifacts/button-interactions.html",
+      "/Users/test/button-interactions.html",
     );
-    expect(
-      ranking.secondaryCandidates.some(
-        (candidate) =>
-          candidate.resolvedPath === "/Users/test/button-interactions.html" &&
-          candidate.allowed === false,
-      ),
-    ).toBe(true);
   });
 
   it("treats unix absolute paths outside the previous whitelist as absolute", () => {

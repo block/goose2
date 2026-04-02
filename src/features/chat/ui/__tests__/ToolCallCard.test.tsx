@@ -5,18 +5,25 @@ import type { Message } from "@/shared/types/messages";
 import { ArtifactPolicyProvider } from "../../hooks/ArtifactPolicyContext";
 import { ToolCallCard } from "../ToolCallCard";
 
-const { openPathMock } = vi.hoisted(() => ({
+const { openPathMock, pathExistsMock } = vi.hoisted(() => ({
   openPathMock: vi.fn(),
+  pathExistsMock: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock("@tauri-apps/plugin-opener", () => ({
   openPath: openPathMock,
 }));
 
+vi.mock("@/shared/api/system", () => ({
+  pathExists: pathExistsMock,
+}));
+
 describe("ToolCallCard", () => {
   afterEach(() => {
     vi.useRealTimers();
     openPathMock.mockReset();
+    pathExistsMock.mockReset();
+    pathExistsMock.mockResolvedValue(true);
   });
 
   it("renders tool name", () => {
@@ -159,6 +166,7 @@ describe("ToolCallCard", () => {
 
   it("shows artifact open action only on the primary host tool card", async () => {
     const user = userEvent.setup();
+    pathExistsMock.mockResolvedValue(true);
     const readArgs = { path: "/Users/test/project-a/notes.md" };
     const writeArgs = {
       paths: [
@@ -219,6 +227,104 @@ describe("ToolCallCard", () => {
     );
   });
 
+  it("falls back to a later existing allowed candidate when the primary path is missing", async () => {
+    const user = userEvent.setup();
+    pathExistsMock.mockImplementation(async (path: string) => {
+      return path === "/Users/test/.goose/artifacts/index.html";
+    });
+    const writeArgs = {};
+    const messages: Message[] = [
+      {
+        id: "assistant-1",
+        role: "assistant",
+        created: Date.now(),
+        content: [
+          {
+            type: "toolRequest",
+            id: "tool-write",
+            name: "Write index.html",
+            arguments: writeArgs,
+            status: "completed",
+          },
+          {
+            type: "toolResponse",
+            id: "tool-write",
+            name: "Write index.html",
+            result: "/Users/test/.goose/artifacts/index.html (new)",
+            isError: false,
+          },
+        ],
+      },
+    ];
+
+    render(
+      <ArtifactPolicyProvider
+        messages={messages}
+        allowedRoots={["/Users/test/project-a", "/Users/test/.goose/artifacts"]}
+      >
+        <ToolCallCard
+          name="Write index.html"
+          arguments={writeArgs}
+          status="completed"
+        />
+      </ArtifactPolicyProvider>,
+    );
+
+    await user.click(screen.getByText("Open file"));
+    expect(openPathMock).toHaveBeenCalledWith(
+      "/Users/test/.goose/artifacts/index.html",
+    );
+  });
+
+  it("opens explicit write outputs outside default roots", async () => {
+    const user = userEvent.setup();
+    pathExistsMock.mockImplementation(async (path: string) => {
+      return path === "/Users/test/coffee_shop_inventory.csv";
+    });
+    const writeArgs = {};
+    const messages: Message[] = [
+      {
+        id: "assistant-1",
+        role: "assistant",
+        created: Date.now(),
+        content: [
+          {
+            type: "toolRequest",
+            id: "tool-write",
+            name: "Write coffee_shop_inventory.csv",
+            arguments: writeArgs,
+            status: "completed",
+          },
+          {
+            type: "toolResponse",
+            id: "tool-write",
+            name: "Write coffee_shop_inventory.csv",
+            result: "/Users/test/coffee_shop_inventory.csv (new)",
+            isError: false,
+          },
+        ],
+      },
+    ];
+
+    render(
+      <ArtifactPolicyProvider
+        messages={messages}
+        allowedRoots={["/Users/test/.goose/artifacts"]}
+      >
+        <ToolCallCard
+          name="Write coffee_shop_inventory.csv"
+          arguments={writeArgs}
+          status="completed"
+        />
+      </ArtifactPolicyProvider>,
+    );
+
+    await user.click(screen.getByText("Open file"));
+    expect(openPathMock).toHaveBeenCalledWith(
+      "/Users/test/coffee_shop_inventory.csv",
+    );
+  });
+
   it("keeps secondary outputs collapsed until expanded", async () => {
     const user = userEvent.setup();
     const writeArgs = {
@@ -262,8 +368,8 @@ describe("ToolCallCard", () => {
     expect(screen.getAllByText("Open file")).toHaveLength(2);
   });
 
-  it("renders blocked candidate as disabled with reason", () => {
-    const writeArgs = { path: "/Users/test/outside/final_report.md" };
+  it("keeps non-write candidates blocked outside allowed roots", () => {
+    const readArgs = { path: "/Users/test/outside/final_report.md" };
     const messages: Message[] = [
       {
         id: "assistant-1",
@@ -272,9 +378,9 @@ describe("ToolCallCard", () => {
         content: [
           {
             type: "toolRequest",
-            id: "tool-write",
-            name: "write_file",
-            arguments: writeArgs,
+            id: "tool-read",
+            name: "read_file",
+            arguments: readArgs,
             status: "completed",
           },
         ],
@@ -287,8 +393,8 @@ describe("ToolCallCard", () => {
         allowedRoots={["/Users/test/project-a", "/Users/test/.goose/artifacts"]}
       >
         <ToolCallCard
-          name="write_file"
-          arguments={writeArgs}
+          name="read_file"
+          arguments={readArgs}
           status="completed"
         />
       </ArtifactPolicyProvider>,
