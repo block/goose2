@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Home, Plus, X } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
@@ -28,12 +28,20 @@ export function TabBar({
   onClearAllTabs,
 }: TabBarProps) {
   const [dismissingTabs, setDismissingTabs] = useState(false);
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+    };
+  }, []);
 
   const handleClearTabs = () => {
     if (dismissingTabs || tabs.length === 0) return;
     setDismissingTabs(true);
     const totalMs = (tabs.length - 1) * DISMISS_STAGGER_MS + DISMISS_DURATION_MS;
-    setTimeout(() => {
+    dismissTimerRef.current = setTimeout(() => {
+      dismissTimerRef.current = null;
       onClearAllTabs();
       setDismissingTabs(false);
     }, totalMs);

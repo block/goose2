@@ -48,4 +48,40 @@ describe("TabBar", () => {
 
     expect(screen.getByLabelText(/unread messages/i)).toBeInTheDocument();
   });
+
+  it("shows close-all button only when tabs exist", () => {
+    const { rerender } = render(
+      <TabBar
+        tabs={[]}
+        activeTabId={null}
+        onTabSelect={vi.fn()}
+        onTabClose={vi.fn()}
+        onNewTab={vi.fn()}
+        onHomeClick={vi.fn()}
+        onClearAllTabs={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByLabelText(/close all tabs/i)).not.toBeInTheDocument();
+
+    rerender(
+      <TabBar
+        tabs={[
+          {
+            id: "session-1",
+            title: "Some Chat",
+            sessionId: "session-1",
+          },
+        ]}
+        activeTabId="session-1"
+        onTabSelect={vi.fn()}
+        onTabClose={vi.fn()}
+        onNewTab={vi.fn()}
+        onHomeClick={vi.fn()}
+        onClearAllTabs={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText(/close all tabs/i)).toBeInTheDocument();
+  });
 });
