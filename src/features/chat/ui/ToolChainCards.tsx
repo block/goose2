@@ -202,7 +202,7 @@ export function ToolChainCards({ toolItems }: { toolItems: ToolChainItem[] }) {
   const groups = groupByConsecutiveType(primaryItems);
 
   return (
-    <div className="my-1 flex flex-col items-start gap-3">
+    <div className="flex flex-col items-start gap-3">
       {groups.flatMap((group) => {
         if (group.items.length > 1 && group.type !== undefined) {
           const groupKey = group.items.map((i) => i.key).join(":");

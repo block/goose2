@@ -283,11 +283,15 @@ export function MessageBubble({
           </span>
         )}
 
-        <div className="w-full min-w-0 text-[13px] leading-relaxed">
+        <div className="w-full min-w-0 flex flex-col text-[13px] leading-relaxed [&>*+*]:mt-0.5 [&>[data-section='tool']+*]:mt-2 [&>*+[data-section='tool']]:mt-2">
           {groupContentSections(content).map((section, sectionIdx) => {
             if (section.type === "toolChain") {
               const toolItems = section.items as ToolChainItem[];
-              return <ToolChainCards key={section.key} toolItems={toolItems} />;
+              return (
+                <div key={section.key} data-section="tool">
+                  <ToolChainCards toolItems={toolItems} />
+                </div>
+              );
             }
             const block = section.items[0] as MessageContent;
             return (

@@ -66,7 +66,7 @@ export function ToolCallAdapter({
           {title}
         </span>
         {getStatusBadge(state)}
-        <div className="space-y-4 py-2">
+        <div className="space-y-2 pt-1">
           {Object.keys(args).length > 0 && <ToolInput input={args} />}
           <ToolOutput
             output={isError ? undefined : result}
