@@ -260,6 +260,11 @@
   }
 }
 
+::selection {
+  background: color-mix(in srgb, var(--color-brand) 60%, transparent);
+  color: #ffffff;
+}
+
 .content-fade-in {
   animation: content-fade-in 0.3s ease-out forwards;
 }
