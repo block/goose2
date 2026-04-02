@@ -266,4 +266,92 @@ describe("useAcpStream", () => {
       expect(listeners.get("acp:text")?.length ?? 0).toBe(0),
     );
   });
+
+  it("ignores late tool title updates after a message is completed", async () => {
+    const store = useChatStore.getState();
+    store.addMessage(sessionId, {
+      id: "msg-1",
+      role: "assistant",
+      created: Date.now(),
+      content: [
+        {
+          type: "toolRequest",
+          id: "tool-1",
+          name: "Original title",
+          arguments: {},
+          status: "executing",
+        },
+      ],
+      metadata: {
+        userVisible: true,
+        completionStatus: "completed",
+      },
+    });
+
+    renderHook(() => useAcpStream(true));
+    await vi.waitFor(() =>
+      expect(listeners.get("acp:tool_title")).toBeDefined(),
+    );
+
+    act(() => {
+      emit("acp:tool_title", {
+        sessionId,
+        messageId: "msg-1",
+        toolCallId: "tool-1",
+        title: "Late title",
+      });
+    });
+
+    const message = useChatStore.getState().messagesBySession[sessionId][0];
+    expect(message.content).toContainEqual({
+      type: "toolRequest",
+      id: "tool-1",
+      name: "Original title",
+      arguments: {},
+      status: "executing",
+    });
+  });
+
+  it("ignores late tool results after a message is stopped", async () => {
+    const store = useChatStore.getState();
+    store.addMessage(sessionId, {
+      id: "msg-1",
+      role: "assistant",
+      created: Date.now(),
+      content: [
+        {
+          type: "toolRequest",
+          id: "tool-1",
+          name: "Lookup",
+          arguments: {},
+          status: "executing",
+        },
+      ],
+      metadata: {
+        userVisible: true,
+        completionStatus: "stopped",
+      },
+    });
+
+    renderHook(() => useAcpStream(true));
+    await vi.waitFor(() =>
+      expect(listeners.get("acp:tool_result")).toBeDefined(),
+    );
+
+    act(() => {
+      emit("acp:tool_result", {
+        sessionId,
+        messageId: "msg-1",
+        content: "late result",
+      });
+    });
+
+    const message = useChatStore.getState().messagesBySession[sessionId][0];
+    expect(message.content).toHaveLength(1);
+    expect(message.content[0]).toMatchObject({
+      type: "toolRequest",
+      id: "tool-1",
+      status: "executing",
+    });
+  });
 });

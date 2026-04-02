@@ -290,6 +290,9 @@ export function useAcpStream(enabled: boolean): void {
         if (!active) return;
         const { sessionId: sid, messageId, toolCallId, title } = event.payload;
         const store = useChatStore.getState();
+        if (!shouldTrackStreamingEvent(store, sid, messageId)) {
+          return;
+        }
         store.updateMessage(sid, messageId, (msg) => ({
           ...msg,
           content: msg.content.map((c) =>
@@ -306,6 +309,15 @@ export function useAcpStream(enabled: boolean): void {
       listen<AcpToolResultPayload>("acp:tool_result", (event) => {
         if (!active) return;
         const store = useChatStore.getState();
+        if (
+          !shouldTrackStreamingEvent(
+            store,
+            event.payload.sessionId,
+            event.payload.messageId,
+          )
+        ) {
+          return;
+        }
         const streamingMessage = event.payload.messageId
           ? store.messagesBySession[event.payload.sessionId]?.find(
               (message) => message.id === event.payload.messageId,

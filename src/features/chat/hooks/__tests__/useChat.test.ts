@@ -38,9 +38,9 @@ function addStreamingAssistantMessage(
   useChatStore.getState().setStreamingMessageId(sessionId, messageId);
 }
 
-function createDeferredPromise() {
-  let resolve!: () => void;
-  const promise = new Promise<void>((res) => {
+function createDeferredPromise<T = void>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((res) => {
     resolve = res;
   });
   return { promise, resolve };
@@ -180,7 +180,7 @@ describe("useChat", () => {
   });
 
   it("marks the streaming message stopped only after cancellation succeeds", async () => {
-    const cancelDeferred = createDeferredPromise();
+    const cancelDeferred = createDeferredPromise<boolean>();
     mockAcpCancelSession.mockReturnValue(cancelDeferred.promise);
 
     const { result } = renderHook(() => useChat("session-1"));
@@ -207,7 +207,7 @@ describe("useChat", () => {
     expect(runtime.streamingMessageId).toBeNull();
 
     await act(async () => {
-      cancelDeferred.resolve();
+      cancelDeferred.resolve(true);
       await cancelDeferred.promise;
     });
 
@@ -216,7 +216,7 @@ describe("useChat", () => {
   });
 
   it("does not overwrite a completed message when stop loses the race", async () => {
-    const cancelDeferred = createDeferredPromise();
+    const cancelDeferred = createDeferredPromise<boolean>();
     mockAcpCancelSession.mockReturnValue(cancelDeferred.promise);
 
     const { result } = renderHook(() => useChat("session-1"));
@@ -245,12 +245,36 @@ describe("useChat", () => {
     });
 
     await act(async () => {
-      cancelDeferred.resolve();
+      cancelDeferred.resolve(true);
       await cancelDeferred.promise;
     });
 
     const message = useChatStore.getState().messagesBySession["session-1"][0];
     expect(message.metadata?.completionStatus).toBe("completed");
+  });
+
+  it("does not mark the message stopped when cancellation reports no active session", async () => {
+    mockAcpCancelSession.mockResolvedValue(false);
+
+    const { result } = renderHook(() => useChat("session-1"));
+
+    act(() => {
+      addStreamingAssistantMessage(
+        "session-1",
+        "assistant-1",
+        "persona-a",
+        "Persona A",
+      );
+      useChatStore.getState().setChatState("session-1", "streaming");
+    });
+
+    await act(async () => {
+      result.current.stopGeneration();
+      await Promise.resolve();
+    });
+
+    const message = useChatStore.getState().messagesBySession["session-1"][0];
+    expect(message.metadata?.completionStatus).toBe("inProgress");
   });
 
   it("allows another session to send while a different session is streaming", async () => {

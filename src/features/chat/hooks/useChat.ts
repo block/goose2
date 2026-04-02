@@ -251,8 +251,8 @@ export function useChat(
     store.setStreamingMessageId(sessionId, null);
     // Cancel the backend ACP session to stop orphaned streaming events
     acpCancelSession(sessionId, activePersonaId ?? undefined)
-      .then(() => {
-        if (activeStreamingMessageId) {
+      .then((wasCancelled) => {
+        if (wasCancelled && activeStreamingMessageId) {
           markMessageStopped(sessionId, activeStreamingMessageId);
         }
       })
