@@ -311,9 +311,12 @@ export function ChatView({
   // Auto-send initial message from HomeScreen on mount
   const initialMessageSent = useRef(false);
   useEffect(() => {
-    if ((initialMessage || initialImages?.length) && !initialMessageSent.current) {
+    if (
+      (initialMessage || initialImages?.length) &&
+      !initialMessageSent.current
+    ) {
       initialMessageSent.current = true;
-      handleSend(initialMessage, undefined, initialImages);
+      handleSend(initialMessage ?? "", undefined, initialImages);
       onInitialMessageConsumed?.();
     }
   }, [initialMessage, initialImages, handleSend, onInitialMessageConsumed]);
