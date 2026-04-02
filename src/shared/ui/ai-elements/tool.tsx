@@ -1,4 +1,3 @@
-import { Badge } from "@/shared/ui/badge";
 import {
   Collapsible,
   CollapsibleContent,
@@ -22,10 +21,7 @@ import { CodeBlock } from "./code-block";
 export type ToolProps = ComponentProps<typeof Collapsible>;
 
 export const Tool = ({ className, ...props }: ToolProps) => (
-  <Collapsible
-    className={cn("group not-prose mb-4 w-full rounded-md border", className)}
-    {...props}
-  />
+  <Collapsible className={cn("group not-prose w-full", className)} {...props} />
 );
 
 export type ToolPart = ToolUIPart | DynamicToolUIPart;
@@ -33,6 +29,7 @@ export type ToolPart = ToolUIPart | DynamicToolUIPart;
 export type ToolHeaderProps = {
   title?: string;
   className?: string;
+  showIcon?: boolean;
 } & (
   | { type: ToolUIPart["type"]; state: ToolUIPart["state"]; toolName?: never }
   | {
@@ -62,12 +59,15 @@ const statusIcons: Record<ToolPart["state"], ReactNode> = {
   "output-error": <XCircleIcon className="size-4 text-red-600" />,
 };
 
-export const getStatusBadge = (status: ToolPart["state"]) => (
-  <Badge className="gap-1.5 rounded-full text-xs" variant="secondary">
-    {statusIcons[status]}
-    {statusLabels[status]}
-  </Badge>
-);
+export const getStatusBadge = (status: ToolPart["state"]) => {
+  if (status === "output-available") return null;
+  return (
+    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+      {statusIcons[status]}
+      {statusLabels[status]}
+    </span>
+  );
+};
 
 export const ToolHeader = ({
   className,
@@ -75,6 +75,7 @@ export const ToolHeader = ({
   type,
   state,
   toolName,
+  showIcon = true,
   ...props
 }: ToolHeaderProps) => {
   const derivedName =
@@ -82,18 +83,13 @@ export const ToolHeader = ({
 
   return (
     <CollapsibleTrigger
-      className={cn(
-        "flex w-full items-center justify-between gap-4 p-3",
-        className,
-      )}
+      className={cn("inline-flex items-center gap-1.5 py-px", className)}
       {...props}
     >
-      <div className="flex items-center gap-2">
-        <WrenchIcon className="size-4 text-muted-foreground" />
-        <span className="font-medium text-sm">{title ?? derivedName}</span>
-        {getStatusBadge(state)}
-      </div>
-      <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+      {showIcon && <WrenchIcon className="size-4 text-muted-foreground" />}
+      <span className="font-medium text-sm">{title ?? derivedName}</span>
+      {getStatusBadge(state)}
+      <ChevronDownIcon className="size-3.5 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
     </CollapsibleTrigger>
   );
 };
@@ -103,7 +99,7 @@ export type ToolContentProps = ComponentProps<typeof CollapsibleContent>;
 export const ToolContent = ({ className, ...props }: ToolContentProps) => (
   <CollapsibleContent
     className={cn(
-      "data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 space-y-4 p-4 text-popover-foreground outline-none data-[state=closed]:animate-out data-[state=open]:animate-in",
+      "data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 space-y-4 py-2 text-popover-foreground outline-none data-[state=closed]:animate-out data-[state=open]:animate-in",
       className,
     )}
     {...props}

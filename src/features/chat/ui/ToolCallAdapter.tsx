@@ -58,6 +58,7 @@ export function ToolCallAdapter({
         toolName={name}
         title={title}
         state={state}
+        showIcon={false}
       />
       <ToolContent>
         {Object.keys(args).length > 0 && <ToolInput input={args} />}

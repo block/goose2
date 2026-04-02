@@ -168,7 +168,7 @@ function ToolChainCards({ toolItems }: { toolItems: ToolChainItem[] }) {
   };
 
   return (
-    <div className="my-1 flex flex-col items-start gap-1.5">
+    <div className="my-1 flex flex-col items-start gap-3">
       {primaryItems.map((item) => renderToolItem(item))}
 
       {hiddenItems.length > 0 && (
