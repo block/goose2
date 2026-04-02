@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Message } from "@/shared/types/messages";
+import { pathExists } from "@/shared/api/system";
 import {
   buildArtifactsIndexForMessages,
   resolveMarkdownLocalHref,
@@ -27,6 +28,7 @@ interface ArtifactPolicyContextValue {
     result?: string,
   ) => ToolCardDisplay;
   resolveMarkdownHref: (href: string) => ArtifactPathCandidate | null;
+  pathExists: (path: string) => Promise<boolean>;
   openResolvedPath: (path: string) => Promise<void>;
 }
 
@@ -39,6 +41,7 @@ const EMPTY_DISPLAY: ToolCardDisplay = {
 const DEFAULT_CONTEXT_VALUE: ArtifactPolicyContextValue = {
   resolveToolCardDisplay: () => EMPTY_DISPLAY,
   resolveMarkdownHref: () => null,
+  pathExists: async () => false,
   openResolvedPath: async () => {},
 };
 
@@ -94,24 +97,40 @@ export function ArtifactPolicyProvider({
     [normalizedRoots],
   );
 
-  const openResolvedPath = useCallback(async (path: string) => {
-    const key = path.trim().toLowerCase();
-    const now = Date.now();
-    const lastOpenAt = lastOpenAtByPathRef.current.get(key) ?? 0;
-    if (now - lastOpenAt < 1200) {
-      return;
-    }
-    lastOpenAtByPathRef.current.set(key, now);
-    await openPath(path);
-  }, []);
+  const checkPathExists = useCallback((path: string) => pathExists(path), []);
+
+  const openResolvedPath = useCallback(
+    async (path: string) => {
+      const exists = await checkPathExists(path);
+      if (!exists) {
+        throw new Error(`File not found: ${path}`);
+      }
+
+      const key = path.trim().toLowerCase();
+      const now = Date.now();
+      const lastOpenAt = lastOpenAtByPathRef.current.get(key) ?? 0;
+      if (now - lastOpenAt < 1200) {
+        return;
+      }
+      lastOpenAtByPathRef.current.set(key, now);
+      await openPath(path);
+    },
+    [checkPathExists],
+  );
 
   const contextValue = useMemo<ArtifactPolicyContextValue>(
     () => ({
       resolveToolCardDisplay,
       resolveMarkdownHref,
+      pathExists: checkPathExists,
       openResolvedPath,
     }),
-    [openResolvedPath, resolveMarkdownHref, resolveToolCardDisplay],
+    [
+      checkPathExists,
+      openResolvedPath,
+      resolveMarkdownHref,
+      resolveToolCardDisplay,
+    ],
   );
 
   return (

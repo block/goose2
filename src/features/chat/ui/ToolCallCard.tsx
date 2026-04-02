@@ -94,7 +94,7 @@ export function ToolCallCard({
   const [openError, setOpenError] = useState<string | null>(null);
   const elapsed = useElapsedTime(status);
   const displayName = formatToolName(name);
-  const { resolveToolCardDisplay, openResolvedPath } =
+  const { resolveToolCardDisplay, pathExists, openResolvedPath } =
     useArtifactPolicyContext();
 
   const hasContent = Object.keys(args).length > 0 || result != null;
@@ -118,17 +118,53 @@ export function ToolCallCard({
   const displayPath = (candidate: ArtifactPathCandidate): string =>
     candidate.rawPath || candidate.resolvedPath;
 
-  const openCandidate = async (candidate: ArtifactPathCandidate) => {
-    if (!candidate.allowed) {
+  const openCandidate = async (
+    candidate: ArtifactPathCandidate,
+    options?: { allowFallback?: boolean },
+  ) => {
+    const orderedCandidates = options?.allowFallback
+      ? [
+          candidate,
+          ...display.secondaryCandidates.filter(
+            (secondaryCandidate) => secondaryCandidate.id !== candidate.id,
+          ),
+        ]
+      : [candidate];
+
+    try {
+      setOpenError(null);
+
+      for (const orderedCandidate of orderedCandidates) {
+        const exists = await pathExists(orderedCandidate.resolvedPath);
+        if (orderedCandidate.allowed && exists) {
+          await openResolvedPath(orderedCandidate.resolvedPath);
+          return;
+        }
+      }
+
+      for (const orderedCandidate of orderedCandidates) {
+        const exists = await pathExists(orderedCandidate.resolvedPath);
+        if (exists && !orderedCandidate.allowed) {
+          setOpenError(
+            orderedCandidate.blockedReason ||
+              "Path is outside allowed project/artifacts roots.",
+          );
+          return;
+        }
+      }
+
+      const firstAllowedCandidate = orderedCandidates.find(
+        (orderedCandidate) => orderedCandidate.allowed,
+      );
+      if (firstAllowedCandidate) {
+        setOpenError(`File not found: ${firstAllowedCandidate.resolvedPath}`);
+        return;
+      }
+
       setOpenError(
         candidate.blockedReason ||
           "Path is outside allowed project/artifacts roots.",
       );
-      return;
-    }
-    try {
-      setOpenError(null);
-      await openResolvedPath(candidate.resolvedPath);
     } catch (error) {
       setOpenError(error instanceof Error ? error.message : String(error));
     }
@@ -174,7 +210,9 @@ export function ToolCallCard({
             type="button"
             onClick={() => {
               if (!display.primaryCandidate) return;
-              void openCandidate(display.primaryCandidate);
+              void openCandidate(display.primaryCandidate, {
+                allowFallback: true,
+              });
             }}
             className={cn(
               "inline-flex max-w-full items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs transition-colors",
@@ -227,7 +265,11 @@ export function ToolCallCard({
                     <div key={candidate.id} className="space-y-0.5">
                       <button
                         type="button"
-                        onClick={() => void openCandidate(candidate)}
+                        onClick={() =>
+                          void openCandidate(candidate, {
+                            allowFallback: false,
+                          })
+                        }
                         className={cn(
                           "inline-flex max-w-full items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] transition-colors",
                           candidate.allowed

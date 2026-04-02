@@ -4,12 +4,17 @@ import userEvent from "@testing-library/user-event";
 import { ArtifactPolicyProvider } from "../../hooks/ArtifactPolicyContext";
 import { MarkdownContent } from "../MarkdownContent";
 
-const { openPathMock } = vi.hoisted(() => ({
+const { openPathMock, pathExistsMock } = vi.hoisted(() => ({
   openPathMock: vi.fn(),
+  pathExistsMock: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock("@tauri-apps/plugin-opener", () => ({
   openPath: openPathMock,
+}));
+
+vi.mock("@/shared/api/system", () => ({
+  pathExists: pathExistsMock,
 }));
 
 function renderWithPolicy(content: string) {
@@ -26,6 +31,8 @@ function renderWithPolicy(content: string) {
 describe("MarkdownContent", () => {
   afterEach(() => {
     openPathMock.mockReset();
+    pathExistsMock.mockReset();
+    pathExistsMock.mockResolvedValue(true);
   });
 
   it("opens allowed local links through artifact policy", async () => {

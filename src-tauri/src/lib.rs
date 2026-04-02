@@ -70,6 +70,7 @@ pub fn run() {
             commands::doctor::run_doctor,
             commands::doctor::run_doctor_fix,
             commands::system::get_home_dir,
+            commands::system::path_exists,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
