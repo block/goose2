@@ -92,7 +92,7 @@ describe("MessageBubble", () => {
       },
     ]);
     render(<MessageBubble message={msg} />);
-    expect(screen.getByText("readFile")).toBeInTheDocument();
+    expect(screen.getByText("Read")).toBeInTheDocument();
   });
 
   it("renders standalone tool responses without dropping surrounding text", () => {
@@ -111,7 +111,7 @@ describe("MessageBubble", () => {
     render(<MessageBubble message={msg} />);
 
     expect(screen.getByText("Working on it.")).toBeInTheDocument();
-    expect(screen.getByText("readFile")).toBeInTheDocument();
+    expect(screen.getByText("Read")).toBeInTheDocument();
     expect(screen.getByText("Done.")).toBeInTheDocument();
   });
 
@@ -137,7 +137,7 @@ describe("MessageBubble", () => {
     render(<MessageBubble message={msg} />);
 
     expect(screen.getByText("Checking that now.")).toBeInTheDocument();
-    expect(screen.getAllByText("readFile")).toHaveLength(1);
+    expect(screen.getAllByText("Read")).toHaveLength(1);
   });
 
   it("renders tool cards inline between surrounding assistant text blocks", () => {
@@ -166,12 +166,12 @@ describe("MessageBubble", () => {
     )?.textContent;
 
     expect(bubbleText).toContain("Lemme check...");
-    expect(bubbleText).toContain("readFile");
+    expect(bubbleText).toContain("Read");
     expect(bubbleText).toContain("Results from checking.");
     expect(bubbleText?.indexOf("Lemme check...")).toBeLessThan(
-      bubbleText?.indexOf("readFile") ?? Number.POSITIVE_INFINITY,
+      bubbleText?.indexOf("Read") ?? Number.POSITIVE_INFINITY,
     );
-    expect(bubbleText?.indexOf("readFile")).toBeLessThan(
+    expect(bubbleText?.indexOf("Read")).toBeLessThan(
       bubbleText?.indexOf("Results from checking.") ?? Number.POSITIVE_INFINITY,
     );
   });
@@ -198,7 +198,7 @@ describe("MessageBubble", () => {
 
     render(<MessageBubble message={msg} />);
 
-    expect(screen.getAllByText("readFile")).toHaveLength(1);
+    expect(screen.getAllByText("Read")).toHaveLength(1);
     expect(screen.queryByText("Tool result")).not.toBeInTheDocument();
   });
 
@@ -269,16 +269,18 @@ describe("MessageBubble", () => {
     render(<MessageBubble message={msg} />);
 
     expect(screen.getByText("Create PDF about whales")).toBeInTheDocument();
-    expect(screen.getByText("Write whales.pdf")).toBeInTheDocument();
+    expect(screen.getByText("Wrote whales.pdf")).toBeInTheDocument();
     expect(
-      screen.queryByText("python3 create_whales.py"),
+      screen.queryByText("Ran python3 create_whales.py"),
     ).not.toBeInTheDocument();
-    expect(screen.queryByText("ls -lh whales.pdf")).not.toBeInTheDocument();
+    expect(screen.queryByText("Ran ls -lh whales.pdf")).not.toBeInTheDocument();
     expect(screen.getByText("Show internal steps (2)")).toBeInTheDocument();
 
     await user.click(screen.getByText("Show internal steps (2)"));
 
-    expect(screen.getByText("python3 create_whales.py")).toBeInTheDocument();
-    expect(screen.getByText("ls -lh whales.pdf")).toBeInTheDocument();
+    expect(
+      screen.getByText("Ran python3 create_whales.py"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Ran ls -lh whales.pdf")).toBeInTheDocument();
   });
 });
