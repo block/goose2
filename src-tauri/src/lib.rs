@@ -47,9 +47,6 @@ pub fn run() {
             commands::sessions::list_archived_sessions,
             commands::sessions::archive_session,
             commands::sessions::unarchive_session,
-            commands::ui_state::save_ui_state,
-            commands::ui_state::load_ui_state,
-            commands::ui_state::get_home_dir,
             commands::chat::chat_send_message,
             commands::acp::discover_acp_providers,
             commands::acp::acp_send_message,
@@ -72,6 +69,7 @@ pub fn run() {
             commands::projects::restore_project,
             commands::doctor::run_doctor,
             commands::doctor::run_doctor_fix,
+            commands::system::get_home_dir,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

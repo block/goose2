@@ -21,7 +21,6 @@ interface TabInfo {
   title: string;
   sessionId: string;
   projectId?: string;
-  isOpenTab?: boolean;
   updatedAt?: string;
   isRunning?: boolean;
   hasUnread?: boolean;
@@ -29,7 +28,7 @@ interface TabInfo {
 
 interface SidebarProjectsSectionProps {
   projects: ProjectInfo[];
-  projectTabs: {
+  projectSessions: {
     byProject: Record<string, TabInfo[]>;
     standalone: TabInfo[];
   };
@@ -38,15 +37,15 @@ interface SidebarProjectsSectionProps {
   collapsed: boolean;
   labelTransition: string;
   labelVisible: boolean;
-  activeTabId?: string | null;
+  activeSessionId?: string | null;
   onNavigate?: (view: AppView) => void;
-  onSelectTab?: (tabId: string) => void;
+  onSelectSession?: (sessionId: string) => void;
   onNewChatInProject?: (projectId: string) => void;
   onCreateProject?: () => void;
   onEditProject?: (projectId: string) => void;
   onArchiveProject?: (projectId: string) => void;
-  onArchiveChat?: (tabId: string) => void;
-  onRenameChat?: (tabId: string, nextTitle: string) => void;
+  onArchiveChat?: (sessionId: string) => void;
+  onRenameChat?: (sessionId: string, nextTitle: string) => void;
 }
 
 function ItemMenu({
@@ -135,8 +134,8 @@ function ProjectSection({
   projectChats,
   isExpanded,
   toggleProject,
-  activeTabId,
-  onSelectTab,
+  activeSessionId,
+  onSelectSession,
   onNewChatInProject,
   onNavigate,
   onEditProject,
@@ -148,14 +147,14 @@ function ProjectSection({
   projectChats: TabInfo[];
   isExpanded: boolean;
   toggleProject: (projectId: string) => void;
-  activeTabId?: string | null;
-  onSelectTab?: (tabId: string) => void;
+  activeSessionId?: string | null;
+  onSelectSession?: (sessionId: string) => void;
   onNewChatInProject?: (projectId: string) => void;
   onNavigate?: (view: AppView) => void;
   onEditProject?: (projectId: string) => void;
   onArchiveProject?: (projectId: string) => void;
-  onArchiveChat?: (tabId: string) => void;
-  onRenameChat?: (tabId: string, nextTitle: string) => void;
+  onArchiveChat?: (sessionId: string) => void;
+  onRenameChat?: (sessionId: string, nextTitle: string) => void;
 }) {
   const [showAll, setShowAll] = useState(false);
   const visibleChats = showAll
@@ -216,20 +215,18 @@ function ProjectSection({
       {/* Nested chats */}
       {isExpanded && (
         <div className="mt-0.5 space-y-0.5">
-          {visibleChats.map((tab) => {
-            const isActive = activeTabId === tab.id;
-            const isOpen = tab.isOpenTab ?? false;
+          {visibleChats.map((session) => {
+            const isActive = activeSessionId === session.id;
             return (
               <SidebarChatRow
-                key={tab.id}
-                id={tab.id}
-                title={tab.title}
+                key={session.id}
+                id={session.id}
+                title={session.title}
                 isActive={isActive}
-                isOpen={isOpen}
-                isRunning={tab.isRunning ?? false}
-                hasUnread={tab.hasUnread ?? false}
+                isRunning={session.isRunning ?? false}
+                hasUnread={session.hasUnread ?? false}
                 className="pl-5"
-                onSelect={onSelectTab}
+                onSelect={onSelectSession}
                 onRename={onRenameChat}
                 onArchive={onArchiveChat}
               />
@@ -278,15 +275,15 @@ function ProjectSection({
 
 export function SidebarProjectsSection({
   projects,
-  projectTabs,
+  projectSessions,
   expandedProjects,
   toggleProject,
   collapsed,
   labelTransition,
   labelVisible,
-  activeTabId,
+  activeSessionId,
   onNavigate,
-  onSelectTab,
+  onSelectSession,
   onNewChatInProject,
   onCreateProject,
   onEditProject,
@@ -366,11 +363,11 @@ export function SidebarProjectsSection({
             <ProjectSection
               key={project.id}
               project={project}
-              projectChats={projectTabs.byProject[project.id] ?? []}
+              projectChats={projectSessions.byProject[project.id] ?? []}
               isExpanded={expandedProjects[project.id] ?? false}
               toggleProject={toggleProject}
-              activeTabId={activeTabId}
-              onSelectTab={onSelectTab}
+              activeSessionId={activeSessionId}
+              onSelectSession={onSelectSession}
               onNewChatInProject={onNewChatInProject}
               onNavigate={onNavigate}
               onEditProject={onEditProject}
@@ -383,7 +380,7 @@ export function SidebarProjectsSection({
       )}
 
       {/* --- RECENTS (standalone chats from all sessions) --- */}
-      {projectTabs.standalone.length > 0 && (
+      {projectSessions.standalone.length > 0 && (
         <>
           {/* Section header (expanded only) */}
           <div
@@ -407,23 +404,23 @@ export function SidebarProjectsSection({
 
           {collapsed ? (
             <div className="flex flex-col items-center gap-1">
-              {projectTabs.standalone.map((tab) => (
+              {projectSessions.standalone.map((session) => (
                 <button
                   type="button"
-                  key={tab.id}
-                  title={tab.title}
-                  onClick={() => onSelectTab?.(tab.id)}
+                  key={session.id}
+                  title={session.title}
+                  onClick={() => onSelectSession?.(session.id)}
                   className={cn(
                     "relative flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-200",
-                    activeTabId === tab.id
+                    activeSessionId === session.id
                       ? "bg-background-tertiary/70 text-foreground"
                       : "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
                   )}
                 >
                   <MessageSquare className="w-4 h-4" />
                   <SessionActivityIndicator
-                    isRunning={tab.isRunning}
-                    hasUnread={tab.hasUnread}
+                    isRunning={session.isRunning}
+                    hasUnread={session.hasUnread}
                     variant="overlay"
                   />
                 </button>
@@ -431,19 +428,17 @@ export function SidebarProjectsSection({
             </div>
           ) : (
             <div className="space-y-0.5">
-              {projectTabs.standalone.map((tab) => {
-                const isActive = activeTabId === tab.id;
-                const isOpen = tab.isOpenTab ?? false;
+              {projectSessions.standalone.map((session) => {
+                const isActive = activeSessionId === session.id;
                 return (
                   <SidebarChatRow
-                    key={tab.id}
-                    id={tab.id}
-                    title={tab.title}
+                    key={session.id}
+                    id={session.id}
+                    title={session.title}
                     isActive={isActive}
-                    isOpen={isOpen}
-                    isRunning={tab.isRunning ?? false}
-                    hasUnread={tab.hasUnread ?? false}
-                    onSelect={onSelectTab}
+                    isRunning={session.isRunning ?? false}
+                    hasUnread={session.hasUnread ?? false}
+                    onSelect={onSelectSession}
                     onRename={onRenameChat}
                     onArchive={onArchiveChat}
                   />

@@ -103,7 +103,7 @@ export function useChat(
       store.setChatState(sessionId, "thinking");
       store.setError(sessionId, null);
 
-      // Immediately set the tab/sidebar title from the user's message when
+      // Immediately set the session/sidebar title from the user's message when
       // the session still has the default placeholder.  This gives instant
       // feedback instead of waiting for acp:done or acp:session_info.
       // A better backend-generated title will overwrite this if it arrives

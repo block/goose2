@@ -11,8 +11,7 @@ interface NewChatRequest {
 
 interface FindReusableNewChatSessionArgs {
   sessions: ChatSession[];
-  activeTabId: string | null;
-  openTabIds: string[];
+  activeSessionId: string | null;
   messagesBySession: Record<string, Message[]>;
   request: NewChatRequest;
 }
@@ -43,8 +42,7 @@ function isReusableNewChatSession(
 
 export function findReusableNewChatSession({
   sessions,
-  activeTabId,
-  openTabIds,
+  activeSessionId,
   messagesBySession,
   request,
 }: FindReusableNewChatSessionArgs): ChatSession | undefined {
@@ -52,10 +50,9 @@ export function findReusableNewChatSession({
     return undefined;
   }
 
-  const openTabIdSet = new Set(openTabIds);
   const matchingSessions = sessions.filter(
     (session) =>
-      (session.id === activeTabId || openTabIdSet.has(session.id)) &&
+      session.id === activeSessionId &&
       isMatchingContext(session, request) &&
       isReusableNewChatSession(session, messagesBySession[session.id]),
   );
@@ -65,7 +62,7 @@ export function findReusableNewChatSession({
   }
 
   return (
-    matchingSessions.find((session) => session.id === activeTabId) ??
+    matchingSessions.find((session) => session.id === activeSessionId) ??
     matchingSessions.sort(
       (a, b) =>
         new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),

@@ -5,14 +5,12 @@ import {
   archiveSession as apiArchiveSession,
   unarchiveSession as apiUnarchiveSession,
   updateSession as apiUpdateSession,
-  saveUiState as apiSaveUiState,
-  loadUiState as apiLoadUiState,
 } from "@/shared/api/chat";
 import type { Session } from "@/shared/types/chat";
 
 const SESSION_CACHE_STORAGE_KEY = "goose:chat-sessions";
 
-// Extended session metadata for tab management
+// Extended session metadata used by the frontend session list
 export interface ChatSession {
   id: string; // === sessionId
   title: string;
@@ -29,8 +27,7 @@ export interface ChatSession {
 
 interface ChatSessionStoreState {
   sessions: ChatSession[];
-  openTabIds: string[]; // ordered list of session IDs shown as tabs
-  activeTabId: string | null;
+  activeSessionId: string | null;
   isLoading: boolean;
 }
 
@@ -48,15 +45,7 @@ interface ChatSessionStoreActions {
   archiveSession: (id: string) => Promise<void>;
   unarchiveSession: (id: string) => Promise<void>;
 
-  // Tab management
-  openTab: (sessionId: string) => void;
-  closeTab: (sessionId: string) => void;
-  reorderTabs: (tabIds: string[]) => void;
-  setActiveTab: (sessionId: string | null) => void;
-
-  // Persistence (stubs for Phase 2b)
-  persistTabState: () => void;
-  loadTabState: () => Promise<boolean>;
+  setActiveSession: (sessionId: string | null) => void;
 
   // Helpers
   getSession: (id: string) => ChatSession | undefined;
@@ -64,10 +53,6 @@ interface ChatSessionStoreActions {
 }
 
 export type ChatSessionStore = ChatSessionStoreState & ChatSessionStoreActions;
-
-function tabIdsMatch(a: string[], b: string[]): boolean {
-  return a.length === b.length && a.every((id, index) => id === b[index]);
-}
 
 function loadCachedSessions(): ChatSession[] {
   if (typeof window === "undefined") return [];
@@ -112,8 +97,7 @@ function sessionToChatSession(session: Session): ChatSession {
 export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
   // State
   sessions: loadCachedSessions(),
-  openTabIds: [],
-  activeTabId: null,
+  activeSessionId: null,
   isLoading: false,
 
   // Session lifecycle
@@ -194,21 +178,13 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
   },
 
   archiveSession: async (id) => {
-    const { openTabIds, activeTabId } = get();
-
-    // Remove from open tabs immediately for responsive UI
+    const previousActiveSessionId = get().activeSessionId;
     set((state) => {
-      const newOpenTabIds = state.openTabIds.filter((tabId) => tabId !== id);
-      const newActiveTabId =
-        state.activeTabId === id
-          ? (newOpenTabIds[newOpenTabIds.length - 1] ?? null)
-          : state.activeTabId;
       return {
-        openTabIds: newOpenTabIds,
-        activeTabId: newActiveTabId,
+        activeSessionId:
+          state.activeSessionId === id ? null : state.activeSessionId,
       };
     });
-    get().persistTabState();
 
     // Archive on backend — update local state on success
     try {
@@ -221,10 +197,8 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
       persistSessions(nextSessions);
     } catch (err) {
       set({
-        openTabIds,
-        activeTabId,
+        activeSessionId: previousActiveSessionId,
       });
-      get().persistTabState();
       console.error("Failed to archive session:", err);
       throw err;
     }
@@ -240,106 +214,17 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     }
   },
 
-  // Tab management
-  openTab: (sessionId) => {
-    set((state) => {
-      // Don't add duplicate tabs
-      if (state.openTabIds.includes(sessionId)) {
-        return { activeTabId: sessionId };
-      }
-      return {
-        openTabIds: [...state.openTabIds, sessionId],
-        activeTabId: sessionId,
-      };
-    });
-    get().persistTabState();
-  },
-
-  closeTab: (sessionId) => {
-    set((state) => {
-      const newOpenTabIds = state.openTabIds.filter((id) => id !== sessionId);
-      let newActiveTabId = state.activeTabId;
-      if (state.activeTabId === sessionId) {
-        // Activate the previous tab, or the next one, or null
-        const closedIndex = state.openTabIds.indexOf(sessionId);
-        newActiveTabId =
-          newOpenTabIds[Math.min(closedIndex, newOpenTabIds.length - 1)] ??
-          null;
-      }
-      return {
-        openTabIds: newOpenTabIds,
-        activeTabId: newActiveTabId,
-      };
-    });
-    get().persistTabState();
-  },
-
-  reorderTabs: (tabIds) => {
-    set({ openTabIds: tabIds });
-    get().persistTabState();
-  },
-
-  setActiveTab: (sessionId) => {
-    if (get().activeTabId === sessionId) return;
-    set({ activeTabId: sessionId });
-    get().persistTabState();
-  },
-
-  // Persistence
-  persistTabState: () => {
-    const { openTabIds, activeTabId } = get();
-    // personaPerSession kept for backward compat with ui_state.json but
-    // persona is now persisted on the session itself via update_session.
-    apiSaveUiState(openTabIds, activeTabId, {}).catch((err) => {
-      console.error("Failed to persist tab state:", err);
-    });
-  },
-
-  loadTabState: async () => {
-    const baselineOpenTabIds = get().openTabIds;
-    const baselineActiveTabId = get().activeTabId;
-    try {
-      const { openTabIds, activeTabId } = await apiLoadUiState();
-      const {
-        sessions,
-        openTabIds: currentOpenTabIds,
-        activeTabId: currentActiveTabId,
-      } = get();
-
-      const userChangedTabs =
-        currentActiveTabId !== baselineActiveTabId ||
-        !tabIdsMatch(currentOpenTabIds, baselineOpenTabIds);
-
-      if (userChangedTabs) {
-        return false;
-      }
-
-      const sessionIds = new Set(sessions.map((s) => s.id));
-
-      // Filter to only tabs whose sessions still exist
-      const validTabIds = openTabIds.filter((id) => sessionIds.has(id));
-      const validActiveTabId =
-        activeTabId && sessionIds.has(activeTabId)
-          ? activeTabId
-          : (validTabIds[0] ?? null);
-
-      set({
-        openTabIds: validTabIds,
-        activeTabId: validActiveTabId,
-      });
-      return true;
-    } catch (err) {
-      console.error("Failed to load tab state:", err);
-      return false;
-    }
+  setActiveSession: (sessionId) => {
+    if (get().activeSessionId === sessionId) return;
+    set({ activeSessionId: sessionId });
   },
 
   // Helpers
   getSession: (id) => get().sessions.find((s) => s.id === id),
 
   getActiveSession: () => {
-    const { activeTabId, sessions } = get();
-    if (!activeTabId) return null;
-    return sessions.find((s) => s.id === activeTabId) ?? null;
+    const { activeSessionId, sessions } = get();
+    if (!activeSessionId) return null;
+    return sessions.find((s) => s.id === activeSessionId) ?? null;
   },
 }));

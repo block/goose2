@@ -109,7 +109,8 @@ export function useAcpStream(enabled: boolean): void {
         store.setStreamingMessageId(event.payload.sessionId, null);
         store.setChatState(event.payload.sessionId, "idle");
         if (
-          useChatSessionStore.getState().activeTabId !== event.payload.sessionId
+          useChatSessionStore.getState().activeSessionId !==
+          event.payload.sessionId
         ) {
           store.markSessionUnread(event.payload.sessionId);
         }

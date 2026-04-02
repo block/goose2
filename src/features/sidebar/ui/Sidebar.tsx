@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   BookOpen,
   Bot,
@@ -9,7 +9,6 @@ import {
   User,
 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
-import { GooseIcon } from "@/shared/ui/icons/GooseIcon";
 import type { AppView } from "@/app/AppShell";
 import type { ProjectInfo } from "@/features/projects/api/projects";
 import { useChatStore } from "@/features/chat/stores/chatStore";
@@ -28,14 +27,14 @@ interface SidebarProps {
   onCreateProject?: () => void;
   onEditProject?: (projectId: string) => void;
   onArchiveProject?: (projectId: string) => void;
-  onArchiveChat?: (tabId: string) => void;
-  onRenameChat?: (tabId: string, nextTitle: string) => void;
+  onArchiveChat?: (sessionId: string) => void;
+  onRenameChat?: (sessionId: string, nextTitle: string) => void;
   onNavigate?: (view: AppView) => void;
-  onSelectTab?: (tabId: string) => void;
+  onSelectSession?: (sessionId: string) => void;
   activeView?: AppView;
-  activeTabId?: string | null;
+  activeSessionId?: string | null;
   className?: string;
-  // Project & tab data
+  // Project & session data
   projects: ProjectInfo[];
 }
 
@@ -62,9 +61,9 @@ export function Sidebar({
   onArchiveChat,
   onRenameChat,
   onNavigate,
-  onSelectTab,
+  onSelectSession,
   activeView,
-  activeTabId,
+  activeSessionId,
   className,
   projects,
 }: SidebarProps) {
@@ -84,10 +83,8 @@ export function Sidebar({
     }
   });
 
-  // Read all sessions and open tab IDs from the store
   const chatStore = useChatStore();
-  const { sessions, openTabIds } = useChatSessionStore();
-  const openTabIdSet = useMemo(() => new Set(openTabIds), [openTabIds]);
+  const { sessions } = useChatSessionStore();
 
   useEffect(() => {
     if (collapsed) {
@@ -106,13 +103,12 @@ export function Sidebar({
 
   const MAX_RECENTS = 20;
 
-  const projectTabs = useMemo(() => {
+  const projectSessions = (() => {
     type SessionItem = {
       id: string;
       title: string;
       sessionId: string;
       projectId?: string;
-      isOpenTab: boolean;
       updatedAt: string;
       isRunning: boolean;
       hasUnread: boolean;
@@ -126,7 +122,6 @@ export function Sidebar({
         title: session.title,
         sessionId: session.id,
         projectId: session.projectId ?? undefined,
-        isOpenTab: openTabIdSet.has(session.id),
         updatedAt: session.updatedAt,
         isRunning: isSessionRunning(runtime.chatState),
         hasUnread: runtime.hasUnread,
@@ -145,12 +140,12 @@ export function Sidebar({
     );
     const limitedStandalone = standalone.slice(0, MAX_RECENTS);
     return { byProject, standalone: limitedStandalone };
-  }, [chatStore, sessions, openTabIdSet]);
+  })();
 
-  // Auto-expand the project containing the active tab
+  // Auto-expand the project containing the active session
   useEffect(() => {
-    if (!activeTabId) return;
-    const activeSession = sessions.find((s) => s.id === activeTabId);
+    if (!activeSessionId) return;
+    const activeSession = sessions.find((s) => s.id === activeSessionId);
     const projectId = activeSession?.projectId;
     if (projectId) {
       setExpandedProjects((prev) => {
@@ -158,7 +153,7 @@ export function Sidebar({
         return { ...prev, [projectId]: true };
       });
     }
-  }, [activeTabId, sessions]);
+  }, [activeSessionId, sessions]);
 
   useEffect(() => {
     try {
@@ -205,18 +200,9 @@ export function Sidebar({
       <div className="flex flex-col h-full">
         {/* Header */}
         <div
-          className="flex items-center justify-between px-3 py-3 border-b border-border-secondary flex-shrink-0"
+          className="flex items-center justify-end px-3 py-3 border-b border-border-secondary flex-shrink-0"
           data-tauri-drag-region
         >
-          <button
-            type="button"
-            onClick={() => onNavigate?.("home")}
-            className="hover:opacity-70 transition-opacity flex-shrink-0"
-            title="Home"
-          >
-            <GooseIcon className="w-[18px] h-[18px]" />
-          </button>
-
           <button
             type="button"
             onClick={onCollapse}
@@ -374,15 +360,15 @@ export function Sidebar({
           {/* Projects + Chats section */}
           <SidebarProjectsSection
             projects={projects}
-            projectTabs={projectTabs}
+            projectSessions={projectSessions}
             expandedProjects={expandedProjects}
             toggleProject={toggleProject}
             collapsed={collapsed}
             labelTransition={labelTransition}
             labelVisible={labelVisible}
-            activeTabId={activeTabId}
+            activeSessionId={activeSessionId}
             onNavigate={onNavigate}
-            onSelectTab={onSelectTab}
+            onSelectSession={onSelectSession}
             onNewChatInProject={onNewChatInProject}
             onCreateProject={onCreateProject}
             onEditProject={onEditProject}

@@ -13,7 +13,6 @@ describe("SidebarChatRow", () => {
         id="session-1"
         title="Original Title"
         isActive={false}
-        isOpen={false}
         onRename={onRename}
       />,
     );
@@ -36,7 +35,6 @@ describe("SidebarChatRow", () => {
         id="session-1"
         title="Original Title"
         isActive={false}
-        isOpen={false}
         onRename={onRename}
       />,
     );
@@ -63,7 +61,6 @@ describe("SidebarChatRow", () => {
         id="session-1"
         title="Same Title"
         isActive={false}
-        isOpen={false}
         onRename={onRename}
       />,
     );
@@ -90,7 +87,6 @@ describe("SidebarChatRow", () => {
         id="session-1"
         title="Busy Chat"
         isActive={false}
-        isOpen
         isRunning
       />,
     );
@@ -104,7 +100,6 @@ describe("SidebarChatRow", () => {
         id="session-1"
         title="Unread Chat"
         isActive={false}
-        isOpen
         hasUnread
       />,
     );
