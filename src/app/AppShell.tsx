@@ -10,6 +10,7 @@ import { CreateProjectDialog } from "@/features/projects/ui/CreateProjectDialog"
 import { archiveProject } from "@/features/projects/api/projects";
 import type { ProjectInfo } from "@/features/projects/api/projects";
 import { SettingsModal } from "@/features/settings/ui/SettingsModal";
+import { TopBar } from "./ui/TopBar";
 import { useChatStore } from "@/features/chat/stores/chatStore";
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
 import { useAcpStream } from "@/features/chat/hooks/useAcpStream";
@@ -389,6 +390,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
+      <TopBar onHomeClick={() => handleNavigate("home")} />
+
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <div
           className="flex-shrink-0 h-full py-3 pl-3"

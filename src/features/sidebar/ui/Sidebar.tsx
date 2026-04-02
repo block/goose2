@@ -9,7 +9,6 @@ import {
   User,
 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
-import { GooseIcon } from "@/shared/ui/icons/GooseIcon";
 import type { AppView } from "@/app/AppShell";
 import type { ProjectInfo } from "@/features/projects/api/projects";
 import { useChatStore } from "@/features/chat/stores/chatStore";
@@ -201,18 +200,9 @@ export function Sidebar({
       <div className="flex flex-col h-full">
         {/* Header */}
         <div
-          className="flex items-center justify-between px-3 py-3 border-b border-border-secondary flex-shrink-0"
+          className="flex items-center justify-end px-3 py-3 border-b border-border-secondary flex-shrink-0"
           data-tauri-drag-region
         >
-          <button
-            type="button"
-            onClick={() => onNavigate?.("home")}
-            className="hover:opacity-70 transition-opacity flex-shrink-0"
-            title="Home"
-          >
-            <GooseIcon className="w-[18px] h-[18px]" />
-          </button>
-
           <button
             type="button"
             onClick={onCollapse}
