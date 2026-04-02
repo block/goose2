@@ -18,8 +18,7 @@ const buttonVariants = cva(
         secondary:
           "bg-background-secondary text-foreground shadow-sm hover:bg-background-secondary/80",
         ghost: "hover:bg-background-secondary hover:text-foreground",
-        "ghost-subtle":
-          "text-foreground-secondary hover:text-foreground",
+        "ghost-subtle": "text-foreground-secondary hover:text-foreground",
         toolbar:
           "justify-start bg-transparent font-normal text-foreground-secondary shadow-none hover:bg-background-secondary hover:text-foreground active:bg-background-secondary active:text-foreground focus-visible:ring-0 data-[state=open]:bg-background-secondary data-[state=open]:text-foreground aria-expanded:bg-background-secondary aria-expanded:text-foreground",
         link: "text-brand underline-offset-4 hover:underline",
