@@ -118,13 +118,18 @@ export function ToolCallCard({
   const displayPath = (candidate: ArtifactPathCandidate): string =>
     candidate.rawPath || candidate.resolvedPath;
 
-  const openCandidate = async (candidate: ArtifactPathCandidate) => {
-    const orderedCandidates = [
-      candidate,
-      ...display.secondaryCandidates.filter(
-        (secondaryCandidate) => secondaryCandidate.id !== candidate.id,
-      ),
-    ];
+  const openCandidate = async (
+    candidate: ArtifactPathCandidate,
+    options?: { allowFallback?: boolean },
+  ) => {
+    const orderedCandidates = options?.allowFallback
+      ? [
+          candidate,
+          ...display.secondaryCandidates.filter(
+            (secondaryCandidate) => secondaryCandidate.id !== candidate.id,
+          ),
+        ]
+      : [candidate];
 
     try {
       setOpenError(null);
@@ -205,7 +210,9 @@ export function ToolCallCard({
             type="button"
             onClick={() => {
               if (!display.primaryCandidate) return;
-              void openCandidate(display.primaryCandidate);
+              void openCandidate(display.primaryCandidate, {
+                allowFallback: true,
+              });
             }}
             className={cn(
               "inline-flex max-w-full items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs transition-colors",
@@ -258,7 +265,11 @@ export function ToolCallCard({
                     <div key={candidate.id} className="space-y-0.5">
                       <button
                         type="button"
-                        onClick={() => void openCandidate(candidate)}
+                        onClick={() =>
+                          void openCandidate(candidate, {
+                            allowFallback: false,
+                          })
+                        }
                         className={cn(
                           "inline-flex max-w-full items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] transition-colors",
                           candidate.allowed

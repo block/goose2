@@ -137,6 +137,25 @@ describe("artifactPathPolicy", () => {
     expect(ranking.primaryCandidate?.blockedReason).toBeNull();
   });
 
+  it("keeps write arg-key paths outside default roots blocked until a result confirms them", () => {
+    const candidates = extractToolCallCandidates(
+      {
+        toolCallId: "write-1",
+        toolName: "write_file",
+        args: { path: "/Users/test/Desktop/coffee_shop_inventory.csv" },
+        toolCallIndex: 0,
+      },
+      ["/Users/test/.goose/artifacts"],
+    );
+
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0].resolvedPath).toBe(
+      "/Users/test/Desktop/coffee_shop_inventory.csv",
+    );
+    expect(candidates[0].allowed).toBe(false);
+    expect(candidates[0].blockedReason).toContain("outside allowed");
+  });
+
   it("keeps write-origin candidates and drops noisy non-write regex candidates", () => {
     const ranking = rankMessageToolArtifacts(
       [

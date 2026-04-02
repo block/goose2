@@ -368,6 +368,61 @@ describe("ToolCallCard", () => {
     expect(screen.getAllByText("Open file")).toHaveLength(2);
   });
 
+  it("keeps a secondary open action scoped to the clicked candidate", async () => {
+    const user = userEvent.setup();
+    pathExistsMock.mockImplementation(async (path: string) => {
+      return path === "/Users/test/project-a/output/appendix.md";
+    });
+    const writeArgs = {
+      paths: [
+        "/Users/test/project-a/output/final_report.md",
+        "/Users/test/project-a/output/missing_notes.md",
+        "/Users/test/project-a/output/appendix.md",
+      ],
+    };
+    const messages: Message[] = [
+      {
+        id: "assistant-1",
+        role: "assistant",
+        created: Date.now(),
+        content: [
+          {
+            type: "toolRequest",
+            id: "tool-write",
+            name: "write_file",
+            arguments: writeArgs,
+            status: "completed",
+          },
+        ],
+      },
+    ];
+
+    render(
+      <ArtifactPolicyProvider
+        messages={messages}
+        allowedRoots={["/Users/test/project-a", "/Users/test/.goose/artifacts"]}
+      >
+        <ToolCallCard
+          name="write_file"
+          arguments={writeArgs}
+          status="completed"
+        />
+      </ArtifactPolicyProvider>,
+    );
+
+    await user.click(screen.getByText("More outputs (2)"));
+    await user.click(
+      screen.getByTitle("/Users/test/project-a/output/missing_notes.md"),
+    );
+
+    expect(openPathMock).not.toHaveBeenCalled();
+    expect(
+      screen.getByText(
+        "File not found: /Users/test/project-a/output/missing_notes.md",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("keeps non-write candidates blocked outside allowed roots", () => {
     const readArgs = { path: "/Users/test/outside/final_report.md" };
     const messages: Message[] = [

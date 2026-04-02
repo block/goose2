@@ -301,8 +301,11 @@ export function evaluatePathScope(
 
 function shouldAllowOutsideRootsForToolCandidate(
   input: ToolCallArtifactInput,
+  candidate: {
+    fromResultText: boolean;
+  },
 ): boolean {
-  return isWriteOrientedTool(input.toolName);
+  return isWriteOrientedTool(input.toolName) && candidate.fromResultText;
 }
 
 function collectArgPathCandidates(args: Record<string, unknown>): string[] {
@@ -360,6 +363,7 @@ export function extractToolCallCandidates(
     rawPath: string;
     source: ArtifactCandidateSource;
     confidence: ArtifactCandidateConfidence;
+    fromResultText: boolean;
   }> = [];
 
   for (const rawPath of collectArgPathCandidates(input.args)) {
@@ -367,6 +371,7 @@ export function extractToolCallCandidates(
       rawPath,
       source: "arg_key",
       confidence: "high",
+      fromResultText: false,
     });
   }
 
@@ -387,6 +392,7 @@ export function extractToolCallCandidates(
       rawPath,
       source: "result_regex",
       confidence: "low",
+      fromResultText: false,
     });
   }
 
@@ -400,13 +406,17 @@ export function extractToolCallCandidates(
         rawPath,
         source: "result_regex",
         confidence: "low",
+        fromResultText: true,
       });
     }
   }
 
   return rawCandidates.map((raw, idx) => {
     const resolvedPath = resolvePathCandidate(raw.rawPath, allowedRoots);
-    const allowOutsideRoots = shouldAllowOutsideRootsForToolCandidate(input);
+    const allowOutsideRoots = shouldAllowOutsideRootsForToolCandidate(
+      input,
+      raw,
+    );
     const { allowed, blockedReason } = evaluatePathScope(
       resolvedPath,
       allowedRoots,

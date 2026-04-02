@@ -2,6 +2,7 @@ type ToolNamePathCandidate = {
   rawPath: string;
   source: "arg_key" | "result_regex";
   confidence: "high" | "low";
+  fromResultText: boolean;
 };
 
 const COMMAND_ARG_KEYS = ["cmd", "command"] as const;
@@ -95,6 +96,7 @@ export function extractToolNamePathCandidates(
           rawPath: cleaned,
           source: "arg_key",
           confidence: "high",
+          fromResultText: false,
         });
       }
     }
@@ -109,6 +111,7 @@ export function extractToolNamePathCandidates(
       rawPath,
       source: "result_regex",
       confidence: "low",
+      fromResultText: false,
     });
   }
 
