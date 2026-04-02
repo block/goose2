@@ -2,6 +2,7 @@ import { Home, Plus, X } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
 import type { Tab } from "@/features/tabs/types";
+import { SessionActivityIndicator } from "@/shared/ui/SessionActivityIndicator";
 
 interface TabBarProps {
   tabs: Tab[];
@@ -54,13 +55,17 @@ export function TabBar({
               }
             }}
             className={cn(
-              "group flex h-7 cursor-pointer items-center gap-1.5 rounded-md pl-3 pr-1.5 text-xs transition-colors",
+              "group flex h-7 cursor-pointer select-none items-center gap-1.5 rounded-md pl-3 pr-1.5 text-xs transition-colors",
               tab.id === activeTabId
                 ? "bg-muted text-foreground"
                 : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
             )}
           >
             <span className="truncate">{tab.title}</span>
+            <SessionActivityIndicator
+              isRunning={tab.isRunning}
+              hasUnread={tab.hasUnread}
+            />
             {/* biome-ignore lint/a11y/useKeyWithClickEvents: close is a secondary action inside an interactive tab, keyboard users close tabs via other means */}
             {/* biome-ignore lint/a11y/noStaticElementInteractions: cannot use button inside a tab element, span with click is intentional */}
             <span

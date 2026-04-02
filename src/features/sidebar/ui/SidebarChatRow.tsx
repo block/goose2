@@ -3,12 +3,19 @@ import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
+import { SessionActivityIndicator } from "@/shared/ui/SessionActivityIndicator";
+
+const OPEN_CHAT_ROW_CLASS = "text-foreground group-hover:text-foreground";
+const INACTIVE_CHAT_ROW_CLASS = "text-foreground group-hover:text-foreground";
+const ACTIVE_CHAT_ROW_CLASS = "bg-accent text-foreground";
 
 interface SidebarChatRowProps {
   id: string;
   title: string;
   isActive: boolean;
   isOpen: boolean;
+  isRunning?: boolean;
+  hasUnread?: boolean;
   className?: string;
   onSelect?: (id: string) => void;
   onRename?: (id: string, nextTitle: string) => void;
@@ -20,6 +27,8 @@ export function SidebarChatRow({
   title,
   isActive,
   isOpen,
+  isRunning = false,
+  hasUnread = false,
   className,
   onSelect,
   onRename,
@@ -73,7 +82,7 @@ export function SidebarChatRow({
 
   if (editing) {
     return (
-      <div className={cn("flex items-center group", className)}>
+      <div className={cn("flex items-center group rounded-md", className)}>
         <div className="flex items-center flex-1 min-w-0 py-1.5 rounded-md text-[13px] px-2.5">
           <Input
             ref={inputRef}
@@ -103,7 +112,13 @@ export function SidebarChatRow({
   }
 
   return (
-    <div className={cn("flex items-center group", className)}>
+    <div
+      className={cn(
+        "flex items-center group rounded-md transition-colors duration-150",
+        isActive ? "bg-accent" : "hover:bg-accent/50",
+        className,
+      )}
+    >
       <Button
         type="button"
         variant="ghost"
@@ -116,15 +131,16 @@ export function SidebarChatRow({
         }}
         title="Double-click to rename"
         className={cn(
-          "flex-1 min-w-0 justify-start rounded-md px-2.5 py-1.5 text-[13px]",
+          "flex-1 min-w-0 justify-start gap-2 rounded-md px-2.5 py-1.5 text-[13px] bg-transparent hover:bg-transparent",
           isActive
-            ? "bg-accent/70 text-foreground font-medium hover:bg-accent/70"
+            ? ACTIVE_CHAT_ROW_CLASS
             : isOpen
-              ? "text-foreground hover:bg-accent/50"
-              : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
+              ? OPEN_CHAT_ROW_CLASS
+              : INACTIVE_CHAT_ROW_CLASS,
         )}
       >
         <span className="flex-1 min-w-0 truncate">{title}</span>
+        <SessionActivityIndicator isRunning={isRunning} hasUnread={hasUnread} />
       </Button>
 
       <div ref={menuRef} className="relative shrink-0">

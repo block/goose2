@@ -1,4 +1,5 @@
 use serde::Serialize;
+use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::{AppHandle, State};
 
@@ -12,6 +13,13 @@ use acp_client::discover_providers;
 pub struct AcpProviderResponse {
     id: String,
     label: String,
+}
+
+fn default_artifacts_working_dir() -> PathBuf {
+    if let Some(home_dir) = dirs::home_dir() {
+        return home_dir.join(".goose").join("artifacts");
+    }
+    PathBuf::from("/tmp").join(".goose").join("artifacts")
 }
 
 /// Discover all locally available ACP providers.
@@ -43,12 +51,20 @@ pub async fn acp_send_message(
     working_dir: Option<String>,
     persona_id: Option<String>,
     persona_name: Option<String>,
+    images: Vec<(String, String)>,
 ) -> Result<(), String> {
     let working_dir = working_dir
         .map(|dir| dir.trim().to_string())
         .filter(|dir| !dir.is_empty())
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|| dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("/tmp")));
+        .map(PathBuf::from)
+        .unwrap_or_else(default_artifacts_working_dir);
+
+    std::fs::create_dir_all(&working_dir).map_err(|error| {
+        format!(
+            "Failed to create working directory '{}': {error}",
+            working_dir.display()
+        )
+    })?;
 
     AcpService::send_prompt(
         app_handle,
@@ -61,6 +77,7 @@ pub async fn acp_send_message(
         system_prompt,
         persona_id,
         persona_name,
+        images,
     )
     .await
 }

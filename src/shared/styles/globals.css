@@ -73,6 +73,7 @@
 
   /* Semantic text */
   --text-default: var(--color-gray-900);
+  --text-subtle: var(--color-gray-600);
   --text-muted: var(--color-gray-500);
   --text-alt: var(--color-gray-600);
   --text-inverse: var(--color-white);
@@ -254,6 +255,7 @@
 
   /* semantic text */
   --text-default: var(--color-white);
+  --text-subtle: var(--color-gray-400);
   --text-muted: var(--color-gray-500);
   --text-alt: var(--color-gray-500);
   --text-inverse: var(--color-black);
@@ -302,6 +304,7 @@
   /* shadcn/ui standard Tailwind color mappings */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-foreground-subtle: var(--text-subtle);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
@@ -348,6 +351,7 @@
 
   /* semantic text */
   --color-text-default: var(--text-default);
+  --color-text-subtle: var(--text-subtle);
   --color-text-muted: var(--text-muted);
   --color-text-alt: var(--text-alt);
   --color-text-inverse: var(--text-inverse);

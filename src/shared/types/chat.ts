@@ -31,6 +31,22 @@ export const INITIAL_TOKEN_STATE: TokenState = {
   contextLimit: 0,
 };
 
+export interface SessionChatRuntime {
+  chatState: ChatState;
+  tokenState: TokenState;
+  streamingMessageId: string | null;
+  error: string | null;
+  hasUnread: boolean;
+}
+
+export const INITIAL_SESSION_CHAT_RUNTIME: SessionChatRuntime = {
+  chatState: "idle",
+  tokenState: INITIAL_TOKEN_STATE,
+  streamingMessageId: null,
+  error: null,
+  hasUnread: false,
+};
+
 // Session
 export interface Session {
   id: string;
@@ -98,8 +114,8 @@ export interface ChatContext {
   sessionId: string;
   agent: Agent;
   messages: Message[];
-  chatState: ChatState;
-  tokenState: TokenState;
-  streamingMessageId: string | null;
-  error: string | null;
+  chatState: SessionChatRuntime["chatState"];
+  tokenState: SessionChatRuntime["tokenState"];
+  streamingMessageId: SessionChatRuntime["streamingMessageId"];
+  error: SessionChatRuntime["error"];
 }

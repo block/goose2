@@ -1,5 +1,6 @@
 import { useCallback, useRef } from "react";
 import { useChatStore } from "../stores/chatStore";
+import { useChatSessionStore } from "../stores/chatSessionStore";
 import { createUserMessage } from "@/shared/types/messages";
 import type { Message } from "@/shared/types/messages";
 import type { ChatState, TokenState } from "@/shared/types/chat";
@@ -20,14 +21,22 @@ export function useChat(
 ) {
   const store = useChatStore();
   const abortRef = useRef<AbortController | null>(null);
-  const activeStreamingPersonaIdRef = useRef<string | null>(null);
 
   const messages = store.messagesBySession[sessionId] ?? [];
-  const chatState = store.chatState;
-  const tokenState = store.tokenState;
-  const error = store.error;
-  const streamingMessageId = store.streamingMessageId;
+  const { chatState, tokenState, error, streamingMessageId } =
+    store.getSessionRuntime(sessionId);
   const isStreaming = streamingMessageId !== null;
+
+  const getStreamingPersonaId = useCallback(() => {
+    if (!streamingMessageId) {
+      return null;
+    }
+
+    return (
+      messages.find((message) => message.id === streamingMessageId)?.metadata
+        ?.personaId ?? null
+    );
+  }, [messages, streamingMessageId]);
 
   const resolvePersonaInfo = useCallback(
     (overridePersonaId?: string, overridePersonaName?: string) => {
@@ -48,8 +57,16 @@ export function useChat(
   );
 
   const sendMessage = useCallback(
-    async (text: string, overridePersona?: { id: string; name?: string }) => {
-      if (!text.trim() || chatState === "streaming" || chatState === "thinking")
+    async (
+      text: string,
+      overridePersona?: { id: string; name?: string },
+      images?: { base64: string; mimeType: string }[],
+    ) => {
+      if (
+        (!text.trim() && (!images || images.length === 0)) ||
+        chatState === "streaming" ||
+        chatState === "thinking"
+      )
         return;
 
       const effectivePersonaInfo = resolvePersonaInfo(
@@ -69,9 +86,35 @@ export function useChat(
           targetPersonaName: effectivePersonaInfo.name,
         };
       }
+      // Embed image content blocks into the user message for local display
+      if (images && images.length > 0) {
+        for (const img of images) {
+          userMessage.content.push({
+            type: "image",
+            source: {
+              type: "base64",
+              mediaType: img.mimeType,
+              data: img.base64,
+            },
+          });
+        }
+      }
       store.addMessage(sessionId, userMessage);
-      store.setChatState("thinking");
-      store.setError(null);
+      store.setChatState(sessionId, "thinking");
+      store.setError(sessionId, null);
+
+      // Immediately set the tab/sidebar title from the user's message when
+      // the session still has the default placeholder.  This gives instant
+      // feedback instead of waiting for acp:done or acp:session_info.
+      // A better backend-generated title will overwrite this if it arrives
+      // via the acp:session_info event.
+      const sessionStore = useChatSessionStore.getState();
+      const session = sessionStore.getSession(sessionId);
+      if (session && session.title === "New Chat") {
+        sessionStore.updateSession(sessionId, {
+          title: text.trim().slice(0, 40),
+        });
+      }
 
       // Create placeholder assistant message for streaming
       const assistantMessage: Message = {
@@ -87,11 +130,10 @@ export function useChat(
         },
       };
       store.addMessage(sessionId, assistantMessage);
-      store.setStreamingMessageId(assistantMessage.id);
+      store.setStreamingMessageId(sessionId, assistantMessage.id);
 
       const abort = new AbortController();
       abortRef.current = abort;
-      activeStreamingPersonaIdRef.current = effectivePersonaInfo?.id ?? null;
 
       try {
         const agent = useAgentStore.getState().getActiveAgent();
@@ -100,28 +142,33 @@ export function useChat(
           systemPromptOverride ?? agent?.systemPrompt ?? undefined;
 
         // Send via ACP — response streams back through Tauri events
-        // which are handled by useAcpStream in ChatView.
-        store.setChatState("streaming");
-        await acpSendMessage(sessionId, providerId, text, {
+        // which are handled by the global useAcpStream listener in AppShell.
+        store.setChatState(sessionId, "streaming");
+        // When images are present with no text, pass a single space so the ACP
+        // driver doesn't send an empty text content block that goose rejects.
+        const acpPrompt = text.trim() || (images?.length ? " " : text);
+        await acpSendMessage(sessionId, providerId, acpPrompt, {
           systemPrompt,
           workingDir: workingDirOverride,
           personaId: effectivePersonaInfo?.id,
           personaName: effectivePersonaInfo?.name,
+          images: images?.map(
+            (img) => [img.base64, img.mimeType] as [string, string],
+          ),
         });
         // Note: setChatState("idle") is handled by useAcpStream on "acp:done"
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") {
-          store.setChatState("idle");
+          store.setChatState(sessionId, "idle");
         } else {
           const errorMessage =
             err instanceof Error ? err.message : "Unknown error";
-          store.setError(errorMessage);
-          store.setChatState("idle");
-          store.setStreamingMessageId(null);
+          store.setError(sessionId, errorMessage);
+          store.setChatState(sessionId, "idle");
+          store.setStreamingMessageId(sessionId, null);
         }
       } finally {
         abortRef.current = null;
-        activeStreamingPersonaIdRef.current = null;
       }
     },
     [
@@ -137,15 +184,14 @@ export function useChat(
 
   const stopGeneration = useCallback(() => {
     abortRef.current?.abort();
-    const activePersonaId = activeStreamingPersonaIdRef.current;
-    store.setChatState("idle");
-    store.setStreamingMessageId(null);
-    activeStreamingPersonaIdRef.current = null;
+    const activePersonaId = getStreamingPersonaId();
+    store.setChatState(sessionId, "idle");
+    store.setStreamingMessageId(sessionId, null);
     // Cancel the backend ACP session to stop orphaned streaming events
     acpCancelSession(sessionId, activePersonaId ?? undefined).catch(() => {
       // Best-effort cancellation — ignore errors
     });
-  }, [store, sessionId]);
+  }, [getStreamingPersonaId, store, sessionId]);
 
   const retryLastMessage = useCallback(async () => {
     const sessionMessages = store.messagesBySession[sessionId] ?? [];
@@ -178,10 +224,9 @@ export function useChat(
 
   const clearChat = useCallback(() => {
     abortRef.current?.abort();
-    activeStreamingPersonaIdRef.current = null;
     store.clearMessages(sessionId);
-    store.setChatState("idle");
-    store.setStreamingMessageId(null);
+    store.setChatState(sessionId, "idle");
+    store.setStreamingMessageId(sessionId, null);
   }, [sessionId, store]);
 
   const stopStreaming = stopGeneration;

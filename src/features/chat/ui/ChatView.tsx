@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { MessageTimeline } from "./MessageTimeline";
-import { ChatInput } from "./ChatInput";
+import { ChatInput, type PastedImage } from "./ChatInput";
 import { LoadingGoose } from "./LoadingGoose";
 import { useChat } from "../hooks/useChat";
-import { useAcpStream } from "../hooks/useAcpStream";
 import { useChatStore } from "../stores/chatStore";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { useProviderSelection } from "@/features/agents/hooks/useProviderSelection";
@@ -16,6 +15,8 @@ import {
   getProjectFolderOption,
 } from "@/features/projects/lib/chatProjectContext";
 import { useAvatarSrc } from "@/shared/hooks/useAvatarSrc";
+import { getHomeDir } from "@/shared/api/system";
+import { ArtifactPolicyProvider } from "../hooks/ArtifactPolicyContext";
 
 interface ChatViewProps {
   sessionId?: string;
@@ -71,6 +72,9 @@ export function ChatView({
   const [fallbackProject, setFallbackProject] = useState<ProjectInfo | null>(
     null,
   );
+  const [homeArtifactsRoot, setHomeArtifactsRoot] = useState<string | null>(
+    null,
+  );
   const project = storedProject ?? fallbackProject;
   const availableProjects = useMemo(
     () =>
@@ -95,6 +99,17 @@ export function ChatView({
     () => getProjectFolderOption(project),
     [project],
   );
+  const effectiveWorkingDir =
+    projectFolders[0]?.path ?? homeArtifactsRoot ?? undefined;
+  const allowedArtifactRoots = useMemo(() => {
+    const roots = projectFolders
+      .map((folder) => folder.path?.trim())
+      .filter((path): path is string => Boolean(path));
+    if (homeArtifactsRoot) {
+      roots.push(homeArtifactsRoot);
+    }
+    return [...new Set(roots)];
+  }, [homeArtifactsRoot, projectFolders]);
   const projectSystemPrompt = useMemo(
     () => buildProjectSystemPrompt(project),
     [project],
@@ -130,6 +145,22 @@ export function ChatView({
     };
   }, [session?.projectId, storedProject]);
 
+  useEffect(() => {
+    let cancelled = false;
+    getHomeDir()
+      .then((homeDir) => {
+        if (cancelled) return;
+        const normalizedHome = homeDir.replace(/\\/g, "/").replace(/\/+$/, "");
+        setHomeArtifactsRoot(`${normalizedHome}/.goose/artifacts`);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setHomeArtifactsRoot(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const handleProviderChange = useCallback(
     (providerId: string) => {
       if (providerId === selectedProvider) {
@@ -208,6 +239,7 @@ export function ChatView({
   const {
     messages,
     chatState,
+    tokenState,
     sendMessage,
     stopStreaming,
     streamingMessageId,
@@ -216,20 +248,18 @@ export function ChatView({
     selectedProvider,
     effectiveSystemPrompt,
     personaInfo,
-    projectFolders[0]?.path,
+    effectiveWorkingDir,
   );
 
-  // Listen for ACP streaming events
-  useAcpStream(activeSessionId, true);
-
   // Ref for deferred sends after persona switch (Bug 1 fix: avoid stale system prompt)
-  const deferredSend = useRef<string | null>(null);
+  const deferredSend = useRef<{ text: string; images?: PastedImage[] } | null>(
+    null,
+  );
 
   // Wrap sendMessage to handle @ mentioned persona overrides
   const chatStore = useChatStore();
-  const tokenState = useChatStore((s) => s.tokenState);
   const handleSend = useCallback(
-    (text: string, personaId?: string) => {
+    (text: string, personaId?: string, images?: PastedImage[]) => {
       if (personaId && personaId !== selectedPersonaId) {
         const newPersona = personas.find((p) => p.id === personaId);
         if (newPersona) {
@@ -250,10 +280,10 @@ export function ChatView({
         }
         handlePersonaChange(personaId);
         // Defer the send until after persona state updates
-        deferredSend.current = text;
+        deferredSend.current = { text, images };
         return;
       }
-      sendMessage(text);
+      sendMessage(text, undefined, images);
     },
     [
       sendMessage,
@@ -268,9 +298,9 @@ export function ChatView({
   // Effect to send deferred message after persona switch completes
   useEffect(() => {
     if (deferredSend.current && selectedPersona) {
-      const text = deferredSend.current;
+      const { text, images } = deferredSend.current;
       deferredSend.current = null;
-      sendMessage(text);
+      sendMessage(text, undefined, images);
     }
   }, [sendMessage, selectedPersona]);
 
@@ -297,60 +327,65 @@ export function ChatView({
   }, []);
 
   return (
-    <div className="flex h-full flex-col">
-      <MessageTimeline
-        messages={messages}
-        streamingMessageId={streamingMessageId}
-        agentName={displayAgentName}
-        agentAvatarUrl={personaAvatarSrc ?? agentAvatarUrl}
-      />
-
-      {showIndicator && (
-        <LoadingGoose
+    <ArtifactPolicyProvider
+      messages={messages}
+      allowedRoots={allowedArtifactRoots}
+    >
+      <div className="flex h-full flex-col">
+        <MessageTimeline
+          messages={messages}
+          streamingMessageId={streamingMessageId}
           agentName={displayAgentName}
-          chatState={
-            chatState as "thinking" | "streaming" | "waiting" | "compacting"
-          }
+          agentAvatarUrl={personaAvatarSrc ?? agentAvatarUrl}
         />
-      )}
 
-      <ChatInput
-        onSend={handleSend}
-        onStop={stopStreaming}
-        isStreaming={isStreaming || chatState === "thinking"}
-        placeholder={`Message ${displayAgentName}...`}
-        // Personas
-        personas={personas}
-        selectedPersonaId={selectedPersonaId}
-        onPersonaChange={handlePersonaChange}
-        onCreatePersona={handleCreatePersona}
-        // Providers (secondary)
-        providers={providers}
-        providersLoading={providersLoading}
-        selectedProvider={selectedProvider}
-        onProviderChange={handleProviderChange}
-        selectedProjectId={session?.projectId ?? null}
-        availableProjects={availableProjects}
-        onProjectChange={handleProjectChange}
-        onCreateProject={(options) =>
-          onCreateProject?.({
-            onCreated: (projectId) => {
-              handleProjectChange(projectId);
-              options?.onCreated?.(projectId);
-            },
-          })
-        }
-        onCreateProjectFromFolder={(options) =>
-          onCreateProjectFromFolder?.({
-            onCreated: (projectId) => {
-              handleProjectChange(projectId);
-              options?.onCreated?.(projectId);
-            },
-          })
-        }
-        contextTokens={tokenState.accumulatedTotal}
-        contextLimit={tokenState.contextLimit}
-      />
-    </div>
+        {showIndicator && (
+          <LoadingGoose
+            agentName={displayAgentName}
+            chatState={
+              chatState as "thinking" | "streaming" | "waiting" | "compacting"
+            }
+          />
+        )}
+
+        <ChatInput
+          onSend={handleSend}
+          onStop={stopStreaming}
+          isStreaming={isStreaming || chatState === "thinking"}
+          placeholder={`Message ${displayAgentName}...`}
+          // Personas
+          personas={personas}
+          selectedPersonaId={selectedPersonaId}
+          onPersonaChange={handlePersonaChange}
+          onCreatePersona={handleCreatePersona}
+          // Providers (secondary)
+          providers={providers}
+          providersLoading={providersLoading}
+          selectedProvider={selectedProvider}
+          onProviderChange={handleProviderChange}
+          selectedProjectId={session?.projectId ?? null}
+          availableProjects={availableProjects}
+          onProjectChange={handleProjectChange}
+          onCreateProject={(options) =>
+            onCreateProject?.({
+              onCreated: (projectId) => {
+                handleProjectChange(projectId);
+                options?.onCreated?.(projectId);
+              },
+            })
+          }
+          onCreateProjectFromFolder={(options) =>
+            onCreateProjectFromFolder?.({
+              onCreated: (projectId) => {
+                handleProjectChange(projectId);
+                options?.onCreated?.(projectId);
+              },
+            })
+          }
+          contextTokens={tokenState.accumulatedTotal}
+          contextLimit={tokenState.contextLimit}
+        />
+      </div>
+    </ArtifactPolicyProvider>
   );
 }

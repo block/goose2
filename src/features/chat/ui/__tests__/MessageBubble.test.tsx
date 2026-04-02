@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MessageBubble } from "../MessageBubble";
 import type { Message } from "@/shared/types/messages";
 
@@ -201,10 +202,10 @@ describe("MessageBubble", () => {
     expect(screen.queryByText("Tool result")).not.toBeInTheDocument();
   });
 
-  it("renders thinking content as ThinkingBlock", () => {
+  it("renders thinking content as Reasoning block", () => {
     const msg = assistantMessage([{ type: "thinking", text: "deep thoughts" }]);
     render(<MessageBubble message={msg} />);
-    expect(screen.getByText(/thinking/i)).toBeInTheDocument();
+    expect(screen.getByText(/thought for/i)).toBeInTheDocument();
   });
 
   it("prefers the message persona name over the current agent name", () => {
@@ -230,5 +231,54 @@ describe("MessageBubble", () => {
     );
 
     expect(screen.getByText("Solo")).toBeInTheDocument();
+  });
+
+  it("collapses low-signal internal tool steps behind a toggle", async () => {
+    const user = userEvent.setup();
+    const msg = assistantMessage([
+      {
+        type: "toolRequest",
+        id: "tool-1",
+        name: "Create PDF about whales",
+        arguments: {},
+        status: "completed",
+      },
+      {
+        type: "toolRequest",
+        id: "tool-2",
+        name: "Write whales.pdf",
+        arguments: {},
+        status: "completed",
+      },
+      {
+        type: "toolRequest",
+        id: "tool-3",
+        name: "python3 create_whales.py",
+        arguments: {},
+        status: "completed",
+      },
+      {
+        type: "toolRequest",
+        id: "tool-4",
+        name: "ls -lh whales.pdf",
+        arguments: {},
+        status: "completed",
+      },
+    ]);
+
+    render(<MessageBubble message={msg} />);
+
+    expect(screen.getByText("Create PDF about whales")).toBeInTheDocument();
+    expect(screen.getByText("Write whales.pdf")).toBeInTheDocument();
+    expect(
+      screen.queryByText("python3 create_whales.py"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("ls -lh whales.pdf")).not.toBeInTheDocument();
+    expect(screen.getByText("Show internal steps (2)")).toBeInTheDocument();
+
+    await user.click(screen.getByText("Show internal steps (2)"));
+
+    expect(screen.getByText("python3 create_whales.py")).toBeInTheDocument();
+    expect(screen.getByText("ls -lh whales.pdf")).toBeInTheDocument();
   });
 });

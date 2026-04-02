@@ -13,7 +13,9 @@ import { Button } from "@/shared/ui/button";
 import { GooseIcon } from "@/shared/ui/icons/GooseIcon";
 import type { AppView } from "@/app/AppShell";
 import type { ProjectInfo } from "@/features/projects/api/projects";
+import { useChatStore } from "@/features/chat/stores/chatStore";
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
+import { isSessionRunning } from "@/features/chat/lib/sessionActivity";
 import { SidebarProjectsSection } from "./SidebarProjectsSection";
 
 interface SidebarProps {
@@ -43,6 +45,10 @@ const NAV_ITEMS: readonly { id: AppView; label: string; icon: typeof Bot }[] = [
   { id: "skills", label: "Skills", icon: BookOpen },
 ];
 
+const SIDEBAR_NAV_TEXT_CLASS =
+  "text-foreground-subtle hover:text-foreground hover:bg-accent/50";
+const EXPANDED_PROJECTS_STORAGE_KEY = "goose:sidebar:expanded-projects";
+
 export function Sidebar({
   collapsed,
   width = 240,
@@ -67,9 +73,20 @@ export function Sidebar({
   const prevCollapsed = useRef(collapsed);
   const [expandedProjects, setExpandedProjects] = useState<
     Record<string, boolean>
-  >({});
+  >(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const stored = window.localStorage.getItem(EXPANDED_PROJECTS_STORAGE_KEY);
+      if (!stored) return {};
+      const parsed = JSON.parse(stored);
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
+    }
+  });
 
   // Read all sessions and open tab IDs from the store
+  const chatStore = useChatStore();
   const { sessions, openTabIds } = useChatSessionStore();
   const openTabIdSet = useMemo(() => new Set(openTabIds), [openTabIds]);
 
@@ -98,10 +115,13 @@ export function Sidebar({
       projectId?: string;
       isOpenTab: boolean;
       updatedAt: string;
+      isRunning: boolean;
+      hasUnread: boolean;
     };
     const byProject: Record<string, SessionItem[]> = {};
     const standalone: SessionItem[] = [];
     for (const session of sessions) {
+      const runtime = chatStore.getSessionRuntime(session.id);
       const item: SessionItem = {
         id: session.id,
         title: session.title,
@@ -109,6 +129,8 @@ export function Sidebar({
         projectId: session.projectId ?? undefined,
         isOpenTab: openTabIdSet.has(session.id),
         updatedAt: session.updatedAt,
+        isRunning: isSessionRunning(runtime.chatState),
+        hasUnread: runtime.hasUnread,
       };
       if (session.projectId) {
         if (!byProject[session.projectId]) byProject[session.projectId] = [];
@@ -124,7 +146,7 @@ export function Sidebar({
     );
     const limitedStandalone = standalone.slice(0, MAX_RECENTS);
     return { byProject, standalone: limitedStandalone };
-  }, [sessions, openTabIdSet]);
+  }, [chatStore, sessions, openTabIdSet]);
 
   // Auto-expand the project containing the active tab
   useEffect(() => {
@@ -138,6 +160,32 @@ export function Sidebar({
       });
     }
   }, [activeTabId, sessions]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        EXPANDED_PROJECTS_STORAGE_KEY,
+        JSON.stringify(expandedProjects),
+      );
+    } catch {
+      // localStorage may be unavailable
+    }
+  }, [expandedProjects]);
+
+  useEffect(() => {
+    if (projects.length === 0) return;
+    const validProjectIds = new Set(projects.map((project) => project.id));
+    setExpandedProjects((prev) => {
+      const next = Object.fromEntries(
+        Object.entries(prev).filter(([projectId]) =>
+          validProjectIds.has(projectId),
+        ),
+      );
+      return Object.keys(next).length === Object.keys(prev).length
+        ? prev
+        : next;
+    });
+  }, [projects]);
 
   const toggleProject = (projectId: string) => {
     setExpandedProjects((prev) => ({
@@ -265,7 +313,8 @@ export function Sidebar({
               onClick={onNewChat}
               title={collapsed ? "New Chat" : undefined}
               className={cn(
-                "w-full rounded-md text-[13px] text-muted-foreground hover:text-foreground hover:bg-accent/50",
+                "w-full rounded-md text-[13px]",
+                SIDEBAR_NAV_TEXT_CLASS,
                 collapsed
                   ? "justify-center px-0 py-1.5"
                   : "justify-start gap-2.5 px-3 py-1.5",
@@ -285,7 +334,7 @@ export function Sidebar({
             </Button>
 
             {/* Nav items */}
-            {NAV_ITEMS.map((item, index) => {
+            {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const isActive = activeView === item.id;
               return (
@@ -303,13 +352,9 @@ export function Sidebar({
                       : "justify-start gap-2.5 px-3 py-1.5",
                     isActive
                       ? "bg-muted text-foreground hover:bg-muted"
-                      : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
+                      : SIDEBAR_NAV_TEXT_CLASS,
                   )}
                   aria-current={isActive ? "page" : undefined}
-                  style={{
-                    transitionDelay:
-                      !collapsed && expanded ? `${index * 30}ms` : "0ms",
-                  }}
                 >
                   <Icon className="size-4 flex-shrink-0" />
                   <span
@@ -319,11 +364,6 @@ export function Sidebar({
                         ? "opacity-100 w-auto"
                         : "opacity-0 w-0 overflow-hidden",
                     )}
-                    style={{
-                      transitionDelay: labelVisible
-                        ? `${index * 30 + 60}ms`
-                        : "0ms",
-                    }}
                   >
                     {item.label}
                   </span>
