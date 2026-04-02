@@ -11,6 +11,26 @@ pub struct SessionStore {
 }
 
 impl SessionStore {
+    fn message_preview(message: &Message) -> Option<String> {
+        for content in &message.content {
+            if let crate::types::messages::MessageContent::Text { text } = content {
+                let cutoff = text.char_indices().nth(100).map(|(index, _)| index);
+                return Some(match cutoff {
+                    Some(index) => format!("{}...", &text[..index]),
+                    None => text.clone(),
+                });
+            }
+        }
+
+        None
+    }
+
+    fn refresh_session_message_metadata(session: &mut Session, messages: &[Message]) {
+        session.message_count = messages.len() as u32;
+        session.last_message_preview = messages.iter().rev().find_map(Self::message_preview);
+        session.updated_at = chrono::Utc::now().to_rfc3339();
+    }
+
     pub fn new() -> Self {
         let sessions_dir = dirs::home_dir()
             .expect("home dir")
@@ -203,28 +223,43 @@ impl SessionStore {
             .get_mut(session_id)
             .ok_or_else(|| format!("Session '{}' not found", session_id))?;
 
-        // Update session metadata
-        session.message_count += 1;
-        session.updated_at = chrono::Utc::now().to_rfc3339();
-
-        // Extract a preview from text content
-        for content in &message.content {
-            if let crate::types::messages::MessageContent::Text { text } = content {
-                let preview = if text.len() > 100 {
-                    format!("{}...", &text[..100])
-                } else {
-                    text.clone()
-                };
-                session.last_message_preview = Some(preview);
-                break;
-            }
-        }
-
-        self.save_metadata(&sessions);
-
-        // Append message to the messages file on disk
         let mut messages = self.load_messages(session_id);
         messages.push(message);
+        Self::refresh_session_message_metadata(session, &messages);
+        self.save_metadata(&sessions);
+        self.save_messages(session_id, &messages);
+
+        Ok(())
+    }
+
+    pub fn update_message<F>(
+        &self,
+        session_id: &str,
+        message_id: &str,
+        updater: F,
+    ) -> Result<(), String>
+    where
+        F: FnOnce(&mut Message),
+    {
+        let mut sessions = self.sessions.lock().unwrap();
+        let session = sessions
+            .get_mut(session_id)
+            .ok_or_else(|| format!("Session '{}' not found", session_id))?;
+
+        let mut messages = self.load_messages(session_id);
+        let message = messages
+            .iter_mut()
+            .find(|message| message.id == message_id)
+            .ok_or_else(|| {
+                format!(
+                    "Message '{}' not found in session '{}'",
+                    message_id, session_id
+                )
+            })?;
+        updater(message);
+
+        Self::refresh_session_message_metadata(session, &messages);
+        self.save_metadata(&sessions);
         self.save_messages(session_id, &messages);
 
         Ok(())

@@ -21,6 +21,12 @@ export type ToolCallStatus =
   | "error"
   | "stopped";
 
+export type MessageCompletionStatus =
+  | "inProgress"
+  | "completed"
+  | "error"
+  | "stopped";
+
 export interface ToolRequestContent {
   type: "toolRequest";
   id: string;
@@ -101,6 +107,7 @@ export interface MessageMetadata {
   /** Which persona this user message is addressed to. */
   targetPersonaId?: string;
   targetPersonaName?: string;
+  completionStatus?: MessageCompletionStatus;
 }
 
 export interface Message {
