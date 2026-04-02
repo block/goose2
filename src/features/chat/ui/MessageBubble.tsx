@@ -355,10 +355,16 @@ function renderContentBlock(content: MessageContent, index: number) {
       );
     case "systemNotification": {
       const sn = content as SystemNotificationContent;
+      const isError = sn.notificationType === "error";
       return (
         <div
           key={`notification-${index}`}
-          className="rounded-md bg-background-tertiary p-2 text-xs text-foreground-secondary"
+          className={cn(
+            "rounded-md border p-2 text-xs",
+            isError
+              ? "border-danger/30 bg-danger/10 text-danger"
+              : "border-border-secondary bg-background-tertiary text-foreground-secondary",
+          )}
         >
           {sn.text}
         </div>
@@ -384,11 +390,10 @@ export function MessageBubble({
     .map((c) => c.text)
     .join("\n");
 
-  // System messages: centered, muted
   if (role === "system") {
     return (
       <div className="flex justify-center px-4 py-2">
-        <div className="max-w-md rounded-full bg-background-tertiary px-3 py-1 text-center text-xs text-foreground-tertiary">
+        <div className="w-full max-w-md text-center text-xs text-foreground-tertiary">
           {content.map((c, i) => renderContentBlock(c, i))}
         </div>
       </div>

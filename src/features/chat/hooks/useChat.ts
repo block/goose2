@@ -1,7 +1,10 @@
 import { useCallback, useRef } from "react";
 import { useChatStore } from "../stores/chatStore";
 import { useChatSessionStore } from "../stores/chatSessionStore";
-import { createUserMessage } from "@/shared/types/messages";
+import {
+  createSystemNotificationMessage,
+  createUserMessage,
+} from "@/shared/types/messages";
 import type { Message } from "@/shared/types/messages";
 import type { ChatState, TokenState } from "@/shared/types/chat";
 import { acpSendMessage, acpCancelSession } from "@/shared/api/acp";
@@ -163,6 +166,22 @@ export function useChat(
         } else {
           const errorMessage =
             err instanceof Error ? err.message : "Unknown error";
+          const liveStore = useChatStore.getState();
+          const { streamingMessageId } = liveStore.getSessionRuntime(sessionId);
+          const streamingMessage = streamingMessageId
+            ? liveStore.messagesBySession[sessionId]?.find(
+                (message) => message.id === streamingMessageId,
+              )
+            : undefined;
+
+          if (streamingMessageId && streamingMessage?.content.length === 0) {
+            liveStore.removeMessage(sessionId, streamingMessageId);
+          }
+
+          liveStore.addMessage(
+            sessionId,
+            createSystemNotificationMessage(errorMessage, "error"),
+          );
           store.setError(sessionId, errorMessage);
           store.setChatState(sessionId, "idle");
           store.setStreamingMessageId(sessionId, null);

@@ -193,4 +193,33 @@ describe("useChat", () => {
       await firstPromise;
     });
   });
+
+  it("appends an error message and removes the empty assistant placeholder when send fails", async () => {
+    mockAcpSendMessage.mockRejectedValue(
+      new Error("Working directory missing"),
+    );
+
+    const { result } = renderHook(() => useChat("session-1"));
+
+    await act(async () => {
+      await result.current.sendMessage("Hello");
+    });
+
+    const messages = useChatStore.getState().messagesBySession["session-1"];
+    const runtime = useChatStore.getState().getSessionRuntime("session-1");
+
+    expect(messages).toHaveLength(2);
+    expect(messages[0].role).toBe("user");
+    expect(messages[1].role).toBe("system");
+    expect(messages[1].content).toEqual([
+      {
+        type: "systemNotification",
+        notificationType: "error",
+        text: "Working directory missing",
+      },
+    ]);
+    expect(runtime.error).toBe("Working directory missing");
+    expect(runtime.streamingMessageId).toBeNull();
+    expect(runtime.chatState).toBe("idle");
+  });
 });

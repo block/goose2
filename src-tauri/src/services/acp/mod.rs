@@ -16,6 +16,9 @@ use acp_client::{AcpDriver, AgentDriver, MessageWriter, Store};
 
 use crate::services::sessions::SessionStore;
 use crate::types::messages::{MessageContent, MessageRole};
+use tauri::Emitter;
+
+use self::payloads::ErrorPayload;
 
 /// Build a composite registry key: `{session_id}__{persona_id}` when a
 /// persona is active, or plain `session_id` for backward compatibility.
@@ -168,6 +171,40 @@ impl AcpService {
         // Always deregister, even on panic/JoinError
         registry_inner.deregister(&registry_key);
 
-        join_result.map_err(|e| format!("ACP task panicked: {e}"))?
+        let result = join_result.map_err(|e| format!("ACP task panicked: {e}"))?;
+
+        if let Err(ref error) = result {
+            let error_message = crate::types::messages::Message {
+                id: uuid::Uuid::new_v4().to_string(),
+                role: MessageRole::System,
+                created: chrono::Utc::now().timestamp_millis(),
+                content: vec![MessageContent::SystemNotification {
+                    notification_type: "error".to_string(),
+                    text: error.clone(),
+                }],
+                metadata: Some(crate::types::messages::MessageMetadata {
+                    user_visible: Some(true),
+                    agent_visible: Some(false),
+                    ..Default::default()
+                }),
+            };
+
+            if let Err(save_error) = session_store.add_message(&session_id, error_message) {
+                eprintln!(
+                    "Failed to save ACP error message for session {}: {}",
+                    session_id, save_error
+                );
+            }
+
+            let _ = app_handle.emit(
+                "acp:error",
+                ErrorPayload {
+                    session_id: session_id.clone(),
+                    error: error.clone(),
+                },
+            );
+        }
+
+        result
     }
 }

@@ -192,6 +192,34 @@ describe("useAcpStream", () => {
     expect(listeners.size).toBe(0);
   });
 
+  it("appends a visible error message when an ACP session fails", async () => {
+    setupStreaming(sessionId);
+
+    renderHook(() => useAcpStream(true));
+    await vi.waitFor(() => expect(listeners.get("acp:error")).toBeDefined());
+
+    act(() => {
+      emit("acp:text", { sessionId, text: "partial" });
+      emit("acp:error", { sessionId, error: "Working directory missing" });
+    });
+
+    const runtime = useChatStore.getState().getSessionRuntime(sessionId);
+    const messages = useChatStore.getState().messagesBySession[sessionId];
+
+    expect(runtime.error).toBe("Working directory missing");
+    expect(runtime.chatState).toBe("idle");
+    expect(runtime.streamingMessageId).toBeNull();
+    expect(messages).toHaveLength(2);
+    expect(messages[1].role).toBe("system");
+    expect(messages[1].content).toEqual([
+      {
+        type: "systemNotification",
+        notificationType: "error",
+        text: "Working directory missing",
+      },
+    ]);
+  });
+
   it("unregisters listeners on unmount", async () => {
     const { unmount } = renderHook(() => useAcpStream(true));
     await vi.waitFor(() => expect(listeners.get("acp:text")).toBeDefined());
