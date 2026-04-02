@@ -222,4 +222,23 @@ describe("useChat", () => {
     expect(runtime.streamingMessageId).toBeNull();
     expect(runtime.chatState).toBe("idle");
   });
+
+  it("shows string-shaped invoke errors instead of falling back to unknown error", async () => {
+    mockAcpSendMessage.mockRejectedValue("Working directory missing");
+
+    const { result } = renderHook(() => useChat("session-1"));
+
+    await act(async () => {
+      await result.current.sendMessage("Hello");
+    });
+
+    const messages = useChatStore.getState().messagesBySession["session-1"];
+    expect(messages[1].content).toEqual([
+      {
+        type: "systemNotification",
+        notificationType: "error",
+        text: "Working directory missing",
+      },
+    ]);
+  });
 });

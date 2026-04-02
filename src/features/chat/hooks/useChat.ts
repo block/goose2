@@ -11,6 +11,28 @@ import { acpSendMessage, acpCancelSession } from "@/shared/api/acp";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { findLastIndex } from "@/shared/lib/arrays";
 
+function getErrorMessage(error: unknown): string {
+  if (typeof error === "string" && error.trim()) {
+    return error;
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof error.message === "string" &&
+    error.message.trim()
+  ) {
+    return error.message;
+  }
+
+  return "Unknown error";
+}
+
 /**
  * Hook for managing a chat session -- sending messages, handling streaming,
  * and managing chat lifecycle.
@@ -164,8 +186,7 @@ export function useChat(
         if (err instanceof DOMException && err.name === "AbortError") {
           store.setChatState(sessionId, "idle");
         } else {
-          const errorMessage =
-            err instanceof Error ? err.message : "Unknown error";
+          const errorMessage = getErrorMessage(err);
           const liveStore = useChatStore.getState();
           const { streamingMessageId } = liveStore.getSessionRuntime(sessionId);
           const streamingMessage = streamingMessageId
