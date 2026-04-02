@@ -1,9 +1,13 @@
 use std::sync::Arc;
 
+use agent_client_protocol::{SessionConfigKind, SessionConfigSelectOptions};
 use async_trait::async_trait;
 use tauri::Emitter;
 
-use acp_client::{MessageWriter, SessionInfoUpdate, SessionModelState};
+use acp_client::{
+    MessageWriter, SessionConfigOption, SessionConfigOptionCategory, SessionInfoUpdate,
+    SessionModelState,
+};
 
 use crate::services::sessions::SessionStore;
 use crate::types::messages::{
@@ -11,8 +15,8 @@ use crate::types::messages::{
 };
 
 use super::payloads::{
-    DonePayload, MessageCreatedPayload, ModelStatePayload, SessionInfoPayload, TextPayload,
-    ToolCallPayload, ToolResultPayload, ToolTitlePayload,
+    AvailableModelPayload, DonePayload, MessageCreatedPayload, ModelStatePayload,
+    SessionInfoPayload, TextPayload, ToolCallPayload, ToolResultPayload, ToolTitlePayload,
 };
 
 /// A [`MessageWriter`] implementation that streams ACP output to the frontend
@@ -134,6 +138,10 @@ impl TauriMessageWriter {
             );
         }
     }
+
+    fn emit_model_state(&self, payload: ModelStatePayload) {
+        let _ = self.app_handle.emit("acp:model_state", payload);
+    }
 }
 
 fn append_text_block(content: &mut Vec<MessageContent>, text: &str) {
@@ -166,6 +174,86 @@ fn find_latest_unpaired_tool_request(
     }
 
     None
+}
+
+fn model_payload_from_session_model_state(
+    session_id: String,
+    state: &SessionModelState,
+) -> ModelStatePayload {
+    let available_models = state
+        .available_models
+        .iter()
+        .map(|model| AvailableModelPayload {
+            id: model.model_id.to_string(),
+            name: model.name.clone(),
+            description: model.description.clone(),
+        })
+        .collect();
+    let current_model_name = state
+        .available_models
+        .iter()
+        .find(|model| model.model_id == state.current_model_id)
+        .map(|model| model.name.clone());
+
+    ModelStatePayload {
+        session_id,
+        source: "session_model".to_string(),
+        config_id: None,
+        current_model_id: state.current_model_id.to_string(),
+        current_model_name,
+        available_models,
+    }
+}
+
+fn model_payload_from_config_options(
+    session_id: String,
+    options: &[SessionConfigOption],
+) -> Option<ModelStatePayload> {
+    let option = options
+        .iter()
+        .find(|option| matches!(option.category, Some(SessionConfigOptionCategory::Model)))?;
+
+    let select = match &option.kind {
+        SessionConfigKind::Select(select) => select,
+        #[allow(unreachable_patterns)]
+        _ => return None,
+    };
+
+    let available_models = match &select.options {
+        SessionConfigSelectOptions::Ungrouped(options) => options
+            .iter()
+            .map(|model| AvailableModelPayload {
+                id: model.value.to_string(),
+                name: model.name.clone(),
+                description: model.description.clone(),
+            })
+            .collect::<Vec<_>>(),
+        SessionConfigSelectOptions::Grouped(groups) => groups
+            .iter()
+            .flat_map(|group| group.options.iter())
+            .map(|model| AvailableModelPayload {
+                id: model.value.to_string(),
+                name: model.name.clone(),
+                description: model.description.clone(),
+            })
+            .collect::<Vec<_>>(),
+        _ => return None,
+    };
+    let current_model_id = select.current_value.to_string();
+    let current_model_name = available_models
+        .iter()
+        .find(|model| model.id == current_model_id)
+        .map(|model| model.name.clone())
+        .or_else(|| Some(option.name.clone()));
+
+    Some(ModelStatePayload {
+        session_id,
+        source: "config_option".to_string(),
+        config_id: Some(option.id.to_string()),
+        current_model_id,
+        current_model_name,
+        available_models,
+    })
 }
 
 #[async_trait]
@@ -314,18 +402,15 @@ impl MessageWriter for TauriMessageWriter {
     }
 
     async fn on_model_state_update(&self, state: &SessionModelState) {
-        let current_model_name = state
-            .available_models
-            .iter()
-            .find(|m| m.model_id == state.current_model_id)
-            .map(|m| m.name.clone());
-        let _ = self.app_handle.emit(
-            "acp:model_state",
-            ModelStatePayload {
-                session_id: self.session_id.clone(),
-                current_model_id: state.current_model_id.to_string(),
-                current_model_name,
-            },
-        );
+        self.emit_model_state(model_payload_from_session_model_state(
+            self.session_id.clone(),
+            state,
+        ));
+    }
+
+    async fn on_config_option_update(&self, options: &[SessionConfigOption]) {
+        if let Some(payload) = model_payload_from_config_options(self.session_id.clone(), options) {
+            self.emit_model_state(payload);
+        }
     }
 }

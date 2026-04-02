@@ -9,11 +9,12 @@ import {
 } from "lucide-react";
 import type { AcpProvider } from "@/shared/api/acp";
 import type { Persona } from "@/shared/types/agents";
+import type { ModelOption } from "@/shared/types/chat";
 import { cn } from "@/shared/lib/cn";
 import { ChatInputSelector } from "./ChatInputSelector";
 import { ContextRing } from "./ContextRing";
 import { PersonaPicker } from "./PersonaPicker";
-import type { ModelOption, ProjectOption } from "./ChatInput";
+import type { ProjectOption } from "./ChatInput";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -63,6 +64,8 @@ interface ChatInputToolbarProps {
   onProviderChange: (providerId: string) => void;
   // Model
   currentModel: string;
+  currentModelId?: string;
+  modelsLoading?: boolean;
   availableModels: ModelOption[];
   onModelChange?: (modelId: string) => void;
   // Project
@@ -97,6 +100,8 @@ export function ChatInputToolbar({
   selectedProvider,
   onProviderChange,
   currentModel,
+  currentModelId,
+  modelsLoading = false,
   availableModels,
   onModelChange,
   selectedProjectId,
@@ -131,6 +136,8 @@ export function ChatInputToolbar({
   const providerLabel =
     availableProviderItems.find((provider) => provider.id === selectedProvider)
       ?.label ?? formatProviderLabel(selectedProvider);
+  const modelTriggerLabel =
+    currentModel || (modelsLoading ? "Loading models..." : "Select model");
 
   const handleProjectValueChange = (value: string) => {
     if (value === CREATE_PROJECT_VALUE) {
@@ -172,7 +179,10 @@ export function ChatInputToolbar({
           />
         )}
 
-        {availableModels.length > 0 && (
+        {(availableModels.length > 0 ||
+          Boolean(selectedProvider) ||
+          currentModel ||
+          modelsLoading) && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -182,14 +192,22 @@ export function ChatInputToolbar({
                 rightIcon={<ChevronDown className="opacity-50" />}
                 className="gap-1.5 rounded-lg px-2.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
                 aria-label="Select model"
+                disabled={modelsLoading || availableModels.length === 0}
               >
-                {!isCompact && <span>{currentModel}</span>}
+                {!isCompact && <span>{modelTriggerLabel}</span>}
                 {isCompact && (
-                  <span className="max-w-[60px] truncate">{currentModel}</span>
+                  <span className="max-w-[60px] truncate">
+                    {modelTriggerLabel}
+                  </span>
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuContent
+              align="start"
+              sideOffset={8}
+              collisionPadding={24}
+              className="w-56 max-h-[min(20rem,calc(100vh-3rem))]"
+            >
               <DropdownMenuLabel>Model</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {availableModels.map((model) => (
@@ -208,7 +226,7 @@ export function ChatInputToolbar({
                       </span>
                     )}
                   </div>
-                  {model.id === currentModel && (
+                  {model.id === (currentModelId ?? currentModel) && (
                     <Check className="h-4 w-4 shrink-0 text-muted-foreground" />
                   )}
                 </DropdownMenuItem>

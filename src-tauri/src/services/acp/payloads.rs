@@ -65,8 +65,19 @@ pub(super) struct SessionInfoPayload {
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(super) struct ModelStatePayload {
+pub(crate) struct AvailableModelPayload {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ModelStatePayload {
     pub session_id: String,
+    pub source: String,
+    pub config_id: Option<String>,
     pub current_model_id: String,
     pub current_model_name: Option<String>,
+    pub available_models: Vec<AvailableModelPayload>,
 }

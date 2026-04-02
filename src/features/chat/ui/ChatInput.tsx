@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { X } from "lucide-react";
 import type { AcpProvider } from "@/shared/api/acp";
 import type { Persona } from "@/shared/types/agents";
+import type { ModelOption } from "@/shared/types/chat";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
 import {
@@ -14,13 +15,6 @@ import { PersonaAvatar } from "./PersonaPicker";
 import { ImageLightbox } from "@/shared/ui/ImageLightbox";
 import type { PastedImage } from "@/shared/types/messages";
 import { resizeImage } from "../lib/resizeImage";
-
-export interface ModelOption {
-  id: string;
-  name: string;
-  displayName?: string;
-  provider?: string;
-}
 
 export interface ProjectOption {
   id: string;
@@ -48,6 +42,8 @@ interface ChatInputProps {
   onProviderChange?: (providerId: string) => void;
   // Model
   currentModel?: string;
+  currentModelId?: string;
+  modelsLoading?: boolean;
   availableModels?: ModelOption[];
   onModelChange?: (modelId: string) => void;
   // Project
@@ -134,6 +130,8 @@ export function ChatInput({
   selectedProvider = "goose",
   onProviderChange,
   currentModel = "Claude Sonnet 4",
+  currentModelId,
+  modelsLoading = false,
   availableModels = [],
   onModelChange,
   selectedProjectId = null,
@@ -425,6 +423,8 @@ export function ChatInput({
               selectedProvider={selectedProvider}
               onProviderChange={(id) => onProviderChange?.(id)}
               currentModel={currentModel}
+              currentModelId={currentModelId}
+              modelsLoading={modelsLoading}
               availableModels={availableModels}
               onModelChange={onModelChange}
               selectedProjectId={selectedProjectId}

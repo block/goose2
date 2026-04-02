@@ -6,7 +6,12 @@ import {
   createUserMessage,
 } from "@/shared/types/messages";
 import type { ChatState, TokenState } from "@/shared/types/chat";
-import { acpSendMessage, acpCancelSession } from "@/shared/api/acp";
+import {
+  acpSendMessage,
+  acpCancelSession,
+  acpGetModelState,
+  acpSetModel,
+} from "@/shared/api/acp";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { findLastIndex } from "@/shared/lib/arrays";
 
@@ -177,6 +182,40 @@ export function useChat(
         const providerId = providerOverride ?? agent?.provider ?? "goose";
         const systemPrompt =
           systemPromptOverride ?? agent?.systemPrompt ?? undefined;
+        const activeSession = useChatSessionStore
+          .getState()
+          .getSession(sessionId);
+        const targetModelId = activeSession?.currentModelId;
+
+        if (targetModelId) {
+          // Ensure ACP session exists and apply model if it differs from target.
+          // This handles: (a) first send after Home screen model selection,
+          // (b) safety net if handleModelChange's set_model didn't stick.
+          try {
+            const modelState = await acpGetModelState(sessionId, providerId, {
+              personaId: effectivePersonaInfo?.id,
+              workingDir: workingDirOverride,
+              persistSession: true,
+            });
+
+            if (
+              modelState.currentModelId !== targetModelId &&
+              modelState.availableModels.some(
+                (model) => model.id === targetModelId,
+              )
+            ) {
+              await acpSetModel(sessionId, providerId, targetModelId, {
+                source: modelState.source,
+                configId: modelState.configId,
+                personaId: effectivePersonaInfo?.id,
+                workingDir: workingDirOverride,
+              });
+            }
+          } catch (modelError) {
+            // Model sync is best-effort — don't block the send
+            console.warn("Pre-send model sync failed:", modelError);
+          }
+        }
 
         // Send via ACP — response streams back through Tauri events
         // which are handled by the global useAcpStream listener in AppShell.

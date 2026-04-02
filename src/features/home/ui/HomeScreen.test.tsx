@@ -11,6 +11,15 @@ vi.mock("@/shared/api/acp", () => ({
     { id: "goose", label: "Goose" },
     { id: "openai", label: "OpenAI" },
   ]),
+  acpGetModelState: vi.fn().mockResolvedValue({
+    source: "session_model",
+    currentModelId: "claude-sonnet-4",
+    currentModelName: "Claude Sonnet 4",
+    availableModels: [
+      { id: "claude-sonnet-4", name: "Claude Sonnet 4" },
+      { id: "opus-1m", name: "Opus (1M context)" },
+    ],
+  }),
 }));
 
 vi.mock("@/features/agents/hooks/useProviderSelection", () => ({

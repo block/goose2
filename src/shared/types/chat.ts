@@ -55,11 +55,30 @@ export interface Session {
   projectId?: string | null;
   providerId?: string;
   personaId?: string;
+  currentModelId?: string;
   modelName?: string;
   createdAt: string;
   updatedAt: string;
   archivedAt?: string;
   messageCount: number;
+}
+
+export interface ModelOption {
+  id: string;
+  name: string;
+  displayName?: string;
+  description?: string;
+  provider?: string;
+}
+
+export type ModelSelectionSource = "session_model" | "config_option";
+
+export interface ProviderModelState {
+  source: ModelSelectionSource;
+  configId?: string;
+  currentModelId: string;
+  currentModelName?: string;
+  availableModels: ModelOption[];
 }
 
 // SSE event types (from goosed server)

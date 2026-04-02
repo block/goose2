@@ -1485,6 +1485,7 @@ name = "goose2"
 version = "0.1.0"
 dependencies = [
  "acp-client",
+ "agent-client-protocol",
  "async-trait",
  "chrono",
  "dirs",
