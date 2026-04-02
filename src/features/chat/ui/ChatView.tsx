@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { MessageTimeline } from "./MessageTimeline";
-import { ChatInput, type PastedImage } from "./ChatInput";
+import { ChatInput } from "./ChatInput";
+import type { PastedImage } from "@/shared/types/messages";
 import { LoadingGoose } from "./LoadingGoose";
 import { useChat } from "../hooks/useChat";
 import { useChatStore } from "../stores/chatStore";

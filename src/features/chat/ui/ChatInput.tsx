@@ -12,16 +12,7 @@ import { ChatInputToolbar } from "./ChatInputToolbar";
 import { TooltipProvider } from "@/shared/ui/tooltip";
 import { PersonaAvatar } from "./PersonaPicker";
 import { ImageLightbox } from "@/shared/ui/ImageLightbox";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-export interface PastedImage {
-  base64: string;
-  mimeType: string;
-  objectUrl: string;
-}
+import type { PastedImage } from "@/shared/types/messages";
 
 // ---------------------------------------------------------------------------
 // Image resizing
@@ -352,7 +343,17 @@ export function ChatInput({
         setImages((prev) => [...prev, { base64, mimeType, objectUrl }]);
       })
       .catch(() => {
-        URL.revokeObjectURL(objectUrl);
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = reader.result as string;
+          const [header, b64] = dataUrl.split(",");
+          const mime = header.replace("data:", "").replace(";base64", "");
+          setImages((prev) => [...prev, { base64: b64, mimeType: mime, objectUrl }]);
+        };
+        reader.onerror = () => {
+          URL.revokeObjectURL(objectUrl);
+        };
+        reader.readAsDataURL(file);
       });
   }, []);
 

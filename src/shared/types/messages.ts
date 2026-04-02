@@ -1,3 +1,9 @@
+export interface PastedImage {
+  base64: string;
+  mimeType: string;
+  objectUrl: string;
+}
+
 // Message roles
 export type MessageRole = "user" | "assistant" | "system";
 

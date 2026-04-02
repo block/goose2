@@ -4,7 +4,8 @@ import {
   useAgentStore,
 } from "@/features/agents/stores/agentStore";
 import { useProviderSelection } from "@/features/agents/hooks/useProviderSelection";
-import { ChatInput, type PastedImage } from "@/features/chat/ui/ChatInput";
+import { ChatInput } from "@/features/chat/ui/ChatInput";
+import type { PastedImage } from "@/shared/types/messages";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
 
 function HomeClock() {

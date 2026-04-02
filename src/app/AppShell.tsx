@@ -3,7 +3,7 @@ import { Sidebar } from "@/features/sidebar/ui/Sidebar";
 import { StatusBar } from "@/features/status/ui/StatusBar";
 import { HomeScreen } from "@/features/home/ui/HomeScreen";
 import { ChatView } from "@/features/chat/ui/ChatView";
-import type { PastedImage } from "@/features/chat/ui/ChatInput";
+import type { PastedImage } from "@/shared/types/messages";
 import { SkillsView } from "@/features/skills/ui/SkillsView";
 import { AgentsView } from "@/features/agents/ui/AgentsView";
 import { ProjectsView } from "@/features/projects/ui/ProjectsView";
