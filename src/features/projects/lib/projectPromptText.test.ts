@@ -19,38 +19,56 @@ describe("projectPromptText", () => {
     });
   });
 
-  it("keeps blank lines between include lines and prompt content", () => {
+  it("places includes after the prompt text", () => {
+    expect(buildEditorText(["/tmp/one"], "My prompt")).toBe(
+      "My prompt\n\ninclude: /tmp/one",
+    );
+  });
+
+  it("handles includes-only text (no prompt)", () => {
+    expect(buildEditorText(["/tmp/one", "/tmp/two"], "")).toBe(
+      "include: /tmp/one\ninclude: /tmp/two",
+    );
+  });
+
+  it("collects include lines from anywhere in the editor text", () => {
     expect(
-      parseEditorText("include: /tmp/one\n\ninclude: /tmp/two\nprompt"),
+      parseEditorText("include: /tmp/one\nprompt\n\ninclude: /tmp/two"),
     ).toEqual({
       prompt: "prompt",
       workingDirs: ["/tmp/one", "/tmp/two"],
     });
   });
 
-  it("keeps include-looking prompt lines after prompt content begins", () => {
+  it("treats trailing include lines as working directories when saving", () => {
     expect(parseEditorText("prompt first\ninclude: /tmp/kept")).toEqual({
-      prompt: "prompt first\ninclude: /tmp/kept",
-      workingDirs: [],
+      prompt: "prompt first",
+      workingDirs: ["/tmp/kept"],
     });
   });
 
-  it("creates a leading include block for prompt-only text", () => {
+  it("creates a trailing include block for prompt-only text", () => {
     expect(insertWorkingDir("Existing prompt", "/tmp/one")).toBe(
-      "include: /tmp/one\n\nExisting prompt",
+      "Existing prompt\n\ninclude: /tmp/one",
     );
   });
 
-  it("appends a directory within the leading include block", () => {
+  it("appends a directory to the trailing include block", () => {
     expect(
-      insertWorkingDir("include: /tmp/one\n\nPrompt body", "/tmp/two"),
-    ).toBe("include: /tmp/one\ninclude: /tmp/two\n\nPrompt body");
+      insertWorkingDir("Prompt body\n\ninclude: /tmp/one", "/tmp/two"),
+    ).toBe("Prompt body\n\ninclude: /tmp/one\ninclude: /tmp/two");
+  });
+
+  it("adds a new directory to the bottom without moving existing prompt text", () => {
+    expect(insertWorkingDir("include: /tmp/one\nPrompt body", "/tmp/two")).toBe(
+      "include: /tmp/one\nPrompt body\n\ninclude: /tmp/two",
+    );
   });
 
   it("treats tilde and absolute paths as equivalent when checking duplicates", () => {
     expect(
       hasEquivalentWorkingDir(
-        "include: ~/dev/goose2\n\nPrompt body",
+        "Prompt body\ninclude: ~/dev/goose2",
         "/Users/mtoohey/dev/goose2",
         "/Users/mtoohey",
       ),
@@ -60,7 +78,7 @@ describe("projectPromptText", () => {
   it("does not match different directories when checking duplicates", () => {
     expect(
       hasEquivalentWorkingDir(
-        "include: ~/dev/goose2\n\nPrompt body",
+        "Prompt body\ninclude: ~/dev/goose2",
         "/Users/mtoohey/dev/other",
         "/Users/mtoohey",
       ),
@@ -70,7 +88,7 @@ describe("projectPromptText", () => {
   it("treats trailing slashes as equivalent when checking duplicates", () => {
     expect(
       hasEquivalentWorkingDir(
-        "include: /Users/mtoohey/dev/goose2/\n\nPrompt body",
+        "Prompt body\ninclude: /Users/mtoohey/dev/goose2/",
         "/Users/mtoohey/dev/goose2",
         "/Users/mtoohey",
       ),
