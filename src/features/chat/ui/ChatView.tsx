@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { PanelRight, PanelRightOpen } from "lucide-react";
 import { MessageTimeline } from "./MessageTimeline";
 import { ChatInput } from "./ChatInput";
 import type { PastedImage } from "@/shared/types/messages";
 import { LoadingGoose } from "./LoadingGoose";
+import { ContextPanel } from "./ContextPanel";
 import { useChat } from "../hooks/useChat";
 import { useChatStore } from "../stores/chatStore";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
@@ -17,6 +19,7 @@ import {
 } from "@/features/projects/lib/chatProjectContext";
 import { useAvatarSrc } from "@/shared/hooks/useAvatarSrc";
 import { getHomeDir } from "@/shared/api/system";
+import { Button } from "@/shared/ui/button";
 import { ArtifactPolicyProvider } from "../hooks/ArtifactPolicyContext";
 
 interface ChatViewProps {
@@ -36,6 +39,8 @@ interface ChatViewProps {
   }) => void;
 }
 
+const CONTEXT_PANEL_WIDTH = 340;
+
 export function ChatView({
   sessionId,
   agentName = "Goose",
@@ -49,6 +54,7 @@ export function ChatView({
   onCreateProjectFromFolder,
 }: ChatViewProps) {
   const [activeSessionId] = useState(() => sessionId ?? crypto.randomUUID());
+  const [isContextPanelOpen, setIsContextPanelOpen] = useState(true);
 
   // Provider state from shared store
   const {
@@ -338,60 +344,99 @@ export function ChatView({
       messages={messages}
       allowedRoots={allowedArtifactRoots}
     >
-      <div className="flex h-full flex-col">
-        <MessageTimeline
-          messages={messages}
-          streamingMessageId={streamingMessageId}
-          agentName={displayAgentName}
-          agentAvatarUrl={personaAvatarSrc ?? agentAvatarUrl}
-        />
+      <div className="flex h-full min-w-0">
+        <div className="relative flex min-w-0 flex-1 flex-col">
+          <div className="absolute right-4 top-3 z-20">
+            <Button
+              type="button"
+              variant={isContextPanelOpen ? "secondary" : "ghost"}
+              size="icon-sm"
+              onClick={() => setIsContextPanelOpen((prev) => !prev)}
+              className="rounded-md shadow-sm"
+              aria-label={
+                isContextPanelOpen
+                  ? "Close context panel"
+                  : "Open context panel"
+              }
+              title={
+                isContextPanelOpen
+                  ? "Close context panel"
+                  : "Open context panel"
+              }
+            >
+              {isContextPanelOpen ? (
+                <PanelRightOpen className="size-3.5" />
+              ) : (
+                <PanelRight className="size-3.5" />
+              )}
+            </Button>
+          </div>
 
-        {showIndicator && (
-          <LoadingGoose
+          <MessageTimeline
+            messages={messages}
+            streamingMessageId={streamingMessageId}
             agentName={displayAgentName}
-            chatState={
-              chatState as "thinking" | "streaming" | "waiting" | "compacting"
-            }
+            agentAvatarUrl={personaAvatarSrc ?? agentAvatarUrl}
           />
-        )}
 
-        <ChatInput
-          onSend={handleSend}
-          onStop={stopStreaming}
-          isStreaming={isStreaming || chatState === "thinking"}
-          placeholder={`Message ${displayAgentName}...`}
-          // Personas
-          personas={personas}
-          selectedPersonaId={selectedPersonaId}
-          onPersonaChange={handlePersonaChange}
-          onCreatePersona={handleCreatePersona}
-          // Providers (secondary)
-          providers={providers}
-          providersLoading={providersLoading}
-          selectedProvider={selectedProvider}
-          onProviderChange={handleProviderChange}
-          selectedProjectId={session?.projectId ?? null}
-          availableProjects={availableProjects}
-          onProjectChange={handleProjectChange}
-          onCreateProject={(options) =>
-            onCreateProject?.({
-              onCreated: (projectId) => {
-                handleProjectChange(projectId);
-                options?.onCreated?.(projectId);
-              },
-            })
-          }
-          onCreateProjectFromFolder={(options) =>
-            onCreateProjectFromFolder?.({
-              onCreated: (projectId) => {
-                handleProjectChange(projectId);
-                options?.onCreated?.(projectId);
-              },
-            })
-          }
-          contextTokens={tokenState.accumulatedTotal}
-          contextLimit={tokenState.contextLimit}
-        />
+          {showIndicator && (
+            <LoadingGoose
+              agentName={displayAgentName}
+              chatState={
+                chatState as "thinking" | "streaming" | "waiting" | "compacting"
+              }
+            />
+          )}
+
+          <ChatInput
+            onSend={handleSend}
+            onStop={stopStreaming}
+            isStreaming={isStreaming || chatState === "thinking"}
+            placeholder={`Message ${displayAgentName}...`}
+            personas={personas}
+            selectedPersonaId={selectedPersonaId}
+            onPersonaChange={handlePersonaChange}
+            onCreatePersona={handleCreatePersona}
+            providers={providers}
+            providersLoading={providersLoading}
+            selectedProvider={selectedProvider}
+            onProviderChange={handleProviderChange}
+            selectedProjectId={session?.projectId ?? null}
+            availableProjects={availableProjects}
+            onProjectChange={handleProjectChange}
+            onCreateProject={(options) =>
+              onCreateProject?.({
+                onCreated: (projectId) => {
+                  handleProjectChange(projectId);
+                  options?.onCreated?.(projectId);
+                },
+              })
+            }
+            onCreateProjectFromFolder={(options) =>
+              onCreateProjectFromFolder?.({
+                onCreated: (projectId) => {
+                  handleProjectChange(projectId);
+                  options?.onCreated?.(projectId);
+                },
+              })
+            }
+            contextTokens={tokenState.accumulatedTotal}
+            contextLimit={tokenState.contextLimit}
+          />
+        </div>
+
+        {isContextPanelOpen ? (
+          <aside
+            className="min-w-0 shrink-0"
+            style={{ width: CONTEXT_PANEL_WIDTH }}
+          >
+            <ContextPanel
+              projectName={project?.name}
+              projectColor={project?.color}
+              projectWorkingDir={project?.workingDirs[0] ?? null}
+            />
+          </aside>
+        ) : null}
       </div>
     </ArtifactPolicyProvider>
   );
