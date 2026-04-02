@@ -22,6 +22,25 @@ fn default_artifacts_working_dir() -> PathBuf {
     PathBuf::from("/tmp").join(".goose").join("artifacts")
 }
 
+fn expand_home_dir(path: PathBuf) -> PathBuf {
+    let path_string = path.to_string_lossy();
+
+    if path_string == "~" {
+        return dirs::home_dir().unwrap_or(path);
+    }
+
+    if let Some(stripped) = path_string
+        .strip_prefix("~/")
+        .or_else(|| path_string.strip_prefix("~\\"))
+    {
+        if let Some(home_dir) = dirs::home_dir() {
+            return home_dir.join(stripped);
+        }
+    }
+
+    path
+}
+
 fn resolve_working_dir(
     working_dir: Option<String>,
     current_dir: &std::path::Path,
@@ -31,6 +50,7 @@ fn resolve_working_dir(
         .filter(|dir| !dir.is_empty())
         .map(PathBuf::from)
         .unwrap_or_else(default_artifacts_working_dir);
+    let working_dir = expand_home_dir(working_dir);
 
     let working_dir = if working_dir.is_relative() {
         current_dir.join(&working_dir)
@@ -99,7 +119,8 @@ pub async fn acp_send_message(
 
 #[cfg(test)]
 mod tests {
-    use super::resolve_working_dir;
+    use super::{expand_home_dir, resolve_working_dir};
+    use std::path::PathBuf;
 
     #[test]
     fn resolve_working_dir_returns_absolute_path_for_existing_relative_directory() {
@@ -123,6 +144,31 @@ mod tests {
         let result = resolve_working_dir(Some("missing".to_string()), temp_dir.path());
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn expand_home_dir_replaces_leading_tilde() {
+        let home_dir = dirs::home_dir().expect("home dir");
+
+        assert_eq!(expand_home_dir(PathBuf::from("~")), home_dir);
+        assert_eq!(
+            expand_home_dir(PathBuf::from("~/Code/goose2")),
+            home_dir.join("Code/goose2")
+        );
+    }
+
+    #[test]
+    fn resolve_working_dir_accepts_tilde_prefixed_path() {
+        let home_dir = dirs::home_dir().expect("home dir");
+        let target_dir = home_dir.join(".goose");
+        let resolved =
+            resolve_working_dir(Some("~/.goose".to_string()), std::path::Path::new("/tmp"))
+                .expect("resolve path");
+
+        assert_eq!(
+            resolved,
+            std::fs::canonicalize(target_dir).expect("canonical home dir path")
+        );
     }
 }
 
