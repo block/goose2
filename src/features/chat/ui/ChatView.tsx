@@ -84,6 +84,7 @@ export function ChatView({
           id: projectInfo.id,
           name: projectInfo.name,
           workingDir: projectInfo.workingDirs[0] ?? null,
+          color: projectInfo.color,
         })),
     [projects],
   );

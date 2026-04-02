@@ -59,13 +59,11 @@ export function PersonaPicker({
             type="button"
             variant="ghost"
             size="icon-sm"
-            className={cn(
-              "rounded-lg text-foreground-secondary hover:bg-background-tertiary hover:text-foreground",
-              className,
-            )}
+            className={className}
             aria-label="Choose assistant"
+            title="Choose assistant"
           >
-            <AtSign className="h-4 w-4" />
+            <AtSign />
           </Button>
         ) : (
           <Button
