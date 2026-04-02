@@ -670,7 +670,7 @@ body,
   }
 
   ::selection {
-    background: #1a1a1a;
+    background: color-mix(in srgb, var(--color-brand) 60%, transparent);
     color: #ffffff;
   }
 
