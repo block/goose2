@@ -444,6 +444,10 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         onTabClose={handleTabClose}
         onNewTab={handleNewTab}
         onHomeClick={() => handleNavigate("home")}
+        onClearAllTabs={() => {
+          sessionStore.clearAllTabs();
+          handleNavigate("home");
+        }}
       />
 
       <div className="flex flex-1 min-h-0 overflow-hidden">

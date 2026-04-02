@@ -51,6 +51,7 @@ interface ChatSessionStoreActions {
   // Tab management
   openTab: (sessionId: string) => void;
   closeTab: (sessionId: string) => void;
+  clearAllTabs: () => void;
   reorderTabs: (tabIds: string[]) => void;
   setActiveTab: (sessionId: string | null) => void;
 
@@ -271,6 +272,11 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
         activeTabId: newActiveTabId,
       };
     });
+    get().persistTabState();
+  },
+
+  clearAllTabs: () => {
+    set({ openTabIds: [], activeTabId: null });
     get().persistTabState();
   },
 

@@ -264,6 +264,14 @@
   animation: content-fade-in 0.3s ease-out forwards;
 }
 
+/* Tab dismiss animation for clearing all tabs */
+@keyframes tab-dismiss {
+  to {
+    opacity: 0;
+    transform: translateX(8px) scale(0.95);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

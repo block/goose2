@@ -19,6 +19,7 @@ describe("TabBar", () => {
         onTabClose={vi.fn()}
         onNewTab={vi.fn()}
         onHomeClick={vi.fn()}
+        onClearAllTabs={vi.fn()}
       />,
     );
 
@@ -41,6 +42,7 @@ describe("TabBar", () => {
         onTabClose={vi.fn()}
         onNewTab={vi.fn()}
         onHomeClick={vi.fn()}
+        onClearAllTabs={vi.fn()}
       />,
     );
 
