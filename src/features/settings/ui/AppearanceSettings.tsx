@@ -1,4 +1,6 @@
 import { cn } from "@/shared/lib/cn";
+import { Separator } from "@/shared/ui/separator";
+import { ToggleGroup, ToggleGroupItem } from "@/shared/ui/toggle-group";
 import { useTheme } from "@/shared/theme/ThemeProvider";
 import { Sun, Moon, Monitor, Check } from "lucide-react";
 
@@ -39,9 +41,7 @@ function SettingRow({
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium">{label}</p>
         {description && (
-          <p className="mt-0.5 text-xs text-foreground-secondary">
-            {description}
-          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
         )}
       </div>
       <div className="flex-shrink-0">{children}</div>
@@ -55,38 +55,39 @@ export function AppearanceSettings() {
 
   return (
     <div>
-      <h3 className="text-lg font-semibold">Appearance</h3>
-      <p className="mt-1 text-sm text-foreground-secondary">
+      <h3 className="text-lg font-semibold font-display tracking-tight">
+        Appearance
+      </h3>
+      <p className="mt-1 text-sm text-muted-foreground">
         Customize the look and feel of Goose
       </p>
 
-      <div className="my-4 border-t" />
+      <Separator className="my-4" />
 
       <SettingRow
         label="Theme"
         description="Choose your preferred color scheme"
       >
-        <div className="flex gap-1 rounded-lg bg-background-secondary p-1">
+        <ToggleGroup
+          type="single"
+          value={theme}
+          onValueChange={(v) => v && setTheme(v as typeof theme)}
+          className="gap-1 rounded-lg bg-muted p-1"
+        >
           {THEME_OPTIONS.map((option) => (
-            <button
-              type="button"
+            <ToggleGroupItem
               key={option.value}
-              onClick={() => setTheme(option.value)}
-              className={cn(
-                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors",
-                theme === option.value
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-foreground-secondary hover:text-foreground",
-              )}
+              value={option.value}
+              className="gap-1.5 rounded-md px-3 py-1.5 text-sm data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:shadow-sm"
             >
               <option.icon className="h-3.5 w-3.5" />
               {option.label}
-            </button>
+            </ToggleGroupItem>
           ))}
-        </div>
+        </ToggleGroup>
       </SettingRow>
 
-      <div className="my-4 border-t" />
+      <Separator className="my-4" />
 
       <SettingRow label="Accent Color" description="Choose your accent color">
         <div className="grid grid-cols-4 gap-2">
@@ -111,29 +112,28 @@ export function AppearanceSettings() {
         </div>
       </SettingRow>
 
-      <div className="my-4 border-t" />
+      <Separator className="my-4" />
 
       <SettingRow
         label="Interface Density"
         description="Adjust the spacing of UI elements"
       >
-        <div className="flex gap-1 rounded-lg bg-background-secondary p-1">
+        <ToggleGroup
+          type="single"
+          value={density}
+          onValueChange={(v) => v && setDensity(v as typeof density)}
+          className="gap-1 rounded-lg bg-muted p-1"
+        >
           {DENSITY_OPTIONS.map((option) => (
-            <button
-              type="button"
+            <ToggleGroupItem
               key={option.value}
-              onClick={() => setDensity(option.value)}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-sm transition-colors",
-                density === option.value
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-foreground-secondary hover:text-foreground",
-              )}
+              value={option.value}
+              className="rounded-md px-3 py-1.5 text-sm data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:shadow-sm"
             >
               {option.label}
-            </button>
+            </ToggleGroupItem>
           ))}
-        </div>
+        </ToggleGroup>
       </SettingRow>
     </div>
   );

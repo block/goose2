@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/shared/lib/cn";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-left text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -23,11 +23,11 @@ const buttonVariants = cva(
         link: "text-brand underline-offset-4 hover:underline",
       },
       size: {
-        xs: "h-7 rounded-md px-2.5 text-xs [&_svg:not([class*='size-']):not([class*='h-']):not([class*='w-'])]:size-3",
+        xs: "h-7 px-2.5 text-xs [&_svg:not([class*='size-']):not([class*='h-']):not([class*='w-'])]:size-3",
         default:
           "h-9 px-4 py-2 [&_svg:not([class*='size-']):not([class*='h-']):not([class*='w-'])]:size-3.5",
-        sm: "h-8 rounded-md px-3 text-xs [&_svg:not([class*='size-']):not([class*='h-']):not([class*='w-'])]:size-3",
-        lg: "h-10 rounded-md px-8 [&_svg:not([class*='size-']):not([class*='h-']):not([class*='w-'])]:size-4",
+        sm: "h-8 px-3 text-xs [&_svg:not([class*='size-']):not([class*='h-']):not([class*='w-'])]:size-3",
+        lg: "h-10 px-8 [&_svg:not([class*='size-']):not([class*='h-']):not([class*='w-'])]:size-4",
         icon: "h-9 w-9 [&_svg:not([class*='size-']):not([class*='h-']):not([class*='w-'])]:size-4",
         "icon-xs":
           "h-7 w-7 [&_svg:not([class*='size-']):not([class*='h-']):not([class*='w-'])]:size-3",
@@ -57,25 +57,25 @@ const buttonVariants = cva(
         variant: "ghost",
         size: "icon-xs",
         className:
-          "bg-transparent text-foreground-secondary hover:bg-transparent hover:text-foreground active:bg-transparent",
+          "bg-transparent text-muted-foreground hover:bg-transparent hover:text-foreground active:bg-transparent",
       },
       {
         variant: "ghost",
         size: "icon-sm",
         className:
-          "bg-transparent text-foreground-secondary hover:bg-transparent hover:text-foreground active:bg-transparent",
+          "bg-transparent text-muted-foreground hover:bg-transparent hover:text-foreground active:bg-transparent",
       },
       {
         variant: "ghost",
         size: "icon",
         className:
-          "bg-transparent text-foreground-secondary hover:bg-transparent hover:text-foreground active:bg-transparent",
+          "bg-transparent text-muted-foreground hover:bg-transparent hover:text-foreground active:bg-transparent",
       },
       {
         variant: "ghost",
         size: "icon-lg",
         className:
-          "bg-transparent text-foreground-secondary hover:bg-transparent hover:text-foreground active:bg-transparent",
+          "bg-transparent text-muted-foreground hover:bg-transparent hover:text-foreground active:bg-transparent",
       },
     ],
     defaultVariants: {

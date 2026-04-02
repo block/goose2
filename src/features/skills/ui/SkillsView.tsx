@@ -11,6 +11,17 @@ import {
 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { SearchBar } from "@/shared/ui/SearchBar";
+import { Button, buttonVariants } from "@/shared/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/ui/alert-dialog";
 import { useFileImportZone } from "@/shared/hooks/useFileImportZone";
 import { CreateSkillDialog } from "./CreateSkillDialog";
 import {
@@ -51,73 +62,80 @@ function SkillCardMenu({
 
   return (
     <div ref={menuRef} className="relative shrink-0">
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="icon-xs"
         aria-label={`Options for ${skill.name}`}
         aria-haspopup="true"
         aria-expanded={menuOpen}
         onClick={() => setMenuOpen((prev) => !prev)}
-        className={cn(
-          "rounded-md p-1 text-foreground-secondary/60 transition-opacity",
-          "hover:bg-background-secondary hover:text-foreground",
-        )}
+        className="size-6 rounded-md text-muted-foreground hover:text-foreground"
       >
-        <MoreHorizontal className="h-3.5 w-3.5" />
-      </button>
+        <MoreHorizontal className="size-3.5" />
+      </Button>
 
       {menuOpen && (
         <div
           role="menu"
-          className="absolute right-0 top-full z-10 mt-1 w-36 rounded-lg border border-border bg-background py-1 shadow-lg"
+          className="absolute right-0 top-full z-10 mt-1 w-36 rounded-lg border border-border bg-background py-1 shadow-popover"
         >
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="xs"
             role="menuitem"
             onClick={() => {
               setMenuOpen(false);
               onEdit(skill);
             }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-background-secondary transition-colors"
+            className="w-full justify-start"
           >
-            <Pencil className="h-3.5 w-3.5" />
+            <Pencil className="size-3.5" />
             Edit
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
+            size="xs"
             role="menuitem"
             onClick={() => {
               setMenuOpen(false);
               onDuplicate(skill);
             }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-background-secondary transition-colors"
+            className="w-full justify-start"
           >
-            <Copy className="h-3.5 w-3.5" />
+            <Copy className="size-3.5" />
             Duplicate
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
+            size="xs"
             role="menuitem"
             onClick={() => {
               setMenuOpen(false);
               onExport(skill);
             }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-background-secondary transition-colors"
+            className="w-full justify-start"
           >
-            <Download className="h-3.5 w-3.5" />
+            <Download className="size-3.5" />
             Export
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
+            size="xs"
             role="menuitem"
             onClick={() => {
               setMenuOpen(false);
               onDelete(skill);
             }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-foreground-danger hover:bg-background-secondary transition-colors"
+            className="w-full justify-start text-destructive hover:text-destructive"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash2 className="size-3.5" />
             Delete
-          </button>
+          </Button>
         </div>
       )}
     </div>
@@ -275,8 +293,10 @@ export function SkillsView() {
           {/* Header */}
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h1 className="text-lg font-semibold">Skills</h1>
-              <p className="text-xs text-foreground-secondary">
+              <h1 className="text-lg font-semibold font-display tracking-tight">
+                Skills
+              </h1>
+              <p className="text-xs text-muted-foreground">
                 Reusable instructions for your AI personas
               </p>
             </div>
@@ -288,22 +308,24 @@ export function SkillsView() {
                 className="hidden"
                 onChange={handleImportFile}
               />
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="xs"
                 onClick={() => importInputRef.current?.click()}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-background-tertiary transition-colors"
               >
-                <Upload className="w-3.5 h-3.5" />
+                <Upload className="size-3.5" />
                 Import
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="outline"
+                size="xs"
                 onClick={handleNewSkill}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-background-tertiary transition-colors"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="size-3.5" />
                 New Skill
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -323,11 +345,9 @@ export function SkillsView() {
                   className="flex items-start justify-between gap-3 rounded-lg border border-border px-4 py-3"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium font-mono">
-                      {skill.name}
-                    </p>
+                    <p className="text-sm font-medium">{skill.name}</p>
                     {skill.description && (
-                      <p className="text-xs text-foreground-secondary mt-0.5">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         {skill.description}
                       </p>
                     )}
@@ -343,25 +363,22 @@ export function SkillsView() {
               ))}
 
               {/* New Skill card */}
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={handleNewSkill}
                 {...dropHandlers}
                 className={cn(
-                  "flex w-full items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-3 transition-colors",
+                  "h-auto w-full rounded-lg border border-dashed px-4 py-3 text-muted-foreground",
                   isDragOver
-                    ? "border-ring bg-background-secondary"
-                    : "border-border hover:border-foreground-secondary/40 hover:bg-background-secondary/50",
+                    ? "border-ring bg-muted"
+                    : "border-border hover:border-border hover:bg-accent/50",
                 )}
               >
-                <Plus className="h-4 w-4 text-foreground-secondary" />
-                <span className="text-sm text-foreground-secondary">
-                  New Skill
-                </span>
-                <span className="text-xs text-foreground-secondary/50 ml-1">
-                  or drop a file
-                </span>
-              </button>
+                <Plus className="size-4" />
+                <span className="text-sm">New Skill</span>
+                <span className="ml-1 text-xs">or drop a file</span>
+              </Button>
             </div>
           )}
 
@@ -370,10 +387,8 @@ export function SkillsView() {
             <div
               {...dropHandlers}
               className={cn(
-                "flex flex-col items-center justify-center gap-3 py-16 text-foreground-secondary rounded-lg border border-dashed transition-colors",
-                isDragOver
-                  ? "border-ring bg-background-secondary"
-                  : "border-transparent",
+                "flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground rounded-lg border border-dashed transition-colors",
+                isDragOver ? "border-ring bg-muted" : "border-transparent",
               )}
             >
               <AtSign className="h-10 w-10 opacity-30" />
@@ -381,21 +396,23 @@ export function SkillsView() {
                 <p className="text-sm font-medium">
                   {skills.length === 0 ? "No skills yet" : "No matching skills"}
                 </p>
-                <p className="text-xs text-foreground-secondary/60 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   {skills.length === 0
                     ? "Create a skill or drop a .skill.json file here."
                     : "Try a different search term."}
                 </p>
               </div>
               {skills.length === 0 && (
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="xs"
                   onClick={handleNewSkill}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-background-tertiary transition-colors mt-2"
+                  className="mt-2"
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  <Plus className="size-3.5" />
                   New Skill
-                </button>
+                </Button>
               )}
             </div>
           )}
@@ -420,42 +437,33 @@ export function SkillsView() {
       />
 
       {/* Delete confirmation dialog */}
-      {deletingSkill && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setDeletingSkill(null)}
-            aria-hidden="true"
-          />
-          <div className="relative z-10 w-full max-w-sm rounded-xl border border-border bg-background p-6 shadow-xl space-y-4">
-            <h3 className="text-sm font-semibold">Delete skill?</h3>
-            <p className="text-sm text-foreground-secondary">
-              Are you sure you want to delete &quot;{deletingSkill.name}&quot;?
+      <AlertDialog
+        open={!!deletingSkill}
+        onOpenChange={(open) => !open && setDeletingSkill(null)}
+      >
+        <AlertDialogContent className="max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete skill?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{deletingSkill?.name}&quot;?
               This cannot be undone.
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setDeletingSkill(null)}
-                className="px-3 py-1.5 text-xs font-medium rounded-md hover:bg-background-secondary transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmDeleteSkill}
-                className="px-3 py-1.5 text-xs font-medium rounded-md bg-background-danger text-foreground-inverse shadow-sm hover:bg-background-danger/90 transition-colors"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className={buttonVariants({ variant: "destructive" })}
+              onClick={handleConfirmDeleteSkill}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Export notification toast */}
       {notification && (
-        <div className="fixed bottom-4 right-4 z-50 rounded-lg border border-border bg-background px-4 py-3 shadow-lg text-sm animate-in fade-in slide-in-from-bottom-2">
+        <div className="fixed bottom-4 right-4 z-50 rounded-lg border border-border bg-background px-4 py-3 shadow-popover text-sm animate-in fade-in slide-in-from-bottom-2">
           {notification}
         </div>
       )}

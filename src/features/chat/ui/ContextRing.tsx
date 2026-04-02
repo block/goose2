@@ -19,10 +19,10 @@ export function ContextRing({
   // Color based on usage
   const strokeColor =
     progress > 0.9
-      ? "var(--color-text-danger)"
+      ? "var(--text-danger)"
       : progress > 0.7
-        ? "var(--color-text-warning)"
-        : "var(--color-text-tertiary)";
+        ? "var(--text-warning)"
+        : "var(--text-muted)";
 
   return (
     <svg
@@ -40,7 +40,7 @@ export function ContextRing({
         fill="none"
         stroke="currentColor"
         strokeWidth={2}
-        className="text-foreground-tertiary/30"
+        className="text-muted-foreground/30"
       />
       {/* Progress arc */}
       <circle

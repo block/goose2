@@ -9,10 +9,19 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
-import { ToolCallCard } from "./ToolCallCard";
-import { ThinkingBlock } from "./ThinkingBlock";
-import { MarkdownContent } from "./MarkdownContent";
+import {
+  MessageActions,
+  MessageAction,
+  MessageResponse,
+} from "@/shared/ui/ai-elements/message";
+import {
+  Reasoning,
+  ReasoningTrigger,
+  ReasoningContent,
+} from "@/shared/ui/ai-elements/reasoning";
+import { ToolCallAdapter } from "./ToolCallAdapter";
 import { ClickableImage } from "./ClickableImage";
+import { useArtifactLinkHandler } from "@/features/chat/hooks/useArtifactLinkHandler";
 import type {
   Message,
   MessageContent,
@@ -21,7 +30,7 @@ import type {
   ToolRequestContent,
   ToolResponseContent,
   ThinkingContent,
-  ReasoningContent,
+  ReasoningContent as ReasoningContentType,
   SystemNotificationContent,
 } from "@/shared/types/messages";
 
@@ -33,27 +42,6 @@ interface MessageBubbleProps {
   onCopy?: () => void;
   onRetry?: () => void;
   onEdit?: () => void;
-}
-
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={handleCopy}
-      className="rounded p-1 text-foreground-tertiary opacity-0 transition-opacity duration-150 hover:text-foreground-primary group-hover:opacity-100"
-      aria-label={copied ? "Copied" : "Copy message"}
-    >
-      {copied ? <Check size={14} /> : <Copy size={14} />}
-    </button>
-  );
 }
 
 interface ContentSection {
@@ -163,30 +151,25 @@ function ToolChainCards({ toolItems }: { toolItems: ToolChainItem[] }) {
   const [showInternalSteps, setShowInternalSteps] = useState(false);
   const { primaryItems, hiddenItems } = partitionToolSteps(toolItems);
 
-  const renderToolItem = (
-    item: ToolChainItem,
-    options?: { variant?: "default" | "subtle"; expandable?: boolean },
-  ) => {
+  const renderToolItem = (item: ToolChainItem) => {
     const name = getToolItemName(item);
     const status = getToolItemStatus(item);
     const { request, response } = item;
 
     return (
-      <ToolCallCard
+      <ToolCallAdapter
         key={item.key}
         name={name}
         arguments={request?.arguments ?? {}}
         status={status}
         result={response?.result}
         isError={response?.isError}
-        variant={options?.variant}
-        expandable={options?.expandable}
       />
     );
   };
 
   return (
-    <div className="my-1 flex flex-col items-start gap-1.5">
+    <div className="my-1 flex flex-col items-start gap-3">
       {primaryItems.map((item) => renderToolItem(item))}
 
       {hiddenItems.length > 0 && (
@@ -194,7 +177,7 @@ function ToolChainCards({ toolItems }: { toolItems: ToolChainItem[] }) {
           <button
             type="button"
             onClick={() => setShowInternalSteps((prev) => !prev)}
-            className="inline-flex items-center gap-1 text-xs text-foreground-tertiary hover:text-foreground-secondary"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-muted-foreground"
           >
             <ChevronRight
               className={cn(
@@ -207,10 +190,7 @@ function ToolChainCards({ toolItems }: { toolItems: ToolChainItem[] }) {
               : `Show internal steps (${hiddenItems.length})`}
           </button>
 
-          {showInternalSteps &&
-            hiddenItems.map((item) =>
-              renderToolItem(item, { variant: "subtle", expandable: false }),
-            )}
+          {showInternalSteps && hiddenItems.map((item) => renderToolItem(item))}
         </div>
       )}
     </div>
@@ -300,16 +280,18 @@ function groupContentSections(content: MessageContent[]): ContentSection[] {
   return sections;
 }
 
-function renderContentBlock(content: MessageContent, index: number) {
+function renderContentBlock(
+  content: MessageContent,
+  index: number,
+  isStreamingMsg?: boolean,
+) {
   switch (content.type) {
     case "text": {
       const tc = content as TextContent;
       return (
-        <MarkdownContent
-          key={`text-${index}`}
-          content={tc.text}
-          className="text-sm leading-relaxed"
-        />
+        <MessageResponse key={`text-${index}`} isAnimating={isStreamingMsg}>
+          {tc.text}
+        </MessageResponse>
       );
     }
     case "image": {
@@ -327,28 +309,34 @@ function renderContentBlock(content: MessageContent, index: number) {
     case "thinking": {
       const th = content as ThinkingContent;
       return (
-        <ThinkingBlock
+        <Reasoning
           key={`thinking-${index}`}
-          text={th.text}
-          type="thinking"
-        />
+          isStreaming={isStreamingMsg}
+          defaultOpen={false}
+        >
+          <ReasoningTrigger />
+          <ReasoningContent>{th.text}</ReasoningContent>
+        </Reasoning>
       );
     }
     case "reasoning": {
-      const r = content as ReasoningContent;
+      const r = content as ReasoningContentType;
       return (
-        <ThinkingBlock
+        <Reasoning
           key={`reasoning-${index}`}
-          text={r.text}
-          type="reasoning"
-        />
+          isStreaming={isStreamingMsg}
+          defaultOpen={false}
+        >
+          <ReasoningTrigger />
+          <ReasoningContent>{r.text}</ReasoningContent>
+        </Reasoning>
       );
     }
     case "redactedThinking":
       return (
         <div
           key={`redacted-${index}`}
-          className="text-xs italic text-foreground-tertiary"
+          className="text-xs italic text-muted-foreground"
         >
           (thinking redacted)
         </div>
@@ -363,7 +351,7 @@ function renderContentBlock(content: MessageContent, index: number) {
             "rounded-md border p-2 text-xs",
             isError
               ? "border-danger/30 bg-danger/10 text-danger"
-              : "border-border-secondary bg-background-tertiary text-foreground-secondary",
+              : "border-border bg-accent text-muted-foreground",
           )}
         >
           {sn.text}
@@ -375,6 +363,22 @@ function renderContentBlock(content: MessageContent, index: number) {
   }
 }
 
+function CopyAction({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <MessageAction tooltip={copied ? "Copied" : "Copy"} onClick={handleCopy}>
+      {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+    </MessageAction>
+  );
+}
+
 export function MessageBubble({
   message,
   agentName,
@@ -384,6 +388,7 @@ export function MessageBubble({
   onEdit,
 }: MessageBubbleProps) {
   const { role, content, created } = message;
+  const { handleContentClick, pathNotice } = useArtifactLinkHandler();
 
   const textContent = content
     .filter((c): c is TextContent => c.type === "text")
@@ -393,7 +398,7 @@ export function MessageBubble({
   if (role === "system") {
     return (
       <div className="flex justify-center px-4 py-2">
-        <div className="w-full max-w-md text-center text-xs text-foreground-tertiary">
+        <div className="w-full max-w-md text-center text-xs text-muted-foreground">
           {content.map((c, i) => renderContentBlock(c, i))}
         </div>
       </div>
@@ -414,15 +419,15 @@ export function MessageBubble({
     >
       {/* Avatar */}
       {isUser ? (
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-background-tertiary">
-          <User size={14} className="text-foreground-secondary" />
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent">
+          <User size={14} className="text-muted-foreground" />
         </div>
       ) : (
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-background-tertiary">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent">
           {agentAvatarUrl ? (
             <img src={agentAvatarUrl} alt="" className="h-7 w-7 rounded-full" />
           ) : (
-            <Bot size={14} className="text-foreground-secondary" />
+            <Bot size={14} className="text-muted-foreground" />
           )}
         </div>
       )}
@@ -430,17 +435,22 @@ export function MessageBubble({
       {/* Message content */}
       <div
         className={cn(
-          "flex flex-col gap-1",
+          "min-w-0 flex flex-col gap-1",
           isUser ? "max-w-[80%] items-end" : "max-w-[85%] items-start",
         )}
       >
         {!isUser && assistantDisplayName && (
-          <span className="mb-0.5 text-xs font-medium text-foreground-secondary">
+          <span className="mb-0.5 text-xs font-medium text-muted-foreground">
             {assistantDisplayName}
           </span>
         )}
 
-        <div className="text-[13px] leading-relaxed">
+        {/* biome-ignore lint/a11y/useKeyWithClickEvents: delegated link handler */}
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: delegated link handler */}
+        <div
+          className="w-full min-w-0 text-[13px] leading-relaxed"
+          onClick={handleContentClick}
+        >
           {groupContentSections(content).map((section, sectionIdx) => {
             if (section.type === "toolChain") {
               const toolItems = section.items as ToolChainItem[];
@@ -449,50 +459,37 @@ export function MessageBubble({
             const block = section.items[0] as MessageContent;
             return (
               <div key={`${message.id}-${section.key}`}>
-                {renderContentBlock(block, sectionIdx)}
+                {renderContentBlock(block, sectionIdx, isStreaming)}
               </div>
             );
           })}
-          {isStreaming && (
-            <span
-              className="inline-block animate-pulse text-foreground-tertiary"
-              aria-hidden="true"
-            >
-              ▍
-            </span>
+          {pathNotice && (
+            <p className="mt-2 text-xs text-destructive" role="status">
+              {pathNotice}
+            </p>
           )}
         </div>
 
         {/* Hover actions + timestamp */}
-        <div className="flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-          {textContent && <CopyButton text={textContent} />}
+        <MessageActions className="opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+          {textContent && <CopyAction text={textContent} />}
           {!isUser && onRetry && (
-            <button
-              type="button"
-              onClick={onRetry}
-              className="rounded p-1 text-foreground-tertiary hover:text-foreground-primary"
-              aria-label="Retry"
-            >
-              <RotateCcw size={14} />
-            </button>
+            <MessageAction tooltip="Retry" onClick={onRetry}>
+              <RotateCcw className="size-3.5" />
+            </MessageAction>
           )}
           {isUser && onEdit && (
-            <button
-              type="button"
-              onClick={onEdit}
-              className="rounded p-1 text-foreground-tertiary hover:text-foreground-primary"
-              aria-label="Edit message"
-            >
-              <Pencil size={14} />
-            </button>
+            <MessageAction tooltip="Edit" onClick={onEdit}>
+              <Pencil className="size-3.5" />
+            </MessageAction>
           )}
-          <span className="px-1 text-[10px] text-foreground-secondary">
+          <span className="px-1 text-[10px] text-muted-foreground">
             {new Date(created).toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
             })}
           </span>
-        </div>
+        </MessageActions>
       </div>
     </div>
   );

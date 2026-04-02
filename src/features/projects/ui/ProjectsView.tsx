@@ -7,8 +7,18 @@ import {
   Pencil,
   FolderKanban,
 } from "lucide-react";
-import { cn } from "@/shared/lib/cn";
 import { SearchBar } from "@/shared/ui/SearchBar";
+import { Button, buttonVariants } from "@/shared/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/ui/alert-dialog";
 import { CreateProjectDialog } from "./CreateProjectDialog";
 import { listProjects, deleteProject, type ProjectInfo } from "../api/projects";
 
@@ -39,63 +49,68 @@ function ProjectCardMenu({
 
   return (
     <div ref={menuRef} className="relative shrink-0">
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="icon-xs"
         aria-label={`Options for ${project.name}`}
         aria-haspopup="true"
         aria-expanded={menuOpen}
         onClick={() => setMenuOpen((prev) => !prev)}
-        className={cn(
-          "rounded-md p-1 text-foreground-secondary/60 transition-opacity",
-          "hover:bg-background-secondary hover:text-foreground",
-        )}
+        className="size-6 rounded-md text-muted-foreground hover:text-foreground"
       >
-        <MoreHorizontal className="h-3.5 w-3.5" />
-      </button>
+        <MoreHorizontal className="size-3.5" />
+      </Button>
 
       {menuOpen && (
         <div
           role="menu"
-          className="absolute right-0 top-full z-10 mt-1 w-36 rounded-lg border border-border bg-background py-1 shadow-lg"
+          className="absolute right-0 top-full z-10 mt-1 w-36 rounded-lg border border-border bg-background py-1 shadow-popover"
         >
           {onStartChat && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="xs"
               role="menuitem"
               onClick={() => {
                 setMenuOpen(false);
                 onStartChat(project);
               }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-background-secondary transition-colors"
+              className="w-full justify-start"
             >
-              <MessageSquare className="h-3.5 w-3.5" />
+              <MessageSquare className="size-3.5" />
               Start Chat
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="xs"
             role="menuitem"
             onClick={() => {
               setMenuOpen(false);
               onEdit(project);
             }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-background-secondary transition-colors"
+            className="w-full justify-start"
           >
-            <Pencil className="h-3.5 w-3.5" />
+            <Pencil className="size-3.5" />
             Edit
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
+            size="xs"
             role="menuitem"
             onClick={() => {
               setMenuOpen(false);
               onDelete(project);
             }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-foreground-danger hover:bg-background-secondary transition-colors"
+            className="w-full justify-start text-destructive hover:text-destructive"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash2 className="size-3.5" />
             Delete
-          </button>
+          </Button>
         </div>
       )}
     </div>
@@ -200,20 +215,23 @@ export function ProjectsView({ onStartChat }: ProjectsViewProps) {
           {/* Header */}
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h1 className="text-lg font-semibold">Projects</h1>
-              <p className="text-xs text-foreground-secondary">
+              <h1 className="text-lg font-semibold font-display tracking-tight">
+                Projects
+              </h1>
+              <p className="text-xs text-muted-foreground">
                 Organize your work into focused project contexts
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="xs"
                 onClick={handleNewProject}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-background-tertiary transition-colors"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="size-3.5" />
                 New Project
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -240,7 +258,7 @@ export function ProjectsView({ onStartChat }: ProjectsViewProps) {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium">{project.name}</p>
                       {project.prompt && (
-                        <p className="text-xs text-foreground-secondary mt-0.5 line-clamp-2">
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
                           {project.prompt}
                         </p>
                       )}
@@ -258,22 +276,21 @@ export function ProjectsView({ onStartChat }: ProjectsViewProps) {
               ))}
 
               {/* New Project card */}
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={handleNewProject}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border px-4 py-3 transition-colors hover:border-foreground-secondary/40 hover:bg-background-secondary/50"
+                className="h-auto w-full rounded-lg border border-dashed border-border px-4 py-3 text-muted-foreground hover:border-border hover:bg-accent/50"
               >
-                <Plus className="h-4 w-4 text-foreground-secondary" />
-                <span className="text-sm text-foreground-secondary">
-                  New Project
-                </span>
-              </button>
+                <Plus className="size-4" />
+                <span className="text-sm">New Project</span>
+              </Button>
             </div>
           )}
 
           {/* Empty state */}
           {!loading && filtered.length === 0 && (
-            <div className="flex flex-col items-center justify-center gap-3 py-16 text-foreground-secondary rounded-lg border border-dashed border-transparent">
+            <div className="flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground rounded-lg border border-dashed border-transparent">
               <FolderKanban className="h-10 w-10 opacity-30" />
               <div className="text-center">
                 <p className="text-sm font-medium">
@@ -281,21 +298,23 @@ export function ProjectsView({ onStartChat }: ProjectsViewProps) {
                     ? "No projects yet"
                     : "No matching projects"}
                 </p>
-                <p className="text-xs text-foreground-secondary/60 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   {projects.length === 0
                     ? "Create a project to organize your work."
                     : "Try a different search term."}
                 </p>
               </div>
               {projects.length === 0 && (
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="xs"
                   onClick={handleNewProject}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-background-tertiary transition-colors mt-2"
+                  className="mt-2"
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  <Plus className="size-3.5" />
                   New Project
-                </button>
+                </Button>
               )}
             </div>
           )}
@@ -311,38 +330,29 @@ export function ProjectsView({ onStartChat }: ProjectsViewProps) {
       />
 
       {/* Delete confirmation dialog */}
-      {deletingProject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setDeletingProject(null)}
-            aria-hidden="true"
-          />
-          <div className="relative z-10 w-full max-w-sm rounded-xl border border-border bg-background p-6 shadow-xl space-y-4">
-            <h3 className="text-sm font-semibold">Delete project?</h3>
-            <p className="text-sm text-foreground-secondary">
-              Are you sure you want to delete &quot;{deletingProject.name}
+      <AlertDialog
+        open={!!deletingProject}
+        onOpenChange={(open) => !open && setDeletingProject(null)}
+      >
+        <AlertDialogContent className="max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete project?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{deletingProject?.name}
               &quot;? This cannot be undone.
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setDeletingProject(null)}
-                className="px-3 py-1.5 text-xs font-medium rounded-md hover:bg-background-secondary transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmDeleteProject}
-                className="px-3 py-1.5 text-xs font-medium rounded-md bg-background-danger text-foreground-inverse shadow-sm hover:bg-background-danger/90 transition-colors"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className={buttonVariants({ variant: "destructive" })}
+              onClick={handleConfirmDeleteProject}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -52,7 +52,7 @@ export function MentionAutocomplete({
   return (
     <div
       ref={listRef}
-      className="absolute z-50 w-64 rounded-lg border border-border bg-background shadow-lg"
+      className="absolute z-50 w-64 rounded-lg border border-border bg-background shadow-popover"
       style={{
         bottom: anchorRect ? "calc(100% + 4px)" : undefined,
         left: anchorRect ? 16 : undefined,
@@ -60,7 +60,7 @@ export function MentionAutocomplete({
       role="listbox"
       aria-label="Mention suggestions"
     >
-      <div className="px-2 py-1.5 text-[10px] font-medium uppercase tracking-wider text-foreground-tertiary">
+      <div className="px-2 py-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
         Mention a persona
       </div>
       <div className="max-h-48 overflow-y-auto px-1 pb-1">
@@ -73,8 +73,8 @@ export function MentionAutocomplete({
             className={cn(
               "flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors",
               index === selectedIndex
-                ? "bg-background-tertiary text-foreground"
-                : "text-foreground-secondary hover:bg-background-tertiary/50",
+                ? "bg-accent text-foreground"
+                : "text-muted-foreground hover:bg-accent/50",
             )}
             onClick={() => handleSelect(persona)}
             onMouseEnter={() => setInternalIndex(index)}
@@ -83,7 +83,7 @@ export function MentionAutocomplete({
             <div className="flex min-w-0 flex-col">
               <span className="text-sm font-medium">{persona.displayName}</span>
               {persona.provider && (
-                <span className="text-[10px] text-foreground-tertiary">
+                <span className="text-[10px] text-muted-foreground">
                   {persona.provider}
                   {persona.model
                     ? ` / ${persona.model.split("-").slice(0, 2).join("-")}`

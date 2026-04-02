@@ -35,7 +35,7 @@ function ProjectDot({ color }: { color?: string | null }) {
       aria-hidden="true"
       className={cn(
         "inline-block size-2 rounded-full",
-        color ? "" : "bg-foreground-tertiary/40",
+        color ? "" : "bg-muted-foreground/40",
       )}
       style={color ? { backgroundColor: color } : undefined}
     />
@@ -180,7 +180,7 @@ export function ChatInputToolbar({
                 variant="ghost"
                 size="sm"
                 rightIcon={<ChevronDown className="opacity-50" />}
-                className="gap-1.5 rounded-lg px-2.5 text-xs text-foreground-tertiary hover:bg-background-tertiary hover:text-foreground"
+                className="gap-1.5 rounded-lg px-2.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
                 aria-label="Select model"
               >
                 {!isCompact && <span>{currentModel}</span>}
@@ -203,13 +203,13 @@ export function ChatInputToolbar({
                       {model.displayName ?? model.name}
                     </span>
                     {model.provider && (
-                      <span className="text-xs text-foreground-tertiary">
+                      <span className="text-xs text-muted-foreground">
                         {model.provider}
                       </span>
                     )}
                   </div>
                   {model.id === currentModel && (
-                    <Check className="h-4 w-4 shrink-0 text-foreground-secondary" />
+                    <Check className="h-4 w-4 shrink-0 text-muted-foreground" />
                   )}
                 </DropdownMenuItem>
               ))}
@@ -287,7 +287,7 @@ export function ChatInputToolbar({
               type="button"
               variant="ghost"
               size="icon-sm"
-              className="rounded-lg text-foreground-secondary hover:bg-background-tertiary hover:text-foreground"
+              className="rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
               aria-label="Context usage"
               title={`${contextTokens.toLocaleString()} / ${contextLimit.toLocaleString()} tokens`}
             >
@@ -330,7 +330,7 @@ export function ChatInputToolbar({
               onClick={onStop}
               variant="ghost"
               size="icon-sm"
-              className="rounded-full bg-background-danger/10 text-foreground-danger hover:bg-background-danger/20 hover:text-foreground-danger"
+              className="rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive"
               aria-label="Stop generation"
               title="Stop generation"
             >
@@ -345,8 +345,8 @@ export function ChatInputToolbar({
               className={cn(
                 "rounded-full",
                 canSend
-                  ? "bg-foreground text-background-primary shadow-none hover:bg-foreground/90"
-                  : "cursor-default bg-foreground/10 text-foreground-tertiary disabled:opacity-100",
+                  ? "bg-foreground text-background shadow-none hover:bg-foreground/90"
+                  : "cursor-default bg-foreground/10 text-muted-foreground disabled:opacity-100",
               )}
               aria-label="Send message"
               title={canSend ? "Send message" : undefined}

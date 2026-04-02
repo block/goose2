@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { RefreshCw, ClipboardCopy, Check, Loader2 } from "lucide-react";
+import { Button } from "@/shared/ui/button";
+import { Separator } from "@/shared/ui/separator";
 import {
   runDoctor,
   type DoctorCheck,
@@ -100,52 +102,58 @@ export function DoctorSettings() {
     <div>
       <div className="flex items-start justify-between gap-4 pr-8">
         <div>
-          <h3 className="text-lg font-semibold">Doctor</h3>
-          <p className="mt-1 text-sm text-foreground-secondary">
+          <h3 className="text-lg font-semibold font-display tracking-tight">
+            Doctor
+          </h3>
+          <p className="mt-1 text-sm text-muted-foreground">
             Verify required tools and agent availability for Goose.
           </p>
         </div>
 
         <div className="flex flex-shrink-0 items-center gap-2">
           {report && !loading && (
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="xs"
               onClick={copyDebugInfo}
-              className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground-secondary transition-colors hover:bg-background-secondary hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground"
             >
               {copied ? (
-                <Check className="h-3.5 w-3.5" />
+                <Check className="size-3.5" />
               ) : (
-                <ClipboardCopy className="h-3.5 w-3.5" />
+                <ClipboardCopy className="size-3.5" />
               )}
               {copied ? "Copied" : "Copy details"}
-            </button>
+            </Button>
           )}
 
           {!loading && (
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="xs"
               onClick={runChecksAndRefresh}
-              className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground-secondary transition-colors hover:bg-background-secondary hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground"
             >
-              <RefreshCw className="h-3.5 w-3.5" />
+              <RefreshCw className="size-3.5" />
               Re-run
-            </button>
+            </Button>
           )}
         </div>
       </div>
 
-      <div className="my-4 border-t" />
+      <Separator className="my-4" />
 
       {loading ? (
-        <div className="flex min-h-[160px] items-center justify-center gap-2 text-sm text-foreground-secondary">
+        <div className="flex min-h-[160px] items-center justify-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" />
           Running checks...
         </div>
       ) : report ? (
         <div className="space-y-6">
           <div className="mx-auto w-full max-w-xl space-y-2">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-foreground-tertiary">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Tools
             </h4>
             <div className="space-y-2">
@@ -161,7 +169,7 @@ export function DoctorSettings() {
 
           {agentChecks.length > 0 && (
             <div className="mx-auto w-full max-w-xl space-y-2">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-foreground-tertiary">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Agents
               </h4>
               <div className="space-y-2">
@@ -177,7 +185,7 @@ export function DoctorSettings() {
           )}
         </div>
       ) : (
-        <div className="flex min-h-[160px] items-center justify-center text-sm text-foreground-secondary">
+        <div className="flex min-h-[160px] items-center justify-center text-sm text-muted-foreground">
           No checks are available yet.
         </div>
       )}
