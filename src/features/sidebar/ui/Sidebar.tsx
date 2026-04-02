@@ -9,6 +9,8 @@ import {
   User,
 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import { Button } from "@/shared/ui/button";
+import { GooseIcon } from "@/shared/ui/icons/GooseIcon";
 import type { AppView } from "@/app/AppShell";
 import type { ProjectInfo } from "@/features/projects/api/projects";
 import { useChatStore } from "@/features/chat/stores/chatStore";
@@ -44,7 +46,7 @@ const NAV_ITEMS: readonly { id: AppView; label: string; icon: typeof Bot }[] = [
 ];
 
 const SIDEBAR_NAV_TEXT_CLASS =
-  "text-foreground-subtle hover:text-foreground hover:bg-accent";
+  "text-foreground-subtle hover:text-foreground hover:bg-accent/50";
 const EXPANDED_PROJECTS_STORAGE_KEY = "goose:sidebar:expanded-projects";
 
 export function Sidebar({
@@ -98,7 +100,7 @@ export function Sidebar({
     prevCollapsed.current = collapsed;
   }, [collapsed]);
 
-  const labelTransition = "transition-all duration-300 ease-out";
+  const labelTransition = "transition-[opacity,width] duration-300 ease-out";
   const labelVisible = expanded && !collapsed;
 
   const MAX_RECENTS = 20;
@@ -191,7 +193,7 @@ export function Sidebar({
   return (
     <div
       className={cn(
-        "relative h-full overflow-hidden bg-background-secondary border border-border-secondary/50",
+        "relative h-full overflow-hidden bg-background border border-border",
         "transition-[width] duration-300 ease-in-out",
         className,
       )}
@@ -200,22 +202,39 @@ export function Sidebar({
       <div className="flex flex-col h-full">
         {/* Header */}
         <div
-          className="flex items-center justify-end px-3 py-3 border-b border-border-secondary flex-shrink-0"
+          className={cn(
+            "flex items-center px-3 py-3 border-b border-border flex-shrink-0",
+            collapsed ? "justify-center" : "justify-between",
+          )}
           data-tauri-drag-region
         >
-          <button
+          <Button
             type="button"
-            onClick={onCollapse}
-            className={cn(
-              "flex items-center justify-center w-7 h-7 rounded-md",
-              "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
-              "transition-opacity duration-200",
-              collapsed ? "opacity-0 pointer-events-none" : "opacity-100",
-            )}
-            aria-label="Collapse sidebar"
+            variant="ghost"
+            size="icon-xs"
+            onClick={() => onNavigate?.("home")}
+            className="flex shrink-0 items-center justify-center transition-opacity hover:opacity-70"
+            aria-label="Home"
+            title="Home"
           >
-            <PanelLeftClose className="w-4 h-4" />
-          </button>
+            <GooseIcon className="h-[18px] w-[18px]" />
+          </Button>
+
+          {!collapsed && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              onClick={onCollapse}
+              className={cn(
+                "rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50",
+                "transition-opacity duration-200",
+              )}
+              aria-label="Collapse sidebar"
+            >
+              <PanelLeftClose className="size-4" />
+            </Button>
+          )}
         </div>
 
         {/* Expand button (collapsed only) */}
@@ -227,17 +246,16 @@ export function Sidebar({
               : "opacity-0 h-0 overflow-hidden pointer-events-none",
           )}
         >
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-xs"
             onClick={onCollapse}
-            className={cn(
-              "flex items-center justify-center w-7 h-7 rounded-md",
-              "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
-            )}
+            className="rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50"
             aria-label="Expand sidebar"
           >
-            <PanelLeft className="w-4 h-4" />
-          </button>
+            <PanelLeft className="size-4" />
+          </Button>
         </div>
 
         {/* Search bar */}
@@ -247,18 +265,20 @@ export function Sidebar({
             collapsed ? "px-0 py-1.5 flex justify-center" : "px-3 py-2",
           )}
         >
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size={collapsed ? "icon-xs" : "sm"}
             onClick={onSearchClick}
             className={cn(
-              "flex items-center rounded-md transition-all duration-300 ease-out",
+              "rounded-md transition-all duration-300 ease-out",
               collapsed
-                ? "justify-center w-7 h-7 mx-auto text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50"
-                : "gap-2 w-full px-2.5 py-1.5 border border-border-secondary text-xs text-foreground-secondary hover:text-foreground hover:border-foreground-secondary/30",
+                ? "mx-auto gap-0 text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                : "w-full gap-2 border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:border-border hover:bg-transparent",
             )}
             title={collapsed ? "Search ⌘K" : undefined}
           >
-            <Search className="w-3.5 h-3.5 flex-shrink-0" />
+            <Search className="size-3.5 flex-shrink-0" />
             <span
               className={cn(
                 labelTransition,
@@ -271,7 +291,7 @@ export function Sidebar({
             </span>
             <kbd
               className={cn(
-                "text-[10px] text-foreground-tertiary px-1 py-0.5 rounded font-mono flex-shrink-0",
+                "text-[10px] text-muted-foreground px-1 py-0.5 rounded font-mono flex-shrink-0",
                 labelTransition,
                 labelVisible
                   ? "opacity-100 w-auto"
@@ -280,26 +300,28 @@ export function Sidebar({
             >
               ⌘K
             </kbd>
-          </button>
+          </Button>
         </div>
 
         {/* Navigation (scrollable) */}
         <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-1.5 py-1">
           <div className="space-y-0.5">
             {/* New Chat */}
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={onNewChat}
               title={collapsed ? "New Chat" : undefined}
               className={cn(
-                "flex items-center w-full rounded-md text-[13px] transition-all duration-200",
+                "w-full rounded-md text-[13px]",
                 SIDEBAR_NAV_TEXT_CLASS,
                 collapsed
-                  ? "justify-center px-0 py-1.5"
-                  : "gap-2.5 px-3 py-1.5",
+                  ? "justify-center gap-0 px-0 py-1.5"
+                  : "justify-start gap-2.5 px-3 py-1.5",
               )}
             >
-              <Plus className="w-4 h-4 flex-shrink-0" />
+              <Plus className="size-4 flex-shrink-0" />
               <span
                 className={cn(
                   labelTransition,
@@ -310,30 +332,32 @@ export function Sidebar({
               >
                 New Chat
               </span>
-            </button>
+            </Button>
 
             {/* Nav items */}
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const isActive = activeView === item.id;
               return (
-                <button
+                <Button
                   key={item.id}
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => onNavigate?.(item.id)}
                   title={collapsed ? item.label : undefined}
                   className={cn(
-                    "flex items-center w-full rounded-md text-[13px] transition-all duration-200",
+                    "w-full rounded-md text-[13px] transition-all duration-200",
                     collapsed
-                      ? "justify-center px-0 py-1.5"
-                      : "gap-2.5 px-3 py-1.5",
+                      ? "justify-center gap-0 px-0 py-1.5"
+                      : "justify-start gap-2.5 px-3 py-1.5",
                     isActive
-                      ? "bg-background-secondary text-foreground"
+                      ? "bg-muted text-foreground hover:bg-muted"
                       : SIDEBAR_NAV_TEXT_CLASS,
                   )}
                   aria-current={isActive ? "page" : undefined}
                 >
-                  <Icon className="w-4 h-4 flex-shrink-0" />
+                  <Icon className="size-4 flex-shrink-0" />
                   <span
                     className={cn(
                       labelTransition,
@@ -344,7 +368,7 @@ export function Sidebar({
                   >
                     {item.label}
                   </span>
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -352,7 +376,7 @@ export function Sidebar({
           {/* Divider */}
           <div
             className={cn(
-              "my-2 mx-auto bg-border-secondary transition-all duration-300",
+              "my-2 mx-auto bg-border transition-all duration-300",
               collapsed ? "w-5 h-px" : "w-full h-px mx-1.5",
             )}
           />
@@ -381,18 +405,20 @@ export function Sidebar({
         {/* Footer */}
         <div
           className={cn(
-            "flex items-center border-t border-border-secondary flex-shrink-0 transition-all duration-300",
+            "flex items-center border-t border-border flex-shrink-0 transition-all duration-300",
             collapsed ? "justify-center px-0 py-2" : "px-3 py-2",
           )}
         >
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-xs"
             onClick={onSettingsClick}
-            className="w-7 h-7 rounded-full bg-background-tertiary flex items-center justify-center overflow-hidden hover:bg-background-tertiary/80 transition-colors cursor-pointer"
+            className="bg-accent text-muted-foreground hover:bg-accent/80"
             title="Settings"
           >
-            <User className="w-3.5 h-3.5 text-foreground-secondary" />
-          </button>
+            <User className="size-3.5" />
+          </Button>
         </div>
       </div>
     </div>

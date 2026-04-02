@@ -5,6 +5,10 @@ description = "Goose desktop app"
 authors = ["you"]
 edition = "2021"
 
+[[bin]]
+name = "Goose"
+path = "src/main.rs"
+
 [lib]
 name = "goose2_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]

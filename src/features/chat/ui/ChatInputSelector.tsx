@@ -16,6 +16,7 @@ export interface ChatInputSelectorItem {
   value: string;
   label: string;
   description?: string;
+  icon?: ReactNode;
   disabled?: boolean;
 }
 
@@ -65,14 +66,14 @@ export function ChatInputSelector({
           aria-label={ariaLabel}
           title={triggerTitle}
           disabled={disabled}
+          leftIcon={icon}
+          rightIcon={<ChevronDown />}
           className={cn(
             "min-w-0",
             triggerVariant === "default" && "justify-between",
           )}
         >
-          {icon}
           <span className="truncate">{triggerLabel}</span>
-          <ChevronDown className="size-3" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -102,20 +103,23 @@ export function ChatInputSelector({
                 key={item.value}
                 disabled={item.disabled}
                 onSelect={() => onValueChange(item.value)}
-                className="items-start justify-between"
+                className="gap-2 items-start justify-between"
               >
+                {item.icon ? (
+                  <span className="mt-0.5 shrink-0">{item.icon}</span>
+                ) : null}
                 <div className="min-w-0 flex-1">
                   <span className="block truncate font-medium">
                     {item.label}
                   </span>
                   {item.description ? (
-                    <span className="block truncate text-xs text-foreground-tertiary">
+                    <span className="block truncate text-xs text-muted-foreground">
                       {item.description}
                     </span>
                   ) : null}
                 </div>
                 {item.value === value ? (
-                  <Check className="mt-0.5 size-4 shrink-0 text-foreground-secondary" />
+                  <Check className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                 ) : null}
               </DropdownMenuItem>
             ))}

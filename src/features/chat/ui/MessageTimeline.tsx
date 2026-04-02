@@ -52,11 +52,15 @@ export function MessageTimeline({
   const containerRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
 
-  // Auto-scroll when near bottom
+  // Auto-scroll when near bottom — use scrollTo on the container instead of
+  // scrollIntoView which can scroll parent/document-level ancestors.
   // biome-ignore lint/correctness/useExhaustiveDependencies: refs are stable and don't need to be in deps
   useEffect(() => {
-    if (isNearBottomRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (isNearBottomRef.current && containerRef.current) {
+      containerRef.current.scrollTo({
+        top: containerRef.current.scrollHeight,
+        behavior: "smooth",
+      });
     }
   }, [messages, streamingMessageId]);
 
@@ -75,10 +79,10 @@ export function MessageTimeline({
     return (
       <div className={cn("flex flex-1 items-center justify-center", className)}>
         <div className="text-center">
-          <p className="text-lg font-medium text-foreground-secondary">
+          <p className="text-lg font-medium font-display tracking-tight text-muted-foreground">
             Start a conversation
           </p>
-          <p className="mt-1 text-sm text-foreground-tertiary">
+          <p className="mt-1 text-sm text-muted-foreground">
             Send a message to get started
           </p>
         </div>
@@ -105,11 +109,11 @@ export function MessageTimeline({
             <div key={message.id} className={index === 0 ? "mt-0" : "mt-4"}>
               {showDateSeparator && (
                 <div className="my-4 flex items-center gap-3 px-4">
-                  <div className="h-px flex-1 bg-border-secondary" />
-                  <span className="text-[11px] font-medium text-foreground-tertiary">
+                  <div className="h-px flex-1 bg-border" />
+                  <span className="text-[11px] font-medium text-muted-foreground">
                     {formatDateSeparator(message.created)}
                   </span>
-                  <div className="h-px flex-1 bg-border-secondary" />
+                  <div className="h-px flex-1 bg-border" />
                 </div>
               )}
               <MessageBubble

@@ -5,7 +5,6 @@ import {
   createSystemNotificationMessage,
   createUserMessage,
 } from "@/shared/types/messages";
-import type { Message } from "@/shared/types/messages";
 import type { ChatState, TokenState } from "@/shared/types/chat";
 import { acpSendMessage, acpCancelSession } from "@/shared/api/acp";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
@@ -35,6 +34,31 @@ function getErrorMessage(error: unknown): string {
   return "Unknown error";
 }
 
+function markMessageStopped(sessionId: string, messageId: string) {
+  useChatStore.getState().updateMessage(sessionId, messageId, (message) => {
+    if (
+      message.metadata?.completionStatus === "completed" ||
+      message.metadata?.completionStatus === "error" ||
+      message.metadata?.completionStatus === "stopped"
+    ) {
+      return message;
+    }
+
+    return {
+      ...message,
+      metadata: {
+        ...message.metadata,
+        completionStatus: "stopped",
+      },
+      content: message.content.map((block) =>
+        block.type === "toolRequest" && block.status === "executing"
+          ? { ...block, status: "stopped" }
+          : block,
+      ),
+    };
+  });
+}
+
 /**
  * Hook for managing a chat session -- sending messages, handling streaming,
  * and managing chat lifecycle.
@@ -48,11 +72,12 @@ export function useChat(
 ) {
   const store = useChatStore();
   const abortRef = useRef<AbortController | null>(null);
+  const streamingPersonaIdRef = useRef<string | null>(null);
 
   const messages = store.messagesBySession[sessionId] ?? [];
   const { chatState, tokenState, error, streamingMessageId } =
     store.getSessionRuntime(sessionId);
-  const isStreaming = streamingMessageId !== null;
+  const isStreaming = chatState === "streaming" || streamingMessageId !== null;
 
   const getStreamingPersonaId = useCallback(() => {
     if (!streamingMessageId) {
@@ -143,24 +168,9 @@ export function useChat(
         });
       }
 
-      // Create placeholder assistant message for streaming
-      const assistantMessage: Message = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        created: Date.now(),
-        content: [],
-        metadata: {
-          userVisible: true,
-          agentVisible: true,
-          personaId: effectivePersonaInfo?.id,
-          personaName: effectivePersonaInfo?.name,
-        },
-      };
-      store.addMessage(sessionId, assistantMessage);
-      store.setStreamingMessageId(sessionId, assistantMessage.id);
-
       const abort = new AbortController();
       abortRef.current = abort;
+      streamingPersonaIdRef.current = effectivePersonaInfo?.id ?? null;
 
       try {
         const agent = useAgentStore.getState().getActiveAgent();
@@ -191,14 +201,18 @@ export function useChat(
           const errorMessage = getErrorMessage(err);
           const liveStore = useChatStore.getState();
           const { streamingMessageId } = liveStore.getSessionRuntime(sessionId);
-          const streamingMessage = streamingMessageId
-            ? liveStore.messagesBySession[sessionId]?.find(
-                (message) => message.id === streamingMessageId,
-              )
-            : undefined;
-
-          if (streamingMessageId && streamingMessage?.content.length === 0) {
-            liveStore.removeMessage(sessionId, streamingMessageId);
+          if (streamingMessageId) {
+            liveStore.updateMessage(
+              sessionId,
+              streamingMessageId,
+              (message) => ({
+                ...message,
+                metadata: {
+                  ...message.metadata,
+                  completionStatus: "error",
+                },
+              }),
+            );
           }
 
           liveStore.addMessage(
@@ -211,6 +225,7 @@ export function useChat(
         }
       } finally {
         abortRef.current = null;
+        streamingPersonaIdRef.current = null;
       }
     },
     [
@@ -226,13 +241,24 @@ export function useChat(
 
   const stopGeneration = useCallback(() => {
     abortRef.current?.abort();
-    const activePersonaId = getStreamingPersonaId();
+    const activePersonaId =
+      streamingPersonaIdRef.current ?? getStreamingPersonaId();
+    const activeStreamingMessageId = useChatStore
+      .getState()
+      .getSessionRuntime(sessionId).streamingMessageId;
+
     store.setChatState(sessionId, "idle");
     store.setStreamingMessageId(sessionId, null);
     // Cancel the backend ACP session to stop orphaned streaming events
-    acpCancelSession(sessionId, activePersonaId ?? undefined).catch(() => {
-      // Best-effort cancellation — ignore errors
-    });
+    acpCancelSession(sessionId, activePersonaId ?? undefined)
+      .then((wasCancelled) => {
+        if (wasCancelled && activeStreamingMessageId) {
+          markMessageStopped(sessionId, activeStreamingMessageId);
+        }
+      })
+      .catch(() => {
+        // Best-effort cancellation — ignore errors
+      });
   }, [getStreamingPersonaId, store, sessionId]);
 
   const retryLastMessage = useCallback(async () => {

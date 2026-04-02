@@ -4,6 +4,7 @@ import {
   ChevronDown,
   Check,
   ArrowUp,
+  Sparkles,
   Square,
 } from "lucide-react";
 import type { AcpProvider } from "@/shared/api/acp";
@@ -27,6 +28,19 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/shared/ui/tooltip";
 const NO_PROJECT_VALUE = "__no_project__";
 const CREATE_PROJECT_VALUE = "__create_project__";
 const CREATE_PROJECT_FROM_FOLDER_VALUE = "__create_project_from_folder__";
+
+function ProjectDot({ color }: { color?: string | null }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "inline-block size-2 rounded-full",
+        color ? "" : "bg-muted-foreground/40",
+      )}
+      style={color ? { backgroundColor: color } : undefined}
+    />
+  );
+}
 
 function formatProviderLabel(providerId: string) {
   return providerId
@@ -117,10 +131,6 @@ export function ChatInputToolbar({
   const providerLabel =
     availableProviderItems.find((provider) => provider.id === selectedProvider)
       ?.label ?? formatProviderLabel(selectedProvider);
-  const actionButtonClass =
-    "rounded-lg text-foreground-secondary hover:bg-background-tertiary hover:text-foreground";
-  const disabledActionButtonClass =
-    "rounded-lg text-foreground-tertiary/35 hover:bg-transparent hover:text-foreground-tertiary/35";
 
   const handleProjectValueChange = (value: string) => {
     if (value === CREATE_PROJECT_VALUE) {
@@ -145,6 +155,7 @@ export function ChatInputToolbar({
             ariaLabel="Override provider"
             value={selectedProvider}
             triggerLabel={providersLoading ? "Loading..." : providerLabel}
+            icon={<Sparkles aria-hidden="true" />}
             triggerVariant="toolbar"
             triggerSize="sm"
             menuLabel="Provider Override"
@@ -168,14 +179,14 @@ export function ChatInputToolbar({
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="gap-1.5 rounded-lg px-2.5 text-xs text-foreground-tertiary hover:bg-background-tertiary hover:text-foreground"
+                rightIcon={<ChevronDown className="opacity-50" />}
+                className="gap-1.5 rounded-lg px-2.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
                 aria-label="Select model"
               >
                 {!isCompact && <span>{currentModel}</span>}
                 {isCompact && (
                   <span className="max-w-[60px] truncate">{currentModel}</span>
                 )}
-                <ChevronDown className="h-3 w-3 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56">
@@ -192,13 +203,13 @@ export function ChatInputToolbar({
                       {model.displayName ?? model.name}
                     </span>
                     {model.provider && (
-                      <span className="text-xs text-foreground-tertiary">
+                      <span className="text-xs text-muted-foreground">
                         {model.provider}
                       </span>
                     )}
                   </div>
                   {model.id === currentModel && (
-                    <Check className="h-4 w-4 shrink-0 text-foreground-secondary" />
+                    <Check className="h-4 w-4 shrink-0 text-muted-foreground" />
                   )}
                 </DropdownMenuItem>
               ))}
@@ -211,6 +222,7 @@ export function ChatInputToolbar({
           value={selectedProjectId ?? NO_PROJECT_VALUE}
           triggerLabel={projectLabel}
           triggerTitle={projectTitle}
+          icon={<ProjectDot color={selectedProject?.color} />}
           triggerVariant="toolbar"
           triggerSize="sm"
           menuLabel="Project"
@@ -222,11 +234,13 @@ export function ChatInputToolbar({
                   value: NO_PROJECT_VALUE,
                   label: "No project",
                   description: "General chat without project context",
+                  icon: <ProjectDot />,
                 },
                 ...availableProjects.map((project) => ({
                   value: project.id,
                   label: project.name,
                   description: project.workingDir ?? undefined,
+                  icon: <ProjectDot color={project.color} />,
                 })),
               ],
             },
@@ -256,99 +270,91 @@ export function ChatInputToolbar({
       </div>
 
       {/* Right side: actions */}
-      <div className="flex items-center gap-1">
-        {personas.length > 0 && (
-          <PersonaPicker
-            personas={personas}
-            selectedPersonaId={selectedPersonaId}
-            onPersonaChange={(id) => onPersonaChange?.(id)}
-            onCreatePersona={onCreatePersona}
-            triggerVariant="icon"
-          />
-        )}
+      <div className="flex items-center">
+        <div className="flex items-center gap-px">
+          {personas.length > 0 && (
+            <PersonaPicker
+              personas={personas}
+              selectedPersonaId={selectedPersonaId}
+              onPersonaChange={(id) => onPersonaChange?.(id)}
+              onCreatePersona={onCreatePersona}
+              triggerVariant="icon"
+            />
+          )}
 
-        {contextLimit > 0 && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                className={actionButtonClass}
-                aria-label="Context usage"
-              >
-                <ContextRing tokens={contextTokens} limit={contextLimit} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {contextTokens.toLocaleString()} / {contextLimit.toLocaleString()}{" "}
-              tokens
-            </TooltipContent>
-          </Tooltip>
-        )}
-
-        <Tooltip>
-          <TooltipTrigger asChild>
+          {contextLimit > 0 && (
             <Button
               type="button"
               variant="ghost"
               size="icon-sm"
-              className={cn(
-                "cursor-not-allowed disabled:pointer-events-auto disabled:opacity-100",
-                disabledActionButtonClass,
-              )}
-              disabled
-              aria-label="Voice input (coming soon)"
+              className="rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
+              aria-label="Context usage"
+              title={`${contextTokens.toLocaleString()} / ${contextLimit.toLocaleString()} tokens`}
             >
-              <Mic className="h-3.5 w-3.5" />
+              <ContextRing tokens={contextTokens} limit={contextLimit} />
             </Button>
-          </TooltipTrigger>
-          <TooltipContent>Voice input (coming soon)</TooltipContent>
-        </Tooltip>
+          )}
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              className={actionButtonClass}
-              aria-label="Attach file"
-            >
-              <Paperclip className="h-3.5 w-3.5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Attach file</TooltipContent>
-        </Tooltip>
-
-        {isStreaming ? (
           <Button
             type="button"
-            onClick={onStop}
             variant="ghost"
             size="icon-sm"
-            className="rounded-full bg-background-danger/10 text-foreground-danger hover:bg-background-danger/20 hover:text-foreground-danger"
-            aria-label="Stop generation"
+            aria-label="Attach file"
+            title="Attach file"
           >
-            <Square className="h-3.5 w-3.5" />
+            <Paperclip />
           </Button>
-        ) : (
-          <Button
-            type="button"
-            onClick={onSend}
-            disabled={!canSend}
-            size="icon-sm"
-            className={cn(
-              "rounded-full",
-              canSend
-                ? "bg-foreground text-background-primary shadow-none hover:bg-foreground/90"
-                : "cursor-default bg-foreground/10 text-foreground-tertiary disabled:opacity-100",
-            )}
-            aria-label="Send message"
-          >
-            <ArrowUp className="h-4 w-4" />
-          </Button>
-        )}
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  disabled
+                  aria-label="Voice input (coming soon)"
+                >
+                  <Mic />
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>Voice input (coming soon)</TooltipContent>
+          </Tooltip>
+        </div>
+
+        <div className="ml-2">
+          {isStreaming ? (
+            <Button
+              type="button"
+              onClick={onStop}
+              variant="ghost"
+              size="icon-sm"
+              className="rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive"
+              aria-label="Stop generation"
+              title="Stop generation"
+            >
+              <Square className="h-3.5 w-3.5" />
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              onClick={onSend}
+              disabled={!canSend}
+              size="icon-sm"
+              className={cn(
+                "rounded-full",
+                canSend
+                  ? "bg-foreground text-background shadow-none hover:bg-foreground/90"
+                  : "cursor-default bg-foreground/10 text-muted-foreground disabled:opacity-100",
+              )}
+              aria-label="Send message"
+              title={canSend ? "Send message" : undefined}
+            >
+              <ArrowUp className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

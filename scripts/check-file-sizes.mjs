@@ -12,16 +12,30 @@ const EXCEPTIONS = {
   },
 };
 
+// Directories excluded from size checks (imported library code)
+const EXCLUDED_DIRS = [
+  "src/shared/ui",
+  "src/components/ai-elements",
+  "src/hooks",
+];
+
 const DIRS_TO_CHECK = [
   { dir: "src/app", glob: /\.[jt]sx?$/ },
   { dir: "src/features", glob: /\.[jt]sx?$/ },
   { dir: "src/shared", glob: /\.[jt]sx?$/ },
+  { dir: "src/components", glob: /\.[jt]sx?$/ },
+  { dir: "src/hooks", glob: /\.[jt]sx?$/ },
   { dir: "src-tauri/src", glob: /\.rs$/ },
 ];
 
 function countLines(filePath) {
   const content = readFileSync(filePath, "utf8");
   return content.split("\n").length;
+}
+
+function isExcluded(filePath) {
+  const rel = relative(".", filePath);
+  return EXCLUDED_DIRS.some((dir) => rel.startsWith(dir));
 }
 
 function walkDir(dir, pattern) {
@@ -48,6 +62,7 @@ const violations = [];
 for (const { dir, glob } of DIRS_TO_CHECK) {
   const files = walkDir(dir, glob);
   for (const file of files) {
+    if (isExcluded(file)) continue;
     const rel = relative(".", file);
     const limit = EXCEPTIONS[rel]?.limit ?? DEFAULT_LIMIT;
     const lines = countLines(file);

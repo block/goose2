@@ -1,5 +1,16 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/shared/lib/cn";
+import { Button, buttonVariants } from "@/shared/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/ui/alert-dialog";
 import {
   Palette,
   Settings2,
@@ -123,7 +134,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
       {/* biome-ignore lint/a11y/noStaticElementInteractions: click handler only prevents backdrop dismiss propagation */}
       <div
         className={cn(
-          "flex h-[600px] w-full max-w-3xl overflow-hidden rounded-xl border bg-background shadow-2xl transition-all duration-500 ease-out",
+          "flex h-[600px] w-full max-w-3xl overflow-hidden rounded-xl border bg-background shadow-modal transition-all duration-500 ease-out",
           isLoaded ? "opacity-100 scale-100" : "opacity-0 scale-95",
           isTransitioning ? "scale-[0.98]" : "scale-100",
         )}
@@ -132,7 +143,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
         {/* Sidebar */}
         <div
           className={cn(
-            "flex w-44 flex-col border-r bg-background-secondary/50 transition-all duration-700 ease-out",
+            "flex w-44 flex-col border-r bg-muted/50 transition-all duration-700 ease-out",
             isLoaded ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-2",
           )}
         >
@@ -148,15 +159,17 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
           </div>
           <nav className="flex flex-col gap-1 px-2">
             {NAV_ITEMS.map((item, index) => (
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 key={item.id}
                 onClick={() => setActiveSection(item.id)}
                 className={cn(
-                  "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-all duration-600 ease-out",
+                  "w-full justify-start rounded-lg px-3 py-2 transition-all duration-600 ease-out",
                   activeSection === item.id
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-foreground-secondary hover:bg-background-secondary/50 hover:text-foreground duration-300",
+                    ? "bg-background text-foreground shadow-sm hover:bg-background"
+                    : "text-muted-foreground hover:bg-accent/50 hover:text-foreground duration-300",
                   isLoaded
                     ? "opacity-100 translate-x-0"
                     : "opacity-0 translate-x-4",
@@ -165,22 +178,24 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                   transitionDelay: isLoaded ? "0ms" : `${index * 40 + 300}ms`,
                 }}
               >
-                <item.icon className="h-4 w-4" />
+                <item.icon className="size-4" />
                 {item.label}
-              </button>
+              </Button>
             ))}
           </nav>
         </div>
 
         {/* Content */}
         <div className="relative flex-1 overflow-y-auto">
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-xs"
             onClick={onClose}
-            className="absolute right-4 top-4 z-10 rounded-md p-1 text-foreground-secondary transition-colors hover:text-foreground"
+            className="absolute right-4 top-4 z-10 rounded-md text-muted-foreground hover:text-foreground"
           >
-            <X className="h-4 w-4" />
-          </button>
+            <X className="size-4" />
+          </Button>
 
           <div
             className={cn(
@@ -206,8 +221,10 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               {activeSection === "general" && (
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-lg font-semibold">General</h3>
-                    <p className="mt-1 text-sm text-foreground-secondary">
+                    <h3 className="text-lg font-semibold font-display tracking-tight">
+                      General
+                    </h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
                       General settings will appear here.
                     </p>
                   </div>
@@ -216,8 +233,10 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               {activeSection === "projects" && (
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-lg font-semibold">Projects</h3>
-                    <p className="mt-1 text-sm text-foreground-secondary">
+                    <h3 className="text-lg font-semibold font-display tracking-tight">
+                      Projects
+                    </h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
                       Manage your projects.
                     </p>
                   </div>
@@ -226,7 +245,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                   <div className="space-y-3">
                     <h3 className="text-sm font-semibold">Archived Projects</h3>
                     {!loadingArchived && archivedProjects.length === 0 && (
-                      <p className="text-xs text-foreground-secondary">
+                      <p className="text-xs text-muted-foreground">
                         No archived projects.
                       </p>
                     )}
@@ -245,20 +264,23 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5 flex-shrink-0">
-                          <button
+                          <Button
                             type="button"
+                            variant="outline"
+                            size="xs"
                             onClick={() => handleRestoreProject(project.id)}
-                            className="px-2 py-1 text-xs font-medium rounded-md border border-border hover:bg-background-tertiary transition-colors"
                           >
                             Restore
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             type="button"
+                            variant="ghost"
+                            size="xs"
                             onClick={() => setDeletingProject(project)}
-                            className="px-2 py-1 text-xs font-medium rounded-md text-foreground-danger hover:bg-background-danger/10 transition-colors"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
                           >
                             Delete
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -268,8 +290,10 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               {activeSection === "chats" && (
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-lg font-semibold">Chats</h3>
-                    <p className="mt-1 text-sm text-foreground-secondary">
+                    <h3 className="text-lg font-semibold font-display tracking-tight">
+                      Chats
+                    </h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
                       Restore archived chats.
                     </p>
                   </div>
@@ -277,7 +301,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                   <div className="space-y-3">
                     <h3 className="text-sm font-semibold">Archived Chats</h3>
                     {!loadingArchivedChats && archivedChats.length === 0 && (
-                      <p className="text-xs text-foreground-secondary">
+                      <p className="text-xs text-muted-foreground">
                         No archived chats.
                       </p>
                     )}
@@ -290,7 +314,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                           <div className="truncate text-sm">
                             {session.title}
                           </div>
-                          <p className="truncate text-xs text-foreground-secondary">
+                          <p className="truncate text-xs text-muted-foreground">
                             {session.projectId
                               ? "Project chat"
                               : "Standalone chat"}{" "}
@@ -300,13 +324,15 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                               : `${session.messageCount} messages`}
                           </p>
                         </div>
-                        <button
+                        <Button
                           type="button"
+                          variant="outline"
+                          size="xs"
                           onClick={() => handleRestoreChat(session.id)}
-                          className="flex-shrink-0 rounded-md border border-border px-2 py-1 text-xs font-medium transition-colors hover:bg-background-tertiary"
+                          className="flex-shrink-0"
                         >
                           Restore
-                        </button>
+                        </Button>
                       </div>
                     ))}
                   </div>
@@ -314,8 +340,10 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               )}
               {activeSection === "about" && (
                 <div>
-                  <h3 className="text-lg font-semibold">About</h3>
-                  <p className="mt-1 text-sm text-foreground-secondary">
+                  <h3 className="text-lg font-semibold font-display tracking-tight">
+                    About
+                  </h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
                     About information will appear here.
                   </p>
                 </div>
@@ -325,43 +353,34 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
         </div>
       </div>
 
-      {deletingProject && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setDeletingProject(null)}
-            aria-hidden="true"
-          />
-          <div className="relative z-10 w-full max-w-sm rounded-xl border border-border bg-background p-6 shadow-xl space-y-4">
-            <h3 className="text-sm font-semibold">
-              Delete project permanently?
-            </h3>
-            <p className="text-sm text-foreground-secondary">
+      <AlertDialog
+        open={!!deletingProject}
+        onOpenChange={(open) => !open && setDeletingProject(null)}
+      >
+        <AlertDialogContent className="max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete project permanently?</AlertDialogTitle>
+            <AlertDialogDescription>
               Are you sure you want to permanently delete &quot;
-              {deletingProject.name}&quot;? This cannot be undone.
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setDeletingProject(null)}
-                className="px-3 py-1.5 text-xs font-medium rounded-md hover:bg-background-secondary transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
+              {deletingProject?.name}&quot;? This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className={buttonVariants({ variant: "destructive" })}
+              onClick={() => {
+                if (deletingProject) {
                   handleDelete(deletingProject.id);
                   setDeletingProject(null);
-                }}
-                className="px-3 py-1.5 text-xs font-medium rounded-md bg-background-danger text-foreground-inverse shadow-sm hover:bg-background-danger/90 transition-colors"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

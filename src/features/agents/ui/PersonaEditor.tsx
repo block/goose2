@@ -1,7 +1,29 @@
 import { useState, useEffect, useCallback } from "react";
-import { X, Copy } from "lucide-react";
+import { Copy } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import {
+  Avatar as AvatarRoot,
+  AvatarImage,
+  AvatarFallback,
+} from "@/shared/ui/avatar";
 import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
+import { Label } from "@/shared/ui/label";
+import { Textarea } from "@/shared/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
 import type {
   Persona,
   ProviderType,
@@ -90,78 +112,41 @@ export function PersonaEditor({
     ],
   );
 
-  if (!isOpen) return null;
-
   const initials = displayName.charAt(0).toUpperCase() || "?";
 
   // For new personas, use a temporary ID for the avatar upload
   const avatarPersonaId = persona?.id ?? "new-persona";
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={
-        isEditing ? `Edit persona ${persona?.displayName}` : "Create persona"
-      }
-      className="fixed inset-0 z-50 flex items-center justify-center"
-    >
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/40 motion-safe:animate-in motion-safe:fade-in"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      {/* Panel */}
-      <div
-        className={cn(
-          "relative z-10 w-full max-w-lg rounded-xl border border-border bg-background shadow-xl",
-          "max-h-[85vh] flex flex-col",
-          "motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95",
-        )}
-      >
-        {/* Header */}
-        <div className="shrink-0 flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="text-sm font-semibold">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-lg max-h-[85vh] flex flex-col gap-0 p-0">
+        <DialogHeader className="shrink-0 px-5 py-4">
+          <DialogTitle className="text-sm">
             {isReadOnly
               ? persona?.displayName
               : isEditing
                 ? "Edit Persona"
                 : "New Persona"}
-          </h2>
-          <button
-            type="button"
-            aria-label="Close"
-            onClick={onClose}
-            className="rounded-md p-1 text-foreground-secondary hover:bg-background-secondary transition-colors"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+          </DialogTitle>
+        </DialogHeader>
 
         <form
           id="persona-form"
           onSubmit={handleSubmit}
-          className="min-h-0 flex-1 overflow-y-auto space-y-4 p-5"
+          className="min-h-0 flex-1 overflow-y-auto space-y-4 px-5 pb-5"
         >
           {/* Avatar drop zone */}
           <div className="flex justify-center">
             {isReadOnly ? (
-              avatar ? (
-                <img
-                  src={avatar.type === "url" ? avatar.value : undefined}
+              <AvatarRoot className="h-16 w-16 border border-border">
+                <AvatarImage
+                  src={avatar?.type === "url" ? avatar.value : undefined}
                   alt="Avatar preview"
-                  className="h-16 w-16 rounded-full object-cover border border-border"
                 />
-              ) : (
-                <div
-                  aria-hidden="true"
-                  className="flex h-16 w-16 items-center justify-center rounded-full bg-background-secondary text-lg font-semibold text-foreground-secondary"
-                >
+                <AvatarFallback className="text-lg font-semibold">
                   {initials}
-                </div>
-              )
+                </AvatarFallback>
+              </AvatarRoot>
             ) : (
               <AvatarDropZone
                 personaId={avatarPersonaId}
@@ -173,37 +158,31 @@ export function PersonaEditor({
           </div>
 
           {/* Display Name */}
-          <label className="block space-y-1">
-            <span className="text-xs font-medium text-foreground-secondary">
-              Display Name <span className="text-foreground-danger">*</span>
-            </span>
-            <input
-              type="text"
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-muted-foreground">
+              Display Name <span className="text-destructive">*</span>
+            </Label>
+            <Input
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               readOnly={isReadOnly}
               required
               placeholder="e.g. Code Reviewer"
-              className={cn(
-                "w-full rounded-lg border border-border bg-background-secondary px-3 py-2 text-sm",
-                "placeholder:text-foreground-secondary/40",
-                "focus:outline-none focus:ring-1 focus:ring-ring transition-colors",
-                isReadOnly && "opacity-70 cursor-not-allowed",
-              )}
+              className={cn(isReadOnly && "opacity-70 cursor-not-allowed")}
             />
-          </label>
+          </div>
 
           {/* System Prompt */}
-          <label className="block space-y-1">
+          <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-foreground-secondary">
-                System Prompt <span className="text-foreground-danger">*</span>
-              </span>
-              <span className="text-[10px] text-foreground-secondary/60">
+              <Label className="text-xs font-medium text-muted-foreground">
+                System Prompt <span className="text-destructive">*</span>
+              </Label>
+              <span className="text-[10px] text-muted-foreground">
                 {systemPrompt.length} chars
               </span>
             </div>
-            <textarea
+            <Textarea
               value={systemPrompt}
               onChange={(e) => setSystemPrompt(e.target.value)}
               readOnly={isReadOnly}
@@ -211,99 +190,94 @@ export function PersonaEditor({
               rows={6}
               placeholder="You are a helpful assistant that..."
               className={cn(
-                "w-full resize-y rounded-lg border border-border bg-background-secondary px-3 py-2 text-sm leading-relaxed",
-                "placeholder:text-foreground-secondary/40",
-                "focus:outline-none focus:ring-1 focus:ring-ring transition-colors",
+                "leading-relaxed",
                 isReadOnly && "opacity-70 cursor-not-allowed",
               )}
             />
-          </label>
+          </div>
 
           {/* Provider */}
-          <label className="block space-y-1">
-            <span className="text-xs font-medium text-foreground-secondary">
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-muted-foreground">
               Provider
-            </span>
-            <select
-              value={provider}
-              onChange={(e) => setProvider(e.target.value as ProviderType | "")}
+            </Label>
+            <Select
+              value={provider || "__none__"}
+              onValueChange={(v) =>
+                setProvider(
+                  v === "__none__"
+                    ? ("" as ProviderType | "")
+                    : (v as ProviderType),
+                )
+              }
               disabled={isReadOnly}
-              className={cn(
-                "w-full rounded-lg border border-border bg-background-secondary px-3 py-2 text-sm",
-                "focus:outline-none focus:ring-1 focus:ring-ring transition-colors",
-                isReadOnly && "opacity-70 cursor-not-allowed",
-              )}
             >
-              <option value="">None</option>
-              {PROVIDER_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </label>
+              <SelectTrigger
+                className={cn(
+                  "w-full",
+                  isReadOnly && "opacity-70 cursor-not-allowed",
+                )}
+              >
+                <SelectValue placeholder="None" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">None</SelectItem>
+                {PROVIDER_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Model */}
-          <label className="block space-y-1">
-            <span className="text-xs font-medium text-foreground-secondary">
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-muted-foreground">
               Model
-            </span>
-            <input
-              type="text"
+            </Label>
+            <Input
               value={model}
               onChange={(e) => setModel(e.target.value)}
               readOnly={isReadOnly}
               placeholder="e.g. claude-sonnet-4-20250514"
-              className={cn(
-                "w-full rounded-lg border border-border bg-background-secondary px-3 py-2 text-sm",
-                "placeholder:text-foreground-secondary/40",
-                "focus:outline-none focus:ring-1 focus:ring-ring transition-colors",
-                isReadOnly && "opacity-70 cursor-not-allowed",
-              )}
+              className={cn(isReadOnly && "opacity-70 cursor-not-allowed")}
             />
-          </label>
+          </div>
         </form>
 
-        {/* Footer actions */}
-        <div className="shrink-0 border-t border-border px-5 py-4">
-          <div className="flex items-center justify-end gap-2">
-            {isReadOnly && onDuplicate && persona ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => onDuplicate(persona)}
-              >
-                <Copy className="h-3.5 w-3.5" />
-                Duplicate
+        <DialogFooter className="shrink-0 border-t px-5 py-4">
+          {isReadOnly && onDuplicate && persona ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onDuplicate(persona)}
+            >
+              <Copy className="h-3.5 w-3.5" />
+              Duplicate
+            </Button>
+          ) : (
+            <>
+              <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+                Cancel
               </Button>
-            ) : (
-              <>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={onClose}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  form="persona-form"
-                  size="sm"
-                  disabled={!isValid || isPending}
-                >
-                  {isPending
-                    ? "Saving..."
-                    : isEditing
-                      ? "Save Changes"
-                      : "Create"}
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+              <Button
+                type="submit"
+                form="persona-form"
+                size="sm"
+                disabled={!isValid || isPending}
+              >
+                {isPending
+                  ? "Saving..."
+                  : isEditing
+                    ? "Save Changes"
+                    : "Create"}
+              </Button>
+            </>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

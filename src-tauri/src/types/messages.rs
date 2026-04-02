@@ -96,6 +96,17 @@ pub struct MessageMetadata {
     pub target_persona_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub target_persona_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub completion_status: Option<MessageCompletionStatus>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum MessageCompletionStatus {
+    InProgress,
+    Completed,
+    Error,
+    Stopped,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

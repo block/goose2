@@ -49,7 +49,7 @@ export function LoadingGoose({
       aria-label={`${agentName} ${message}`}
     >
       <div className="max-w-3xl mx-auto w-full">
-        <div className="flex items-center gap-2 py-2 text-xs text-foreground-tertiary">
+        <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
           {icon}
           <span>
             {agentName} {message}

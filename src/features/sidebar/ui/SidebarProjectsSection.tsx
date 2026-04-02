@@ -7,6 +7,7 @@ import {
   Plus,
 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import { Button } from "@/shared/ui/button";
 import type { AppView } from "@/app/AppShell";
 import type { ProjectInfo } from "@/features/projects/api/projects";
 import { SessionActivityIndicator } from "@/shared/ui/SessionActivityIndicator";
@@ -14,7 +15,7 @@ import { SidebarChatRow } from "./SidebarChatRow";
 
 const MAX_VISIBLE_CHATS = 3;
 const PROJECT_ROW_TEXT_CLASS =
-  "text-foreground-subtle group-hover:text-foreground";
+  "text-foreground-subtle group-hover:text-foreground hover:bg-transparent";
 
 interface TabInfo {
   id: string;
@@ -73,8 +74,10 @@ function ItemMenu({
 
   return (
     <div ref={ref} className="relative shrink-0">
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="icon-xs"
         aria-label={`Options for ${label}`}
         aria-haspopup="true"
         aria-expanded={open}
@@ -83,45 +86,48 @@ function ItemMenu({
           setOpen((prev) => !prev);
         }}
         className={cn(
-          "flex items-center justify-center w-6 h-6 rounded-md",
-          "text-foreground-secondary/40 hover:text-foreground",
+          "size-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50",
           open
             ? "visible opacity-100"
             : "invisible group-hover:visible opacity-0 group-hover:opacity-100",
         )}
       >
-        <MoreHorizontal className="w-3.5 h-3.5" />
-      </button>
+        <MoreHorizontal className="size-3.5" />
+      </Button>
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full z-10 mt-1 w-28 rounded-lg border border-border bg-background py-1 shadow-lg"
+          className="absolute right-0 top-full z-10 mt-1 w-28 rounded-lg border border-border bg-background py-1 shadow-popover"
         >
           {onEdit && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="xs"
               role="menuitem"
               onClick={() => {
                 setOpen(false);
                 onEdit();
               }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-background-secondary transition-colors"
+              className="w-full justify-start"
             >
               Edit
-            </button>
+            </Button>
           )}
           {onArchive && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="xs"
               role="menuitem"
               onClick={() => {
                 setOpen(false);
                 onArchive();
               }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-background-secondary transition-colors"
+              className="w-full justify-start"
             >
               Archive
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -165,13 +171,14 @@ function ProjectSection({
   return (
     <div>
       {/* Project row */}
-      <div className="flex items-center group rounded-md transition-colors duration-150 hover:bg-accent">
-        <button
+      <div className="flex items-center group rounded-md transition-colors duration-150 hover:bg-accent/50">
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => toggleProject(project.id)}
           className={cn(
-            "flex items-center flex-1 min-w-0 gap-1.5 py-1.5 px-2.5 text-[13px]",
-            "transition-colors duration-150",
+            "flex-1 min-w-0 justify-start gap-1.5 rounded-md px-2.5 py-1.5 text-[13px]",
             PROJECT_ROW_TEXT_CLASS,
           )}
         >
@@ -189,27 +196,28 @@ function ProjectSection({
           <span className="flex-1 min-w-0 truncate text-left">
             {project.name}
           </span>
-        </button>
+        </Button>
         <ItemMenu
           label={project.name}
           onEdit={() => onEditProject?.(project.id)}
           onArchive={() => onArchiveProject?.(project.id)}
         />
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-xs"
           onClick={(e) => {
             e.stopPropagation();
             onNewChatInProject?.(project.id);
           }}
           title="New chat in project"
           className={cn(
-            "flex items-center justify-center w-6 h-6 rounded-md mr-1 flex-shrink-0",
-            "text-foreground-secondary/50 hover:text-foreground",
+            "mr-1 size-6 flex-shrink-0 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50",
             "invisible group-hover:visible opacity-0 group-hover:opacity-100",
           )}
         >
-          <Plus className="w-3.5 h-3.5" />
-        </button>
+          <Plus className="size-3.5" />
+        </Button>
       </div>
 
       {/* Nested chats */}
@@ -233,13 +241,14 @@ function ProjectSection({
             );
           })}
           {hasMore && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="xs"
               onClick={() => {
                 if (showAll) {
                   setShowAll(false);
                 } else {
-                  // If more than 8 items, navigate to full view instead
                   if (projectChats.length > 8) {
                     onNavigate?.("projects");
                   } else {
@@ -247,25 +256,22 @@ function ProjectSection({
                   }
                 }
               }}
-              className={cn(
-                "flex items-center gap-1.5 w-full pl-8 pr-3 py-1 text-[11px]",
-                "text-foreground-secondary/60 hover:text-foreground-secondary transition-colors duration-150",
-              )}
+              className="h-auto w-full justify-start gap-1.5 rounded-md py-1 pl-8 pr-3 text-[11px] text-muted-foreground hover:text-muted-foreground"
             >
               {showAll ? (
                 <>
-                  <ChevronDown className="w-3 h-3" />
+                  <ChevronDown className="size-3" />
                   Show less
                 </>
               ) : (
                 <>
-                  <ChevronRight className="w-3 h-3" />
+                  <ChevronRight className="size-3" />
                   {projectChats.length > 8
                     ? `View all ${projectChats.length} chats`
                     : `${projectChats.length - MAX_VISIBLE_CHATS} more`}
                 </>
               )}
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -312,7 +318,7 @@ export function SidebarProjectsSection({
       >
         <span
           className={cn(
-            "text-[10px] font-semibold uppercase tracking-wider text-foreground-secondary/70 flex-1 pl-1.5",
+            "text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex-1 pl-1.5",
             labelTransition,
             labelVisible
               ? "opacity-100 w-auto"
@@ -322,39 +328,36 @@ export function SidebarProjectsSection({
           Projects
         </span>
         {!collapsed && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-xs"
             onClick={onCreateProject}
             title="New project"
-            className={cn(
-              "flex items-center justify-center w-6 h-6 rounded-md flex-shrink-0 mr-1",
-              "text-foreground-secondary/50 hover:text-foreground hover:bg-background-tertiary/50",
-              "transition-opacity duration-150",
-            )}
+            className="mr-1 size-6 flex-shrink-0 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50"
           >
-            <Plus className="w-3.5 h-3.5" />
-          </button>
+            <Plus className="size-3.5" />
+          </Button>
         )}
       </div>
 
       {collapsed ? (
         <div className="flex flex-col items-center gap-1">
           {projects.map((project) => (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-xs"
               key={project.id}
               title={project.name}
               onClick={() => onNavigate?.("projects")}
-              className={cn(
-                "flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-200",
-                "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
-              )}
+              className="rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/50"
             >
               <span
-                className="inline-block w-2.5 h-2.5 rounded-full"
+                className="inline-block size-2.5 rounded-full"
                 style={{ backgroundColor: project.color }}
               />
-            </button>
+            </Button>
           ))}
         </div>
       ) : (
@@ -391,7 +394,7 @@ export function SidebarProjectsSection({
           >
             <span
               className={cn(
-                "text-[10px] font-semibold uppercase tracking-wider text-foreground-secondary/70 pl-1.5",
+                "text-[10px] font-semibold uppercase tracking-wider text-muted-foreground pl-1.5",
                 labelTransition,
                 labelVisible
                   ? "opacity-100 w-auto"
@@ -405,25 +408,27 @@ export function SidebarProjectsSection({
           {collapsed ? (
             <div className="flex flex-col items-center gap-1">
               {projectSessions.standalone.map((session) => (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-xs"
                   key={session.id}
                   title={session.title}
                   onClick={() => onSelectSession?.(session.id)}
                   className={cn(
-                    "relative flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-200",
+                    "relative rounded-lg",
                     activeSessionId === session.id
-                      ? "bg-background-tertiary/70 text-foreground"
-                      : "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
+                      ? "bg-accent/70 text-foreground hover:bg-accent/70"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
                   )}
                 >
-                  <MessageSquare className="w-4 h-4" />
+                  <MessageSquare className="size-4" />
                   <SessionActivityIndicator
                     isRunning={session.isRunning}
                     hasUnread={session.hasUnread}
                     variant="overlay"
                   />
-                </button>
+                </Button>
               ))}
             </div>
           ) : (

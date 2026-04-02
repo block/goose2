@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import { Plus } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import { Button } from "@/shared/ui/button";
+import { Skeleton } from "@/shared/ui/skeleton";
 import type { Persona } from "@/shared/types/agents";
 import { PersonaCard } from "@/features/agents/ui/PersonaCard";
 import { useFileImportZone } from "@/shared/hooks/useFileImportZone";
@@ -22,12 +24,12 @@ function SkeletonCard() {
   return (
     <div
       aria-hidden="true"
-      className="flex flex-col items-center gap-3 rounded-xl border border-border p-5 motion-safe:animate-pulse"
+      className="flex flex-col items-center gap-3 rounded-xl border border-border p-5"
     >
-      <div className="h-12 w-12 rounded-full bg-background-secondary" />
-      <div className="h-4 w-24 rounded bg-background-secondary" />
-      <div className="h-3 w-full rounded bg-background-secondary" />
-      <div className="h-3 w-3/4 rounded bg-background-secondary" />
+      <Skeleton className="h-12 w-12 rounded-full" />
+      <Skeleton className="h-4 w-24" />
+      <Skeleton className="h-3 w-full" />
+      <Skeleton className="h-3 w-3/4" />
     </div>
   );
 }
@@ -89,28 +91,29 @@ export function PersonaGallery({
       ))}
 
       {/* Create new card */}
-      <button
+      <Button
         type="button"
+        variant="ghost"
         onClick={onCreatePersona}
         aria-label="Create new persona"
         {...dropHandlers}
         className={cn(
-          "flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-5",
-          "text-foreground-secondary/60 transition-colors",
-          "hover:border-border-primary/50 hover:text-foreground-secondary hover:bg-background-secondary/50",
+          "flex h-auto flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-5",
+          "text-muted-foreground",
+          "hover:border-border hover:text-muted-foreground hover:bg-accent/50",
           isDragOver
-            ? "border-border-primary bg-background-secondary/50 text-foreground-secondary"
+            ? "border-border bg-muted/50 text-muted-foreground"
             : "border-border",
         )}
       >
-        <Plus className="h-8 w-8" />
+        <Plus className="size-8" />
         <span className="text-sm font-medium">New Persona</span>
         {onImportFile && (
-          <span className="text-[11px] text-foreground-secondary/40">
+          <span className="text-[11px] text-muted-foreground">
             or drop a file
           </span>
         )}
-      </button>
+      </Button>
       {onImportFile && (
         <input
           ref={fileInputRef}

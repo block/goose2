@@ -202,10 +202,10 @@ describe("MessageBubble", () => {
     expect(screen.queryByText("Tool result")).not.toBeInTheDocument();
   });
 
-  it("renders thinking content as ThinkingBlock", () => {
+  it("renders thinking content as Reasoning block", () => {
     const msg = assistantMessage([{ type: "thinking", text: "deep thoughts" }]);
     render(<MessageBubble message={msg} />);
-    expect(screen.getByText(/thinking/i)).toBeInTheDocument();
+    expect(screen.getByText(/thought for/i)).toBeInTheDocument();
   });
 
   it("prefers the message persona name over the current agent name", () => {
