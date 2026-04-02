@@ -90,17 +90,9 @@ export function buildInitScript(options?: {
             case "import_skills":
               return Promise.resolve(SKILLS);
 
-            // ---- Sessions / UI State / Misc ----
+            // ---- Sessions / Misc ----
             case "list_sessions":
               return Promise.resolve([]);
-            case "load_ui_state":
-              return Promise.resolve({
-                openTabIds: [],
-                activeTabId: null,
-                extra: {},
-              });
-            case "save_ui_state":
-              return Promise.resolve(null);
             case "list_projects":
               return Promise.resolve([]);
             case "get_avatars_dir":

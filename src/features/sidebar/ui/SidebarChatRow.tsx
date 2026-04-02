@@ -3,7 +3,6 @@ import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { SessionActivityIndicator } from "@/shared/ui/SessionActivityIndicator";
 
-const OPEN_CHAT_ROW_CLASS = "text-foreground group-hover:text-foreground";
 const INACTIVE_CHAT_ROW_CLASS = "text-foreground group-hover:text-foreground";
 const ACTIVE_CHAT_ROW_CLASS = "bg-accent text-foreground";
 
@@ -11,7 +10,6 @@ interface SidebarChatRowProps {
   id: string;
   title: string;
   isActive: boolean;
-  isOpen: boolean;
   isRunning?: boolean;
   hasUnread?: boolean;
   className?: string;
@@ -24,7 +22,6 @@ export function SidebarChatRow({
   id,
   title,
   isActive,
-  isOpen,
   isRunning = false,
   hasUnread = false,
   className,
@@ -129,11 +126,7 @@ export function SidebarChatRow({
         className={cn(
           "flex items-center gap-2 flex-1 min-w-0 py-1.5 text-[13px]",
           "transition-colors duration-150 px-2.5 text-left bg-transparent",
-          isActive
-            ? ACTIVE_CHAT_ROW_CLASS
-            : isOpen
-              ? OPEN_CHAT_ROW_CLASS
-              : INACTIVE_CHAT_ROW_CLASS,
+          isActive ? ACTIVE_CHAT_ROW_CLASS : INACTIVE_CHAT_ROW_CLASS,
         )}
       >
         <span className="flex-1 min-w-0 truncate">{title}</span>

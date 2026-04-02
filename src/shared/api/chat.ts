@@ -54,23 +54,3 @@ export async function archiveSession(sessionId: string): Promise<void> {
 export async function unarchiveSession(sessionId: string): Promise<void> {
   return invoke("unarchive_session", { sessionId });
 }
-
-export async function saveUiState(
-  openTabIds: string[],
-  activeTabId: string | null,
-  personaPerSession: Record<string, string>,
-): Promise<void> {
-  return invoke("save_ui_state", {
-    openTabIds,
-    activeTabId,
-    personaPerSession,
-  });
-}
-
-export async function loadUiState(): Promise<{
-  openTabIds: string[];
-  activeTabId: string | null;
-  personaPerSession: Record<string, string>;
-}> {
-  return invoke("load_ui_state");
-}
