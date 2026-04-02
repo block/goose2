@@ -149,8 +149,8 @@ mod tests {
     fn resolve_working_dir_creates_missing_directory() {
         let temp_dir = tempfile::tempdir().expect("temp dir");
         let missing_dir = temp_dir.path().join("missing");
-        let resolved =
-            resolve_working_dir(Some("missing".to_string()), temp_dir.path()).expect("resolve path");
+        let resolved = resolve_working_dir(Some("missing".to_string()), temp_dir.path())
+            .expect("resolve path");
 
         assert!(missing_dir.exists());
         assert_eq!(
@@ -169,7 +169,6 @@ mod tests {
             home_dir.join("Code/goose2")
         );
     }
-
 }
 
 /// Cancel a running ACP session.

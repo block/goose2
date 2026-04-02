@@ -191,7 +191,6 @@ impl AcpService {
                     session_id, save_error
                 );
             }
-
         }
 
         result
