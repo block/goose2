@@ -58,6 +58,13 @@ fn resolve_working_dir(
         working_dir
     };
 
+    std::fs::create_dir_all(&working_dir).map_err(|error| {
+        format!(
+            "Failed to create working directory '{}': {error}",
+            working_dir.display()
+        )
+    })?;
+
     std::fs::canonicalize(&working_dir).map_err(|error| {
         format!(
             "Working directory '{}' does not exist or is not accessible: {error}",
@@ -139,11 +146,17 @@ mod tests {
     }
 
     #[test]
-    fn resolve_working_dir_errors_for_missing_directory() {
+    fn resolve_working_dir_creates_missing_directory() {
         let temp_dir = tempfile::tempdir().expect("temp dir");
-        let result = resolve_working_dir(Some("missing".to_string()), temp_dir.path());
+        let missing_dir = temp_dir.path().join("missing");
+        let resolved =
+            resolve_working_dir(Some("missing".to_string()), temp_dir.path()).expect("resolve path");
 
-        assert!(result.is_err());
+        assert!(missing_dir.exists());
+        assert_eq!(
+            resolved,
+            std::fs::canonicalize(&missing_dir).expect("canonical missing dir")
+        );
     }
 
     #[test]
