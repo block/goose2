@@ -428,7 +428,7 @@ export function MessageBubble({
       {/* Message content */}
       <div
         className={cn(
-          "flex flex-col gap-1",
+          "min-w-0 flex flex-col gap-1",
           isUser ? "max-w-[80%] items-end" : "max-w-[85%] items-start",
         )}
       >
@@ -438,7 +438,7 @@ export function MessageBubble({
           </span>
         )}
 
-        <div className="text-[13px] leading-relaxed">
+        <div className="w-full min-w-0 text-[13px] leading-relaxed">
           {groupContentSections(content).map((section, sectionIdx) => {
             if (section.type === "toolChain") {
               const toolItems = section.items as ToolChainItem[];

@@ -157,7 +157,7 @@ export const ToolOutput = ({
       </h4>
       <div
         className={cn(
-          "overflow-x-auto rounded-md text-xs [&_table]:w-full",
+          "overflow-x-auto rounded-md text-xs [&_table]:w-full [&_pre]:whitespace-pre-wrap [&_pre]:break-words",
           errorText
             ? "bg-destructive/10 text-destructive"
             : "bg-muted/50 text-foreground",
