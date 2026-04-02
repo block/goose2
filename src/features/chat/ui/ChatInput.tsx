@@ -279,6 +279,19 @@ export function ChatInput({
     textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
   };
 
+  const addImageFile = useCallback((file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      // dataUrl is "data:<mimeType>;base64,<data>"
+      const [header, base64] = dataUrl.split(",");
+      const mimeType = header.replace("data:", "").replace(";base64", "");
+      const objectUrl = URL.createObjectURL(file);
+      setImages((prev) => [...prev, { base64, mimeType, objectUrl }]);
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
       const items = Array.from(e.clipboardData.items);
@@ -289,19 +302,31 @@ export function ChatInput({
       for (const item of imageItems) {
         const file = item.getAsFile();
         if (!file) continue;
-        const reader = new FileReader();
-        reader.onload = () => {
-          const dataUrl = reader.result as string;
-          // dataUrl is "data:<mimeType>;base64,<data>"
-          const [header, base64] = dataUrl.split(",");
-          const mimeType = header.replace("data:", "").replace(";base64", "");
-          const objectUrl = URL.createObjectURL(file);
-          setImages((prev) => [...prev, { base64, mimeType, objectUrl }]);
-        };
-        reader.readAsDataURL(file);
+        addImageFile(file);
       }
     },
-    [],
+    [addImageFile],
+  );
+
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    const hasImages = Array.from(e.dataTransfer.items).some((item) =>
+      item.type.startsWith("image/"),
+    );
+    if (hasImages) e.preventDefault();
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      const files = Array.from(e.dataTransfer.files).filter((f) =>
+        f.type.startsWith("image/"),
+      );
+      if (files.length === 0) return;
+      e.preventDefault();
+      for (const file of files) {
+        addImageFile(file);
+      }
+    },
+    [addImageFile],
   );
 
   const removeImage = useCallback((index: number) => {
@@ -325,7 +350,12 @@ export function ChatInput({
     <TooltipProvider delayDuration={300}>
       <div className={cn("px-4 pb-6 pt-2", className)} ref={containerRef}>
         <div className="mx-auto max-w-3xl">
-          <div className="relative rounded-2xl border border-border bg-background-secondary px-4 pb-3 pt-4 shadow-lg">
+          {/* biome-ignore lint/a11y/noStaticElementInteractions: drop zone for image files */}
+          <div
+            className="relative rounded-2xl border border-border bg-background-secondary px-4 pb-3 pt-4 shadow-lg"
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+          >
             <MentionAutocomplete
               personas={personas}
               query={mentionQuery}
