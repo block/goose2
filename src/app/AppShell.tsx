@@ -423,7 +423,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           />
         </div>
 
-        <main className="min-h-0 min-w-0 flex-1">
+        <main className="min-h-0 min-w-0 flex-1 overflow-hidden">
           {children ?? renderContent()}
         </main>
       </div>
