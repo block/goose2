@@ -272,55 +272,55 @@ export function ChatInputToolbar({
       {/* Right side: actions */}
       <div className="flex items-center">
         <div className="flex items-center gap-px">
-        {personas.length > 0 && (
-          <PersonaPicker
-            personas={personas}
-            selectedPersonaId={selectedPersonaId}
-            onPersonaChange={(id) => onPersonaChange?.(id)}
-            onCreatePersona={onCreatePersona}
-            triggerVariant="icon"
-          />
-        )}
+          {personas.length > 0 && (
+            <PersonaPicker
+              personas={personas}
+              selectedPersonaId={selectedPersonaId}
+              onPersonaChange={(id) => onPersonaChange?.(id)}
+              onCreatePersona={onCreatePersona}
+              triggerVariant="icon"
+            />
+          )}
 
-        {contextLimit > 0 && (
+          {contextLimit > 0 && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="rounded-lg text-foreground-secondary hover:bg-background-tertiary hover:text-foreground"
+              aria-label="Context usage"
+              title={`${contextTokens.toLocaleString()} / ${contextLimit.toLocaleString()} tokens`}
+            >
+              <ContextRing tokens={contextTokens} limit={contextLimit} />
+            </Button>
+          )}
+
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
-            className="rounded-lg text-foreground-secondary hover:bg-background-tertiary hover:text-foreground"
-            aria-label="Context usage"
-            title={`${contextTokens.toLocaleString()} / ${contextLimit.toLocaleString()} tokens`}
+            aria-label="Attach file"
+            title="Attach file"
           >
-            <ContextRing tokens={contextTokens} limit={contextLimit} />
+            <Paperclip />
           </Button>
-        )}
 
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Attach file"
-          title="Attach file"
-        >
-          <Paperclip />
-        </Button>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                disabled
-                aria-label="Voice input (coming soon)"
-              >
-                <Mic />
-              </Button>
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>Voice input (coming soon)</TooltipContent>
-        </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  disabled
+                  aria-label="Voice input (coming soon)"
+                >
+                  <Mic />
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>Voice input (coming soon)</TooltipContent>
+          </Tooltip>
         </div>
 
         <div className="ml-2">

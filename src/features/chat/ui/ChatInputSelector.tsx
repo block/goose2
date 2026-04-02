@@ -105,7 +105,9 @@ export function ChatInputSelector({
                 onSelect={() => onValueChange(item.value)}
                 className="gap-2 items-start justify-between"
               >
-                {item.icon ? <span className="mt-0.5 shrink-0">{item.icon}</span> : null}
+                {item.icon ? (
+                  <span className="mt-0.5 shrink-0">{item.icon}</span>
+                ) : null}
                 <div className="min-w-0 flex-1">
                   <span className="block truncate font-medium">
                     {item.label}

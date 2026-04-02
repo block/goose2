@@ -29,9 +29,12 @@ const buttonVariants = cva(
         sm: "h-8 rounded-md px-3 text-xs [&_svg:not([class*='size-']):not([class*='h-']):not([class*='w-'])]:size-3",
         lg: "h-10 rounded-md px-8 [&_svg:not([class*='size-']):not([class*='h-']):not([class*='w-'])]:size-4",
         icon: "h-9 w-9 [&_svg:not([class*='size-']):not([class*='h-']):not([class*='w-'])]:size-4",
-        "icon-xs": "h-7 w-7 [&_svg:not([class*='size-']):not([class*='h-']):not([class*='w-'])]:size-3",
-        "icon-sm": "h-8 w-8 [&_svg:not([class*='size-']):not([class*='h-']):not([class*='w-'])]:size-3.5",
-        "icon-lg": "h-10 w-10 [&_svg:not([class*='size-']):not([class*='h-']):not([class*='w-'])]:size-5",
+        "icon-xs":
+          "h-7 w-7 [&_svg:not([class*='size-']):not([class*='h-']):not([class*='w-'])]:size-3",
+        "icon-sm":
+          "h-8 w-8 [&_svg:not([class*='size-']):not([class*='h-']):not([class*='w-'])]:size-3.5",
+        "icon-lg":
+          "h-10 w-10 [&_svg:not([class*='size-']):not([class*='h-']):not([class*='w-'])]:size-5",
       },
     },
     compoundVariants: [
@@ -91,7 +94,16 @@ export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> &
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   (
-    { className, variant, size, asChild = false, leftIcon, rightIcon, children, ...props },
+    {
+      className,
+      variant,
+      size,
+      asChild = false,
+      leftIcon,
+      rightIcon,
+      children,
+      ...props
+    },
     ref,
   ) => {
     const Comp = asChild ? Slot : "button";
@@ -102,23 +114,29 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         {...props}
       >
-        {leftIcon ? (
-          <span
-            data-slot="button-left-icon"
-            className="inline-flex shrink-0 items-center justify-center"
-          >
-            {leftIcon}
-          </span>
-        ) : null}
-        {children}
-        {rightIcon ? (
-          <span
-            data-slot="button-right-icon"
-            className="inline-flex shrink-0 items-center justify-center"
-          >
-            {rightIcon}
-          </span>
-        ) : null}
+        {asChild ? (
+          children
+        ) : (
+          <>
+            {leftIcon ? (
+              <span
+                data-slot="button-left-icon"
+                className="inline-flex shrink-0 items-center justify-center"
+              >
+                {leftIcon}
+              </span>
+            ) : null}
+            {children}
+            {rightIcon ? (
+              <span
+                data-slot="button-right-icon"
+                className="inline-flex shrink-0 items-center justify-center"
+              >
+                {rightIcon}
+              </span>
+            ) : null}
+          </>
+        )}
       </Comp>
     );
   },
