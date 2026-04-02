@@ -1,7 +1,8 @@
 pre-commit:
   commands:
     format:
-      run: npx biome format --write . && npx biome check --fix . && git add -u
+      glob: "*.{js,jsx,ts,tsx,json,css}"
+      run: npx biome format --write {staged_files} && npx biome check --fix {staged_files} && git add {staged_files}
     check:
       run: just check
 
