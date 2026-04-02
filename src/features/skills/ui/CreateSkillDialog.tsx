@@ -120,10 +120,7 @@ export function CreateSkillDialog({
               onChange={(e) => handleNameChange(e.target.value)}
               placeholder="my-skill-name"
               readOnly={isEditing}
-              className={cn(
-                "font-mono",
-                isEditing && "opacity-60 cursor-not-allowed",
-              )}
+              className={cn(isEditing && "opacity-60 cursor-not-allowed")}
             />
             {name.length > 0 && !nameValid && (
               <p className="text-xs text-destructive">

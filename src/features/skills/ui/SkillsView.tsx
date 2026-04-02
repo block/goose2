@@ -345,9 +345,7 @@ export function SkillsView() {
                   className="flex items-start justify-between gap-3 rounded-lg border border-border px-4 py-3"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium font-mono">
-                      {skill.name}
-                    </p>
+                    <p className="text-sm font-medium">{skill.name}</p>
                     {skill.description && (
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {skill.description}
