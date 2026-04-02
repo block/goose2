@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Bot, Copy, Check } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import { Button } from "@/shared/ui/button";
 
 interface StatusBarProps {
   modelName?: string;
@@ -40,15 +41,21 @@ export function StatusBar({
 
       <div className="flex items-center gap-2">
         {sessionId && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="xs"
             onClick={handleCopySessionId}
-            className="flex items-center gap-1 rounded px-1 py-0.5 text-muted-foreground hover:text-muted-foreground transition-colors"
+            className="h-auto gap-1 rounded px-1 py-0.5 text-muted-foreground hover:text-muted-foreground"
             title={`Session: ${sessionId}`}
           >
             <span className="font-mono">{sessionId.slice(0, 8)}</span>
-            {copied ? <Check size={10} /> : <Copy size={10} />}
-          </button>
+            {copied ? (
+              <Check className="size-2.5" />
+            ) : (
+              <Copy className="size-2.5" />
+            )}
+          </Button>
         )}
         {tokenCount > 0 && (
           <span className="text-muted-foreground">

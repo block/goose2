@@ -253,14 +253,16 @@ export function CreateProjectDialog({
               onChange={setPrompt}
               placeholder="System prompt or context for agents working in this project..."
             />
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="xs"
               onClick={handleAddDirectory}
-              className="mt-1.5 flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs font-medium transition-colors hover:bg-accent"
+              className="mt-1.5"
             >
-              <FolderOpen className="h-3.5 w-3.5" />
+              <FolderOpen className="size-3.5" />
               Add directory
-            </button>
+            </Button>
           </div>
 
           {/* Color */}

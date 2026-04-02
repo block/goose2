@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { RefreshCw, ClipboardCopy, Check, Loader2 } from "lucide-react";
+import { Button } from "@/shared/ui/button";
 import { Separator } from "@/shared/ui/separator";
 import {
   runDoctor,
@@ -111,29 +112,33 @@ export function DoctorSettings() {
 
         <div className="flex flex-shrink-0 items-center gap-2">
           {report && !loading && (
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="xs"
               onClick={copyDebugInfo}
-              className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground"
             >
               {copied ? (
-                <Check className="h-3.5 w-3.5" />
+                <Check className="size-3.5" />
               ) : (
-                <ClipboardCopy className="h-3.5 w-3.5" />
+                <ClipboardCopy className="size-3.5" />
               )}
               {copied ? "Copied" : "Copy details"}
-            </button>
+            </Button>
           )}
 
           {!loading && (
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="xs"
               onClick={runChecksAndRefresh}
-              className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground"
             >
-              <RefreshCw className="h-3.5 w-3.5" />
+              <RefreshCw className="size-3.5" />
               Re-run
-            </button>
+            </Button>
           )}
         </div>
       </div>

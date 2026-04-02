@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { SearchBar } from "@/shared/ui/SearchBar";
-import { buttonVariants } from "@/shared/ui/button";
+import { Button, buttonVariants } from "@/shared/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -62,73 +62,80 @@ function SkillCardMenu({
 
   return (
     <div ref={menuRef} className="relative shrink-0">
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="icon-xs"
         aria-label={`Options for ${skill.name}`}
         aria-haspopup="true"
         aria-expanded={menuOpen}
         onClick={() => setMenuOpen((prev) => !prev)}
-        className={cn(
-          "rounded-md p-1 text-muted-foreground transition-opacity",
-          "hover:bg-muted hover:text-foreground",
-        )}
+        className="size-6 rounded-md text-muted-foreground hover:text-foreground"
       >
-        <MoreHorizontal className="h-3.5 w-3.5" />
-      </button>
+        <MoreHorizontal className="size-3.5" />
+      </Button>
 
       {menuOpen && (
         <div
           role="menu"
           className="absolute right-0 top-full z-10 mt-1 w-36 rounded-lg border border-border bg-background py-1 shadow-popover"
         >
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="xs"
             role="menuitem"
             onClick={() => {
               setMenuOpen(false);
               onEdit(skill);
             }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted transition-colors"
+            className="w-full justify-start"
           >
-            <Pencil className="h-3.5 w-3.5" />
+            <Pencil className="size-3.5" />
             Edit
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
+            size="xs"
             role="menuitem"
             onClick={() => {
               setMenuOpen(false);
               onDuplicate(skill);
             }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted transition-colors"
+            className="w-full justify-start"
           >
-            <Copy className="h-3.5 w-3.5" />
+            <Copy className="size-3.5" />
             Duplicate
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
+            size="xs"
             role="menuitem"
             onClick={() => {
               setMenuOpen(false);
               onExport(skill);
             }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted transition-colors"
+            className="w-full justify-start"
           >
-            <Download className="h-3.5 w-3.5" />
+            <Download className="size-3.5" />
             Export
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
+            size="xs"
             role="menuitem"
             onClick={() => {
               setMenuOpen(false);
               onDelete(skill);
             }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-destructive hover:bg-muted transition-colors"
+            className="w-full justify-start text-destructive hover:text-destructive"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash2 className="size-3.5" />
             Delete
-          </button>
+          </Button>
         </div>
       )}
     </div>
@@ -301,22 +308,24 @@ export function SkillsView() {
                 className="hidden"
                 onChange={handleImportFile}
               />
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="xs"
                 onClick={() => importInputRef.current?.click()}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-accent/50 transition-colors"
               >
-                <Upload className="w-3.5 h-3.5" />
+                <Upload className="size-3.5" />
                 Import
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="outline"
+                size="xs"
                 onClick={handleNewSkill}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-accent/50 transition-colors"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="size-3.5" />
                 New Skill
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -356,23 +365,22 @@ export function SkillsView() {
               ))}
 
               {/* New Skill card */}
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={handleNewSkill}
                 {...dropHandlers}
                 className={cn(
-                  "flex w-full items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-3 transition-colors",
+                  "h-auto w-full rounded-lg border border-dashed px-4 py-3 text-muted-foreground",
                   isDragOver
                     ? "border-ring bg-muted"
                     : "border-border hover:border-border hover:bg-accent/50",
                 )}
               >
-                <Plus className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">New Skill</span>
-                <span className="text-xs text-muted-foreground ml-1">
-                  or drop a file
-                </span>
-              </button>
+                <Plus className="size-4" />
+                <span className="text-sm">New Skill</span>
+                <span className="ml-1 text-xs">or drop a file</span>
+              </Button>
             </div>
           )}
 
@@ -397,14 +405,16 @@ export function SkillsView() {
                 </p>
               </div>
               {skills.length === 0 && (
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="xs"
                   onClick={handleNewSkill}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-accent/50 transition-colors mt-2"
+                  className="mt-2"
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  <Plus className="size-3.5" />
                   New Skill
-                </button>
+                </Button>
               )}
             </div>
           )}

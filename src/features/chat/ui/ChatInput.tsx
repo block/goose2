@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import type { AcpProvider } from "@/shared/api/acp";
 import type { Persona } from "@/shared/types/agents";
 import { cn } from "@/shared/lib/cn";
+import { Button } from "@/shared/ui/button";
 import {
   MentionAutocomplete,
   useMentionDetection,
@@ -228,14 +229,16 @@ export function ChatInput({
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-2.5 py-1 text-[11px] font-medium text-brand">
                   <PersonaAvatar persona={stickyPersona} size="sm" />
                   <span>@{stickyPersona.displayName}</span>
-                  <button
+                  <Button
                     type="button"
-                    className="ml-0.5 inline-flex items-center opacity-60 hover:opacity-100"
+                    variant="ghost"
+                    size="icon-xs"
+                    className="ml-0.5 size-auto p-0 opacity-60 hover:bg-transparent hover:opacity-100"
                     onClick={handleClearStickyPersona}
                     aria-label="Clear active assistant"
                   >
-                    <X className="h-3 w-3" />
-                  </button>
+                    <X className="size-3" />
+                  </Button>
                 </span>
               </div>
             )}

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
 
 interface SidebarChatRowProps {
   id: string;
@@ -73,7 +75,7 @@ export function SidebarChatRow({
     return (
       <div className={cn("flex items-center group", className)}>
         <div className="flex items-center flex-1 min-w-0 py-1.5 rounded-md text-[13px] px-2.5">
-          <input
+          <Input
             ref={inputRef}
             type="text"
             value={draftTitle}
@@ -93,7 +95,7 @@ export function SidebarChatRow({
                 cancelRename();
               }
             }}
-            className="w-full min-w-0 h-6 px-1.5 rounded border border-border bg-background text-[13px] text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            className="h-6 min-w-0 px-1.5 text-[13px]"
           />
         </div>
       </div>
@@ -102,8 +104,10 @@ export function SidebarChatRow({
 
   return (
     <div className={cn("flex items-center group", className)}>
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="sm"
         onClick={() => onSelect?.(id)}
         onDoubleClick={(event) => {
           event.preventDefault();
@@ -112,21 +116,22 @@ export function SidebarChatRow({
         }}
         title="Double-click to rename"
         className={cn(
-          "flex items-center gap-2 flex-1 min-w-0 py-1.5 rounded-md text-[13px]",
-          "transition-colors duration-150 px-2.5 text-left",
+          "flex-1 min-w-0 justify-start rounded-md px-2.5 py-1.5 text-[13px]",
           isActive
-            ? "bg-accent/70 text-foreground font-medium"
+            ? "bg-accent/70 text-foreground font-medium hover:bg-accent/70"
             : isOpen
               ? "text-foreground hover:bg-accent/50"
               : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
         )}
       >
         <span className="flex-1 min-w-0 truncate">{title}</span>
-      </button>
+      </Button>
 
       <div ref={menuRef} className="relative shrink-0">
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-xs"
           aria-label={`Options for ${title}`}
           aria-haspopup="true"
           aria-expanded={menuOpen}
@@ -135,42 +140,45 @@ export function SidebarChatRow({
             setMenuOpen((prev) => !prev);
           }}
           className={cn(
-            "flex items-center justify-center w-6 h-6 rounded-md",
-            "text-muted-foreground hover:text-foreground hover:bg-accent/50",
+            "size-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50",
             menuOpen
               ? "visible opacity-100"
               : "invisible group-hover:visible opacity-0 group-hover:opacity-100",
           )}
         >
-          <MoreHorizontal className="w-3.5 h-3.5" />
-        </button>
+          <MoreHorizontal className="size-3.5" />
+        </Button>
 
         {menuOpen && (
           <div
             role="menu"
             className="absolute right-0 top-full z-10 mt-1 w-32 rounded-lg border border-border bg-background py-1 shadow-popover"
           >
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="xs"
               role="menuitem"
               onClick={startRename}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted transition-colors"
+              className="w-full justify-start"
             >
-              <Pencil className="w-3.5 h-3.5" />
+              <Pencil className="size-3.5" />
               Rename
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="ghost"
+              size="xs"
               role="menuitem"
               onClick={() => {
                 setMenuOpen(false);
                 onArchive?.(id);
               }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted transition-colors"
+              className="w-full justify-start"
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Trash2 className="size-3.5" />
               Archive
-            </button>
+            </Button>
           </div>
         )}
       </div>

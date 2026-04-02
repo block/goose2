@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { Copy } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import {
+  Avatar as AvatarRoot,
+  AvatarImage,
+  AvatarFallback,
+} from "@/shared/ui/avatar";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
@@ -133,20 +138,15 @@ export function PersonaEditor({
           {/* Avatar drop zone */}
           <div className="flex justify-center">
             {isReadOnly ? (
-              avatar ? (
-                <img
-                  src={avatar.type === "url" ? avatar.value : undefined}
+              <AvatarRoot className="h-16 w-16 border border-border">
+                <AvatarImage
+                  src={avatar?.type === "url" ? avatar.value : undefined}
                   alt="Avatar preview"
-                  className="h-16 w-16 rounded-full object-cover border border-border"
                 />
-              ) : (
-                <div
-                  aria-hidden="true"
-                  className="flex h-16 w-16 items-center justify-center rounded-full bg-muted text-lg font-semibold text-muted-foreground"
-                >
+                <AvatarFallback className="text-lg font-semibold">
                   {initials}
-                </div>
-              )
+                </AvatarFallback>
+              </AvatarRoot>
             ) : (
               <AvatarDropZone
                 personaId={avatarPersonaId}

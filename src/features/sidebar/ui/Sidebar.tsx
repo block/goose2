@@ -9,6 +9,7 @@ import {
   User,
 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import { Button } from "@/shared/ui/button";
 import { GooseIcon } from "@/shared/ui/icons/GooseIcon";
 import type { AppView } from "@/app/AppShell";
 import type { ProjectInfo } from "@/features/projects/api/projects";
@@ -160,28 +161,31 @@ export function Sidebar({
           className="flex items-center justify-between px-3 py-3 border-b border-border flex-shrink-0"
           data-tauri-drag-region
         >
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-xs"
             onClick={() => onNavigate?.("home")}
-            className="hover:opacity-70 transition-opacity flex-shrink-0"
+            className="flex-shrink-0 hover:bg-transparent hover:opacity-70"
             title="Home"
           >
-            <GooseIcon className="w-[18px] h-[18px]" />
-          </button>
+            <GooseIcon className="size-[18px]" />
+          </Button>
 
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-xs"
             onClick={onCollapse}
             className={cn(
-              "flex items-center justify-center w-7 h-7 rounded-md",
-              "text-muted-foreground hover:text-foreground hover:bg-accent/50",
+              "rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50",
               "transition-opacity duration-200",
               collapsed ? "opacity-0 pointer-events-none" : "opacity-100",
             )}
             aria-label="Collapse sidebar"
           >
-            <PanelLeftClose className="w-4 h-4" />
-          </button>
+            <PanelLeftClose className="size-4" />
+          </Button>
         </div>
 
         {/* Expand button (collapsed only) */}
@@ -193,17 +197,16 @@ export function Sidebar({
               : "opacity-0 h-0 overflow-hidden pointer-events-none",
           )}
         >
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-xs"
             onClick={onCollapse}
-            className={cn(
-              "flex items-center justify-center w-7 h-7 rounded-md",
-              "text-muted-foreground hover:text-foreground hover:bg-accent/50",
-            )}
+            className="rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50"
             aria-label="Expand sidebar"
           >
-            <PanelLeft className="w-4 h-4" />
-          </button>
+            <PanelLeft className="size-4" />
+          </Button>
         </div>
 
         {/* Search bar */}
@@ -213,18 +216,20 @@ export function Sidebar({
             collapsed ? "px-0 py-1.5 flex justify-center" : "px-3 py-2",
           )}
         >
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size={collapsed ? "icon-xs" : "sm"}
             onClick={onSearchClick}
             className={cn(
-              "flex items-center rounded-md transition-all duration-300 ease-out",
+              "rounded-md transition-all duration-300 ease-out",
               collapsed
-                ? "justify-center w-7 h-7 mx-auto text-muted-foreground hover:text-foreground hover:bg-accent/50"
-                : "gap-2 w-full px-2.5 py-1.5 border border-border text-xs text-muted-foreground hover:text-foreground hover:border-border",
+                ? "mx-auto text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                : "w-full gap-2 border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:border-border hover:bg-transparent",
             )}
             title={collapsed ? "Search ⌘K" : undefined}
           >
-            <Search className="w-3.5 h-3.5 flex-shrink-0" />
+            <Search className="size-3.5 flex-shrink-0" />
             <span
               className={cn(
                 labelTransition,
@@ -246,25 +251,27 @@ export function Sidebar({
             >
               ⌘K
             </kbd>
-          </button>
+          </Button>
         </div>
 
         {/* Navigation (scrollable) */}
         <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-1.5 py-1">
           <div className="space-y-0.5">
             {/* New Chat */}
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={onNewChat}
               title={collapsed ? "New Chat" : undefined}
               className={cn(
-                "flex items-center w-full rounded-md text-[13px] transition-all duration-200 text-muted-foreground hover:text-foreground hover:bg-accent/50",
+                "w-full rounded-md text-[13px] text-muted-foreground hover:text-foreground hover:bg-accent/50",
                 collapsed
                   ? "justify-center px-0 py-1.5"
-                  : "gap-2.5 px-3 py-1.5",
+                  : "justify-start gap-2.5 px-3 py-1.5",
               )}
             >
-              <Plus className="w-4 h-4 flex-shrink-0" />
+              <Plus className="size-4 flex-shrink-0" />
               <span
                 className={cn(
                   labelTransition,
@@ -275,25 +282,27 @@ export function Sidebar({
               >
                 New Chat
               </span>
-            </button>
+            </Button>
 
             {/* Nav items */}
             {NAV_ITEMS.map((item, index) => {
               const Icon = item.icon;
               const isActive = activeView === item.id;
               return (
-                <button
+                <Button
                   key={item.id}
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => onNavigate?.(item.id)}
                   title={collapsed ? item.label : undefined}
                   className={cn(
-                    "flex items-center w-full rounded-md text-[13px] transition-all duration-200",
+                    "w-full rounded-md text-[13px] transition-all duration-200",
                     collapsed
                       ? "justify-center px-0 py-1.5"
-                      : "gap-2.5 px-3 py-1.5",
+                      : "justify-start gap-2.5 px-3 py-1.5",
                     isActive
-                      ? "bg-muted text-foreground"
+                      ? "bg-muted text-foreground hover:bg-muted"
                       : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
                   )}
                   aria-current={isActive ? "page" : undefined}
@@ -302,7 +311,7 @@ export function Sidebar({
                       !collapsed && expanded ? `${index * 30}ms` : "0ms",
                   }}
                 >
-                  <Icon className="w-4 h-4 flex-shrink-0" />
+                  <Icon className="size-4 flex-shrink-0" />
                   <span
                     className={cn(
                       labelTransition,
@@ -318,7 +327,7 @@ export function Sidebar({
                   >
                     {item.label}
                   </span>
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -359,14 +368,16 @@ export function Sidebar({
             collapsed ? "justify-center px-0 py-2" : "px-3 py-2",
           )}
         >
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-xs"
             onClick={onSettingsClick}
-            className="w-7 h-7 rounded-full bg-accent flex items-center justify-center overflow-hidden hover:bg-accent/50/80 transition-colors cursor-pointer"
+            className="bg-accent text-muted-foreground hover:bg-accent/80"
             title="Settings"
           >
-            <User className="w-3.5 h-3.5 text-muted-foreground" />
-          </button>
+            <User className="size-3.5" />
+          </Button>
         </div>
       </div>
     </div>

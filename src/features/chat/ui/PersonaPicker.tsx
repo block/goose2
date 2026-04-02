@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { AtSign, ChevronDown, Check, Plus, Sparkles, User } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import { Avatar, AvatarImage, AvatarFallback } from "@/shared/ui/avatar";
 import { useAvatarSrc } from "@/shared/hooks/useAvatarSrc";
 import {
   DropdownMenu,
@@ -196,36 +197,31 @@ function PersonaAvatar({
 }) {
   const dim = size === "sm" ? "h-4 w-4" : "h-6 w-6";
   const iconDim = size === "sm" ? "h-2.5 w-2.5" : "h-3.5 w-3.5";
-
-  const avatarSrc = useAvatarSrc(persona?.avatar);
-  if (avatarSrc) {
-    return (
-      <img
-        src={avatarSrc}
-        alt={persona?.displayName ?? ""}
-        className={cn(dim, "rounded-full object-cover")}
-      />
-    );
-  }
-
   const isBuiltin = persona?.isBuiltin ?? true;
 
+  const avatarSrc = useAvatarSrc(persona?.avatar);
+
   return (
-    <div
-      className={cn(
-        dim,
-        "flex items-center justify-center rounded-full",
-        isBuiltin
-          ? "bg-foreground/10 text-foreground"
-          : "bg-brand/10 text-brand",
-      )}
-    >
-      {isBuiltin ? (
-        <Sparkles className={iconDim} />
-      ) : (
-        <User className={iconDim} />
-      )}
-    </div>
+    <Avatar className={dim}>
+      <AvatarImage
+        src={avatarSrc ?? undefined}
+        alt={persona?.displayName ?? ""}
+      />
+      <AvatarFallback
+        className={cn(
+          "text-[0px]",
+          isBuiltin
+            ? "bg-foreground/10 text-foreground"
+            : "bg-brand/10 text-brand",
+        )}
+      >
+        {isBuiltin ? (
+          <Sparkles className={iconDim} />
+        ) : (
+          <User className={iconDim} />
+        )}
+      </AvatarFallback>
+    </Avatar>
   );
 }
 

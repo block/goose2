@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Copy, Check, RotateCcw, Pencil, Bot, User } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import { Button } from "@/shared/ui/button";
 import { ToolCallCard } from "./ToolCallCard";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { MarkdownContent } from "./MarkdownContent";
@@ -35,14 +36,16 @@ function CopyButton({ text }: { text: string }) {
   };
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="icon-xs"
       onClick={handleCopy}
-      className="rounded p-1 text-muted-foreground opacity-0 transition-opacity duration-150 hover:text-foreground group-hover:opacity-100"
+      className="size-6 rounded-md text-muted-foreground opacity-0 transition-opacity duration-150 hover:text-foreground group-hover:opacity-100"
       aria-label={copied ? "Copied" : "Copy message"}
     >
-      {copied ? <Check size={14} /> : <Copy size={14} />}
-    </button>
+      {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+    </Button>
   );
 }
 
@@ -320,24 +323,28 @@ export function MessageBubble({
         <div className="flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
           {textContent && <CopyButton text={textContent} />}
           {!isUser && onRetry && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-xs"
               onClick={onRetry}
-              className="rounded p-1 text-muted-foreground hover:text-foreground"
+              className="size-6 rounded-md text-muted-foreground hover:text-foreground"
               aria-label="Retry"
             >
-              <RotateCcw size={14} />
-            </button>
+              <RotateCcw className="size-3.5" />
+            </Button>
           )}
           {isUser && onEdit && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-xs"
               onClick={onEdit}
-              className="rounded p-1 text-muted-foreground hover:text-foreground"
+              className="size-6 rounded-md text-muted-foreground hover:text-foreground"
               aria-label="Edit message"
             >
-              <Pencil size={14} />
-            </button>
+              <Pencil className="size-3.5" />
+            </Button>
           )}
           <span className="px-1 text-[10px] text-muted-foreground">
             {new Date(created).toLocaleTimeString([], {

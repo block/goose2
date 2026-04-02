@@ -1,5 +1,6 @@
 import { cn } from "@/shared/lib/cn";
 import { Separator } from "@/shared/ui/separator";
+import { ToggleGroup, ToggleGroupItem } from "@/shared/ui/toggle-group";
 import { useTheme } from "@/shared/theme/ThemeProvider";
 import { Sun, Moon, Monitor, Check } from "lucide-react";
 
@@ -67,24 +68,23 @@ export function AppearanceSettings() {
         label="Theme"
         description="Choose your preferred color scheme"
       >
-        <div className="flex gap-1 rounded-lg bg-muted p-1">
+        <ToggleGroup
+          type="single"
+          value={theme}
+          onValueChange={(v) => v && setTheme(v as typeof theme)}
+          className="gap-1 rounded-lg bg-muted p-1"
+        >
           {THEME_OPTIONS.map((option) => (
-            <button
-              type="button"
+            <ToggleGroupItem
               key={option.value}
-              onClick={() => setTheme(option.value)}
-              className={cn(
-                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors",
-                theme === option.value
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
+              value={option.value}
+              className="gap-1.5 rounded-md px-3 py-1.5 text-sm data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:shadow-sm"
             >
               <option.icon className="h-3.5 w-3.5" />
               {option.label}
-            </button>
+            </ToggleGroupItem>
           ))}
-        </div>
+        </ToggleGroup>
       </SettingRow>
 
       <Separator className="my-4" />
@@ -118,23 +118,22 @@ export function AppearanceSettings() {
         label="Interface Density"
         description="Adjust the spacing of UI elements"
       >
-        <div className="flex gap-1 rounded-lg bg-muted p-1">
+        <ToggleGroup
+          type="single"
+          value={density}
+          onValueChange={(v) => v && setDensity(v as typeof density)}
+          className="gap-1 rounded-lg bg-muted p-1"
+        >
           {DENSITY_OPTIONS.map((option) => (
-            <button
-              type="button"
+            <ToggleGroupItem
               key={option.value}
-              onClick={() => setDensity(option.value)}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-sm transition-colors",
-                density === option.value
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
+              value={option.value}
+              className="rounded-md px-3 py-1.5 text-sm data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:shadow-sm"
             >
               {option.label}
-            </button>
+            </ToggleGroupItem>
           ))}
-        </div>
+        </ToggleGroup>
       </SettingRow>
     </div>
   );

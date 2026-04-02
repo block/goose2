@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/shared/lib/cn";
-import { buttonVariants } from "@/shared/ui/button";
+import { Button, buttonVariants } from "@/shared/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -159,14 +159,16 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
           </div>
           <nav className="flex flex-col gap-1 px-2">
             {NAV_ITEMS.map((item, index) => (
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 key={item.id}
                 onClick={() => setActiveSection(item.id)}
                 className={cn(
-                  "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-all duration-600 ease-out",
+                  "w-full justify-start rounded-lg px-3 py-2 transition-all duration-600 ease-out",
                   activeSection === item.id
-                    ? "bg-background text-foreground shadow-sm"
+                    ? "bg-background text-foreground shadow-sm hover:bg-background"
                     : "text-muted-foreground hover:bg-accent/50 hover:text-foreground duration-300",
                   isLoaded
                     ? "opacity-100 translate-x-0"
@@ -176,22 +178,24 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                   transitionDelay: isLoaded ? "0ms" : `${index * 40 + 300}ms`,
                 }}
               >
-                <item.icon className="h-4 w-4" />
+                <item.icon className="size-4" />
                 {item.label}
-              </button>
+              </Button>
             ))}
           </nav>
         </div>
 
         {/* Content */}
         <div className="relative flex-1 overflow-y-auto">
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-xs"
             onClick={onClose}
-            className="absolute right-4 top-4 z-10 rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground"
+            className="absolute right-4 top-4 z-10 rounded-md text-muted-foreground hover:text-foreground"
           >
-            <X className="h-4 w-4" />
-          </button>
+            <X className="size-4" />
+          </Button>
 
           <div
             className={cn(
@@ -260,20 +264,23 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5 flex-shrink-0">
-                          <button
+                          <Button
                             type="button"
+                            variant="outline"
+                            size="xs"
                             onClick={() => handleRestoreProject(project.id)}
-                            className="px-2 py-1 text-xs font-medium rounded-md border border-border hover:bg-accent/50 transition-colors"
                           >
                             Restore
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             type="button"
+                            variant="ghost"
+                            size="xs"
                             onClick={() => setDeletingProject(project)}
-                            className="px-2 py-1 text-xs font-medium rounded-md text-destructive hover:bg-destructive/10 transition-colors"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
                           >
                             Delete
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -317,13 +324,15 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                               : `${session.messageCount} messages`}
                           </p>
                         </div>
-                        <button
+                        <Button
                           type="button"
+                          variant="outline"
+                          size="xs"
                           onClick={() => handleRestoreChat(session.id)}
-                          className="flex-shrink-0 rounded-md border border-border px-2 py-1 text-xs font-medium transition-colors hover:bg-accent/50"
+                          className="flex-shrink-0"
                         >
                           Restore
-                        </button>
+                        </Button>
                       </div>
                     ))}
                   </div>

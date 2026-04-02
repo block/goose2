@@ -1,5 +1,6 @@
 import { Home, Plus, X } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import { Button } from "@/shared/ui/button";
 import type { Tab } from "@/features/tabs/types";
 
 interface TabBarProps {
@@ -24,14 +25,16 @@ export function TabBar({
       data-tauri-drag-region
       className="flex h-10 w-full items-center border-b border-border bg-background pl-20"
     >
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="icon-xs"
         onClick={onHomeClick}
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
+        className="rounded-md text-muted-foreground hover:bg-accent/50 hover:text-foreground"
         aria-label="Home"
       >
-        <Home className="h-4 w-4" />
-      </button>
+        <Home className="size-4" />
+      </Button>
 
       <div
         role="tablist"
@@ -74,14 +77,16 @@ export function TabBar({
         ))}
       </div>
 
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="icon-xs"
         onClick={onNewTab}
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
+        className="rounded-md text-muted-foreground hover:bg-accent/50 hover:text-foreground"
         aria-label="New tab"
       >
-        <Plus className="h-4 w-4" />
-      </button>
+        <Plus className="size-4" />
+      </Button>
     </div>
   );
 }

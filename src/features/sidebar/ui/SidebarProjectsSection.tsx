@@ -7,6 +7,7 @@ import {
   Plus,
 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import { Button } from "@/shared/ui/button";
 import type { AppView } from "@/app/AppShell";
 import type { ProjectInfo } from "@/features/projects/api/projects";
 import { SidebarChatRow } from "./SidebarChatRow";
@@ -69,8 +70,10 @@ function ItemMenu({
 
   return (
     <div ref={ref} className="relative shrink-0">
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="icon-xs"
         aria-label={`Options for ${label}`}
         aria-haspopup="true"
         aria-expanded={open}
@@ -79,45 +82,48 @@ function ItemMenu({
           setOpen((prev) => !prev);
         }}
         className={cn(
-          "flex items-center justify-center w-6 h-6 rounded-md",
-          "text-muted-foreground hover:text-foreground hover:bg-accent/50",
+          "size-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50",
           open
             ? "visible opacity-100"
             : "invisible group-hover:visible opacity-0 group-hover:opacity-100",
         )}
       >
-        <MoreHorizontal className="w-3.5 h-3.5" />
-      </button>
+        <MoreHorizontal className="size-3.5" />
+      </Button>
       {open && (
         <div
           role="menu"
           className="absolute right-0 top-full z-10 mt-1 w-28 rounded-lg border border-border bg-background py-1 shadow-popover"
         >
           {onEdit && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="xs"
               role="menuitem"
               onClick={() => {
                 setOpen(false);
                 onEdit();
               }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted transition-colors"
+              className="w-full justify-start"
             >
               Edit
-            </button>
+            </Button>
           )}
           {onArchive && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="xs"
               role="menuitem"
               onClick={() => {
                 setOpen(false);
                 onArchive();
               }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted transition-colors"
+              className="w-full justify-start"
             >
               Archive
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -162,48 +168,47 @@ function ProjectSection({
     <div>
       {/* Project row */}
       <div className="flex items-center group">
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => toggleProject(project.id)}
-          className={cn(
-            "flex items-center flex-1 min-w-0 gap-2 py-1.5 px-2.5 rounded-md text-[13px]",
-            "transition-colors duration-150",
-            "text-muted-foreground hover:text-foreground hover:bg-accent/50",
-          )}
+          className="flex-1 min-w-0 justify-start gap-2 rounded-md px-2.5 py-1.5 text-[13px] text-muted-foreground hover:text-foreground hover:bg-accent/50"
         >
           {isExpanded ? (
-            <ChevronDown className="w-3 h-3 flex-shrink-0" />
+            <ChevronDown className="size-3 flex-shrink-0" />
           ) : (
-            <ChevronRight className="w-3 h-3 flex-shrink-0" />
+            <ChevronRight className="size-3 flex-shrink-0" />
           )}
           <span
-            className="inline-block w-2 h-2 rounded-full flex-shrink-0"
+            className="inline-block size-2 rounded-full flex-shrink-0"
             style={{ backgroundColor: project.color }}
           />
           <span className="flex-1 min-w-0 truncate text-left">
             {project.name}
           </span>
-        </button>
+        </Button>
         <ItemMenu
           label={project.name}
           onEdit={() => onEditProject?.(project.id)}
           onArchive={() => onArchiveProject?.(project.id)}
         />
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-xs"
           onClick={(e) => {
             e.stopPropagation();
             onNewChatInProject?.(project.id);
           }}
           title="New chat in project"
           className={cn(
-            "flex items-center justify-center w-6 h-6 rounded-md mr-1 flex-shrink-0",
-            "text-muted-foreground hover:text-foreground hover:bg-accent/50",
+            "mr-1 size-6 flex-shrink-0 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50",
             "invisible group-hover:visible opacity-0 group-hover:opacity-100",
           )}
         >
-          <Plus className="w-3.5 h-3.5" />
-        </button>
+          <Plus className="size-3.5" />
+        </Button>
       </div>
 
       {/* Nested chats */}
@@ -227,13 +232,14 @@ function ProjectSection({
             );
           })}
           {hasMore && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="xs"
               onClick={() => {
                 if (showAll) {
                   setShowAll(false);
                 } else {
-                  // If more than 8 items, navigate to full view instead
                   if (projectChats.length > 8) {
                     onNavigate?.("projects");
                   } else {
@@ -241,25 +247,22 @@ function ProjectSection({
                   }
                 }
               }}
-              className={cn(
-                "flex items-center gap-1.5 w-full pl-8 pr-3 py-1 text-[11px]",
-                "text-muted-foreground hover:text-muted-foreground transition-colors duration-150",
-              )}
+              className="h-auto w-full justify-start gap-1.5 rounded-md py-1 pl-8 pr-3 text-[11px] text-muted-foreground hover:text-muted-foreground"
             >
               {showAll ? (
                 <>
-                  <ChevronDown className="w-3 h-3" />
+                  <ChevronDown className="size-3" />
                   Show less
                 </>
               ) : (
                 <>
-                  <ChevronRight className="w-3 h-3" />
+                  <ChevronRight className="size-3" />
                   {projectChats.length > 8
                     ? `View all ${projectChats.length} chats`
                     : `${projectChats.length - MAX_VISIBLE_CHATS} more`}
                 </>
               )}
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -322,39 +325,36 @@ export function SidebarProjectsSection({
           Projects
         </span>
         {!collapsed && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-xs"
             onClick={onCreateProject}
             title="New project"
-            className={cn(
-              "flex items-center justify-center w-6 h-6 rounded-md flex-shrink-0 mr-1",
-              "text-muted-foreground hover:text-foreground hover:bg-accent/50",
-              "transition-opacity duration-150",
-            )}
+            className="mr-1 size-6 flex-shrink-0 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50"
           >
-            <Plus className="w-3.5 h-3.5" />
-          </button>
+            <Plus className="size-3.5" />
+          </Button>
         )}
       </div>
 
       {collapsed ? (
         <div className="flex flex-col items-center gap-1">
           {projects.map((project) => (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-xs"
               key={project.id}
               title={project.name}
               onClick={() => onNavigate?.("projects")}
-              className={cn(
-                "flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-200",
-                "text-muted-foreground hover:text-foreground hover:bg-accent/50",
-              )}
+              className="rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/50"
             >
               <span
-                className="inline-block w-2.5 h-2.5 rounded-full"
+                className="inline-block size-2.5 rounded-full"
                 style={{ backgroundColor: project.color }}
               />
-            </button>
+            </Button>
           ))}
         </div>
       ) : (
@@ -405,20 +405,22 @@ export function SidebarProjectsSection({
           {collapsed ? (
             <div className="flex flex-col items-center gap-1">
               {visibleRecents.map((tab) => (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-xs"
                   key={tab.id}
                   title={tab.title}
                   onClick={() => onSelectTab?.(tab.id)}
                   className={cn(
-                    "flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-200",
+                    "rounded-lg",
                     activeTabId === tab.id
-                      ? "bg-accent/70 text-foreground"
+                      ? "bg-accent/70 text-foreground hover:bg-accent/70"
                       : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
                   )}
                 >
-                  <MessageSquare className="w-4 h-4" />
-                </button>
+                  <MessageSquare className="size-4" />
+                </Button>
               ))}
             </div>
           ) : (
@@ -440,28 +442,27 @@ export function SidebarProjectsSection({
                 );
               })}
               {hasMoreRecents && (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="xs"
                   onClick={() => setShowAllRecents((prev) => !prev)}
-                  className={cn(
-                    "flex items-center gap-1.5 w-full px-2.5 py-1 text-[11px]",
-                    "text-muted-foreground hover:text-muted-foreground transition-colors duration-150",
-                  )}
+                  className="h-auto w-full justify-start gap-1.5 rounded-md px-2.5 py-1 text-[11px] text-muted-foreground hover:text-muted-foreground"
                 >
                   {showAllRecents ? (
                     <>
-                      <ChevronDown className="w-3 h-3" />
+                      <ChevronDown className="size-3" />
                       Show less
                     </>
                   ) : (
                     <>
-                      <ChevronRight className="w-3 h-3" />
+                      <ChevronRight className="size-3" />
                       {projectTabs.standalone.length > 8
                         ? `View all ${projectTabs.standalone.length} chats`
                         : `${projectTabs.standalone.length - MAX_VISIBLE_CHATS} more`}
                     </>
                   )}
-                </button>
+                </Button>
               )}
             </div>
           )}

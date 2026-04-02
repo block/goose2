@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { Camera, X } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import { Button } from "@/shared/ui/button";
 import { useAvatarSrc } from "@/shared/hooks/useAvatarSrc";
 import { savePersonaAvatar, savePersonaAvatarBytes } from "@/shared/api/agents";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -175,8 +176,10 @@ export function AvatarDropZone({
   return (
     <div className="flex flex-col items-center gap-1">
       <div className="relative">
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-lg"
           tabIndex={disabled ? -1 : 0}
           aria-label="Drop an image or click to upload avatar"
           onDragEnter={handleDragEnter}
@@ -185,7 +188,7 @@ export function AvatarDropZone({
           onDrop={handleDrop}
           onClick={handleClick}
           className={cn(
-            "flex h-16 w-16 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 bg-muted shadow-sm transition-all",
+            "size-16 overflow-hidden border-2 bg-muted shadow-sm",
             isDragOver
               ? "scale-105 border-accent bg-accent/15 shadow-md ring-4 ring-accent/20"
               : "border-border hover:border-border hover:bg-accent",
@@ -202,25 +205,23 @@ export function AvatarDropZone({
             />
           ) : (
             <div className="flex flex-col items-center justify-center text-muted-foreground">
-              <Camera className="h-5 w-5" />
+              <Camera className="size-5" />
             </div>
           )}
-        </button>
+        </Button>
 
         {/* Clear button */}
         {avatar && !disabled && (
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="icon-xs"
             aria-label="Remove avatar"
             onClick={handleClear}
-            className={cn(
-              "absolute -top-0.5 -right-0.5 z-10 flex h-5 w-5 items-center justify-center rounded-full",
-              "bg-background border border-border text-muted-foreground shadow-sm",
-              "hover:bg-muted hover:text-foreground transition-colors",
-            )}
+            className="absolute -top-0.5 -right-0.5 z-10 size-5 bg-background text-muted-foreground shadow-sm hover:text-foreground"
           >
-            <X className="h-3 w-3" />
-          </button>
+            <X className="size-3" />
+          </Button>
         )}
       </div>
 

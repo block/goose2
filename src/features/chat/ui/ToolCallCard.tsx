@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Wrench, Loader2, Check, XCircle, ChevronRight } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import { Button } from "@/shared/ui/button";
 import type { ToolCallStatus } from "@/shared/types/messages";
 
 interface ToolCallCardProps {
@@ -70,17 +71,18 @@ export function ToolCallCard({
 
   return (
     <div className="my-1">
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="xs"
         onClick={() => hasContent && setExpanded(!expanded)}
         className={cn(
-          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs border transition-all duration-150",
-          hasContent && "cursor-pointer",
-          !hasContent && "cursor-default",
+          "h-auto gap-1.5 border px-2.5 py-1",
+          hasContent ? "cursor-pointer" : "cursor-default",
           pillColors[status] ?? pillColors.pending,
         )}
       >
-        <Wrench className="w-3 h-3 shrink-0" />
+        <Wrench className="size-3 shrink-0" />
         <span className="text-xs font-medium">{name}</span>
         <StatusIndicator status={status} />
         {status === "executing" && elapsed >= 3 && (
@@ -91,12 +93,12 @@ export function ToolCallCard({
         {hasContent && (
           <ChevronRight
             className={cn(
-              "w-3 h-3 shrink-0 transition-transform duration-150",
+              "size-3 shrink-0 transition-transform duration-150",
               expanded && "rotate-90",
             )}
           />
         )}
-      </button>
+      </Button>
 
       {expanded && hasContent && (
         <div className="mt-1.5 p-3 rounded-md bg-accent border border-border">

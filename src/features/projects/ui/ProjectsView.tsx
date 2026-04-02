@@ -7,9 +7,8 @@ import {
   Pencil,
   FolderKanban,
 } from "lucide-react";
-import { cn } from "@/shared/lib/cn";
 import { SearchBar } from "@/shared/ui/SearchBar";
-import { buttonVariants } from "@/shared/ui/button";
+import { Button, buttonVariants } from "@/shared/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,19 +49,18 @@ function ProjectCardMenu({
 
   return (
     <div ref={menuRef} className="relative shrink-0">
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="icon-xs"
         aria-label={`Options for ${project.name}`}
         aria-haspopup="true"
         aria-expanded={menuOpen}
         onClick={() => setMenuOpen((prev) => !prev)}
-        className={cn(
-          "rounded-md p-1 text-muted-foreground transition-opacity",
-          "hover:bg-muted hover:text-foreground",
-        )}
+        className="size-6 rounded-md text-muted-foreground hover:text-foreground"
       >
-        <MoreHorizontal className="h-3.5 w-3.5" />
-      </button>
+        <MoreHorizontal className="size-3.5" />
+      </Button>
 
       {menuOpen && (
         <div
@@ -70,43 +68,49 @@ function ProjectCardMenu({
           className="absolute right-0 top-full z-10 mt-1 w-36 rounded-lg border border-border bg-background py-1 shadow-popover"
         >
           {onStartChat && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="xs"
               role="menuitem"
               onClick={() => {
                 setMenuOpen(false);
                 onStartChat(project);
               }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted transition-colors"
+              className="w-full justify-start"
             >
-              <MessageSquare className="h-3.5 w-3.5" />
+              <MessageSquare className="size-3.5" />
               Start Chat
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="xs"
             role="menuitem"
             onClick={() => {
               setMenuOpen(false);
               onEdit(project);
             }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted transition-colors"
+            className="w-full justify-start"
           >
-            <Pencil className="h-3.5 w-3.5" />
+            <Pencil className="size-3.5" />
             Edit
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
+            size="xs"
             role="menuitem"
             onClick={() => {
               setMenuOpen(false);
               onDelete(project);
             }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-destructive hover:bg-muted transition-colors"
+            className="w-full justify-start text-destructive hover:text-destructive"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash2 className="size-3.5" />
             Delete
-          </button>
+          </Button>
         </div>
       )}
     </div>
@@ -219,14 +223,15 @@ export function ProjectsView({ onStartChat }: ProjectsViewProps) {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="xs"
                 onClick={handleNewProject}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-accent/50 transition-colors"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="size-3.5" />
                 New Project
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -271,16 +276,15 @@ export function ProjectsView({ onStartChat }: ProjectsViewProps) {
               ))}
 
               {/* New Project card */}
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={handleNewProject}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border px-4 py-3 transition-colors hover:border-border hover:bg-accent/50"
+                className="h-auto w-full rounded-lg border border-dashed border-border px-4 py-3 text-muted-foreground hover:border-border hover:bg-accent/50"
               >
-                <Plus className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
-                  New Project
-                </span>
-              </button>
+                <Plus className="size-4" />
+                <span className="text-sm">New Project</span>
+              </Button>
             </div>
           )}
 
@@ -301,14 +305,16 @@ export function ProjectsView({ onStartChat }: ProjectsViewProps) {
                 </p>
               </div>
               {projects.length === 0 && (
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="xs"
                   onClick={handleNewProject}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-accent/50 transition-colors mt-2"
+                  className="mt-2"
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  <Plus className="size-3.5" />
                   New Project
-                </button>
+                </Button>
               )}
             </div>
           )}
