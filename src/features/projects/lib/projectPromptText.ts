@@ -9,42 +9,25 @@ export function buildEditorText(workingDirs: string[], prompt: string): string {
 }
 
 /** Parse editor text into { prompt, workingDirs }.
- *  Only `include:` lines at the bottom of the text (after the last
- *  non-include, non-blank line) are treated as working directories. */
+ *  `include:` lines can appear anywhere in the editor text and are
+ *  extracted into workingDirs when the project is saved. */
 export function parseEditorText(text: string): {
   prompt: string;
   workingDirs: string[];
 } {
   const lines = text.split("\n");
   const workingDirs: string[] = [];
+  const promptLines: string[] = [];
 
-  // Walk backwards from the end to find the trailing include block.
-  // The block may contain include lines and blank lines, but ends as
-  // soon as we hit a non-include, non-blank line.
-  let trailingStart = lines.length;
-  for (let i = lines.length - 1; i >= 0; i--) {
-    const match = lines[i].match(INCLUDE_RE);
-    if (match) {
-      trailingStart = i;
-      continue;
-    }
-    if (lines[i].trim() === "") {
-      continue;
-    }
-    // Hit a non-include, non-blank line — stop.
-    break;
-  }
-
-  // Collect working dirs from the trailing block (in forward order).
-  for (let i = trailingStart; i < lines.length; i++) {
-    const match = lines[i].match(INCLUDE_RE);
+  for (const line of lines) {
+    const match = line.match(INCLUDE_RE);
     if (match) {
       workingDirs.push(match[1].trim());
+      continue;
     }
-  }
 
-  // Everything before the trailing block is the prompt.
-  const promptLines = lines.slice(0, trailingStart);
+    promptLines.push(line);
+  }
 
   // Trim leading/trailing blank lines from the prompt.
   while (promptLines[0]?.trim() === "") {
@@ -61,12 +44,17 @@ export function parseEditorText(text: string): {
 }
 
 export function insertWorkingDir(text: string, directory: string): string {
-  if (text === "") {
+  const trimmedText = text.trimEnd();
+
+  if (trimmedText === "") {
     return `include: ${directory}`;
   }
 
-  const { prompt, workingDirs } = parseEditorText(text);
-  return buildEditorText([...workingDirs, directory], prompt);
+  const trimmedLines = trimmedText.split("\n");
+  const lastLine = trimmedLines[trimmedLines.length - 1] ?? "";
+  const separator = lastLine.match(INCLUDE_RE) ? "\n" : "\n\n";
+
+  return `${trimmedText}${separator}include: ${directory}`;
 }
 
 export function hasEquivalentWorkingDir(

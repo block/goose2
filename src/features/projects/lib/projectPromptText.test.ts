@@ -31,21 +31,19 @@ describe("projectPromptText", () => {
     );
   });
 
-  it("keeps blank lines between include lines in the trailing block", () => {
+  it("collects include lines from anywhere in the editor text", () => {
     expect(
-      parseEditorText("prompt\n\ninclude: /tmp/one\n\ninclude: /tmp/two"),
+      parseEditorText("include: /tmp/one\nprompt\n\ninclude: /tmp/two"),
     ).toEqual({
       prompt: "prompt",
       workingDirs: ["/tmp/one", "/tmp/two"],
     });
   });
 
-  it("keeps include-looking lines that appear within prompt content", () => {
-    expect(
-      parseEditorText("include: /tmp/kept\nprompt text\n\ninclude: /tmp/dir"),
-    ).toEqual({
-      prompt: "include: /tmp/kept\nprompt text",
-      workingDirs: ["/tmp/dir"],
+  it("treats trailing include lines as working directories when saving", () => {
+    expect(parseEditorText("prompt first\ninclude: /tmp/kept")).toEqual({
+      prompt: "prompt first",
+      workingDirs: ["/tmp/kept"],
     });
   });
 
@@ -61,19 +59,16 @@ describe("projectPromptText", () => {
     ).toBe("Prompt body\n\ninclude: /tmp/one\ninclude: /tmp/two");
   });
 
-  it("handles legacy top-positioned includes by migrating them to the bottom", () => {
-    // Old format had includes at the top — parseEditorText should still
-    // handle this gracefully when the entire text is just includes.
-    expect(parseEditorText("include: /tmp/one\ninclude: /tmp/two")).toEqual({
-      prompt: "",
-      workingDirs: ["/tmp/one", "/tmp/two"],
-    });
+  it("adds a new directory to the bottom without moving existing prompt text", () => {
+    expect(insertWorkingDir("include: /tmp/one\nPrompt body", "/tmp/two")).toBe(
+      "include: /tmp/one\nPrompt body\n\ninclude: /tmp/two",
+    );
   });
 
   it("treats tilde and absolute paths as equivalent when checking duplicates", () => {
     expect(
       hasEquivalentWorkingDir(
-        "Prompt body\n\ninclude: ~/dev/goose2",
+        "Prompt body\ninclude: ~/dev/goose2",
         "/Users/mtoohey/dev/goose2",
         "/Users/mtoohey",
       ),
@@ -83,7 +78,7 @@ describe("projectPromptText", () => {
   it("does not match different directories when checking duplicates", () => {
     expect(
       hasEquivalentWorkingDir(
-        "Prompt body\n\ninclude: ~/dev/goose2",
+        "Prompt body\ninclude: ~/dev/goose2",
         "/Users/mtoohey/dev/other",
         "/Users/mtoohey",
       ),
@@ -93,7 +88,7 @@ describe("projectPromptText", () => {
   it("treats trailing slashes as equivalent when checking duplicates", () => {
     expect(
       hasEquivalentWorkingDir(
-        "Prompt body\n\ninclude: /Users/mtoohey/dev/goose2/",
+        "Prompt body\ninclude: /Users/mtoohey/dev/goose2/",
         "/Users/mtoohey/dev/goose2",
         "/Users/mtoohey",
       ),
