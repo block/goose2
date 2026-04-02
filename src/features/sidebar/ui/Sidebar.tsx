@@ -9,6 +9,7 @@ import {
   User,
 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import { GooseIcon } from "@/shared/ui/icons/GooseIcon";
 import type { AppView } from "@/app/AppShell";
 import type { ProjectInfo } from "@/features/projects/api/projects";
 import { useChatStore } from "@/features/chat/stores/chatStore";
@@ -200,22 +201,36 @@ export function Sidebar({
       <div className="flex flex-col h-full">
         {/* Header */}
         <div
-          className="flex items-center justify-end px-3 py-3 border-b border-border-secondary flex-shrink-0"
+          className={cn(
+            "flex items-center px-3 py-3 border-b border-border-secondary flex-shrink-0",
+            collapsed ? "justify-center" : "justify-between",
+          )}
           data-tauri-drag-region
         >
           <button
             type="button"
-            onClick={onCollapse}
-            className={cn(
-              "flex items-center justify-center w-7 h-7 rounded-md",
-              "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
-              "transition-opacity duration-200",
-              collapsed ? "opacity-0 pointer-events-none" : "opacity-100",
-            )}
-            aria-label="Collapse sidebar"
+            onClick={() => onNavigate?.("home")}
+            className="flex shrink-0 items-center justify-center transition-opacity hover:opacity-70"
+            aria-label="Home"
+            title="Home"
           >
-            <PanelLeftClose className="w-4 h-4" />
+            <GooseIcon className="h-[18px] w-[18px]" />
           </button>
+
+          {!collapsed && (
+            <button
+              type="button"
+              onClick={onCollapse}
+              className={cn(
+                "flex items-center justify-center w-7 h-7 rounded-md",
+                "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary/50",
+                "transition-opacity duration-200",
+              )}
+              aria-label="Collapse sidebar"
+            >
+              <PanelLeftClose className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* Expand button (collapsed only) */}
