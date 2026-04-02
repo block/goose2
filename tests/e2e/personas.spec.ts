@@ -55,7 +55,9 @@ test.describe("Personas view", () => {
       .click();
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
-    await expect(dialog).toHaveAttribute("aria-label", "Create persona");
+    await expect(
+      dialog.locator("h2", { hasText: "New Persona" }),
+    ).toBeVisible();
     // Check form fields
     await expect(dialog.getByPlaceholder("e.g. Code Reviewer")).toBeVisible();
     await expect(
@@ -109,7 +111,7 @@ test.describe("Personas view", () => {
       .first()
       .click();
     await expect(page.getByRole("dialog")).toBeVisible();
-    await page.getByLabel("Close").click();
+    await page.getByRole("button", { name: "Close" }).click();
     await expect(page.getByRole("dialog")).not.toBeVisible();
   });
 
@@ -120,10 +122,9 @@ test.describe("Personas view", () => {
     await page.getByLabel("Persona: Code Reviewer").click();
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
-    await expect(dialog).toHaveAttribute(
-      "aria-label",
-      "Edit persona Code Reviewer",
-    );
+    await expect(
+      dialog.locator("h2", { hasText: "Edit Persona" }),
+    ).toBeVisible();
     // Fields should be pre-filled
     await expect(dialog.getByPlaceholder("e.g. Code Reviewer")).toHaveValue(
       "Code Reviewer",
