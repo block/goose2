@@ -5,6 +5,9 @@ use tauri::{AppHandle, State};
 
 use crate::services::acp::{make_composite_key, AcpRunningSession, AcpService, AcpSessionRegistry};
 use crate::services::sessions::SessionStore;
+use crate::types::messages::{
+    MessageCompletionStatus, MessageContent, MessageMetadata, ToolCallStatus,
+};
 use acp_client::discover_providers;
 
 /// Response type for an ACP provider, sent to the frontend.
@@ -178,11 +181,29 @@ mod tests {
 #[tauri::command]
 pub async fn acp_cancel_session(
     registry: State<'_, Arc<AcpSessionRegistry>>,
+    session_store: State<'_, Arc<SessionStore>>,
     session_id: String,
     persona_id: Option<String>,
 ) -> Result<bool, String> {
     let key = make_composite_key(&session_id, persona_id.as_deref());
-    Ok(registry.cancel(&key))
+    let assistant_message_id = registry.cancel(&key);
+
+    if let Some(message_id) = assistant_message_id.as_deref() {
+        let _ = session_store.update_message(&session_id, message_id, |message| {
+            for block in &mut message.content {
+                if let MessageContent::ToolRequest { status, .. } = block {
+                    *status = ToolCallStatus::Stopped;
+                }
+            }
+
+            let metadata = message
+                .metadata
+                .get_or_insert_with(MessageMetadata::default);
+            metadata.completion_status = Some(MessageCompletionStatus::Stopped);
+        });
+    }
+
+    Ok(assistant_message_id.is_some())
 }
 
 /// List all currently running ACP sessions.

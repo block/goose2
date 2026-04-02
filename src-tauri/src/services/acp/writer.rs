@@ -6,11 +6,13 @@ use tauri::Emitter;
 use acp_client::{MessageWriter, SessionInfoUpdate, SessionModelState};
 
 use crate::services::sessions::SessionStore;
-use crate::types::messages::{MessageContent, MessageRole, ToolCallStatus};
+use crate::types::messages::{
+    Message, MessageCompletionStatus, MessageContent, MessageMetadata, MessageRole, ToolCallStatus,
+};
 
 use super::payloads::{
-    DonePayload, ModelStatePayload, SessionInfoPayload, TextPayload, ToolCallPayload,
-    ToolResultPayload, ToolTitlePayload,
+    DonePayload, MessageCreatedPayload, ModelStatePayload, SessionInfoPayload, TextPayload,
+    ToolCallPayload, ToolResultPayload, ToolTitlePayload,
 };
 
 /// A [`MessageWriter`] implementation that streams ACP output to the frontend
@@ -20,13 +22,9 @@ pub struct TauriMessageWriter {
     app_handle: tauri::AppHandle,
     session_id: String,
     session_store: Arc<SessionStore>,
-    /// Accumulated response text across all `append_text` calls.
-    accumulated_text: std::sync::Mutex<String>,
+    assistant_message_id: String,
     /// Accumulated structured content (text + tool calls/results) for persistence.
     accumulated_content: std::sync::Mutex<Vec<MessageContent>>,
-    /// Persona identity to stamp on the finalized assistant message.
-    persona_id: Option<String>,
-    persona_name: Option<String>,
 }
 
 impl TauriMessageWriter {
@@ -38,14 +36,87 @@ impl TauriMessageWriter {
         persona_id: Option<String>,
         persona_name: Option<String>,
     ) -> Self {
+        let assistant_message_id = uuid::Uuid::new_v4().to_string();
+        let message = Message {
+            id: assistant_message_id.clone(),
+            role: MessageRole::Assistant,
+            created: chrono::Utc::now().timestamp_millis(),
+            content: Vec::new(),
+            metadata: Some(MessageMetadata {
+                user_visible: Some(true),
+                agent_visible: Some(true),
+                persona_id: persona_id.clone(),
+                persona_name: persona_name.clone(),
+                completion_status: Some(MessageCompletionStatus::InProgress),
+                ..Default::default()
+            }),
+        };
+
+        if let Err(error) = session_store.add_message(&session_id, message) {
+            eprintln!(
+                "Failed to create streaming assistant message for session {}: {}",
+                session_id, error
+            );
+        }
+
+        let _ = app_handle.emit(
+            "acp:message_created",
+            MessageCreatedPayload {
+                session_id: session_id.clone(),
+                message_id: assistant_message_id.clone(),
+                persona_id: persona_id.clone(),
+                persona_name: persona_name.clone(),
+            },
+        );
+
         Self {
             app_handle,
             session_id,
             session_store,
-            accumulated_text: std::sync::Mutex::new(String::new()),
+            assistant_message_id,
             accumulated_content: std::sync::Mutex::new(Vec::new()),
-            persona_id,
-            persona_name,
+        }
+    }
+
+    pub fn assistant_message_id(&self) -> &str {
+        &self.assistant_message_id
+    }
+
+    fn persist_snapshot(&self, completion_status: Option<MessageCompletionStatus>) {
+        let content = self
+            .accumulated_content
+            .lock()
+            .expect("accumulated_content lock")
+            .clone();
+
+        if let Err(error) = self.session_store.update_message(
+            &self.session_id,
+            &self.assistant_message_id,
+            |message| {
+                message.content = content.clone();
+                if let Some(status) = completion_status.clone() {
+                    let metadata = message
+                        .metadata
+                        .get_or_insert_with(MessageMetadata::default);
+                    let current = metadata.completion_status.clone();
+                    let should_replace = !matches!(
+                        current,
+                        Some(MessageCompletionStatus::Stopped)
+                            | Some(MessageCompletionStatus::Error)
+                    ) || matches!(
+                        status,
+                        MessageCompletionStatus::Stopped | MessageCompletionStatus::Error
+                    );
+                    if should_replace {
+                        metadata.completion_status = Some(status);
+                    }
+                }
+            },
+        ) {
+            eprintln!(
+                "Failed to update assistant message {} for session {}: {}",
+                self.assistant_message_id, self.session_id, error
+            );
         }
     }
 }
@@ -85,11 +156,6 @@ fn find_latest_unpaired_tool_request(
 #[async_trait]
 impl MessageWriter for TauriMessageWriter {
     async fn append_text(&self, text: &str) {
-        // Accumulate the text for later persistence
-        {
-            let mut acc = self.accumulated_text.lock().expect("accumulated_text lock");
-            acc.push_str(text);
-        }
         {
             let mut content = self
                 .accumulated_content
@@ -97,67 +163,26 @@ impl MessageWriter for TauriMessageWriter {
                 .expect("accumulated_content lock");
             append_text_block(&mut content, text);
         }
+        self.persist_snapshot(None);
 
         let _ = self.app_handle.emit(
             "acp:text",
             TextPayload {
                 session_id: self.session_id.clone(),
+                message_id: self.assistant_message_id.clone(),
                 text: text.to_string(),
             },
         );
     }
 
     async fn finalize(&self) {
-        // Save the accumulated assistant message to the SessionStore.
-        let text = {
-            let acc = self.accumulated_text.lock().expect("accumulated_text lock");
-            acc.clone()
-        };
-        let content = {
-            let acc = self
-                .accumulated_content
-                .lock()
-                .expect("accumulated_content lock");
-            acc.clone()
-        };
-
-        let finalized_content = if !content.is_empty() {
-            content
-        } else if !text.is_empty() {
-            vec![MessageContent::Text { text }]
-        } else {
-            Vec::new()
-        };
-
-        if !finalized_content.is_empty() {
-            let message = crate::types::messages::Message {
-                id: uuid::Uuid::new_v4().to_string(),
-                role: MessageRole::Assistant,
-                created: chrono::Utc::now().timestamp_millis(),
-                content: finalized_content,
-                metadata: if self.persona_id.is_some() || self.persona_name.is_some() {
-                    Some(crate::types::messages::MessageMetadata {
-                        persona_id: self.persona_id.clone(),
-                        persona_name: self.persona_name.clone(),
-                        ..Default::default()
-                    })
-                } else {
-                    None
-                },
-            };
-
-            if let Err(e) = self.session_store.add_message(&self.session_id, message) {
-                eprintln!(
-                    "Failed to save assistant message for session {}: {}",
-                    self.session_id, e
-                );
-            }
-        }
+        self.persist_snapshot(Some(MessageCompletionStatus::Completed));
 
         let _ = self.app_handle.emit(
             "acp:done",
             DonePayload {
                 session_id: self.session_id.clone(),
+                message_id: self.assistant_message_id.clone(),
             },
         );
     }
@@ -175,11 +200,13 @@ impl MessageWriter for TauriMessageWriter {
                 status: ToolCallStatus::Executing,
             });
         }
+        self.persist_snapshot(None);
 
         let _ = self.app_handle.emit(
             "acp:tool_call",
             ToolCallPayload {
                 session_id: self.session_id.clone(),
+                message_id: self.assistant_message_id.clone(),
                 tool_call_id: tool_call_id.to_string(),
                 title: title.to_string(),
             },
@@ -201,11 +228,13 @@ impl MessageWriter for TauriMessageWriter {
                 }
             }
         }
+        self.persist_snapshot(None);
 
         let _ = self.app_handle.emit(
             "acp:tool_title",
             ToolTitlePayload {
                 session_id: self.session_id.clone(),
+                message_id: self.assistant_message_id.clone(),
                 tool_call_id: tool_call_id.to_string(),
                 title: title.to_string(),
             },
@@ -242,11 +271,13 @@ impl MessageWriter for TauriMessageWriter {
                 });
             }
         }
+        self.persist_snapshot(None);
 
         let _ = self.app_handle.emit(
             "acp:tool_result",
             ToolResultPayload {
                 session_id: self.session_id.clone(),
+                message_id: self.assistant_message_id.clone(),
                 content: content.to_string(),
             },
         );

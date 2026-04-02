@@ -2,6 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { useChatStore } from "../../stores/chatStore";
+import type { Message } from "@/shared/types/messages";
 
 const mockAcpSendMessage = vi.fn();
 const mockAcpCancelSession = vi.fn();
@@ -12,6 +13,30 @@ vi.mock("@/shared/api/acp", () => ({
 }));
 
 import { useChat } from "../useChat";
+
+function addStreamingAssistantMessage(
+  sessionId: string,
+  messageId: string,
+  personaId: string,
+  personaName: string,
+) {
+  const message: Message = {
+    id: messageId,
+    role: "assistant",
+    created: Date.now(),
+    content: [],
+    metadata: {
+      userVisible: true,
+      agentVisible: true,
+      personaId,
+      personaName,
+      completionStatus: "inProgress",
+    },
+  };
+
+  useChatStore.getState().addMessage(sessionId, message);
+  useChatStore.getState().setStreamingMessageId(sessionId, messageId);
+}
 
 function createDeferredPromise() {
   let resolve!: () => void;
@@ -122,8 +147,18 @@ describe("useChat", () => {
       });
       await Promise.resolve();
     });
+    act(() => {
+      addStreamingAssistantMessage(
+        "session-1",
+        "assistant-1",
+        "persona-b",
+        "Persona B",
+      );
+    });
 
-    firstMount.unmount();
+    act(() => {
+      firstMount.unmount();
+    });
 
     const secondMount = renderHook(() =>
       useChat("session-1", undefined, undefined, {
