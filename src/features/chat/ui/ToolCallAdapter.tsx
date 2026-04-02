@@ -133,7 +133,17 @@ function ArtifactActions({
         <span className="truncate text-[10px] text-muted-foreground">
           {primary.rawPath || primary.resolvedPath}
         </span>
+        {primary.confidence === "low" && (
+          <span className="text-[10px] text-muted-foreground/70 italic">
+            detected
+          </span>
+        )}
       </button>
+      {!primary.allowed && primary.blockedReason && (
+        <p className="text-[11px] text-destructive ml-1">
+          {primary.blockedReason}
+        </p>
+      )}
 
       {display.secondaryCandidates.length > 0 && (
         <div className="space-y-1">
@@ -153,27 +163,38 @@ function ArtifactActions({
           {moreOutputsOpen && (
             <div className="space-y-1.5 pl-4">
               {display.secondaryCandidates.map((candidate) => (
-                <button
-                  key={candidate.id}
-                  type="button"
-                  onClick={() => void openCandidate(candidate, false)}
-                  className={cn(
-                    "inline-flex max-w-full items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] transition-colors",
-                    candidate.allowed
-                      ? "border-border bg-accent text-muted-foreground hover:bg-accent/80 hover:text-foreground"
-                      : "cursor-not-allowed border-red-500/20 bg-red-500/[0.03] text-red-500/70",
+                <div key={candidate.id} className="space-y-0.5">
+                  <button
+                    type="button"
+                    onClick={() => void openCandidate(candidate, false)}
+                    className={cn(
+                      "inline-flex max-w-full items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] transition-colors",
+                      candidate.allowed
+                        ? "border-border bg-accent text-muted-foreground hover:bg-accent/80 hover:text-foreground"
+                        : "cursor-not-allowed border-red-500/20 bg-red-500/[0.03] text-red-500/70",
+                    )}
+                    disabled={!candidate.allowed}
+                    title={candidate.resolvedPath}
+                  >
+                    <FolderOpen className="h-3 w-3 shrink-0" />
+                    <span className="truncate">
+                      {kindLabel[candidate.kind] ?? "Open"}
+                    </span>
+                    <span className="truncate text-[10px] text-muted-foreground">
+                      {candidate.rawPath || candidate.resolvedPath}
+                    </span>
+                    {candidate.confidence === "low" && (
+                      <span className="text-[10px] text-muted-foreground/70 italic">
+                        detected
+                      </span>
+                    )}
+                  </button>
+                  {!candidate.allowed && candidate.blockedReason && (
+                    <p className="text-[11px] text-destructive">
+                      {candidate.blockedReason}
+                    </p>
                   )}
-                  disabled={!candidate.allowed}
-                  title={candidate.resolvedPath}
-                >
-                  <FolderOpen className="h-3 w-3 shrink-0" />
-                  <span className="truncate">
-                    {kindLabel[candidate.kind] ?? "Open"}
-                  </span>
-                  <span className="truncate text-[10px] text-muted-foreground">
-                    {candidate.rawPath || candidate.resolvedPath}
-                  </span>
-                </button>
+                </div>
               ))}
             </div>
           )}
