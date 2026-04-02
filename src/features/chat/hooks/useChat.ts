@@ -57,8 +57,16 @@ export function useChat(
   );
 
   const sendMessage = useCallback(
-    async (text: string, overridePersona?: { id: string; name?: string }) => {
-      if (!text.trim() || chatState === "streaming" || chatState === "thinking")
+    async (
+      text: string,
+      overridePersona?: { id: string; name?: string },
+      images?: { base64: string; mimeType: string }[],
+    ) => {
+      if (
+        (!text.trim() && (!images || images.length === 0)) ||
+        chatState === "streaming" ||
+        chatState === "thinking"
+      )
         return;
 
       const effectivePersonaInfo = resolvePersonaInfo(
@@ -77,6 +85,19 @@ export function useChat(
           targetPersonaId: effectivePersonaInfo.id,
           targetPersonaName: effectivePersonaInfo.name,
         };
+      }
+      // Embed image content blocks into the user message for local display
+      if (images && images.length > 0) {
+        for (const img of images) {
+          userMessage.content.push({
+            type: "image",
+            source: {
+              type: "base64",
+              mediaType: img.mimeType,
+              data: img.base64,
+            },
+          });
+        }
       }
       store.addMessage(sessionId, userMessage);
       store.setChatState(sessionId, "thinking");
@@ -123,11 +144,17 @@ export function useChat(
         // Send via ACP — response streams back through Tauri events
         // which are handled by the global useAcpStream listener in AppShell.
         store.setChatState(sessionId, "streaming");
-        await acpSendMessage(sessionId, providerId, text, {
+        // When images are present with no text, pass a single space so the ACP
+        // driver doesn't send an empty text content block that goose rejects.
+        const acpPrompt = text.trim() || (images?.length ? " " : text);
+        await acpSendMessage(sessionId, providerId, acpPrompt, {
           systemPrompt,
           workingDir: workingDirOverride,
           personaId: effectivePersonaInfo?.id,
           personaName: effectivePersonaInfo?.name,
+          images: images?.map(
+            (img) => [img.base64, img.mimeType] as [string, string],
+          ),
         });
         // Note: setChatState("idle") is handled by useAcpStream on "acp:done"
       } catch (err) {

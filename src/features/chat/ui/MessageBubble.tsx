@@ -12,10 +12,12 @@ import { cn } from "@/shared/lib/cn";
 import { ToolCallCard } from "./ToolCallCard";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { MarkdownContent } from "./MarkdownContent";
+import { ClickableImage } from "./ClickableImage";
 import type {
   Message,
   MessageContent,
   TextContent,
+  ImageContent,
   ToolRequestContent,
   ToolResponseContent,
   ThinkingContent,
@@ -309,6 +311,14 @@ function renderContentBlock(content: MessageContent, index: number) {
           className="text-sm leading-relaxed"
         />
       );
+    }
+    case "image": {
+      const ic = content as ImageContent;
+      const src =
+        ic.source.type === "base64"
+          ? `data:${ic.source.mediaType};base64,${ic.source.data}`
+          : ic.source.url;
+      return <ClickableImage key={`image-${index}`} src={src} alt="Attached" />;
     }
     case "toolRequest":
     case "toolResponse":
