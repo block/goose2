@@ -342,6 +342,7 @@ function renderContentBlock(
       );
     case "systemNotification": {
       const sn = content as SystemNotificationContent;
+      const isError = sn.notificationType === "error";
       return (
         <div
           key={`notification-${index}`}
@@ -387,7 +388,6 @@ export function MessageBubble({
     .map((c) => c.text)
     .join("\n");
 
-  // System messages: centered, muted
   if (role === "system") {
     return (
       <div className="flex justify-center px-4 py-2">

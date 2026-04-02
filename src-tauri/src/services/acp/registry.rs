@@ -19,6 +19,7 @@ struct AcpSessionEntry {
     cancel_token: CancellationToken,
     provider_id: String,
     started_at: std::time::Instant,
+    assistant_message_id: Option<String>,
     /// PID of the process that owns this session (for orphan detection).
     #[allow(dead_code)]
     owner_pid: u32,
@@ -46,6 +47,7 @@ impl AcpSessionRegistry {
             cancel_token: token.clone(),
             provider_id: provider_id.to_string(),
             started_at: std::time::Instant::now(),
+            assistant_message_id: None,
             owner_pid: std::process::id(),
         };
         self.sessions
@@ -64,13 +66,24 @@ impl AcpSessionRegistry {
     }
 
     /// Cancel a running session by signalling its cancellation token.
-    pub fn cancel(&self, session_id: &str) -> bool {
+    pub fn cancel(&self, session_id: &str) -> Option<String> {
         let guard = self.sessions.lock().expect("session registry lock");
         if let Some(entry) = guard.get(session_id) {
             entry.cancel_token.cancel();
-            true
+            entry.assistant_message_id.clone()
         } else {
-            false
+            None
+        }
+    }
+
+    pub fn set_assistant_message_id(&self, session_id: &str, message_id: String) {
+        if let Some(entry) = self
+            .sessions
+            .lock()
+            .expect("session registry lock")
+            .get_mut(session_id)
+        {
+            entry.assistant_message_id = Some(message_id);
         }
     }
 

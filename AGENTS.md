@@ -6,6 +6,29 @@ Guidelines for AI agents (and developers) working on this codebase.
 
 Goose2 is a Tauri 2 + React 19 desktop app. It uses TypeScript strict mode, Vite, and Tailwind CSS 3. The codebase follows a feature-sliced architecture organized under `src/app/`, `src/features/`, and `src/shared/`.
 
+## First Steps
+
+Treat this repo as partially Hermit-managed. Do not assume `just`, `pnpm`, `node`, or `lefthook` are available globally.
+
+- In bash/zsh, run `source ./bin/activate-hermit` before using repo tools if the shell cannot find `just`, `pnpm`, or other managed binaries.
+- In fish, run `source ./bin/activate-hermit.fish`.
+- If PATH still looks wrong or you want to avoid shell assumptions, prefer repo-local binaries such as `./bin/just`, `./bin/pnpm`, and `./bin/lefthook`.
+- Biome is installed from `package.json` devDependencies, not from Hermit. Run it through `pnpm`, `pnpm exec biome`, or `npx biome` after `just setup`.
+- On a fresh clone, a newly created worktree, or after `just clean`, run `just setup` before relying on `pnpm`, Biome, or app-local tooling.
+- In new clones and worktrees, ensure git hooks are installed early with `lefthook install`. If `lefthook` is not on PATH, use `./bin/lefthook install`.
+- Agents starting in a fresh clone or worktree should do the setup and hook-install steps proactively rather than assuming the environment is already bootstrapped.
+- Use `just dev` for the normal desktop workflow. Use `just dev-frontend` only when you intentionally want the Vite app without Tauri.
+
+## Common Commands
+
+- `just setup` installs frontend dependencies with `pnpm install` and builds the Rust backend once.
+- `just dev` starts the desktop app in dev mode and wires Tauri to the local Vite server.
+- `just check` runs Biome checks and file-size checks.
+- `just test` runs the Vitest suite.
+- `just tauri-check` runs `cargo check` in `src-tauri`.
+- `just ci` is the main local verification gate.
+- `just clean` removes Rust build artifacts, `dist`, and `node_modules`, so `just setup` is required again before `just dev`.
+
 ## Architecture & File Structure
 
 ```
@@ -116,17 +139,28 @@ For non AI communication, such as configuration:
 
 | Tool        | Purpose                                        |
 |-------------|-------------------------------------------------|
-| **Hermit**  | Manages toolchain (node, pnpm, biome, just, lefthook) |
+| **Hermit**  | Manages repo binaries such as `node`, `pnpm`, `just`, and `lefthook` |
 | **Just**    | Task runner (`just dev`, `just build`, `just check`) |
 | **Lefthook**| Git hooks (pre-commit, pre-push)               |
 | **Biome**   | Linting and formatting                          |
 | **pnpm**    | Package manager                                 |
 
-## Testing (Planned)
+Additional tooling notes:
 
-- E2E tests with Playwright or similar.
-- Component tests with Vitest + React Testing Library.
-- File size enforcement via `scripts/check-file-sizes.mjs`.
+- Prefer repo-managed binaries over global tools when there is any ambiguity about PATH.
+- Hermit manages `node`, `pnpm`, `just`, and `lefthook`, while Biome comes from `node_modules` after `just setup`.
+- Tauri backend commands still rely on a working Rust/Cargo toolchain.
+- Pre-commit hooks run formatting plus `just check`.
+- Pre-push hooks run `just fmt-check`, `just clippy`, `just check`, `just test`, `just build`, and `just tauri-check`.
+- Do not use `--no-verify` to bypass hooks. Fix the underlying issue instead.
+
+## Testing & Verification
+
+- Unit/component tests use Vitest and Testing Library via `just test` or `pnpm test`.
+- E2E tests use Playwright via `just test-e2e` and `just test-e2e-all`.
+- File size enforcement runs through `pnpm check:file-sizes` and is included in `just check`.
+- Before handing off a change, run the smallest relevant verification step. Use `just ci` when you need the full local gate.
+- GitHub Actions also runs desktop-oriented checks, including Playwright coverage, that are broader than the local pre-push hook.
 
 ## Key Dependencies
 

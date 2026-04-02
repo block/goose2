@@ -21,6 +21,12 @@ export type ToolCallStatus =
   | "error"
   | "stopped";
 
+export type MessageCompletionStatus =
+  | "inProgress"
+  | "completed"
+  | "error"
+  | "stopped";
+
 export interface ToolRequestContent {
   type: "toolRequest";
   id: string;
@@ -101,6 +107,7 @@ export interface MessageMetadata {
   /** Which persona this user message is addressed to. */
   targetPersonaId?: string;
   targetPersonaName?: string;
+  completionStatus?: MessageCompletionStatus;
 }
 
 export interface Message {
@@ -156,5 +163,21 @@ export function createUserMessage(
     created: Date.now(),
     content: [{ type: "text", text }],
     metadata: attachments ? { attachments } : undefined,
+  };
+}
+
+export function createSystemNotificationMessage(
+  text: string,
+  notificationType: SystemNotificationContent["notificationType"] = "info",
+): Message {
+  return {
+    id: crypto.randomUUID(),
+    role: "system",
+    created: Date.now(),
+    content: [{ type: "systemNotification", notificationType, text }],
+    metadata: {
+      userVisible: true,
+      agentVisible: false,
+    },
   };
 }

@@ -141,3 +141,4 @@ dev-frontend:
 clean:
     cd src-tauri && cargo clean
     rm -rf dist
+    rm -rf node_modules
