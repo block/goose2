@@ -21,6 +21,7 @@ import {
 } from "@/shared/ui/ai-elements/reasoning";
 import { ToolCallAdapter } from "./ToolCallAdapter";
 import { ClickableImage } from "./ClickableImage";
+import { useArtifactLinkHandler } from "@/features/chat/hooks/useArtifactLinkHandler";
 import type {
   Message,
   MessageContent,
@@ -387,6 +388,7 @@ export function MessageBubble({
   onEdit,
 }: MessageBubbleProps) {
   const { role, content, created } = message;
+  const { handleContentClick, pathNotice } = useArtifactLinkHandler();
 
   const textContent = content
     .filter((c): c is TextContent => c.type === "text")
@@ -443,7 +445,12 @@ export function MessageBubble({
           </span>
         )}
 
-        <div className="w-full min-w-0 text-[13px] leading-relaxed">
+        {/* biome-ignore lint/a11y/useKeyWithClickEvents: delegated link handler */}
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: delegated link handler */}
+        <div
+          className="w-full min-w-0 text-[13px] leading-relaxed"
+          onClick={handleContentClick}
+        >
           {groupContentSections(content).map((section, sectionIdx) => {
             if (section.type === "toolChain") {
               const toolItems = section.items as ToolChainItem[];
@@ -456,6 +463,11 @@ export function MessageBubble({
               </div>
             );
           })}
+          {pathNotice && (
+            <p className="mt-2 text-xs text-destructive" role="status">
+              {pathNotice}
+            </p>
+          )}
         </div>
 
         {/* Hover actions + timestamp */}
