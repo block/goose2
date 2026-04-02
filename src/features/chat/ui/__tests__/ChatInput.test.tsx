@@ -85,6 +85,7 @@ describe("ChatInput", () => {
       <ChatInput
         onSend={vi.fn()}
         currentModel="GPT-4o"
+        currentModelId="gpt-4o"
         availableModels={[{ id: "gpt-4o", name: "GPT-4o" }]}
       />,
     );
@@ -99,6 +100,44 @@ describe("ChatInput", () => {
       />,
     );
     expect(screen.getByText("Claude Sonnet 4")).toBeInTheDocument();
+  });
+
+  it("calls onModelChange when selecting a model", async () => {
+    const onModelChange = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <ChatInput
+        onSend={vi.fn()}
+        currentModel="GPT-4o"
+        currentModelId="gpt-4o"
+        availableModels={[
+          { id: "gpt-4o", name: "GPT-4o" },
+          { id: "gpt-4.1", name: "GPT-4.1" },
+        ]}
+        onModelChange={onModelChange}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /select model/i }));
+    await user.click(screen.getByText("GPT-4.1"));
+
+    expect(onModelChange).toHaveBeenCalledWith("gpt-4.1");
+  });
+
+  it("shows a disabled loading model picker before models are available", () => {
+    render(
+      <ChatInput
+        onSend={vi.fn()}
+        currentModel="Loading models..."
+        modelsLoading
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /select model/i }),
+    ).toBeDisabled();
+    expect(screen.getByText("Loading models...")).toBeInTheDocument();
   });
 
   it("shows default provider label", () => {

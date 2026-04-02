@@ -112,8 +112,12 @@ impl AcpService {
             &registry_key,
             writer_impl.assistant_message_id().to_string(),
         );
-        let tauri_store =
-            TauriStore::new(Arc::clone(&session_store), session_id.clone(), persona_id);
+        let tauri_store = TauriStore::with_provider(
+            Arc::clone(&session_store),
+            session_id.clone(),
+            persona_id,
+            Some(provider_id.clone()),
+        );
         let agent_session_id = tauri_store.get_agent_session_id();
         let store: Arc<dyn Store> = Arc::new(tauri_store);
         let writer: Arc<dyn MessageWriter> = writer_impl.clone();

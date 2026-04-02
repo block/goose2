@@ -10,6 +10,7 @@ import { useProviderSelection } from "@/features/agents/hooks/useProviderSelecti
 import { useChatSessionStore } from "../stores/chatSessionStore";
 import { getProject, type ProjectInfo } from "@/features/projects/api/projects";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
+import { acpGetModelState } from "@/shared/api/acp";
 import {
   buildProjectSystemPrompt,
   composeSystemPrompt,
@@ -66,6 +67,9 @@ export function ChatView({
   const session = useChatSessionStore((s) =>
     s.sessions.find((candidate) => candidate.id === activeSessionId),
   );
+  const modelStateByProvider = useChatSessionStore(
+    (s) => s.modelStateByProvider,
+  );
   const projects = useProjectStore((s) => s.projects);
   const storedProject = useProjectStore((s) =>
     session?.projectId
@@ -78,6 +82,7 @@ export function ChatView({
   const [homeArtifactsRoot, setHomeArtifactsRoot] = useState<string | null>(
     null,
   );
+  const [modelsLoading, setModelsLoading] = useState(false);
   const project = storedProject ?? fallbackProject;
   const availableProjects = useMemo(
     () =>
@@ -99,6 +104,36 @@ export function ChatView({
     globalSelectedProvider;
 
   const selectedPersona = personas.find((p) => p.id === selectedPersonaId);
+  const providerModelState = selectedProvider
+    ? modelStateByProvider[selectedProvider]
+    : undefined;
+  const availableModels = providerModelState?.availableModels ?? [];
+  const lastModelBootstrapKeyRef = useRef<string | null>(null);
+  const bootstrapSessionId = useMemo(
+    () =>
+      `chat-bootstrap-${activeSessionId}-${selectedProvider}-${selectedPersonaId ?? "default"}`,
+    [activeSessionId, selectedPersonaId, selectedProvider],
+  );
+  const currentModel = useMemo(() => {
+    if (modelsLoading) return "Loading models...";
+    // Session's saved display name is authoritative after model selection
+    if (session?.modelName) return session.modelName;
+    // Fall back to matching against available models list
+    const matchedModel = session?.currentModelId
+      ? availableModels.find((model) => model.id === session.currentModelId)
+      : undefined;
+    if (matchedModel) return matchedModel.displayName ?? matchedModel.name;
+    // Provider's reported current model
+    if (providerModelState?.currentModelName)
+      return providerModelState.currentModelName;
+    return "";
+  }, [
+    modelsLoading,
+    session?.modelName,
+    session?.currentModelId,
+    availableModels,
+    providerModelState?.currentModelName,
+  ]);
   const projectFolders = useMemo(
     () => getProjectFolderOption(project),
     [project],
@@ -171,12 +206,43 @@ export function ChatView({
         return;
       }
 
+      // Show a notification if there are already messages in the chat
+      const currentMessages =
+        useChatStore.getState().messagesBySession[activeSessionId] ?? [];
+      if (currentMessages.length > 0) {
+        const providerLabel =
+          providers.find((p) => p.id === providerId)?.label ?? providerId;
+        // Include the default model if we already have cached model state
+        const cachedState =
+          useChatSessionStore.getState().modelStateByProvider[providerId];
+        const defaultModelName =
+          cachedState?.currentModelName ?? cachedState?.currentModelId;
+        const switchText = defaultModelName
+          ? `Switched to ${providerLabel} (${defaultModelName})`
+          : `Switched to ${providerLabel}`;
+        useChatStore.getState().addMessage(activeSessionId, {
+          id: crypto.randomUUID(),
+          role: "system",
+          created: Date.now(),
+          content: [
+            {
+              type: "systemNotification",
+              notificationType: "info",
+              text: switchText,
+            },
+          ],
+          metadata: { userVisible: true, agentVisible: false },
+        });
+      }
+
       setGlobalSelectedProvider(providerId);
-      useChatSessionStore
-        .getState()
-        .updateSession(activeSessionId, { providerId });
+      useChatSessionStore.getState().updateSession(activeSessionId, {
+        providerId,
+        currentModelId: undefined,
+        modelName: undefined,
+      });
     },
-    [activeSessionId, selectedProvider, setGlobalSelectedProvider],
+    [activeSessionId, providers, selectedProvider, setGlobalSelectedProvider],
   );
 
   const handleProjectChange = useCallback(
@@ -187,6 +253,156 @@ export function ChatView({
     },
     [activeSessionId],
   );
+
+  const handleModelChange = useCallback(
+    (modelId: string) => {
+      if (modelId === session?.currentModelId) {
+        return;
+      }
+
+      const matchedModel = availableModels.find(
+        (model) => model.id === modelId,
+      );
+      const displayName =
+        matchedModel?.displayName ?? matchedModel?.name ?? modelId;
+
+      // Update session — the pre-send sync in useChat will apply the model
+      // to the real ACP session when the user sends the next message.
+      useChatSessionStore.getState().updateSession(activeSessionId, {
+        currentModelId: modelId,
+        modelName: displayName,
+      });
+
+      // Show a system notification if there are already messages in the chat
+      const currentMessages =
+        useChatStore.getState().messagesBySession[activeSessionId] ?? [];
+      if (currentMessages.length > 0) {
+        useChatStore.getState().addMessage(activeSessionId, {
+          id: crypto.randomUUID(),
+          role: "system",
+          created: Date.now(),
+          content: [
+            {
+              type: "systemNotification",
+              notificationType: "info",
+              text: `Switched to ${displayName}`,
+            },
+          ],
+          metadata: { userVisible: true, agentVisible: false },
+        });
+      }
+    },
+    [activeSessionId, availableModels, session?.currentModelId],
+  );
+
+  useEffect(() => {
+    if (!selectedProvider) {
+      return;
+    }
+
+    // Don't fire until effectiveWorkingDir is resolved — avoids a wasted
+    // first bootstrap that gets immediately cancelled when homeArtifactsRoot arrives.
+    if (!effectiveWorkingDir) {
+      return;
+    }
+
+    // If the shared store already has models for this provider (e.g. from
+    // HomeScreen), use them immediately and skip the expensive ACP spawn.
+    const cached =
+      useChatSessionStore.getState().modelStateByProvider[selectedProvider];
+    if (cached && cached.availableModels.length > 0) {
+      // Read from store at call time to avoid closing over session?.currentModelId
+      // (which would cause cascading re-fires if added to the dependency array)
+      const desiredModelId = useChatSessionStore
+        .getState()
+        .getSession(activeSessionId)?.currentModelId;
+      const desiredModel = desiredModelId
+        ? cached.availableModels.find((model) => model.id === desiredModelId)
+        : undefined;
+
+      useChatSessionStore.getState().setModelState(activeSessionId, {
+        providerId: selectedProvider,
+        source: cached.source,
+        configId: cached.configId,
+        currentModelId: desiredModelId ?? cached.currentModelId,
+        currentModelName:
+          desiredModel?.displayName ??
+          desiredModel?.name ??
+          cached.currentModelName,
+        availableModels: cached.availableModels,
+      });
+      setModelsLoading(false);
+      return;
+    }
+
+    const bootstrapKey = [
+      bootstrapSessionId,
+      selectedProvider,
+      selectedPersonaId ?? "",
+      effectiveWorkingDir,
+    ].join(":");
+
+    if (lastModelBootstrapKeyRef.current === bootstrapKey) {
+      return;
+    }
+
+    let cancelled = false;
+    lastModelBootstrapKeyRef.current = bootstrapKey;
+    setModelsLoading(true);
+
+    acpGetModelState(bootstrapSessionId, selectedProvider, {
+      personaId: selectedPersonaId ?? undefined,
+      workingDir: effectiveWorkingDir,
+      persistSession: false,
+    })
+      .then((modelState) => {
+        if (cancelled) {
+          return;
+        }
+
+        const desiredModelId = useChatSessionStore
+          .getState()
+          .getSession(activeSessionId)?.currentModelId;
+        const desiredModel = modelState.availableModels.find(
+          (model) => model.id === desiredModelId,
+        );
+
+        useChatSessionStore.getState().setModelState(activeSessionId, {
+          providerId: selectedProvider,
+          source: modelState.source,
+          configId: modelState.configId,
+          currentModelId: desiredModelId ?? modelState.currentModelId,
+          currentModelName:
+            desiredModel?.displayName ??
+            desiredModel?.name ??
+            modelState.currentModelName,
+          availableModels: modelState.availableModels,
+        });
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+
+        console.error("Failed to bootstrap ACP model state:", error);
+        lastModelBootstrapKeyRef.current = null;
+      })
+      .finally(() => {
+        // Always reset loading — if cancelled, the next effect will set it true again.
+        // Leaving it true on cancellation causes permanently stuck "Loading models..."
+        setModelsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeSessionId,
+    bootstrapSessionId,
+    effectiveWorkingDir,
+    selectedPersonaId,
+    selectedProvider,
+  ]);
 
   // When persona changes, update the provider to match persona's default
   const handlePersonaChange = useCallback(
@@ -313,13 +529,20 @@ export function ChatView({
   useEffect(() => {
     if (
       (initialMessage || initialImages?.length) &&
-      !initialMessageSent.current
+      !initialMessageSent.current &&
+      !modelsLoading
     ) {
       initialMessageSent.current = true;
       handleSend(initialMessage ?? "", undefined, initialImages);
       onInitialMessageConsumed?.();
     }
-  }, [initialMessage, initialImages, handleSend, onInitialMessageConsumed]);
+  }, [
+    initialMessage,
+    initialImages,
+    handleSend,
+    modelsLoading,
+    onInitialMessageConsumed,
+  ]);
 
   const isStreaming = chatState === "streaming";
   const showIndicator =
@@ -370,6 +593,11 @@ export function ChatView({
           providersLoading={providersLoading}
           selectedProvider={selectedProvider}
           onProviderChange={handleProviderChange}
+          currentModel={currentModel}
+          currentModelId={session?.currentModelId}
+          modelsLoading={modelsLoading}
+          availableModels={availableModels}
+          onModelChange={handleModelChange}
           selectedProjectId={session?.projectId ?? null}
           availableProjects={availableProjects}
           onProjectChange={handleProjectChange}

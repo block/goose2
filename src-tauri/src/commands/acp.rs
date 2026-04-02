@@ -1,14 +1,27 @@
+use agent_client_protocol::{
+    Agent, Client, ClientSideConnection, Error as AcpError, Implementation, InitializeRequest,
+    LoadSessionRequest, NewSessionRequest, ProtocolVersion, RequestPermissionRequest,
+    RequestPermissionResponse, Result as AcpResult, SessionConfigKind, SessionConfigOption,
+    SessionConfigOptionCategory, SessionConfigSelectOptions, SessionModelState,
+    SessionNotification, SetSessionConfigOptionRequest, SetSessionModelRequest,
+};
+use async_trait::async_trait;
 use serde::Serialize;
 use std::path::PathBuf;
+use std::process::Stdio;
 use std::sync::Arc;
 use tauri::{AppHandle, State};
+use tokio::process::Command;
+use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
-use crate::services::acp::{make_composite_key, AcpRunningSession, AcpService, AcpSessionRegistry};
+use crate::services::acp::{
+    make_composite_key, AcpRunningSession, AcpService, AcpSessionRegistry, TauriStore,
+};
 use crate::services::sessions::SessionStore;
 use crate::types::messages::{
     MessageCompletionStatus, MessageContent, MessageMetadata, ToolCallStatus,
 };
-use acp_client::discover_providers;
+use acp_client::{discover_providers, find_acp_agent_by_id};
 
 /// Response type for an ACP provider, sent to the frontend.
 #[derive(Serialize)]
@@ -16,6 +29,24 @@ use acp_client::discover_providers;
 pub struct AcpProviderResponse {
     id: String,
     label: String,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpAvailableModelResponse {
+    id: String,
+    name: String,
+    description: Option<String>,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpModelStateResponse {
+    source: String,
+    config_id: Option<String>,
+    current_model_id: String,
+    current_model_name: Option<String>,
+    available_models: Vec<AcpAvailableModelResponse>,
 }
 
 fn default_artifacts_working_dir() -> PathBuf {
@@ -125,6 +156,414 @@ pub async fn acp_send_message(
         images,
     )
     .await
+}
+
+struct NoopAcpClient;
+
+#[async_trait(?Send)]
+impl Client for NoopAcpClient {
+    async fn request_permission(
+        &self,
+        _args: RequestPermissionRequest,
+    ) -> AcpResult<RequestPermissionResponse> {
+        Err(AcpError::method_not_found())
+    }
+
+    async fn session_notification(&self, _args: SessionNotification) -> AcpResult<()> {
+        Ok(())
+    }
+}
+
+async fn run_acp_set_model(
+    working_dir: PathBuf,
+    provider_id: String,
+    agent_session_id: String,
+    model_id: String,
+    source: String,
+    config_id: Option<String>,
+) -> Result<(), String> {
+    let provider = find_acp_agent_by_id(&provider_id)
+        .ok_or_else(|| format!("Unknown or unavailable agent provider: {provider_id}"))?;
+
+    let mut child = Command::new(&provider.binary_path)
+        .args(&provider.acp_args)
+        .current_dir(&working_dir)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .kill_on_drop(true)
+        .spawn()
+        .map_err(|error| {
+            format!(
+                "Failed to spawn {} (binary: {}, cwd: {}): {error}",
+                provider.label,
+                provider.binary_path.display(),
+                working_dir.display()
+            )
+        })?;
+
+    let stdin = child
+        .stdin
+        .take()
+        .ok_or_else(|| "Failed to open ACP stdin".to_string())?;
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| "Failed to open ACP stdout".to_string())?;
+
+    let (connection, io_future) = ClientSideConnection::new(
+        NoopAcpClient,
+        stdin.compat_write(),
+        stdout.compat(),
+        |future| {
+            tokio::task::spawn_local(future);
+        },
+    );
+
+    tokio::task::spawn_local(async move {
+        if let Err(error) = io_future.await {
+            log::error!("ACP IO error during set_model: {error:?}");
+        }
+    });
+
+    let init_request = InitializeRequest::new(ProtocolVersion::LATEST)
+        .client_info(Implementation::new("goose2", env!("CARGO_PKG_VERSION")));
+    let init_response = connection
+        .initialize(init_request)
+        .await
+        .map_err(|error| format!("ACP init failed: {error:?}"))?;
+
+    if !init_response.agent_capabilities.load_session {
+        return Err("Agent does not support load_session".to_string());
+    }
+
+    connection
+        .load_session(LoadSessionRequest::new(
+            agent_session_id.clone(),
+            working_dir.clone(),
+        ))
+        .await
+        .map_err(|error| format!("Failed to load ACP session: {error:?}"))?;
+
+    match source.as_str() {
+        "config_option" => {
+            let config_id = config_id.ok_or_else(|| {
+                "Missing config option ID for config-option-backed model selection".to_string()
+            })?;
+
+            connection
+                .set_session_config_option(SetSessionConfigOptionRequest::new(
+                    agent_session_id,
+                    config_id,
+                    model_id.as_str(),
+                ))
+                .await
+                .map_err(|error| format!("Failed to set ACP session config option: {error:?}"))?;
+        }
+        _ => {
+            connection
+                .set_session_model(SetSessionModelRequest::new(agent_session_id, model_id))
+                .await
+                .map_err(|error| format!("Failed to set ACP session model: {error:?}"))?;
+        }
+    }
+
+    let _ = child.start_kill();
+    let _ = child.wait().await;
+
+    Ok(())
+}
+
+fn model_state_from_session_models(
+    model_state: SessionModelState,
+) -> Option<AcpModelStateResponse> {
+    if model_state.available_models.is_empty() {
+        return None;
+    }
+
+    let current_model_name = model_state
+        .available_models
+        .iter()
+        .find(|model| model.model_id == model_state.current_model_id)
+        .map(|model| model.name.clone());
+    let available_models = model_state
+        .available_models
+        .into_iter()
+        .map(|model| AcpAvailableModelResponse {
+            id: model.model_id.to_string(),
+            name: model.name,
+            description: model.description,
+        })
+        .collect();
+
+    Some(AcpModelStateResponse {
+        source: "session_model".to_string(),
+        config_id: None,
+        current_model_id: model_state.current_model_id.to_string(),
+        current_model_name,
+        available_models,
+    })
+}
+
+fn model_state_from_config_options(
+    config_options: Vec<SessionConfigOption>,
+) -> Option<AcpModelStateResponse> {
+    let option = config_options
+        .into_iter()
+        .find(|option| matches!(option.category, Some(SessionConfigOptionCategory::Model)))?;
+    let config_id = option.id.to_string();
+    let option_name = option.name.clone();
+
+    let select = match option.kind {
+        SessionConfigKind::Select(select) => select,
+        #[allow(unreachable_patterns)]
+        _ => return None,
+    };
+
+    let current_model_id = select.current_value.to_string();
+    let available_models = match select.options {
+        SessionConfigSelectOptions::Ungrouped(options) => options
+            .into_iter()
+            .map(|model| AcpAvailableModelResponse {
+                id: model.value.to_string(),
+                name: model.name,
+                description: model.description,
+            })
+            .collect::<Vec<_>>(),
+        SessionConfigSelectOptions::Grouped(groups) => groups
+            .into_iter()
+            .flat_map(|group| group.options.into_iter())
+            .map(|model| AcpAvailableModelResponse {
+                id: model.value.to_string(),
+                name: model.name,
+                description: model.description,
+            })
+            .collect::<Vec<_>>(),
+        _ => return None,
+    };
+    let current_model_name = available_models
+        .iter()
+        .find(|model| model.id == current_model_id)
+        .map(|model| model.name.clone())
+        .or(Some(option_name));
+
+    Some(AcpModelStateResponse {
+        source: "config_option".to_string(),
+        config_id: Some(config_id),
+        current_model_id,
+        current_model_name,
+        available_models,
+    })
+}
+
+fn normalize_model_state(
+    models: Option<SessionModelState>,
+    config_options: Option<Vec<SessionConfigOption>>,
+) -> Result<AcpModelStateResponse, String> {
+    if let Some(model_state) = models.and_then(model_state_from_session_models) {
+        return Ok(model_state);
+    }
+
+    if let Some(model_state) = config_options.and_then(model_state_from_config_options) {
+        return Ok(model_state);
+    }
+
+    Err("ACP session did not return model options".to_string())
+}
+
+async fn run_acp_get_model_state(
+    working_dir: PathBuf,
+    _session_id: String,
+    provider_id: String,
+    tauri_store: TauriStore,
+) -> Result<AcpModelStateResponse, String> {
+    let provider = find_acp_agent_by_id(&provider_id)
+        .ok_or_else(|| format!("Unknown or unavailable agent provider: {provider_id}"))?;
+
+    let mut child = Command::new(&provider.binary_path)
+        .args(&provider.acp_args)
+        .current_dir(&working_dir)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .kill_on_drop(true)
+        .spawn()
+        .map_err(|error| {
+            format!(
+                "Failed to spawn {} (binary: {}, cwd: {}): {error}",
+                provider.label,
+                provider.binary_path.display(),
+                working_dir.display()
+            )
+        })?;
+
+    let stdin = child
+        .stdin
+        .take()
+        .ok_or_else(|| "Failed to open ACP stdin".to_string())?;
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| "Failed to open ACP stdout".to_string())?;
+
+    let (connection, io_future) = ClientSideConnection::new(
+        NoopAcpClient,
+        stdin.compat_write(),
+        stdout.compat(),
+        |future| {
+            tokio::task::spawn_local(future);
+        },
+    );
+
+    tokio::task::spawn_local(async move {
+        if let Err(error) = io_future.await {
+            log::error!("ACP IO error during model bootstrap: {error:?}");
+        }
+    });
+
+    let result = async {
+        let init_request = InitializeRequest::new(ProtocolVersion::LATEST)
+            .client_info(Implementation::new("goose2", env!("CARGO_PKG_VERSION")));
+        let init_response = connection
+            .initialize(init_request)
+            .await
+            .map_err(|error| format!("ACP init failed: {error:?}"))?;
+
+        // Try to load an existing session. If the stored session ID is stale
+        // (e.g. provider was restarted), fall back to creating a new session.
+        let mut loaded = None;
+        if let Some(agent_session_id) = tauri_store.get_agent_session_id() {
+            if init_response.agent_capabilities.load_session {
+                match connection
+                    .load_session(LoadSessionRequest::new(
+                        agent_session_id.clone(),
+                        working_dir.clone(),
+                    ))
+                    .await
+                {
+                    Ok(session_response) => {
+                        loaded = Some(session_response);
+                    }
+                    Err(error) => {
+                        log::warn!(
+                            "Failed to load ACP session {agent_session_id}, \
+                             falling back to new session: {error:?}"
+                        );
+                    }
+                }
+            }
+        }
+
+        if let Some(session_response) = loaded {
+            normalize_model_state(session_response.models, session_response.config_options)
+        } else {
+            let session_response = connection
+                .new_session(NewSessionRequest::new(working_dir.clone()))
+                .await
+                .map_err(|error| format!("Failed to create ACP session: {error:?}"))?;
+
+            // Do NOT save the agent session ID here. This bootstrap process is
+            // throwaway — it will be killed after we read the model state. The
+            // real send path (driver.run) creates its own session and persists
+            // the ID via the Store trait. Saving here causes the send path to
+            // find a stale ID from a dead process and fail with "Resource not found".
+
+            normalize_model_state(session_response.models, session_response.config_options)
+        }
+    }
+    .await;
+
+    let _ = child.start_kill();
+    let _ = child.wait().await;
+
+    result
+}
+
+#[tauri::command]
+pub async fn acp_get_model_state(
+    session_store: State<'_, Arc<SessionStore>>,
+    session_id: String,
+    provider_id: String,
+    persona_id: Option<String>,
+    working_dir: Option<String>,
+    persist_session: Option<bool>,
+) -> Result<AcpModelStateResponse, String> {
+    let current_dir = std::env::current_dir()
+        .map_err(|error| format!("Failed to determine current working directory: {error}"))?;
+    let working_dir = resolve_working_dir(working_dir, &current_dir)?;
+
+    if persist_session.unwrap_or(true) {
+        session_store.ensure_session(&session_id, Some(provider_id.clone()));
+    }
+    let tauri_store = TauriStore::with_provider(
+        Arc::clone(&session_store),
+        session_id.clone(),
+        persona_id.clone(),
+        Some(provider_id.clone()),
+    );
+
+    tokio::task::spawn_blocking(move || {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|error| format!("Failed to build tokio runtime: {error}"))?;
+        let local = tokio::task::LocalSet::new();
+
+        local.block_on(&runtime, async move {
+            run_acp_get_model_state(working_dir, session_id, provider_id, tauri_store).await
+        })
+    })
+    .await
+    .map_err(|error| format!("ACP model bootstrap task panicked: {error}"))?
+}
+
+#[allow(clippy::too_many_arguments)]
+#[tauri::command]
+pub async fn acp_set_model(
+    session_store: State<'_, Arc<SessionStore>>,
+    session_id: String,
+    provider_id: String,
+    model_id: String,
+    source: String,
+    config_id: Option<String>,
+    persona_id: Option<String>,
+    working_dir: Option<String>,
+) -> Result<(), String> {
+    let current_dir = std::env::current_dir()
+        .map_err(|error| format!("Failed to determine current working directory: {error}"))?;
+    let working_dir = resolve_working_dir(working_dir, &current_dir)?;
+    let tauri_store = TauriStore::with_provider(
+        Arc::clone(&session_store),
+        session_id.clone(),
+        persona_id.clone(),
+        Some(provider_id.clone()),
+    );
+    let agent_session_id = tauri_store.get_agent_session_id().ok_or_else(|| {
+        let key = make_composite_key(&session_id, persona_id.as_deref());
+        format!("No ACP session found for '{key}'. Send a message first before changing models.")
+    })?;
+
+    tokio::task::spawn_blocking(move || {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|error| format!("Failed to build tokio runtime: {error}"))?;
+        let local = tokio::task::LocalSet::new();
+
+        local.block_on(&runtime, async move {
+            run_acp_set_model(
+                working_dir,
+                provider_id,
+                agent_session_id,
+                model_id,
+                source,
+                config_id,
+            )
+            .await
+        })
+    })
+    .await
+    .map_err(|error| format!("ACP set_model task panicked: {error}"))?
 }
 
 #[cfg(test)]

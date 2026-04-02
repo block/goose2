@@ -6,7 +6,7 @@ import {
   unarchiveSession as apiUnarchiveSession,
   updateSession as apiUpdateSession,
 } from "@/shared/api/chat";
-import type { Session } from "@/shared/types/chat";
+import type { ProviderModelState, Session } from "@/shared/types/chat";
 
 const SESSION_CACHE_STORAGE_KEY = "goose:chat-sessions";
 
@@ -18,6 +18,7 @@ export interface ChatSession {
   agentId?: string;
   providerId?: string;
   personaId?: string;
+  currentModelId?: string;
   modelName?: string;
   createdAt: string; // ISO timestamp
   updatedAt: string;
@@ -27,6 +28,7 @@ export interface ChatSession {
 
 interface ChatSessionStoreState {
   sessions: ChatSession[];
+  modelStateByProvider: Record<string, ProviderModelState>;
   activeSessionId: string | null;
   isLoading: boolean;
 }
@@ -42,6 +44,17 @@ interface ChatSessionStoreActions {
   }) => Promise<ChatSession>;
   loadSessions: () => Promise<void>;
   updateSession: (id: string, patch: Partial<ChatSession>) => void;
+  setModelState: (
+    sessionId: string,
+    modelState: {
+      providerId?: string;
+      source: ProviderModelState["source"];
+      configId?: string;
+      currentModelId: string;
+      currentModelName?: string;
+      availableModels: ProviderModelState["availableModels"];
+    },
+  ) => void;
   archiveSession: (id: string) => Promise<void>;
   unarchiveSession: (id: string) => Promise<void>;
 
@@ -86,6 +99,7 @@ function sessionToChatSession(session: Session): ChatSession {
     projectId: session.projectId,
     providerId: session.providerId,
     personaId: session.personaId,
+    currentModelId: session.currentModelId,
     modelName: session.modelName,
     createdAt: session.createdAt,
     updatedAt: session.updatedAt,
@@ -97,6 +111,7 @@ function sessionToChatSession(session: Session): ChatSession {
 export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
   // State
   sessions: loadCachedSessions(),
+  modelStateByProvider: {},
   activeSessionId: null,
   isLoading: false,
 
@@ -175,6 +190,50 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
         console.error("Failed to persist session update:", err);
       });
     }
+  },
+
+  setModelState: (sessionId, modelState) => {
+    const session = get().getSession(sessionId);
+    const providerId = modelState.providerId ?? session?.providerId;
+
+    // If the user has explicitly selected a model (session.currentModelId is set
+    // and differs from what the provider reports), preserve their choice.
+    // Only set the session's model when it hasn't been explicitly chosen yet.
+    const userHasExplicitSelection =
+      session?.currentModelId &&
+      session.currentModelId !== modelState.currentModelId;
+
+    set((state) => ({
+      sessions: state.sessions.map((candidate) =>
+        candidate.id === sessionId
+          ? {
+              ...candidate,
+              ...(userHasExplicitSelection
+                ? {}
+                : {
+                    currentModelId: modelState.currentModelId,
+                    modelName:
+                      modelState.currentModelName ?? modelState.currentModelId,
+                  }),
+              updatedAt: new Date().toISOString(),
+            }
+          : candidate,
+      ),
+      modelStateByProvider: providerId
+        ? {
+            ...state.modelStateByProvider,
+            [providerId]: {
+              source: modelState.source,
+              configId: modelState.configId,
+              currentModelId: modelState.currentModelId,
+              currentModelName: modelState.currentModelName,
+              availableModels: modelState.availableModels,
+            },
+          }
+        : state.modelStateByProvider,
+    }));
+
+    persistSessions(get().sessions);
   },
 
   archiveSession: async (id) => {

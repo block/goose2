@@ -110,6 +110,12 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const [homeSelectedPersonaId, setHomeSelectedPersonaId] = useState<
     string | undefined
   >();
+  const [homeSelectedModelId, setHomeSelectedModelId] = useState<
+    string | undefined
+  >();
+  const [homeSelectedModelName, setHomeSelectedModelName] = useState<
+    string | undefined
+  >();
 
   const createNewTab = useCallback(
     async (title = "New Chat", project?: ProjectInfo) => {
@@ -145,6 +151,13 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         personaId,
       });
 
+      if (homeSelectedModelId || homeSelectedModelName) {
+        sessionStore.updateSession(session.id, {
+          currentModelId: homeSelectedModelId,
+          modelName: homeSelectedModelName,
+        });
+      }
+
       sessionStore.setActiveSession(session.id);
       setActiveView("chat");
 
@@ -156,6 +169,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       chatStore,
       sessionStore,
       agentStore.activeAgentId,
+      homeSelectedModelId,
+      homeSelectedModelName,
       homeSelectedPersonaId,
       homeSelectedProvider,
     ],
@@ -289,10 +304,14 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       providerId?: string,
       personaId?: string,
       projectId?: string | null,
+      modelId?: string,
+      modelName?: string,
       images?: PastedImage[],
     ) => {
       setHomeSelectedProvider(providerId);
       setHomeSelectedPersonaId(personaId);
+      setHomeSelectedModelId(modelId);
+      setHomeSelectedModelName(modelName);
       setPendingInitialMessage(initialMessage);
       setPendingInitialImages(images);
       const selectedProject =
@@ -308,6 +327,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         setPendingInitialImages(undefined);
         setHomeSelectedProvider(undefined);
         setHomeSelectedPersonaId(undefined);
+        setHomeSelectedModelId(undefined);
+        setHomeSelectedModelName(undefined);
       });
     },
     [createNewTab, projectStore.projects],
@@ -385,6 +406,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
               setPendingInitialImages(undefined);
               setHomeSelectedProvider(undefined);
               setHomeSelectedPersonaId(undefined);
+              setHomeSelectedModelId(undefined);
+              setHomeSelectedModelName(undefined);
             }}
           />
         ) : (

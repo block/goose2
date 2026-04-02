@@ -23,6 +23,10 @@ pub struct TauriStore {
     /// Optional persona scoping.  When `Some`, the effective key used for
     /// on-disk persistence becomes `{session_id}__{persona_id}`.
     persona_id: Option<String>,
+    /// The ACP provider ID for this session.  When set, cached agent session
+    /// IDs are only returned if the stored provider matches — this prevents
+    /// cross-provider session reuse when the user switches providers mid-chat.
+    provider_id: Option<String>,
 }
 
 impl TauriStore {
@@ -32,10 +36,11 @@ impl TauriStore {
     /// * `session_id` – the Goose chat session ID.
     /// * `persona_id` – when `Some`, enables per-persona composite keying.
     ///   Pass `None` to preserve single-persona behaviour.
-    pub fn new(
+    pub fn with_provider(
         session_store: Arc<SessionStore>,
         session_id: String,
         persona_id: Option<String>,
+        provider_id: Option<String>,
     ) -> Self {
         let sessions_dir = dirs::home_dir()
             .expect("home dir")
@@ -47,6 +52,7 @@ impl TauriStore {
             session_store,
             session_id,
             persona_id,
+            provider_id,
         }
     }
 
@@ -60,11 +66,25 @@ impl TauriStore {
     }
 
     /// Look up a previously stored agent session ID, or `None` for new sessions.
+    ///
+    /// When `provider_id` is set on this store, only returns a cached session
+    /// if the stored provider matches.  This prevents reusing a Goose session
+    /// ID when the user has switched to Codex (or vice versa).
     pub fn get_agent_session_id(&self) -> Option<String> {
         let key = self.effective_key();
         let path = self.sessions_dir.join(format!("{key}.json"));
         let json = std::fs::read_to_string(&path).ok()?;
         let mapping: serde_json::Value = serde_json::from_str(&json).ok()?;
+
+        // If we know the current provider, reject cached sessions from a different provider
+        if let Some(ref expected_provider) = self.provider_id {
+            if let Some(stored_provider) = mapping["provider_id"].as_str() {
+                if stored_provider != expected_provider.as_str() {
+                    return None;
+                }
+            }
+        }
+
         mapping["agent_session_id"].as_str().map(String::from)
     }
 
@@ -158,6 +178,7 @@ impl Store for TauriStore {
         let payload = serde_json::json!({
             "session_id": self.session_id,
             "persona_id": self.persona_id,
+            "provider_id": self.provider_id,
             "agent_session_id": agent_session_id,
         });
         let json = serde_json::to_string_pretty(&payload)

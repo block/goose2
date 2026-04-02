@@ -10,6 +10,16 @@ const EXCEPTIONS = {
     justification:
       "Temporary allowance while project creation and home/chat handoff wiring remain in the shell.",
   },
+  "src/features/chat/ui/ChatView.tsx": {
+    limit: 650,
+    justification:
+      "Model picker bootstrap, provider/model switching, and notification logic. Candidate for extraction once model picker stabilizes.",
+  },
+  "src-tauri/src/commands/acp.rs": {
+    limit: 700,
+    justification:
+      "ACP command handlers including model state discovery and set_model. run_acp_get_model_state and run_acp_set_model are extraction candidates.",
+  },
 };
 
 // Directories excluded from size checks (imported library code)

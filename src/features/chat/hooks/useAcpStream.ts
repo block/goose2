@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useChatStore } from "../stores/chatStore";
 import { useChatSessionStore } from "../stores/chatSessionStore";
+import type { ModelOption, ModelSelectionSource } from "@/shared/types/chat";
 import type {
   Message,
   MessageCompletionStatus,
@@ -57,8 +58,11 @@ interface AcpSessionInfoPayload {
 
 interface AcpModelStatePayload {
   sessionId: string;
+  source: ModelSelectionSource;
+  configId?: string;
   currentModelId: string;
   currentModelName?: string;
+  availableModels: ModelOption[];
 }
 
 interface AcpUsageUpdatePayload {
@@ -367,15 +371,17 @@ export function useAcpStream(enabled: boolean): void {
       }),
     );
 
-    // acp:model_state — update model name from ACP provider
+    // acp:model_state — update the current model and cache available models
     unlisteners.push(
       listen<AcpModelStatePayload>("acp:model_state", (event) => {
         if (!active) return;
-        const modelName =
-          event.payload.currentModelName ?? event.payload.currentModelId;
-        useChatSessionStore
-          .getState()
-          .updateSession(event.payload.sessionId, { modelName });
+        useChatSessionStore.getState().setModelState(event.payload.sessionId, {
+          source: event.payload.source,
+          configId: event.payload.configId,
+          currentModelId: event.payload.currentModelId,
+          currentModelName: event.payload.currentModelName,
+          availableModels: event.payload.availableModels,
+        });
       }),
     );
 

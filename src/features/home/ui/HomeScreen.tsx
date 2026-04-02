@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   getStoredProvider,
   useAgentStore,
@@ -7,6 +7,8 @@ import { useProviderSelection } from "@/features/agents/hooks/useProviderSelecti
 import { ChatInput } from "@/features/chat/ui/ChatInput";
 import type { PastedImage } from "@/shared/types/messages";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
+import { acpGetModelState } from "@/shared/api/acp";
+import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
 
 function HomeClock() {
   const [time, setTime] = useState(new Date());
@@ -46,6 +48,8 @@ interface HomeScreenProps {
     providerId?: string,
     personaId?: string,
     projectId?: string | null,
+    modelId?: string,
+    modelName?: string,
     images?: PastedImage[],
   ) => void;
   onCreateProject?: (options?: {
@@ -79,6 +83,28 @@ export function HomeScreen({
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     null,
   );
+  const modelStateByProvider = useChatSessionStore(
+    (s) => s.modelStateByProvider,
+  );
+  const providerModelState = selectedProvider
+    ? modelStateByProvider[selectedProvider]
+    : undefined;
+  const availableModels = providerModelState?.availableModels ?? [];
+  const selectedModelId = providerModelState?.currentModelId;
+  const selectedModelName = providerModelState?.currentModelName;
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const selectedProject = useMemo(
+    () =>
+      selectedProjectId
+        ? (projects.find((project) => project.id === selectedProjectId) ?? null)
+        : null,
+    [projects, selectedProjectId],
+  );
+  const bootstrapSessionId = useMemo(
+    () =>
+      `home-bootstrap-${selectedProvider}-${selectedPersonaId ?? "default"}`,
+    [selectedPersonaId, selectedProvider],
+  );
 
   const handlePersonaChange = useCallback(
     (personaId: string | null) => {
@@ -106,11 +132,65 @@ export function HomeScreen({
         selectedProvider,
         effectivePersonaId,
         selectedProjectId,
+        selectedModelId,
+        selectedModelName,
         images,
       );
     },
-    [onStartChat, selectedPersonaId, selectedProjectId, selectedProvider],
+    [
+      onStartChat,
+      selectedModelId,
+      selectedModelName,
+      selectedPersonaId,
+      selectedProjectId,
+      selectedProvider,
+    ],
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    setModelsLoading(true);
+
+    acpGetModelState(bootstrapSessionId, selectedProvider, {
+      personaId: selectedPersonaId ?? undefined,
+      workingDir: selectedProject?.workingDirs[0] ?? undefined,
+      persistSession: false,
+    })
+      .then((modelState) => {
+        if (cancelled) {
+          return;
+        }
+
+        useChatSessionStore.getState().setModelState("home", {
+          providerId: selectedProvider,
+          source: modelState.source,
+          configId: modelState.configId,
+          currentModelId: modelState.currentModelId,
+          currentModelName:
+            modelState.currentModelName ?? modelState.currentModelId,
+          availableModels: modelState.availableModels,
+        });
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+
+        console.error("Failed to bootstrap home model state:", error);
+      })
+      .finally(() => {
+        setModelsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    bootstrapSessionId,
+    selectedPersonaId,
+    selectedProject,
+    selectedProvider,
+  ]);
 
   return (
     <div className="h-full w-full overflow-y-auto">
@@ -135,6 +215,28 @@ export function HomeScreen({
             providersLoading={providersLoading}
             selectedProvider={selectedProvider}
             onProviderChange={setSelectedProvider}
+            currentModel={
+              modelsLoading ? "Loading models..." : (selectedModelName ?? "")
+            }
+            currentModelId={selectedModelId}
+            modelsLoading={modelsLoading}
+            availableModels={availableModels}
+            onModelChange={(modelId) => {
+              const model = availableModels.find(
+                (candidate) => candidate.id === modelId,
+              );
+              if (selectedProvider) {
+                useChatSessionStore.getState().setModelState("home", {
+                  providerId: selectedProvider,
+                  source: providerModelState?.source ?? "session_model",
+                  configId: providerModelState?.configId,
+                  currentModelId: modelId,
+                  currentModelName:
+                    model?.displayName ?? model?.name ?? modelId,
+                  availableModels,
+                });
+              }
+            }}
             selectedProjectId={selectedProjectId}
             availableProjects={projects.map((project) => ({
               id: project.id,
