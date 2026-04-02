@@ -636,6 +636,14 @@
   font-style: normal;
 }
 
+/* App shell lock — outside @layer so nothing can override */
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
 @layer base {
   *,
   ::after,
@@ -651,7 +659,6 @@
   html {
     -webkit-text-size-adjust: 100%;
     font-variation-settings: normal;
-    scroll-behavior: smooth;
     scrollbar-color: var(--bg-muted);
   }
 

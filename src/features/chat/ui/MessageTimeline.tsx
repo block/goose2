@@ -52,11 +52,15 @@ export function MessageTimeline({
   const containerRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
 
-  // Auto-scroll when near bottom
+  // Auto-scroll when near bottom — use scrollTo on the container instead of
+  // scrollIntoView which can scroll parent/document-level ancestors.
   // biome-ignore lint/correctness/useExhaustiveDependencies: refs are stable and don't need to be in deps
   useEffect(() => {
-    if (isNearBottomRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (isNearBottomRef.current && containerRef.current) {
+      containerRef.current.scrollTo({
+        top: containerRef.current.scrollHeight,
+        behavior: "smooth",
+      });
     }
   }, [messages, streamingMessageId]);
 
