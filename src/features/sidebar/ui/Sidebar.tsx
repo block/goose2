@@ -276,7 +276,7 @@ export function Sidebar({
     } else {
       updateActiveRect(null);
     }
-  }, [activeView, activeSessionId, updateActiveRect, expanded]);
+  }, [activeView, updateActiveRect]);
 
   // Callback for SidebarProjectsSection to register active session refs
   const activeSessionRefCallback = useCallback(

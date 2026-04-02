@@ -5,7 +5,8 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { SessionActivityIndicator } from "@/shared/ui/SessionActivityIndicator";
 
-const INACTIVE_CHAT_ROW_CLASS = "text-muted-foreground hover:bg-transparent hover:text-foreground group-hover:text-foreground";
+const INACTIVE_CHAT_ROW_CLASS =
+  "text-muted-foreground hover:bg-transparent hover:text-foreground group-hover:text-foreground";
 const ACTIVE_CHAT_ROW_CLASS = "text-foreground";
 
 interface SidebarChatRowProps {
@@ -113,6 +114,7 @@ export function SidebarChatRow({
   }
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: wrapper div for hover detection, interactive content is the inner Button
     <div
       ref={activeRef}
       className={cn(
