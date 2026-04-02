@@ -164,7 +164,7 @@ function ToolGroupRow({
         />
       </button>
       {expanded && (
-        <div className="ml-[7px] mt-1 flex flex-col gap-3 border-l border-border pl-4">
+        <div className="ml-[7px] mt-1 flex flex-col gap-3 border-l border-border pl-4 animate-in slide-in-from-top-2 fade-in-0 duration-200">
           {group.items.map((item) => renderToolItem(item, true))}
         </div>
       )}
