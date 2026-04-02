@@ -1,10 +1,17 @@
 import { useState } from "react";
 import { Copy, Check, RotateCcw, Pencil, Bot, User } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
-import { Button } from "@/shared/ui/button";
-import { ToolCallCard } from "./ToolCallCard";
-import { ThinkingBlock } from "./ThinkingBlock";
-import { MarkdownContent } from "./MarkdownContent";
+import {
+  MessageActions,
+  MessageAction,
+  MessageResponse,
+} from "@/shared/ui/ai-elements/message";
+import {
+  Reasoning,
+  ReasoningTrigger,
+  ReasoningContent,
+} from "@/shared/ui/ai-elements/reasoning";
+import { ToolCallAdapter } from "./ToolCallAdapter";
 import type {
   Message,
   MessageContent,
@@ -12,7 +19,7 @@ import type {
   ToolRequestContent,
   ToolResponseContent,
   ThinkingContent,
-  ReasoningContent,
+  ReasoningContent as ReasoningContentType,
   SystemNotificationContent,
 } from "@/shared/types/messages";
 
@@ -24,29 +31,6 @@ interface MessageBubbleProps {
   onCopy?: () => void;
   onRetry?: () => void;
   onEdit?: () => void;
-}
-
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon-xs"
-      onClick={handleCopy}
-      className="size-6 rounded-md text-muted-foreground opacity-0 transition-opacity duration-150 hover:text-foreground group-hover:opacity-100"
-      aria-label={copied ? "Copied" : "Copy message"}
-    >
-      {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-    </Button>
-  );
 }
 
 interface ContentSection {
@@ -144,16 +128,18 @@ function groupContentSections(content: MessageContent[]): ContentSection[] {
   return sections;
 }
 
-function renderContentBlock(content: MessageContent, index: number) {
+function renderContentBlock(
+  content: MessageContent,
+  index: number,
+  isStreamingMsg?: boolean,
+) {
   switch (content.type) {
     case "text": {
       const tc = content as TextContent;
       return (
-        <MarkdownContent
-          key={`text-${index}`}
-          content={tc.text}
-          className="text-sm leading-relaxed"
-        />
+        <MessageResponse key={`text-${index}`} isAnimating={isStreamingMsg}>
+          {tc.text}
+        </MessageResponse>
       );
     }
     case "toolRequest":
@@ -163,21 +149,27 @@ function renderContentBlock(content: MessageContent, index: number) {
     case "thinking": {
       const th = content as ThinkingContent;
       return (
-        <ThinkingBlock
+        <Reasoning
           key={`thinking-${index}`}
-          text={th.text}
-          type="thinking"
-        />
+          isStreaming={isStreamingMsg}
+          defaultOpen={false}
+        >
+          <ReasoningTrigger />
+          <ReasoningContent>{th.text}</ReasoningContent>
+        </Reasoning>
       );
     }
     case "reasoning": {
-      const r = content as ReasoningContent;
+      const r = content as ReasoningContentType;
       return (
-        <ThinkingBlock
+        <Reasoning
           key={`reasoning-${index}`}
-          text={r.text}
-          type="reasoning"
-        />
+          isStreaming={isStreamingMsg}
+          defaultOpen={false}
+        >
+          <ReasoningTrigger />
+          <ReasoningContent>{r.text}</ReasoningContent>
+        </Reasoning>
       );
     }
     case "redactedThinking":
@@ -203,6 +195,22 @@ function renderContentBlock(content: MessageContent, index: number) {
     default:
       return null;
   }
+}
+
+function CopyAction({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <MessageAction tooltip={copied ? "Copied" : "Copy"} onClick={handleCopy}>
+      {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+    </MessageAction>
+  );
 }
 
 export function MessageBubble({
@@ -283,7 +291,7 @@ export function MessageBubble({
                   {toolItems.map((item) => {
                     const { request, response } = item;
                     return (
-                      <ToolCallCard
+                      <ToolCallAdapter
                         key={item.key}
                         name={request?.name || response?.name || "Tool result"}
                         arguments={request?.arguments ?? {}}
@@ -305,46 +313,24 @@ export function MessageBubble({
             const block = section.items[0] as MessageContent;
             return (
               <div key={`${message.id}-${section.key}`}>
-                {renderContentBlock(block, sectionIdx)}
+                {renderContentBlock(block, sectionIdx, isStreaming)}
               </div>
             );
           })}
-          {isStreaming && (
-            <span
-              className="inline-block animate-pulse text-muted-foreground"
-              aria-hidden="true"
-            >
-              ▍
-            </span>
-          )}
         </div>
 
         {/* Hover actions + timestamp */}
-        <div className="flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-          {textContent && <CopyButton text={textContent} />}
+        <MessageActions className="opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+          {textContent && <CopyAction text={textContent} />}
           {!isUser && onRetry && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              onClick={onRetry}
-              className="size-6 rounded-md text-muted-foreground hover:text-foreground"
-              aria-label="Retry"
-            >
+            <MessageAction tooltip="Retry" onClick={onRetry}>
               <RotateCcw className="size-3.5" />
-            </Button>
+            </MessageAction>
           )}
           {isUser && onEdit && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              onClick={onEdit}
-              className="size-6 rounded-md text-muted-foreground hover:text-foreground"
-              aria-label="Edit message"
-            >
+            <MessageAction tooltip="Edit" onClick={onEdit}>
               <Pencil className="size-3.5" />
-            </Button>
+            </MessageAction>
           )}
           <span className="px-1 text-[10px] text-muted-foreground">
             {new Date(created).toLocaleTimeString([], {
@@ -352,7 +338,7 @@ export function MessageBubble({
               minute: "2-digit",
             })}
           </span>
-        </div>
+        </MessageActions>
       </div>
     </div>
   );
