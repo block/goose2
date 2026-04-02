@@ -7,6 +7,7 @@ import {
   ToolContent,
   ToolInput,
   ToolOutput,
+  getStatusBadge,
 } from "@/shared/ui/ai-elements/tool";
 import { toolStatusMap } from "../lib/toolStatusMap";
 import type { ToolCallStatus } from "@/shared/types/messages";
@@ -19,6 +20,8 @@ interface ToolCallAdapterProps {
   status: ToolCallStatus;
   result?: string;
   isError?: boolean;
+  displayLabel?: string;
+  flat?: boolean;
 }
 
 function useElapsedTime(status: ToolCallStatus) {
@@ -212,12 +215,36 @@ export function ToolCallAdapter({
   status,
   result,
   isError,
+  displayLabel,
+  flat,
 }: ToolCallAdapterProps) {
   const elapsed = useElapsedTime(status);
   const state = toolStatusMap[status];
 
+  const baseTitle = displayLabel ?? name;
   const title =
-    status === "executing" && elapsed >= 3 ? `${name} (${elapsed}s)` : name;
+    status === "executing" && elapsed >= 3
+      ? `${baseTitle} (${elapsed}s)`
+      : baseTitle;
+
+  if (flat) {
+    return (
+      <div className="w-full">
+        <span className="font-medium text-sm text-muted-foreground">
+          {title}
+        </span>
+        {getStatusBadge(state)}
+        <div className="space-y-2 pt-1">
+          {Object.keys(args).length > 0 && <ToolInput input={args} />}
+          <ToolOutput
+            output={isError ? undefined : result}
+            errorText={isError ? result : undefined}
+            hideLabel
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -228,12 +255,14 @@ export function ToolCallAdapter({
           title={title}
           state={state}
           showIcon={false}
+          className="text-muted-foreground"
         />
         <ToolContent>
           {Object.keys(args).length > 0 && <ToolInput input={args} />}
           <ToolOutput
             output={isError ? undefined : result}
             errorText={isError ? result : undefined}
+            hideLabel
           />
         </ToolContent>
       </Tool>
