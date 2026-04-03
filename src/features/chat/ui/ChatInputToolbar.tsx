@@ -1,10 +1,4 @@
-import {
-  Mic,
-  ChevronDown,
-  Check,
-  ArrowUp,
-  Square,
-} from "lucide-react";
+import { Mic, ChevronDown, Check, ArrowUp, Square } from "lucide-react";
 import {
   formatProviderLabel,
   getProviderIcon,

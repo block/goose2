@@ -16,6 +16,7 @@ import { PersonaAvatar } from "./PersonaPicker";
 import { ImageLightbox } from "@/shared/ui/ImageLightbox";
 import type { PastedImage } from "@/shared/types/messages";
 import { resizeImage } from "../lib/resizeImage";
+import { useImageDropTarget } from "../hooks/useImageDropTarget";
 
 export interface ModelOption {
   id: string;
@@ -143,10 +144,8 @@ export function ChatInput({
   const [text, setText] = useState("");
   const [images, setImages] = useState<PastedImage[]>([]);
   const [isCompact, setIsCompact] = useState(false);
-  const [isImageDragOver, setIsImageDragOver] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const dragDepthRef = useRef(0);
 
   const activePersona = useMemo(
     () => personas.find((persona) => persona.id === selectedPersonaId) ?? null,
@@ -311,70 +310,17 @@ export function ChatInput({
     [addImageFile],
   );
 
-  const hasDraggedFiles = useCallback(
-    (dataTransfer: DataTransfer) =>
-      Array.from(dataTransfer.items).some(
-        (item) => item.kind === "file" || item.type.startsWith("image/"),
-      ) || Array.from(dataTransfer.types).includes("Files"),
-    [],
-  );
-
-  const handleDragEnter = useCallback(
-    (e: React.DragEvent<HTMLDivElement>) => {
-      if (disabled || isStreaming || !hasDraggedFiles(e.dataTransfer)) {
-        return;
-      }
-
-      e.preventDefault();
-      dragDepthRef.current += 1;
-      setIsImageDragOver(true);
-    },
-    [disabled, hasDraggedFiles, isStreaming],
-  );
-
-  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    if (disabled || isStreaming || !hasDraggedFiles(e.dataTransfer)) {
-      return;
-    }
-
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "copy";
-    setIsImageDragOver(true);
-  }, [disabled, hasDraggedFiles, isStreaming]);
-
-  const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-
-    if (!isImageDragOver) {
-      return;
-    }
-
-    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
-    if (dragDepthRef.current === 0) {
-      setIsImageDragOver(false);
-    }
-  }, [isImageDragOver]);
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent<HTMLDivElement>) => {
-      dragDepthRef.current = 0;
-      setIsImageDragOver(false);
-
-      if (disabled || isStreaming) {
-        return;
-      }
-
-      const files = Array.from(e.dataTransfer.files).filter((f) =>
-        f.type.startsWith("image/"),
-      );
-      if (files.length === 0) return;
-      e.preventDefault();
-      for (const file of files) {
-        addImageFile(file);
-      }
-    },
-    [addImageFile, disabled, isStreaming],
-  );
+  const {
+    isImageDragOver,
+    handleDragEnter,
+    handleDragOver,
+    handleDragLeave,
+    handleDrop,
+  } = useImageDropTarget({
+    disabled,
+    isStreaming,
+    onDropFile: addImageFile,
+  });
 
   const removeImage = useCallback((index: number) => {
     setImages((prev) => {
@@ -410,7 +356,10 @@ export function ChatInput({
           >
             {isImageDragOver && (
               <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-2xl border border-dashed border-border bg-background/70">
-                <Badge variant="secondary" className="px-3 py-1 text-sm shadow-sm">
+                <Badge
+                  variant="secondary"
+                  className="px-3 py-1 text-sm shadow-sm"
+                >
                   Drop images to attach
                 </Badge>
               </div>

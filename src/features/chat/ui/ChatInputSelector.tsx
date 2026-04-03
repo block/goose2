@@ -112,9 +112,7 @@ export function ChatInputSelector({
                   )}
                 >
                   {item.icon ? (
-                    <span className="shrink-0">
-                      {item.icon}
-                    </span>
+                    <span className="shrink-0">{item.icon}</span>
                   ) : null}
                   <div className="min-w-0 flex-1">
                     <span className="block truncate font-normal">
