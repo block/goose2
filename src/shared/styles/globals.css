@@ -811,16 +811,12 @@ body,
   *,
   *::before,
   *::after {
-    /* biome-ignore lint/complexity/noImportantStyles: required to override all animations for reduced-motion accessibility */
     animation-duration: 0.01ms !important;
-    /* biome-ignore lint/complexity/noImportantStyles: required to override all transitions for reduced-motion accessibility */
     transition-duration: 0.01ms !important;
   }
 
   .page-transition {
-    /* biome-ignore lint/complexity/noImportantStyles: required to override animation for reduced-motion accessibility */
     animation: none !important;
-    /* biome-ignore lint/complexity/noImportantStyles: required to override opacity for reduced-motion accessibility */
     opacity: 1 !important;
   }
 }
