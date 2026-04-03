@@ -65,7 +65,10 @@ export function ChatView({
   onCreateProject,
 }: ChatViewProps) {
   const [activeSessionId] = useState(() => sessionId ?? crypto.randomUUID());
-  const [isContextPanelOpen, setIsContextPanelOpen] = useState(true);
+  const isContextPanelOpen = useChatSessionStore(
+    (s) => s.contextPanelOpenBySession[activeSessionId] ?? false,
+  );
+  const setContextPanelOpen = useChatSessionStore((s) => s.setContextPanelOpen);
   const shouldReduceMotion = useReducedMotion();
   const fadeTransition = {
     duration: shouldReduceMotion ? 0 : CONTEXT_PANEL_FADE_DURATION_SECONDS,
@@ -452,7 +455,9 @@ export function ChatView({
             type="button"
             variant="ghost"
             size="icon-sm"
-            onClick={() => setIsContextPanelOpen((prev) => !prev)}
+            onClick={() =>
+              setContextPanelOpen(activeSessionId, !isContextPanelOpen)
+            }
             aria-label={
               isContextPanelOpen ? "Close context panel" : "Open context panel"
             }

@@ -29,6 +29,7 @@ interface ChatSessionStoreState {
   sessions: ChatSession[];
   activeSessionId: string | null;
   isLoading: boolean;
+  contextPanelOpenBySession: Record<string, boolean>;
 }
 
 interface ChatSessionStoreActions {
@@ -46,6 +47,8 @@ interface ChatSessionStoreActions {
   unarchiveSession: (id: string) => Promise<void>;
 
   setActiveSession: (sessionId: string | null) => void;
+
+  setContextPanelOpen: (sessionId: string, open: boolean) => void;
 
   // Helpers
   getSession: (id: string) => ChatSession | undefined;
@@ -99,6 +102,7 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
   sessions: loadCachedSessions(),
   activeSessionId: null,
   isLoading: false,
+  contextPanelOpenBySession: {},
 
   // Session lifecycle
   createSession: async (opts) => {
@@ -193,7 +197,12 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
       const nextSessions = get()
         .sessions.map((s) => (s.id === id ? { ...s, archivedAt } : s))
         .filter((s) => !s.archivedAt);
-      set({ sessions: nextSessions });
+      const { [id]: _, ...remainingPanelState } =
+        get().contextPanelOpenBySession;
+      set({
+        sessions: nextSessions,
+        contextPanelOpenBySession: remainingPanelState,
+      });
       persistSessions(nextSessions);
     } catch (err) {
       set({
@@ -217,6 +226,15 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
   setActiveSession: (sessionId) => {
     if (get().activeSessionId === sessionId) return;
     set({ activeSessionId: sessionId });
+  },
+
+  setContextPanelOpen: (sessionId, open) => {
+    set((state) => ({
+      contextPanelOpenBySession: {
+        ...state.contextPanelOpenBySession,
+        [sessionId]: open,
+      },
+    }));
   },
 
   // Helpers
