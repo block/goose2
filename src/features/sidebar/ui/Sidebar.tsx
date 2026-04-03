@@ -1,12 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  BookOpen,
-  Bot,
-  ChevronLeft,
-  ChevronRight,
-  Home,
-  Plus,
-} from "lucide-react";
+import { BookOpen, Bot, ChevronLeft, ChevronRight, Home } from "lucide-react";
 import { GooseIcon } from "@/shared/ui/icons/GooseIcon";
 import { cn } from "@/shared/lib/cn";
 import type { AppView } from "@/app/AppShell";
@@ -21,7 +14,6 @@ interface SidebarProps {
   collapsed: boolean;
   width?: number;
   onCollapse: () => void;
-  onNewChat?: () => void;
   onNewChatInProject?: (projectId: string) => void;
   onCreateProject?: () => void;
   onEditProject?: (projectId: string) => void;
@@ -48,7 +40,6 @@ export function Sidebar({
   collapsed,
   width = 240,
   onCollapse,
-  onNewChat,
   onNewChatInProject,
   onCreateProject,
   onEditProject,
@@ -256,7 +247,7 @@ export function Sidebar({
       <div className="flex flex-col h-full overflow-hidden bg-background border border-border rounded-xl">
         {/* Goose logo — pinned top */}
         <div className="flex-shrink-0 px-3 pt-3 pb-1">
-          <GooseIcon className="text-foreground-muted" />
+          <GooseIcon className="text-muted-foreground" />
         </div>
 
         {/* Navigation (scrollable) */}
@@ -449,7 +440,6 @@ export function Sidebar({
             </>
           )}
         </nav>
-
       </div>
     </div>
   );

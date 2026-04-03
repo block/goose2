@@ -57,9 +57,6 @@ interface ChatInputProps {
   onCreateProject?: (options?: {
     onCreated?: (projectId: string) => void;
   }) => void;
-  onCreateProjectFromFolder?: (options?: {
-    onCreated?: (projectId: string) => void;
-  }) => void;
   // Context
   contextTokens?: number;
   contextLimit?: number;
@@ -139,7 +136,6 @@ export function ChatInput({
   availableProjects = [],
   onProjectChange,
   onCreateProject,
-  onCreateProjectFromFolder,
   contextTokens = 0,
   contextLimit = 0,
 }: ChatInputProps) {
@@ -430,7 +426,6 @@ export function ChatInput({
               availableProjects={availableProjects}
               onProjectChange={onProjectChange}
               onCreateProject={onCreateProject}
-              onCreateProjectFromFolder={onCreateProjectFromFolder}
               contextTokens={contextTokens}
               contextLimit={contextLimit}
               canSend={canSend}

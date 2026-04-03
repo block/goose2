@@ -31,7 +31,6 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/shared/ui/tooltip";
 
 const NO_PROJECT_VALUE = "__no_project__";
 const CREATE_PROJECT_VALUE = "__create_project__";
-const CREATE_PROJECT_FROM_FOLDER_VALUE = "__create_project_from_folder__";
 
 function ProjectDot({ color }: { color?: string | null }) {
   return (
@@ -68,9 +67,6 @@ interface ChatInputToolbarProps {
   onCreateProject?: (options?: {
     onCreated?: (projectId: string) => void;
   }) => void;
-  onCreateProjectFromFolder?: (options?: {
-    onCreated?: (projectId: string) => void;
-  }) => void;
   // Context
   contextTokens: number;
   contextLimit: number;
@@ -99,7 +95,6 @@ export function ChatInputToolbar({
   availableProjects,
   onProjectChange,
   onCreateProject,
-  onCreateProjectFromFolder,
   contextTokens,
   contextLimit,
   canSend,
@@ -131,11 +126,6 @@ export function ChatInputToolbar({
   const handleProjectValueChange = (value: string) => {
     if (value === CREATE_PROJECT_VALUE) {
       onCreateProject?.();
-      return;
-    }
-
-    if (value === CREATE_PROJECT_FROM_FOLDER_VALUE) {
-      onCreateProjectFromFolder?.();
       return;
     }
 
@@ -248,7 +238,9 @@ export function ChatInputToolbar({
                       {
                         value: CREATE_PROJECT_VALUE,
                         label: "Create project",
-                        icon: <IconLibraryPlusFilled className="size-4 text-foreground" />,
+                        icon: (
+                          <IconLibraryPlusFilled className="size-4 text-foreground" />
+                        ),
                       },
                     ]
                   : []),

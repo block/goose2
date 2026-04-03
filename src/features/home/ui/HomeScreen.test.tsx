@@ -103,7 +103,7 @@ describe("HomeScreen", () => {
   it("renders the chat input placeholder with default agent name when no persona selected", () => {
     render(<HomeScreen />);
     expect(
-      screen.getByPlaceholderText("Message Goose... (type @ to mention)"),
+      screen.getByPlaceholderText("Message Goose, @ to mention personas"),
     ).toBeInTheDocument();
   });
 
@@ -117,7 +117,7 @@ describe("HomeScreen", () => {
   it("renders the provider and project controls on the home screen", () => {
     render(<HomeScreen />);
     expect(
-      screen.getByRole("button", { name: /override provider/i }),
+      screen.getByRole("button", { name: /choose a provider/i }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /select project/i }),
