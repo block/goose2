@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  ChevronDown,
-  ChevronRight,
-  MessageSquare,
-  MoreHorizontal,
-  Plus,
-} from "lucide-react";
+  IconChevronDown,
+  IconChevronRight,
+  IconDots,
+  IconLibraryPlusFilled,
+  IconMessage,
+  IconPlus,
+} from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
 import type { AppView } from "@/app/AppShell";
@@ -88,13 +89,13 @@ function ItemMenu({
           setOpen((prev) => !prev);
         }}
         className={cn(
-          "size-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50",
+          "size-6 rounded-md",
           open
             ? "visible opacity-100"
             : "invisible group-hover:visible opacity-0 group-hover:opacity-100",
         )}
       >
-        <MoreHorizontal className="size-3.5" />
+        <IconDots className="size-3.5" />
       </Button>
       {open && (
         <div
@@ -195,9 +196,9 @@ function ProjectSection({
               style={{ backgroundColor: project.color }}
             />
             {isExpanded ? (
-              <ChevronDown className="absolute h-3 w-3 opacity-0 transition-opacity duration-150 group-hover:opacity-100" />
+              <IconChevronDown className="absolute h-3 w-3 opacity-0 transition-opacity duration-150 group-hover:opacity-100" />
             ) : (
-              <ChevronRight className="absolute h-3 w-3 opacity-0 transition-opacity duration-150 group-hover:opacity-100" />
+              <IconChevronRight className="absolute h-3 w-3 opacity-0 transition-opacity duration-150 group-hover:opacity-100" />
             )}
           </span>
           <span className="flex-1 min-w-0 truncate text-left">
@@ -218,12 +219,9 @@ function ProjectSection({
             onNewChatInProject?.(project.id);
           }}
           title="New chat in project"
-          className={cn(
-            "mr-1 size-6 flex-shrink-0 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50",
-            "invisible group-hover:visible opacity-0 group-hover:opacity-100",
-          )}
+          className="mr-1 size-6 flex-shrink-0 rounded-md"
         >
-          <Plus className="size-3.5" />
+          <IconPlus className="size-3.5" />
         </Button>
       </div>
 
@@ -269,12 +267,12 @@ function ProjectSection({
             >
               {showAll ? (
                 <>
-                  <ChevronDown className="size-3" />
+                  <IconChevronDown className="size-3" />
                   Show less
                 </>
               ) : (
                 <>
-                  <ChevronRight className="size-3" />
+                  <IconChevronRight className="size-3" />
                   {projectChats.length > 8
                     ? `View all ${projectChats.length} chats`
                     : `${projectChats.length - MAX_VISIBLE_CHATS} more`}
@@ -324,7 +322,7 @@ export function SidebarProjectsSection({
       {/* Section header with [+] button */}
       <div
         className={cn(
-          "flex items-center transition-all duration-300",
+          "group flex items-center transition-all duration-300",
           collapsed ? "px-0 pt-0 pb-1 justify-center" : "pt-2 pb-1",
         )}
       >
@@ -346,9 +344,12 @@ export function SidebarProjectsSection({
             size="icon-xs"
             onClick={onCreateProject}
             title="New project"
-            className="mr-1 size-6 flex-shrink-0 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50"
+            className={cn(
+              "mr-1 size-6 flex-shrink-0 rounded-md",
+              "invisible group-hover:visible opacity-0 group-hover:opacity-100",
+            )}
           >
-            <Plus className="size-3.5" />
+            <IconLibraryPlusFilled className="size-3.5" />
           </Button>
         )}
       </div>
@@ -442,7 +443,7 @@ export function SidebarProjectsSection({
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  <MessageSquare className="size-4" />
+                  <IconMessage className="size-4" />
                   <SessionActivityIndicator
                     isRunning={session.isRunning}
                     hasUnread={session.hasUnread}

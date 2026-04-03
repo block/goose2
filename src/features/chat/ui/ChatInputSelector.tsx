@@ -103,13 +103,20 @@ export function ChatInputSelector({
                 key={item.value}
                 disabled={item.disabled}
                 onSelect={() => onValueChange(item.value)}
-                className="gap-2 items-start justify-between"
+                className={cn(
+                  "gap-2 justify-between",
+                  item.description ? "items-start" : "items-center",
+                )}
               >
                 {item.icon ? (
-                  <span className="mt-0.5 shrink-0">{item.icon}</span>
+                  <span
+                    className={cn("shrink-0", item.description && "mt-1.5")}
+                  >
+                    {item.icon}
+                  </span>
                 ) : null}
                 <div className="min-w-0 flex-1">
-                  <span className="block truncate font-medium">
+                  <span className="block truncate font-normal">
                     {item.label}
                   </span>
                   {item.description ? (

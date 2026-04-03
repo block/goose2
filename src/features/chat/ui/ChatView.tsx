@@ -388,7 +388,6 @@ export function ChatView({
             onSend={handleSend}
             onStop={stopStreaming}
             isStreaming={isStreaming || chatState === "thinking"}
-            placeholder={`Message ${displayAgentName}...`}
             personas={personas}
             selectedPersonaId={selectedPersonaId}
             onPersonaChange={handlePersonaChange}

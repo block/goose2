@@ -19,6 +19,10 @@ Use the primitives in `src/shared/ui/` as the default way to build interface ele
 - For active icon-only buttons, prefer native hover via `title` plus `aria-label`.
 - Reserve custom `Tooltip` for disabled controls or richer explanatory content.
 
+### Ghost icon buttons
+
+`variant="ghost"` has compound variants for all `icon-*` sizes that set `hover:bg-transparent hover:text-foreground`. This means ghost icon buttons have no background fill on hover — only a color change. Do not add `hover:bg-accent/50` or similar hover background classes to ghost icon buttons; the compound variant already provides the correct behavior. Layout classes like `mr-1`, `size-6`, `flex-shrink-0` are fine to add.
+
 ## Icon Sizing
 
 - Let `Button` size button icons by default.

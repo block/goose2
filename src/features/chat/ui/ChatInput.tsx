@@ -9,6 +9,7 @@ import {
   useMentionDetection,
 } from "./MentionAutocomplete";
 import { ChatInputToolbar } from "./ChatInputToolbar";
+import { formatProviderLabel } from "@/shared/ui/icons/ProviderIcons";
 import { TooltipProvider } from "@/shared/ui/tooltip";
 import { PersonaAvatar } from "./PersonaPicker";
 import { ImageLightbox } from "@/shared/ui/ImageLightbox";
@@ -34,7 +35,6 @@ interface ChatInputProps {
   onStop?: () => void;
   isStreaming?: boolean;
   disabled?: boolean;
-  placeholder?: string;
   className?: string;
   // Personas
   personas?: Persona[];
@@ -123,7 +123,6 @@ export function ChatInput({
   onStop,
   isStreaming = false,
   disabled = false,
-  placeholder = "Message Goose...",
   className,
   personas = [],
   selectedPersonaId = null,
@@ -341,11 +340,11 @@ export function ChatInput({
     });
   }, []);
 
-  const personaDisplayName = activePersona?.displayName ?? "Goose";
-  const effectivePlaceholder =
-    placeholder === "Message Goose..."
-      ? `Message ${personaDisplayName}... (type @ to mention)`
-      : placeholder;
+  const providerDisplayName =
+    providers.find((p) => p.id === selectedProvider)?.label ??
+    formatProviderLabel(selectedProvider);
+  const agentDisplayName = activePersona?.displayName ?? providerDisplayName;
+  const effectivePlaceholder = `Message ${agentDisplayName}, @ to mention personas`;
 
   const handleClearStickyPersona = useCallback(() => {
     onPersonaChange?.(null);
@@ -411,7 +410,7 @@ export function ChatInput({
               placeholder={effectivePlaceholder}
               disabled={disabled || isStreaming}
               rows={1}
-              className="mb-3 min-h-[36px] max-h-[200px] w-full resize-none bg-transparent px-1 text-[14px] leading-relaxed text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 disabled:opacity-60"
+              className="mb-3 min-h-[36px] max-h-[200px] w-full resize-none bg-transparent px-1 text-[14px] leading-relaxed text-foreground placeholder:font-light placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 disabled:opacity-60"
               aria-label="Chat message input"
             />
 

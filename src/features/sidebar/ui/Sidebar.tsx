@@ -238,8 +238,8 @@ export function Sidebar({
         type="button"
         onClick={onCollapse}
         className={cn(
-          "absolute top-1/2 -translate-y-1/2 -right-3.5 z-50",
-          "flex items-center justify-center w-8 h-8 rounded-full",
+          "absolute top-1/2 -translate-y-1/2 -right-3 z-50",
+          "flex items-center justify-center size-6 rounded-full",
           "bg-background border border-border",
           "text-muted-foreground hover:text-foreground hover:scale-110",
           "transition-transform duration-200",
@@ -247,17 +247,22 @@ export function Sidebar({
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
         {collapsed ? (
-          <ChevronRight className="size-3.5" />
+          <ChevronRight className="size-3" />
         ) : (
-          <ChevronLeft className="size-3.5" />
+          <ChevronLeft className="size-3" />
         )}
       </button>
 
       <div className="flex flex-col h-full overflow-hidden bg-background border border-border rounded-xl">
+        {/* Goose logo — pinned top */}
+        <div className="flex-shrink-0 px-3 pt-3 pb-1">
+          <GooseIcon className="text-foreground-muted" />
+        </div>
+
         {/* Navigation (scrollable) */}
         <nav
           ref={navRef}
-          className="relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-1.5 py-1 pt-1.5"
+          className="relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-1.5 py-1 pt-1.5 scrollbar-none"
           onMouseLeave={onNavMouseLeave}
         >
           {/* Sliding highlight */}
@@ -341,8 +346,8 @@ export function Sidebar({
               </span>
             </button>
 
-            {/* New Chat */}
-            <button
+            {/* New Chat — hidden for now; project-scoped "+" covers the primary use case */}
+            {/* <button
               type="button"
               onClick={onNewChat}
               onMouseEnter={onItemMouseEnter}
@@ -364,7 +369,7 @@ export function Sidebar({
               >
                 New Chat
               </span>
-            </button>
+            </button> */}
 
             {/* Nav items */}
             {NAV_ITEMS.map((item, index) => {
@@ -445,10 +450,6 @@ export function Sidebar({
           )}
         </nav>
 
-        {/* Goose logo — pinned bottom-left */}
-        <div className="flex-shrink-0 px-3 py-2 mb-2">
-          <GooseIcon className="text-foreground-muted" />
-        </div>
       </div>
     </div>
   );

@@ -44,15 +44,10 @@ function StatefulChatInput({
 }
 
 describe("ChatInput", () => {
-  it("renders with placeholder text", () => {
-    render(<ChatInput onSend={vi.fn()} placeholder="Ask anything..." />);
-    expect(screen.getByPlaceholderText("Ask anything...")).toBeInTheDocument();
-  });
-
   it("renders with default placeholder", () => {
     render(<ChatInput onSend={vi.fn()} />);
     expect(
-      screen.getByPlaceholderText("Message Goose... (type @ to mention)"),
+      screen.getByPlaceholderText("Message Goose, @ to mention personas"),
     ).toBeInTheDocument();
   });
 
