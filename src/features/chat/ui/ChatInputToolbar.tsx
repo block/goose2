@@ -1,5 +1,4 @@
 import {
-  Paperclip,
   Mic,
   ChevronDown,
   Check,
@@ -276,16 +275,6 @@ export function ChatInputToolbar({
               <ContextRing tokens={contextTokens} limit={contextLimit} />
             </Button>
           )}
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Attach file"
-            title="Attach file"
-          >
-            <Paperclip />
-          </Button>
 
           <Tooltip>
             <TooltipTrigger asChild>

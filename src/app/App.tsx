@@ -1,8 +1,11 @@
 import { useEffect } from "react";
 
 import { AppShell } from "@/app/AppShell";
+import { useKeyboardNavDetection } from "@/shared/hooks/useKeyboardNavDetection";
 
 export function App() {
+  useKeyboardNavDetection();
+
   useEffect(() => {
     const preventWindowFileNavigation = (event: DragEvent) => {
       event.preventDefault();

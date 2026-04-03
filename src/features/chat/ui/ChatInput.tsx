@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import type { AcpProvider } from "@/shared/api/acp";
 import type { Persona } from "@/shared/types/agents";
 import { cn } from "@/shared/lib/cn";
+import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import {
   MentionAutocomplete,
@@ -83,7 +84,7 @@ function PastedImageThumb({
         <button
           type="button"
           onClick={() => setLightboxOpen(true)}
-          className="block cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="block cursor-pointer rounded-lg"
           aria-label={`View attachment ${index + 1}`}
         >
           <img
@@ -142,8 +143,10 @@ export function ChatInput({
   const [text, setText] = useState("");
   const [images, setImages] = useState<PastedImage[]>([]);
   const [isCompact, setIsCompact] = useState(false);
+  const [isImageDragOver, setIsImageDragOver] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dragDepthRef = useRef(0);
 
   const activePersona = useMemo(
     () => personas.find((persona) => persona.id === selectedPersonaId) ?? null,
@@ -308,15 +311,59 @@ export function ChatInput({
     [addImageFile],
   );
 
+  const hasDraggedFiles = useCallback(
+    (dataTransfer: DataTransfer) =>
+      Array.from(dataTransfer.items).some(
+        (item) => item.kind === "file" || item.type.startsWith("image/"),
+      ) || Array.from(dataTransfer.types).includes("Files"),
+    [],
+  );
+
+  const handleDragEnter = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      if (disabled || isStreaming || !hasDraggedFiles(e.dataTransfer)) {
+        return;
+      }
+
+      e.preventDefault();
+      dragDepthRef.current += 1;
+      setIsImageDragOver(true);
+    },
+    [disabled, hasDraggedFiles, isStreaming],
+  );
+
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    const hasImages = Array.from(e.dataTransfer.items).some((item) =>
-      item.type.startsWith("image/"),
-    );
-    if (hasImages) e.preventDefault();
-  }, []);
+    if (disabled || isStreaming || !hasDraggedFiles(e.dataTransfer)) {
+      return;
+    }
+
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    setIsImageDragOver(true);
+  }, [disabled, hasDraggedFiles, isStreaming]);
+
+  const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+
+    if (!isImageDragOver) {
+      return;
+    }
+
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) {
+      setIsImageDragOver(false);
+    }
+  }, [isImageDragOver]);
 
   const handleDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
+      dragDepthRef.current = 0;
+      setIsImageDragOver(false);
+
+      if (disabled || isStreaming) {
+        return;
+      }
+
       const files = Array.from(e.dataTransfer.files).filter((f) =>
         f.type.startsWith("image/"),
       );
@@ -326,7 +373,7 @@ export function ChatInput({
         addImageFile(file);
       }
     },
-    [addImageFile],
+    [addImageFile, disabled, isStreaming],
   );
 
   const removeImage = useCallback((index: number) => {
@@ -352,10 +399,22 @@ export function ChatInput({
         <div className="mx-auto max-w-3xl">
           {/* biome-ignore lint/a11y/noStaticElementInteractions: drop zone for image files */}
           <div
-            className="relative rounded-2xl border border-border bg-background px-4 pb-3 pt-4"
+            className={cn(
+              "relative rounded-2xl border border-border bg-background px-4 pb-3 pt-4 transition-colors",
+              isImageDragOver && "bg-muted/20",
+            )}
+            onDragEnter={handleDragEnter}
             onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
+            {isImageDragOver && (
+              <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-2xl border border-dashed border-border bg-background/70">
+                <Badge variant="secondary" className="px-3 py-1 text-sm shadow-sm">
+                  Drop images to attach
+                </Badge>
+              </div>
+            )}
             <MentionAutocomplete
               personas={personas}
               query={mentionQuery}

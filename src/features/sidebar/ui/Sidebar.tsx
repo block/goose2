@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BookOpen, Bot, ChevronLeft, ChevronRight, Home } from "lucide-react";
+import {
+  IconLayoutSidebar,
+  IconLayoutSidebarFilled,
+} from "@tabler/icons-react";
+import { BookOpen, Bot, Home } from "lucide-react";
 import { GooseIcon } from "@/shared/ui/icons/GooseIcon";
 import { cn } from "@/shared/lib/cn";
 import type { AppView } from "@/app/AppShell";
@@ -7,6 +11,7 @@ import type { ProjectInfo } from "@/features/projects/api/projects";
 import { useChatStore } from "@/features/chat/stores/chatStore";
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
 import { isSessionRunning } from "@/features/chat/lib/sessionActivity";
+import { Button } from "@/shared/ui/button";
 import { SidebarProjectsSection } from "./SidebarProjectsSection";
 import { useSidebarHighlight } from "./useSidebarHighlight";
 
@@ -196,6 +201,10 @@ export function Sidebar({
 
   // Update active rect when activeView/activeSessionId changes
   useEffect(() => {
+    if (activeSessionId) {
+      return;
+    }
+
     if (activeView === "home") {
       updateActiveRect(homeRef.current);
     } else if (activeView && navItemRefs.current[activeView]) {
@@ -203,7 +212,7 @@ export function Sidebar({
     } else {
       updateActiveRect(null);
     }
-  }, [activeView, updateActiveRect]);
+  }, [activeSessionId, activeView, updateActiveRect]);
 
   // Callback for SidebarProjectsSection to register active session refs
   const activeSessionRefCallback = useCallback(
@@ -224,30 +233,35 @@ export function Sidebar({
       )}
       style={{ width: collapsed ? 54 : width }}
     >
-      {/* Collapse toggle — vertically centered, half outside the right edge */}
-      <button
-        type="button"
-        onClick={onCollapse}
-        className={cn(
-          "absolute top-1/2 -translate-y-1/2 -right-3 z-50",
-          "flex items-center justify-center size-6 rounded-full",
-          "bg-background border border-border",
-          "text-muted-foreground hover:text-foreground hover:scale-110",
-          "transition-transform duration-200",
-        )}
-        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-      >
-        {collapsed ? (
-          <ChevronRight className="size-3" />
-        ) : (
-          <ChevronLeft className="size-3" />
-        )}
-      </button>
-
       <div className="flex flex-col h-full overflow-hidden bg-background border border-border rounded-xl">
         {/* Goose logo — pinned top */}
-        <div className="flex-shrink-0 px-3 pt-3 pb-1">
-          <GooseIcon className="text-muted-foreground" />
+        <div
+          className={cn(
+            "flex-shrink-0 pt-3",
+            collapsed ? "px-1.5 pb-1.5" : "px-3 pb-1",
+          )}
+        >
+          <div
+            className={cn(
+              "flex items-center",
+              collapsed ? "justify-center" : "justify-between",
+            )}
+          >
+            <GooseIcon className="text-muted-foreground" />
+            {!collapsed && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                onClick={onCollapse}
+                className="text-muted-foreground hover:text-foreground"
+                aria-label="Collapse sidebar"
+                title="Collapse sidebar"
+              >
+                <IconLayoutSidebarFilled className="size-4" />
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Navigation (scrollable) */}
@@ -271,6 +285,19 @@ export function Sidebar({
           )}
 
           <div className="relative z-10 space-y-0.5">
+            {collapsed && (
+              <button
+                type="button"
+                onClick={onCollapse}
+                title="Expand sidebar"
+                className="flex w-full items-center gap-2.5 rounded-md p-3 text-[13px] text-muted-foreground transition-colors duration-200 hover:text-foreground"
+                aria-label="Expand sidebar"
+              >
+                <IconLayoutSidebar className="size-4 flex-shrink-0" />
+                <span className="sr-only">Expand sidebar</span>
+              </button>
+            )}
+
             {/* TODO: Search bar — uncomment when onSearchClick is wired up */}
             {/* <button
               type="button"

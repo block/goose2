@@ -7,7 +7,7 @@ import { SessionActivityIndicator } from "@/shared/ui/SessionActivityIndicator";
 
 const INACTIVE_CHAT_ROW_CLASS =
   "text-muted-foreground hover:bg-transparent hover:text-foreground group-hover:text-foreground";
-const ACTIVE_CHAT_ROW_CLASS = "text-foreground";
+const ACTIVE_CHAT_ROW_CLASS = "text-foreground hover:bg-transparent hover:text-foreground";
 
 interface SidebarChatRowProps {
   id: string;
@@ -41,6 +41,7 @@ export function SidebarChatRow({
   const [draftTitle, setDraftTitle] = useState(title);
   const menuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -63,6 +64,20 @@ export function SidebarChatRow({
     inputRef.current?.focus();
     inputRef.current?.select();
   }, [editing]);
+
+  useEffect(() => {
+    if (!activeRef || !isActive || !rowRef.current) {
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => {
+      if (rowRef.current) {
+        activeRef(rowRef.current);
+      }
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [activeRef, isActive]);
 
   const startRename = () => {
     setDraftTitle(title);
@@ -116,7 +131,7 @@ export function SidebarChatRow({
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: wrapper div for hover detection, interactive content is the inner Button
     <div
-      ref={activeRef}
+      ref={rowRef}
       className={cn(
         "flex items-center group rounded-md pr-0.5 transition-colors duration-200",
         className,
