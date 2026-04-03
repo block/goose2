@@ -143,7 +143,12 @@ export function FilesList() {
 
   useEffect(() => {
     if (artifacts.length === 0) {
-      setExistingPaths(new Set());
+      setExistingPaths((current) => {
+        if (current?.size === 0) {
+          return current;
+        }
+        return new Set<string>();
+      });
       return;
     }
 
