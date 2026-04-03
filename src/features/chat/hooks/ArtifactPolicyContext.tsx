@@ -27,6 +27,7 @@ export interface SessionArtifact {
   displayPath: string;
   filename: string;
   directoryPath: string;
+  resolvedDirectoryPath: string;
   versionCount: number;
   lastTouchedAt: number;
   kind: "file" | "folder" | "path";
@@ -96,11 +97,15 @@ export function ArtifactPolicyProvider({
   );
   const lastOpenAtByPathRef = useRef(new Map<string, number>());
 
+  const artifactsIndex = useMemo(
+    () => buildArtifactsIndexForMessages(messages, normalizedRoots),
+    [messages, normalizedRoots],
+  );
+
   const { argsToToolCallId, toolCardDisplayByToolCallId } = useMemo(() => {
-    const index = buildArtifactsIndexForMessages(messages, normalizedRoots);
     const displayByToolCallId = new Map<string, ToolCardDisplay>();
 
-    for (const ranking of index.byMessageId.values()) {
+    for (const ranking of artifactsIndex.byMessageId.values()) {
       if (!ranking.primaryToolCallId || !ranking.primaryCandidate) continue;
       displayByToolCallId.set(ranking.primaryToolCallId, {
         role: "primary_host",
@@ -110,10 +115,10 @@ export function ArtifactPolicyProvider({
     }
 
     return {
-      argsToToolCallId: index.argsToToolCallId,
+      argsToToolCallId: artifactsIndex.argsToToolCallId,
       toolCardDisplayByToolCallId: displayByToolCallId,
     };
-  }, [messages, normalizedRoots]);
+  }, [artifactsIndex]);
 
   const resolveToolCardDisplay = useCallback(
     (args: Record<string, unknown>, _name: string, _result?: string) => {
@@ -151,7 +156,6 @@ export function ArtifactPolicyProvider({
   );
 
   const getAllSessionArtifacts = useCallback((): SessionArtifact[] => {
-    const index = buildArtifactsIndexForMessages(messages, normalizedRoots);
     const homeDir =
       normalizedRoots.length > 0
         ? inferHomeDirFromRoots(normalizedRoots)
@@ -159,7 +163,7 @@ export function ArtifactPolicyProvider({
 
     const artifactMap = new Map<string, SessionArtifact>();
 
-    for (const [messageId, ranking] of index.byMessageId.entries()) {
+    for (const [messageId, ranking] of artifactsIndex.byMessageId.entries()) {
       const message = messages.find((m) => m.id === messageId);
       const timestamp = message?.created ?? 0;
 
@@ -184,6 +188,7 @@ export function ArtifactPolicyProvider({
                 parentDir(candidate.resolvedPath),
                 homeDir,
               ),
+              resolvedDirectoryPath: parentDir(candidate.resolvedPath),
               versionCount: 1,
               lastTouchedAt: timestamp,
               kind: candidate.kind,
@@ -197,7 +202,7 @@ export function ArtifactPolicyProvider({
     return Array.from(artifactMap.values()).sort(
       (a, b) => b.lastTouchedAt - a.lastTouchedAt,
     );
-  }, [messages, normalizedRoots]);
+  }, [messages, normalizedRoots, artifactsIndex]);
 
   const contextValue = useMemo<ArtifactPolicyContextValue>(
     () => ({
