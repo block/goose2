@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   File,
   FileCode,
@@ -136,7 +136,10 @@ export function FilesList() {
   const [filter, setFilter] = useState("");
   const [existingPaths, setExistingPaths] = useState<Set<string> | null>(null);
 
-  const artifacts = getAllSessionArtifacts();
+  const artifacts = useMemo(
+    () => getAllSessionArtifacts(),
+    [getAllSessionArtifacts],
+  );
 
   useEffect(() => {
     if (artifacts.length === 0) {

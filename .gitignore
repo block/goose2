@@ -39,5 +39,4 @@ coverage/
 *.log
 
 # Hermit (toolchain manager cache)
-.hermit/geese-honk.html
-geese.md
+.hermit/
