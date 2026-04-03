@@ -276,7 +276,10 @@ export function ToolCallAdapter({
             <motion.button
               layout
               type="button"
-              className="flex w-full items-center gap-1.5 py-px text-muted-foreground"
+              className={cn(
+                "flex w-full items-center gap-1.5 py-px",
+                !isOpen && "text-muted-foreground",
+              )}
               transition={{ duration: 0.15 }}
             >
               <motion.span
