@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Sidebar } from "@/features/sidebar/ui/Sidebar";
 import { StatusBar } from "@/features/status/ui/StatusBar";
 import { HomeScreen } from "@/features/home/ui/HomeScreen";
@@ -367,6 +367,25 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     }
   };
 
+  const editingProjectProp = useMemo(
+    () =>
+      editingProject
+        ? {
+            id: editingProject.id,
+            name: editingProject.name,
+            description: editingProject.description,
+            prompt: editingProject.prompt,
+            icon: editingProject.icon,
+            color: editingProject.color,
+            preferredProvider: editingProject.preferredProvider,
+            preferredModel: editingProject.preferredModel,
+            workingDirs: editingProject.workingDirs,
+            useWorktrees: editingProject.useWorktrees,
+          }
+        : undefined,
+    [editingProject],
+  );
+
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
       <TopBar onSettingsClick={() => setSettingsOpen(true)} />
@@ -434,22 +453,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           setCreateProjectInitialWorkingDir(null);
         }}
         initialWorkingDir={createProjectInitialWorkingDir}
-        editingProject={
-          editingProject
-            ? {
-                id: editingProject.id,
-                name: editingProject.name,
-                description: editingProject.description,
-                prompt: editingProject.prompt,
-                icon: editingProject.icon,
-                color: editingProject.color,
-                preferredProvider: editingProject.preferredProvider,
-                preferredModel: editingProject.preferredModel,
-                workingDirs: editingProject.workingDirs,
-                useWorktrees: editingProject.useWorktrees,
-              }
-            : undefined
-        }
+        editingProject={editingProjectProp}
       />
     </div>
   );

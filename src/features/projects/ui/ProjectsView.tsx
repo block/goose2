@@ -20,7 +20,8 @@ import {
   AlertDialogTitle,
 } from "@/shared/ui/alert-dialog";
 import { CreateProjectDialog } from "./CreateProjectDialog";
-import { listProjects, deleteProject, type ProjectInfo } from "../api/projects";
+import { deleteProject, type ProjectInfo } from "../api/projects";
+import { useProjectStore } from "../stores/projectStore";
 
 function ProjectCardMenu({
   project,
@@ -122,6 +123,7 @@ interface ProjectsViewProps {
 }
 
 export function ProjectsView({ onStartChat }: ProjectsViewProps) {
+  const fetchProjects = useProjectStore((s) => s.fetchProjects);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<
@@ -147,15 +149,15 @@ export function ProjectsView({ onStartChat }: ProjectsViewProps) {
 
   const loadProjects = useCallback(async () => {
     try {
-      const result = await listProjects();
-      setProjects(result);
+      await fetchProjects();
+      setProjects(useProjectStore.getState().projects);
     } catch {
       // projects may not exist yet
       setProjects([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchProjects]);
 
   useEffect(() => {
     loadProjects();
