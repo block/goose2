@@ -236,9 +236,7 @@ export function useAcpStream(enabled: boolean): void {
           return;
         }
 
-        if (
-          sessionStore.activeSessionId !== event.payload.sessionId
-        ) {
+        if (sessionStore.activeSessionId !== event.payload.sessionId) {
           store.markSessionUnread(event.payload.sessionId);
         }
 

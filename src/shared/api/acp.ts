@@ -27,7 +27,14 @@ export async function acpSendMessage(
   prompt: string,
   options: AcpSendMessageOptions = {},
 ): Promise<void> {
-  const { systemPrompt, workingDir, personaId, personaName, images, skipUserMessage } = options;
+  const {
+    systemPrompt,
+    workingDir,
+    personaId,
+    personaName,
+    images,
+    skipUserMessage,
+  } = options;
   return invoke("acp_send_message", {
     sessionId,
     providerId,

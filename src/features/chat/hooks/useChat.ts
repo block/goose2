@@ -92,7 +92,7 @@ export function useChat(
       return store.computeDisplayMessages(sessionId);
     }
     return store.messagesBySession[sessionId] ?? [];
-  }, [hasForks, store, sessionId, store.messagesBySession, store.forkTreeByRoot]);
+  }, [hasForks, store, sessionId, store.messagesBySession]);
 
   const { chatState, tokenState, error, streamingMessageId } =
     store.getSessionRuntime(effectiveSessionId);
@@ -262,20 +262,9 @@ export function useChat(
         });
       }
 
-      await _sendToBackend(
-        targetSessionId,
-        text,
-        effectivePersonaInfo,
-        images,
-      );
+      await _sendToBackend(targetSessionId, text, effectivePersonaInfo, images);
     },
-    [
-      sessionId,
-      chatState,
-      store,
-      resolvePersonaInfo,
-      _sendToBackend,
-    ],
+    [sessionId, chatState, store, resolvePersonaInfo, _sendToBackend],
   );
 
   const retryUserMessage = useCallback(
@@ -378,7 +367,7 @@ export function useChat(
   const retryLastMessage = useCallback(async () => {
     const displayMessages = hasForks
       ? store.computeDisplayMessages(sessionId)
-      : store.messagesBySession[sessionId] ?? [];
+      : (store.messagesBySession[sessionId] ?? []);
     // Find the last user message
     const lastUserIndex = findLastIndex(
       displayMessages,

@@ -11,6 +11,11 @@ import {
   INITIAL_TOKEN_STATE,
 } from "@/shared/types/chat";
 import type { ForkTree } from "../types/forks";
+import {
+  buildForkTree,
+  computeDisplayMessages as computeDisplay,
+  computeLeafSessionId as computeLeaf,
+} from "./forkStoreUtils";
 
 function createInitialSessionRuntime(): SessionChatRuntime {
   return {
@@ -424,46 +429,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       };
     }),
 
-  getForkTree: (rootSessionId) =>
-    get().forkTreeByRoot[rootSessionId] ?? {},
+  getForkTree: (rootSessionId) => get().forkTreeByRoot[rootSessionId] ?? {},
 
   buildForkTreeFromSessions: (rootSessionId, allSessions) => {
-    // Collect all session IDs belonging to this tree
-    const treeSessionIds = new Set<string>([rootSessionId]);
-    let changed = true;
-    while (changed) {
-      changed = false;
-      for (const s of allSessions) {
-        if (s.forkedFrom && treeSessionIds.has(s.forkedFrom) && !treeSessionIds.has(s.id)) {
-          treeSessionIds.add(s.id);
-          changed = true;
-        }
-      }
-    }
-
-    // Build fork tree entries from forked sessions
-    const tree: ForkTree = {};
-    for (const s of allSessions) {
-      if (!s.forkedFrom || !s.forkPointMessageId || !treeSessionIds.has(s.id)) continue;
-      const key = s.forkPointMessageId;
-      const existing = tree[key];
-      if (existing) {
-        if (!existing.branches.some((b) => b.sessionId === s.id)) {
-          existing.branches.push({ sessionId: s.id });
-          existing.activeBranchIndex = existing.branches.length - 1;
-        }
-      } else {
-        tree[key] = {
-          sourceSessionId: s.forkedFrom,
-          branches: [
-            { sessionId: s.forkedFrom },
-            { sessionId: s.id },
-          ],
-          activeBranchIndex: 1,
-        };
-      }
-    }
-
+    const tree = buildForkTree(rootSessionId, allSessions);
     if (Object.keys(tree).length > 0) {
       set((state) => ({
         forkTreeByRoot: { ...state.forkTreeByRoot, [rootSessionId]: tree },
@@ -474,75 +443,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   computeDisplayMessages: (rootSessionId) => {
     const state = get();
     const tree = state.forkTreeByRoot[rootSessionId] ?? {};
-    const rootMessages = state.messagesBySession[rootSessionId] ?? [];
-
-    if (Object.keys(tree).length === 0) {
-      return rootMessages;
-    }
-
-    const result: Message[] = [];
-    let currentMessages = rootMessages;
-    let i = 0;
-
-    while (i < currentMessages.length) {
-      const msg = currentMessages[i];
-      result.push(msg);
-
-      // Check if this user message is a fork point
-      if (msg.role === "user" && tree[msg.id]) {
-        const branch = tree[msg.id];
-        const activeBranch = branch.branches[branch.activeBranchIndex];
-        if (activeBranch && activeBranch.sessionId !== rootSessionId) {
-          const branchMessages = state.messagesBySession[activeBranch.sessionId] ?? [];
-          // Find the fork point in the branch messages
-          const forkIdx = branchMessages.findIndex((m) => m.id === msg.id);
-          if (forkIdx !== -1) {
-            currentMessages = branchMessages;
-            i = forkIdx + 1;
-            continue;
-          }
-        }
-      }
-
-      i++;
-    }
-
-    return result;
+    return computeDisplay(rootSessionId, tree, state.messagesBySession);
   },
 
   computeLeafSessionId: (rootSessionId) => {
     const state = get();
     const tree = state.forkTreeByRoot[rootSessionId] ?? {};
-
-    if (Object.keys(tree).length === 0) {
-      return rootSessionId;
-    }
-
-    let currentSessionId = rootSessionId;
-    let currentMessages = state.messagesBySession[rootSessionId] ?? [];
-    let i = 0;
-
-    while (i < currentMessages.length) {
-      const msg = currentMessages[i];
-
-      if (msg.role === "user" && tree[msg.id]) {
-        const branch = tree[msg.id];
-        const activeBranch = branch.branches[branch.activeBranchIndex];
-        if (activeBranch && activeBranch.sessionId !== currentSessionId) {
-          const branchMessages = state.messagesBySession[activeBranch.sessionId] ?? [];
-          const forkIdx = branchMessages.findIndex((m) => m.id === msg.id);
-          if (forkIdx !== -1) {
-            currentSessionId = activeBranch.sessionId;
-            currentMessages = branchMessages;
-            i = forkIdx + 1;
-            continue;
-          }
-        }
-      }
-
-      i++;
-    }
-
-    return currentSessionId;
+    return computeLeaf(rootSessionId, tree, state.messagesBySession);
   },
 }));
