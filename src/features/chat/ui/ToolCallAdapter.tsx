@@ -256,7 +256,7 @@ export function ToolCallAdapter({
         </div>
         <div className="pt-0.5">
           <FlatFileLabel
-            title={title}
+            title={displayDetail}
             args={args}
             name={name}
             result={result}
