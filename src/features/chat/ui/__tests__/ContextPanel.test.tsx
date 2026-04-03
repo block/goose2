@@ -50,10 +50,8 @@ describe("ContextPanel", () => {
       />,
     );
 
-    expect(
-      screen.getByRole("button", { name: /details/i }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /files/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /details/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /files/i })).toBeInTheDocument();
     expect(screen.getByText("Workspace")).toBeInTheDocument();
     expect(screen.getByText("Desktop UX")).toBeInTheDocument();
     expect(screen.getByText("main")).toBeInTheDocument();
@@ -61,7 +59,7 @@ describe("ContextPanel", () => {
     expect(screen.getByText("Main repo")).toBeInTheDocument();
     expect(screen.getByText("2 worktrees detected")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /files/i }));
+    await user.click(screen.getByRole("tab", { name: /files/i }));
 
     expect(screen.getByText("Files for this session")).toBeInTheDocument();
     expect(

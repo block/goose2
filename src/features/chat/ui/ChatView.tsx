@@ -1,5 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { PanelRight, PanelRightOpen } from "lucide-react";
+import {
+  IconLayoutSidebarRight,
+  IconLayoutSidebarRightFilled,
+} from "@tabler/icons-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { MessageTimeline } from "./MessageTimeline";
 import { ChatInput } from "./ChatInput";
 import type { PastedImage } from "@/shared/types/messages";
@@ -40,6 +44,17 @@ interface ChatViewProps {
 }
 
 const CONTEXT_PANEL_WIDTH = 340;
+const CONTEXT_PANEL_SHELL_PADDING = 12;
+const CONTEXT_PANEL_HEADER_PADDING_X = 12;
+const CONTEXT_PANEL_HEADER_PADDING_TOP = 10;
+const CONTEXT_PANEL_TOTAL_WIDTH =
+  CONTEXT_PANEL_WIDTH + CONTEXT_PANEL_SHELL_PADDING * 2;
+const CONTEXT_PANEL_TOGGLE_RIGHT =
+  CONTEXT_PANEL_SHELL_PADDING + CONTEXT_PANEL_HEADER_PADDING_X;
+const CONTEXT_PANEL_TOGGLE_TOP =
+  CONTEXT_PANEL_SHELL_PADDING + CONTEXT_PANEL_HEADER_PADDING_TOP;
+const CONTEXT_PANEL_FADE_DURATION_SECONDS = 0.15;
+const CONTEXT_PANEL_REFLOW_DURATION_MS = 200;
 
 export function ChatView({
   sessionId,
@@ -55,6 +70,13 @@ export function ChatView({
 }: ChatViewProps) {
   const [activeSessionId] = useState(() => sessionId ?? crypto.randomUUID());
   const [isContextPanelOpen, setIsContextPanelOpen] = useState(true);
+  const shouldReduceMotion = useReducedMotion();
+  const fadeTransition = {
+    duration: shouldReduceMotion ? 0 : CONTEXT_PANEL_FADE_DURATION_SECONDS,
+  };
+  const reflowDuration = shouldReduceMotion
+    ? 0
+    : CONTEXT_PANEL_REFLOW_DURATION_MS;
 
   // Provider state from shared store
   const {
@@ -344,34 +366,8 @@ export function ChatView({
       messages={messages}
       allowedRoots={allowedArtifactRoots}
     >
-      <div className="flex h-full min-w-0">
-        <div className="relative flex min-w-0 flex-1 flex-col">
-          <div className="absolute right-4 top-3 z-20">
-            <Button
-              type="button"
-              variant={isContextPanelOpen ? "secondary" : "ghost"}
-              size="icon-sm"
-              onClick={() => setIsContextPanelOpen((prev) => !prev)}
-              className="rounded-md shadow-sm"
-              aria-label={
-                isContextPanelOpen
-                  ? "Close context panel"
-                  : "Open context panel"
-              }
-              title={
-                isContextPanelOpen
-                  ? "Close context panel"
-                  : "Open context panel"
-              }
-            >
-              {isContextPanelOpen ? (
-                <PanelRightOpen className="size-3.5" />
-              ) : (
-                <PanelRight className="size-3.5" />
-              )}
-            </Button>
-          </div>
-
+      <div className="relative flex h-full min-w-0">
+        <div className="flex min-w-0 flex-1 flex-col">
           <MessageTimeline
             messages={messages}
             streamingMessageId={streamingMessageId}
@@ -425,18 +421,62 @@ export function ChatView({
           />
         </div>
 
-        {isContextPanelOpen ? (
-          <aside
-            className="min-w-0 shrink-0"
-            style={{ width: CONTEXT_PANEL_WIDTH }}
+        <div
+          className="shrink-0 overflow-hidden"
+          style={{
+            width: isContextPanelOpen ? CONTEXT_PANEL_TOTAL_WIDTH : 0,
+            transition: `width ${reflowDuration}ms ease`,
+          }}
+        >
+          <AnimatePresence initial={false}>
+            {isContextPanelOpen ? (
+              <motion.div
+                key="context-panel"
+                className="flex h-full py-3 pl-3 pr-3"
+                style={{ width: CONTEXT_PANEL_TOTAL_WIDTH }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={fadeTransition}
+              >
+                <aside className="flex min-w-0 flex-1 overflow-hidden rounded-xl border border-border bg-background">
+                  <ContextPanel
+                    projectName={project?.name}
+                    projectColor={project?.color}
+                    projectWorkingDir={project?.workingDirs[0] ?? null}
+                  />
+                </aside>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+        </div>
+
+        <div
+          className="absolute z-20"
+          style={{
+            right: CONTEXT_PANEL_TOGGLE_RIGHT,
+            top: CONTEXT_PANEL_TOGGLE_TOP,
+          }}
+        >
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => setIsContextPanelOpen((prev) => !prev)}
+            aria-label={
+              isContextPanelOpen ? "Close context panel" : "Open context panel"
+            }
+            title={
+              isContextPanelOpen ? "Close context panel" : "Open context panel"
+            }
           >
-            <ContextPanel
-              projectName={project?.name}
-              projectColor={project?.color}
-              projectWorkingDir={project?.workingDirs[0] ?? null}
-            />
-          </aside>
-        ) : null}
+            {isContextPanelOpen ? (
+              <IconLayoutSidebarRightFilled className="size-4" />
+            ) : (
+              <IconLayoutSidebarRight className="size-4" />
+            )}
+          </Button>
+        </div>
       </div>
     </ArtifactPolicyProvider>
   );

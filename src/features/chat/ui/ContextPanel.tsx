@@ -1,8 +1,6 @@
 import { type ReactNode, useState } from "react";
 import {
   Activity,
-  ChevronDown,
-  ChevronRight,
   FileCode,
   FileText,
   FolderOpen,
@@ -12,8 +10,15 @@ import {
 } from "lucide-react";
 import { useGitState } from "@/shared/hooks/useGitState";
 import { Badge } from "@/shared/ui/badge";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/shared/ui/accordion";
 import { Button } from "@/shared/ui/button";
 import { Spinner } from "@/shared/ui/spinner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 
 interface ContextPanelProps {
   projectName?: string;
@@ -21,43 +26,29 @@ interface ContextPanelProps {
   projectWorkingDir?: string | null;
 }
 
+type ContextPanelTab = "details" | "files";
+
 function PanelSection({
+  value,
   title,
-  count,
   icon,
-  defaultOpen = true,
   children,
 }: {
+  value: string;
   title: string;
-  count?: string;
   icon: ReactNode;
-  defaultOpen?: boolean;
   children: ReactNode;
 }) {
-  const [isExpanded, setIsExpanded] = useState(defaultOpen);
-
   return (
-    <section className="border-b border-border last:border-0">
-      <button
-        type="button"
-        onClick={() => setIsExpanded((prev) => !prev)}
-        className="flex w-full items-center justify-between px-4 py-2.5 text-xs font-medium transition-colors hover:bg-background-secondary/60"
-      >
+    <AccordionItem value={value}>
+      <AccordionTrigger className="px-4 py-2.5 text-xs font-medium hover:bg-background-secondary/60 hover:no-underline">
         <span className="flex items-center gap-2">
           {icon}
           <span>{title}</span>
         </span>
-        <span className="flex items-center gap-1.5 text-foreground-secondary">
-          {count ? <span>{count}</span> : null}
-          {isExpanded ? (
-            <ChevronDown className="h-3.5 w-3.5" />
-          ) : (
-            <ChevronRight className="h-3.5 w-3.5" />
-          )}
-        </span>
-      </button>
-      {isExpanded ? <div className="px-4 pb-3">{children}</div> : null}
-    </section>
+      </AccordionTrigger>
+      <AccordionContent className="px-4 pb-3">{children}</AccordionContent>
+    </AccordionItem>
   );
 }
 
@@ -74,7 +65,7 @@ export function ContextPanel({
   projectColor,
   projectWorkingDir,
 }: ContextPanelProps) {
-  const [activeTab, setActiveTab] = useState<"details" | "files">("details");
+  const [activeTab, setActiveTab] = useState<ContextPanelTab>("details");
   const {
     data: gitState,
     error,
@@ -91,34 +82,30 @@ export function ContextPanel({
     error instanceof Error ? error.message : "Unable to read git status.";
 
   return (
-    <div className="flex h-full min-h-0 flex-col border-l border-border bg-background">
-      <div className="flex items-center justify-between border-b border-border px-3 pb-2 pt-2.5">
-        <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            variant={activeTab === "details" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => setActiveTab("details")}
-            className="rounded-md"
-          >
+    <Tabs
+      value={activeTab}
+      onValueChange={(value) => setActiveTab(value as ContextPanelTab)}
+      className="h-full"
+    >
+      <div className="border-b border-border px-3 pb-2 pt-2.5">
+        <TabsList variant="buttons">
+          <TabsTrigger value="details" variant="buttons">
             Details
-          </Button>
-          <Button
-            type="button"
-            variant={activeTab === "files" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => setActiveTab("files")}
-            className="rounded-md"
-          >
+          </TabsTrigger>
+          <TabsTrigger value="files" variant="buttons">
             Files
-          </Button>
-        </div>
+          </TabsTrigger>
+        </TabsList>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        {activeTab === "details" ? (
-          <>
+      <TabsContent value="details">
+        <div className="h-full overflow-y-auto">
+          <Accordion
+            type="multiple"
+            defaultValue={["workspace", "processes", "changes", "mcpServers"]}
+          >
             <PanelSection
+              value="workspace"
               title="Workspace"
               icon={<FolderOpen className="h-3.5 w-3.5" />}
             >
@@ -208,6 +195,7 @@ export function ContextPanel({
             </PanelSection>
 
             <PanelSection
+              value="processes"
               title="Processes"
               icon={<Activity className="h-3.5 w-3.5" />}
             >
@@ -218,6 +206,7 @@ export function ContextPanel({
             </PanelSection>
 
             <PanelSection
+              value="changes"
               title="Changes"
               icon={<FileCode className="h-3.5 w-3.5" />}
             >
@@ -227,6 +216,7 @@ export function ContextPanel({
             </PanelSection>
 
             <PanelSection
+              value="mcpServers"
               title="MCP Servers"
               icon={<Server className="h-3.5 w-3.5" />}
             >
@@ -235,8 +225,12 @@ export function ContextPanel({
                 status.
               </p>
             </PanelSection>
-          </>
-        ) : (
+          </Accordion>
+        </div>
+      </TabsContent>
+
+      <TabsContent value="files">
+        <div className="h-full overflow-y-auto">
           <div className="px-4 pb-4 pt-3">
             <div className="flex items-center gap-2 text-xs text-foreground-secondary">
               <FileText className="h-3.5 w-3.5" />
@@ -246,8 +240,8 @@ export function ContextPanel({
               Not wired yet in goose2: artifact list and file opening behavior.
             </p>
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      </TabsContent>
+    </Tabs>
   );
 }

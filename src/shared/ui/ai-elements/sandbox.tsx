@@ -3,7 +3,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/shared/ui/collapsible";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
+import * as TabsPrimitive from "@radix-ui/react-tabs";
 import { cn } from "@/shared/lib/cn";
 import type { ToolUIPart } from "ai";
 import { ChevronDownIcon, Code } from "lucide-react";
@@ -67,10 +67,13 @@ export const SandboxContent = ({
   />
 );
 
-export type SandboxTabsProps = ComponentProps<typeof Tabs>;
+export type SandboxTabsProps = ComponentProps<typeof TabsPrimitive.Root>;
 
 export const SandboxTabs = ({ className, ...props }: SandboxTabsProps) => (
-  <Tabs className={cn("w-full gap-0", className)} {...props} />
+  <TabsPrimitive.Root
+    className={cn("flex w-full flex-col gap-0", className)}
+    {...props}
+  />
 );
 
 export type SandboxTabsBarProps = ComponentProps<"div">;
@@ -88,25 +91,30 @@ export const SandboxTabsBar = ({
   />
 );
 
-export type SandboxTabsListProps = ComponentProps<typeof TabsList>;
+export type SandboxTabsListProps = ComponentProps<typeof TabsPrimitive.List>;
 
 export const SandboxTabsList = ({
   className,
   ...props
 }: SandboxTabsListProps) => (
-  <TabsList
-    className={cn("h-auto rounded-none border-0 bg-transparent p-0", className)}
+  <TabsPrimitive.List
+    className={cn(
+      "inline-flex h-auto items-center bg-transparent p-0",
+      className,
+    )}
     {...props}
   />
 );
 
-export type SandboxTabsTriggerProps = ComponentProps<typeof TabsTrigger>;
+export type SandboxTabsTriggerProps = ComponentProps<
+  typeof TabsPrimitive.Trigger
+>;
 
 export const SandboxTabsTrigger = ({
   className,
   ...props
 }: SandboxTabsTriggerProps) => (
-  <TabsTrigger
+  <TabsPrimitive.Trigger
     className={cn(
       "rounded-none border-0 border-transparent border-b-2 px-4 py-2 font-medium text-muted-foreground text-sm transition-colors data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none",
       className,
@@ -115,11 +123,16 @@ export const SandboxTabsTrigger = ({
   />
 );
 
-export type SandboxTabContentProps = ComponentProps<typeof TabsContent>;
+export type SandboxTabContentProps = ComponentProps<
+  typeof TabsPrimitive.Content
+>;
 
 export const SandboxTabContent = ({
   className,
   ...props
 }: SandboxTabContentProps) => (
-  <TabsContent className={cn("mt-0 text-sm", className)} {...props} />
+  <TabsPrimitive.Content
+    className={cn("mt-0 text-sm outline-none", className)}
+    {...props}
+  />
 );
