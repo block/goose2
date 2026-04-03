@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { FolderOpen, ChevronRight } from "lucide-react";
+import { AnimatePresence, LayoutGroup, motion } from "motion/react";
+import { FolderOpen, ArrowUpRight, ChevronDownIcon } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import {
   Tool,
-  ToolHeader,
-  ToolContent,
   ToolInput,
   ToolOutput,
+  getStatusBadge,
 } from "@/shared/ui/ai-elements/tool";
+import { CollapsibleTrigger } from "@/shared/ui/collapsible";
 import { toolStatusMap } from "../lib/toolStatusMap";
 import type { ToolCallStatus } from "@/shared/types/messages";
 import { useArtifactPolicyContext } from "@/features/chat/hooks/ArtifactPolicyContext";
@@ -19,6 +20,10 @@ interface ToolCallAdapterProps {
   status: ToolCallStatus;
   result?: string;
   isError?: boolean;
+  displayLabel?: string;
+  displayVerb?: string;
+  displayDetail?: string;
+  flat?: boolean;
 }
 
 function useElapsedTime(status: ToolCallStatus) {
@@ -42,16 +47,24 @@ function useElapsedTime(status: ToolCallStatus) {
   return elapsed;
 }
 
+function getFileName(pathStr: string): string {
+  const segments = pathStr.split("/");
+  return segments[segments.length - 1] || pathStr;
+}
+
 function ArtifactActions({
   args,
   name,
   result,
+  inline,
+  children,
 }: {
   args: Record<string, unknown>;
   name: string;
   result?: string;
+  inline?: boolean;
+  children?: React.ReactNode;
 }) {
-  const [moreOutputsOpen, setMoreOutputsOpen] = useState(false);
   const [openError, setOpenError] = useState<string | null>(null);
   const { resolveToolCardDisplay, pathExists, openResolvedPath } =
     useArtifactPolicyContext();
@@ -107,101 +120,104 @@ function ArtifactActions({
     }
   };
 
-  const primary = display.primaryCandidate;
-  const kindLabel: Record<string, string> = {
-    file: "Open file",
-    folder: "Open folder",
-    path: "Open path",
-  };
+  const allCandidates = [
+    display.primaryCandidate,
+    ...display.secondaryCandidates,
+  ];
+
+  if (inline) {
+    const primary = display.primaryCandidate;
+    return (
+      <>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            void openCandidate(primary, true);
+          }}
+          className={cn(
+            "inline-flex items-center gap-1",
+            primary.allowed
+              ? "text-muted-foreground hover:text-foreground"
+              : "cursor-not-allowed text-red-500/50",
+          )}
+          disabled={!primary.allowed}
+          title={primary.resolvedPath}
+        >
+          {children}
+          <ArrowUpRight className="h-3 w-3" />
+        </button>
+        {openError && (
+          <p className="text-[11px] text-destructive whitespace-nowrap">
+            {openError}
+          </p>
+        )}
+      </>
+    );
+  }
 
   return (
-    <div className="mt-1.5 ml-1 space-y-1.5">
-      <button
-        type="button"
-        onClick={() => void openCandidate(primary, true)}
-        className={cn(
-          "inline-flex max-w-full items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs transition-colors",
-          primary.allowed
-            ? "border-accent/45 bg-accent/20 text-accent-foreground shadow-sm hover:bg-accent/30"
-            : "cursor-not-allowed border-red-500/30 bg-red-500/[0.04] text-red-500/70",
-        )}
-        disabled={!primary.allowed}
-        title={primary.resolvedPath}
-      >
-        <FolderOpen className="h-3.5 w-3.5 shrink-0" />
-        <span className="truncate">{kindLabel[primary.kind] ?? "Open"}</span>
-        <span className="truncate text-[10px] text-muted-foreground">
-          {primary.rawPath || primary.resolvedPath}
-        </span>
-        {primary.confidence === "low" && (
-          <span className="text-[10px] text-muted-foreground/70 italic">
-            detected
-          </span>
-        )}
-      </button>
-      {!primary.allowed && primary.blockedReason && (
-        <p className="text-[11px] text-destructive ml-1">
-          {primary.blockedReason}
-        </p>
-      )}
-
-      {display.secondaryCandidates.length > 0 && (
-        <div className="space-y-1">
+    <div className="space-y-1">
+      <div className="flex flex-wrap gap-x-3 gap-y-1">
+        {allCandidates.map((candidate, i) => (
           <button
+            key={candidate.id}
             type="button"
-            onClick={() => setMoreOutputsOpen((prev) => !prev)}
-            className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+            onClick={() => void openCandidate(candidate, i === 0)}
+            className={cn(
+              "inline-flex items-center gap-1 text-[11px] transition-colors",
+              candidate.allowed
+                ? "text-muted-foreground hover:text-foreground"
+                : "cursor-not-allowed text-red-500/50",
+            )}
+            disabled={!candidate.allowed}
+            title={candidate.resolvedPath}
           >
-            <ChevronRight
-              className={cn(
-                "h-3 w-3 transition-transform",
-                moreOutputsOpen && "rotate-90",
-              )}
-            />
-            More outputs ({display.secondaryCandidates.length})
+            <FolderOpen className="h-3 w-3 shrink-0" />
+            <span className="truncate underline underline-offset-2 decoration-border">
+              {getFileName(candidate.rawPath || candidate.resolvedPath)}
+            </span>
           </button>
-          {moreOutputsOpen && (
-            <div className="space-y-1.5 pl-4">
-              {display.secondaryCandidates.map((candidate) => (
-                <div key={candidate.id} className="space-y-0.5">
-                  <button
-                    type="button"
-                    onClick={() => void openCandidate(candidate, false)}
-                    className={cn(
-                      "inline-flex max-w-full items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] transition-colors",
-                      candidate.allowed
-                        ? "border-border bg-accent text-muted-foreground hover:bg-accent/80 hover:text-foreground"
-                        : "cursor-not-allowed border-red-500/20 bg-red-500/[0.03] text-red-500/70",
-                    )}
-                    disabled={!candidate.allowed}
-                    title={candidate.resolvedPath}
-                  >
-                    <FolderOpen className="h-3 w-3 shrink-0" />
-                    <span className="truncate">
-                      {kindLabel[candidate.kind] ?? "Open"}
-                    </span>
-                    <span className="truncate text-[10px] text-muted-foreground">
-                      {candidate.rawPath || candidate.resolvedPath}
-                    </span>
-                    {candidate.confidence === "low" && (
-                      <span className="text-[10px] text-muted-foreground/70 italic">
-                        detected
-                      </span>
-                    )}
-                  </button>
-                  {!candidate.allowed && candidate.blockedReason && (
-                    <p className="text-[11px] text-destructive">
-                      {candidate.blockedReason}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
+        ))}
+      </div>
       {openError && <p className="text-[11px] text-destructive">{openError}</p>}
+    </div>
+  );
+}
+
+function FlatFileLabel({
+  title,
+  args,
+  name,
+  result,
+  statusBadge,
+}: {
+  title?: string;
+  args: Record<string, unknown>;
+  name: string;
+  result?: string;
+  statusBadge: React.ReactNode;
+}) {
+  const { resolveToolCardDisplay } = useArtifactPolicyContext();
+  const display = useMemo(
+    () => resolveToolCardDisplay(args, name, result),
+    [args, name, resolveToolCardDisplay, result],
+  );
+  const hasArtifact =
+    display.role === "primary_host" && display.primaryCandidate;
+
+  if (!title && !hasArtifact) return null;
+
+  return (
+    <div className="flex items-center gap-1 text-muted-foreground">
+      {hasArtifact ? (
+        <ArtifactActions args={args} name={name} result={result} inline>
+          {title && <span className="text-xs">{title}</span>}
+        </ArtifactActions>
+      ) : (
+        title && <span className="text-xs">{title}</span>
+      )}
+      {statusBadge}
     </div>
   );
 }
@@ -212,32 +228,115 @@ export function ToolCallAdapter({
   status,
   result,
   isError,
+  displayLabel,
+  displayVerb,
+  displayDetail,
+  flat,
 }: ToolCallAdapterProps) {
   const elapsed = useElapsedTime(status);
+  const [isOpen, setIsOpen] = useState(false);
   const state = toolStatusMap[status];
 
+  const baseTitle = displayLabel ?? name;
   const title =
-    status === "executing" && elapsed >= 3 ? `${name} (${elapsed}s)` : name;
+    status === "executing" && elapsed >= 3
+      ? `${baseTitle} (${elapsed}s)`
+      : baseTitle;
 
-  return (
-    <div>
-      <Tool>
-        <ToolHeader
-          type="dynamic-tool"
-          toolName={name}
-          title={title}
-          state={state}
-          showIcon={false}
-        />
-        <ToolContent>
+  if (flat) {
+    return (
+      <div className="w-full">
+        <div className="space-y-2">
           {Object.keys(args).length > 0 && <ToolInput input={args} />}
           <ToolOutput
             output={isError ? undefined : result}
             errorText={isError ? result : undefined}
+            hideLabel
           />
-        </ToolContent>
-      </Tool>
-      <ArtifactActions args={args} name={name} result={result} />
-    </div>
+        </div>
+        <div className="pt-0.5">
+          <FlatFileLabel
+            title={displayDetail}
+            args={args}
+            name={name}
+            result={result}
+            statusBadge={getStatusBadge(state)}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  const verb = displayVerb;
+  const fileDetail = displayDetail;
+
+  return (
+    <LayoutGroup>
+      <div className="relative w-full">
+        <Tool open={isOpen} onOpenChange={setIsOpen}>
+          <CollapsibleTrigger asChild>
+            <motion.button
+              layout
+              type="button"
+              className={cn(
+                "flex w-full items-center gap-1.5 py-px",
+                !isOpen && "text-muted-foreground",
+              )}
+              transition={{ duration: 0.15 }}
+            >
+              <motion.span
+                layout="position"
+                transition={{ duration: 0.15 }}
+                className="font-medium text-sm"
+              >
+                {verb ?? title}
+              </motion.span>
+              <AnimatePresence mode="popLayout">
+                {!isOpen && fileDetail && (
+                  <motion.span
+                    key="file-detail"
+                    layout="position"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                    className="font-medium text-sm"
+                  >
+                    {fileDetail}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+              {getStatusBadge(state)}
+              <motion.div
+                layout="position"
+                animate={{ rotate: isOpen ? 0 : -90 }}
+                transition={{ duration: 0.15 }}
+              >
+                <ChevronDownIcon className="size-3.5 text-muted-foreground" />
+              </motion.div>
+            </motion.button>
+          </CollapsibleTrigger>
+        </Tool>
+        {isOpen && (
+          <div className="ml-[7px] mt-1 border-l border-border py-3 pl-4 animate-in slide-in-from-top-2 fade-in-0 duration-200">
+            <div className="space-y-4">
+              {Object.keys(args).length > 0 && <ToolInput input={args} />}
+              <ToolOutput
+                output={isError ? undefined : result}
+                errorText={isError ? result : undefined}
+                hideLabel
+              />
+            </div>
+            <FlatFileLabel
+              title={fileDetail}
+              args={args}
+              name={name}
+              result={result}
+              statusBadge={null}
+            />
+          </div>
+        )}
+      </div>
+    </LayoutGroup>
   );
 }

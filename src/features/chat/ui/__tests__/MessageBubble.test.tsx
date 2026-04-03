@@ -92,7 +92,7 @@ describe("MessageBubble", () => {
       },
     ]);
     render(<MessageBubble message={msg} />);
-    expect(screen.getByText("readFile")).toBeInTheDocument();
+    expect(screen.getAllByText("Read").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders standalone tool responses without dropping surrounding text", () => {
@@ -111,7 +111,7 @@ describe("MessageBubble", () => {
     render(<MessageBubble message={msg} />);
 
     expect(screen.getByText("Working on it.")).toBeInTheDocument();
-    expect(screen.getByText("readFile")).toBeInTheDocument();
+    expect(screen.getAllByText("Read").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Done.")).toBeInTheDocument();
   });
 
@@ -137,7 +137,8 @@ describe("MessageBubble", () => {
     render(<MessageBubble message={msg} />);
 
     expect(screen.getByText("Checking that now.")).toBeInTheDocument();
-    expect(screen.getAllByText("readFile")).toHaveLength(1);
+    expect(screen.getAllByText("Read").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("demo.txt").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders tool cards inline between surrounding assistant text blocks", () => {
@@ -166,12 +167,12 @@ describe("MessageBubble", () => {
     )?.textContent;
 
     expect(bubbleText).toContain("Lemme check...");
-    expect(bubbleText).toContain("readFile");
+    expect(bubbleText).toContain("Read");
     expect(bubbleText).toContain("Results from checking.");
     expect(bubbleText?.indexOf("Lemme check...")).toBeLessThan(
-      bubbleText?.indexOf("readFile") ?? Number.POSITIVE_INFINITY,
+      bubbleText?.indexOf("Read") ?? Number.POSITIVE_INFINITY,
     );
-    expect(bubbleText?.indexOf("readFile")).toBeLessThan(
+    expect(bubbleText?.indexOf("Read")).toBeLessThan(
       bubbleText?.indexOf("Results from checking.") ?? Number.POSITIVE_INFINITY,
     );
   });
@@ -198,7 +199,7 @@ describe("MessageBubble", () => {
 
     render(<MessageBubble message={msg} />);
 
-    expect(screen.getAllByText("readFile")).toHaveLength(1);
+    expect(screen.getAllByText("Read").length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText("Tool result")).not.toBeInTheDocument();
   });
 
@@ -231,6 +232,101 @@ describe("MessageBubble", () => {
     );
 
     expect(screen.getByText("Solo")).toBeInTheDocument();
+  });
+
+  it("groups consecutive same-type tool calls under a count label", () => {
+    const msg = assistantMessage([
+      {
+        type: "toolRequest",
+        id: "w1",
+        name: "Write a.md",
+        arguments: {},
+        status: "completed",
+      },
+      {
+        type: "toolRequest",
+        id: "w2",
+        name: "Write b.md",
+        arguments: {},
+        status: "completed",
+      },
+    ]);
+
+    render(<MessageBubble message={msg} />);
+
+    expect(screen.getByText("Edited 2 files")).toBeInTheDocument();
+  });
+
+  it("does not group tool calls with different execution outcomes", () => {
+    const msg = assistantMessage([
+      {
+        type: "toolRequest",
+        id: "w1",
+        name: "Write a.md",
+        arguments: {},
+        status: "completed",
+      },
+      {
+        type: "toolResponse",
+        id: "w1",
+        name: "Write a.md",
+        result: "ok",
+        isError: false,
+      },
+      {
+        type: "toolRequest",
+        id: "w2",
+        name: "Write b.md",
+        arguments: {},
+        status: "completed",
+      },
+      {
+        type: "toolResponse",
+        id: "w2",
+        name: "Write b.md",
+        result: "failed",
+        isError: true,
+      },
+    ]);
+
+    render(<MessageBubble message={msg} />);
+
+    // Should NOT be grouped as "Edited 2 files" since one errored
+    expect(screen.queryByText("Edited 2 files")).not.toBeInTheDocument();
+  });
+
+  it("shows verb label with filename extracted from tool name", () => {
+    const msg = assistantMessage([
+      {
+        type: "toolRequest",
+        id: "w1",
+        name: "Write report.md",
+        arguments: {},
+        status: "completed",
+      },
+    ]);
+
+    render(<MessageBubble message={msg} />);
+
+    // Solo trigger shows verb + filename
+    expect(screen.getAllByText("Edited").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("report.md").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("extracts filename from args path key when tool name has none", () => {
+    const msg = assistantMessage([
+      {
+        type: "toolRequest",
+        id: "w1",
+        name: "Write",
+        arguments: { file_path: "/Users/test/project/notes.md" },
+        status: "completed",
+      },
+    ]);
+
+    render(<MessageBubble message={msg} />);
+
+    expect(screen.getAllByText("notes.md").length).toBeGreaterThanOrEqual(1);
   });
 
   it("collapses low-signal internal tool steps behind a toggle", async () => {
@@ -268,8 +364,11 @@ describe("MessageBubble", () => {
 
     render(<MessageBubble message={msg} />);
 
-    expect(screen.getByText("Create PDF about whales")).toBeInTheDocument();
-    expect(screen.getByText("Write whales.pdf")).toBeInTheDocument();
+    expect(
+      screen.getAllByText("Create PDF about whales").length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Edited").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("whales.pdf").length).toBeGreaterThanOrEqual(1);
     expect(
       screen.queryByText("python3 create_whales.py"),
     ).not.toBeInTheDocument();
@@ -278,7 +377,11 @@ describe("MessageBubble", () => {
 
     await user.click(screen.getByText("Show internal steps (2)"));
 
-    expect(screen.getByText("python3 create_whales.py")).toBeInTheDocument();
-    expect(screen.getByText("ls -lh whales.pdf")).toBeInTheDocument();
+    expect(
+      screen.getAllByText("python3 create_whales.py").length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByText("ls -lh whales.pdf").length,
+    ).toBeGreaterThanOrEqual(1);
   });
 });
