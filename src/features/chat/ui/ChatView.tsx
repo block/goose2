@@ -112,7 +112,7 @@ export function ChatView({
         .map((projectInfo) => ({
           id: projectInfo.id,
           name: projectInfo.name,
-          workingDir: projectInfo.workingDirs[0] ?? null,
+          workingDirs: projectInfo.workingDirs,
           color: projectInfo.color,
         })),
     [projects],
@@ -451,7 +451,7 @@ export function ChatView({
                   <ContextPanel
                     projectName={project?.name}
                     projectColor={project?.color}
-                    projectWorkingDir={project?.workingDirs[0] ?? null}
+                    projectWorkingDirs={project?.workingDirs ?? []}
                   />
                 </aside>
               </motion.div>

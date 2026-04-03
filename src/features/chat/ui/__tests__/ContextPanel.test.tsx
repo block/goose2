@@ -54,7 +54,7 @@ describe("ContextPanel", () => {
       <ContextPanel
         projectName="Desktop UX"
         projectColor="#22c55e"
-        projectWorkingDir="/Users/test/goose2"
+        projectWorkingDirs={["/Users/test/goose2"]}
       />,
     );
 
@@ -87,7 +87,7 @@ describe("ContextPanel", () => {
       refetch: vi.fn(),
     });
 
-    render(<ContextPanel projectWorkingDir="/Users/test/not-a-repo" />);
+    render(<ContextPanel projectWorkingDirs={["/Users/test/not-a-repo"]} />);
 
     expect(screen.getByText("Not a git repository.")).toBeInTheDocument();
   });

@@ -143,7 +143,7 @@ describe("ChatInput", () => {
           {
             id: "project-1",
             name: "goose2",
-            workingDir: "/Users/wesb/dev/goose2",
+            workingDirs: ["/Users/wesb/dev/goose2"],
           },
         ]}
       />,
@@ -169,7 +169,7 @@ describe("ChatInput", () => {
           {
             id: "project-1",
             name: "goose2",
-            workingDir: "/Users/wesb/dev/goose2",
+            workingDirs: ["/Users/wesb/dev/goose2"],
           },
         ]}
       />,

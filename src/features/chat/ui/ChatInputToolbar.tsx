@@ -111,7 +111,9 @@ export function ChatInputToolbar({
     (project) => project.id === selectedProjectId,
   );
   const projectLabel = selectedProject?.name ?? "No project";
-  const projectTitle = selectedProject?.workingDir ?? undefined;
+  const projectTitle = selectedProject?.workingDirs.length
+    ? selectedProject.workingDirs.join(", ")
+    : undefined;
   const providerLabel =
     availableProviderItems.find((provider) => provider.id === selectedProvider)
       ?.label ?? formatProviderLabel(selectedProvider);
@@ -219,7 +221,9 @@ export function ChatInputToolbar({
                 ...availableProjects.map((project) => ({
                   value: project.id,
                   label: project.name,
-                  description: project.workingDir ?? undefined,
+                  description: project.workingDirs.length
+                    ? project.workingDirs.join(", ")
+                    : undefined,
                   icon: <ProjectDot color={project.color} />,
                 })),
               ],

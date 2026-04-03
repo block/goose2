@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 interface ContextPanelProps {
   projectName?: string;
   projectColor?: string;
-  projectWorkingDir?: string | null;
+  projectWorkingDirs?: string[];
 }
 
 type ContextPanelTab = "details" | "files";
@@ -52,16 +52,17 @@ function Widget({
 export function ContextPanel({
   projectName,
   projectColor,
-  projectWorkingDir,
+  projectWorkingDirs = [],
 }: ContextPanelProps) {
   const [activeTab, setActiveTab] = useState<ContextPanelTab>("details");
+  const primaryWorkingDir = projectWorkingDirs[0] ?? null;
   const {
     data: gitState,
     error,
     isLoading,
     isFetching,
     refetch,
-  } = useGitState(projectWorkingDir, activeTab === "details");
+  } = useGitState(primaryWorkingDir, activeTab === "details");
 
   const gitErrorMessage =
     error instanceof Error ? error.message : "Unable to read git status.";
@@ -94,7 +95,7 @@ export function ContextPanel({
                 variant="ghost"
                 size="icon-xs"
                 onClick={() => void refetch()}
-                disabled={!projectWorkingDir || isFetching}
+                disabled={!primaryWorkingDir || isFetching}
                 className="rounded-md"
                 aria-label="Refresh git status"
                 title="Refresh git status"
@@ -125,11 +126,17 @@ export function ContextPanel({
               ) : (
                 <p className="text-foreground-subtle">No project assigned.</p>
               )}
-              <p className="truncate">
-                {projectWorkingDir ?? "Folder not set"}
-              </p>
+              {projectWorkingDirs.length > 0 ? (
+                projectWorkingDirs.map((dir) => (
+                  <p key={dir} className="truncate">
+                    {dir}
+                  </p>
+                ))
+              ) : (
+                <p className="truncate">Folder not set</p>
+              )}
 
-              {!projectWorkingDir ? null : isLoading && !gitState ? (
+              {!primaryWorkingDir ? null : isLoading && !gitState ? (
                 <div className="flex items-center gap-2 text-foreground">
                   <Spinner className="size-3.5" />
                   <span>Loading git status…</span>

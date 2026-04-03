@@ -28,7 +28,7 @@ export interface ModelOption {
 export interface ProjectOption {
   id: string;
   name: string;
-  workingDir?: string | null;
+  workingDirs: string[];
   color?: string | null;
 }
 
