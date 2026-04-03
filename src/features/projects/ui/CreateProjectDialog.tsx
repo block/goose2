@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { FolderOpen } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { getHomeDir } from "@/shared/api/system";
@@ -133,9 +133,21 @@ export function CreateProjectDialog({
     }
   };
 
-  // Pre-fill fields when editing, reset to defaults for new
+  // Pre-fill fields when the dialog opens or when the project identity changes,
+  // but NOT on every parent re-render (which would reset user edits mid-typing).
+  const prevOpenRef = useRef(false);
+  const prevEditingIdRef = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (isOpen && editingProject) {
+    const justOpened = isOpen && !prevOpenRef.current;
+    prevOpenRef.current = isOpen;
+
+    const projectIdChanged =
+      isOpen && !justOpened && editingProject?.id !== prevEditingIdRef.current;
+    prevEditingIdRef.current = editingProject?.id;
+
+    if (!justOpened && !projectIdChanged) return;
+
+    if (editingProject) {
       setName(editingProject.name);
       setPrompt(
         buildEditorText(editingProject.workingDirs, editingProject.prompt),
@@ -144,7 +156,7 @@ export function CreateProjectDialog({
       setPreferredProvider(editingProject.preferredProvider ?? null);
       setUseWorktrees(editingProject.useWorktrees);
       setError(null);
-    } else if (isOpen) {
+    } else {
       setName(getDefaultProjectName(initialWorkingDir));
       setPrompt(
         buildEditorText(
