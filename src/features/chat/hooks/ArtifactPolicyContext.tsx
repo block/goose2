@@ -65,7 +65,7 @@ const ArtifactPolicyContext = createContext<ArtifactPolicyContextValue>(
 
 function shortenPath(fullPath: string, homeDir: string | null): string {
   if (homeDir && fullPath.startsWith(homeDir)) {
-    return "~" + fullPath.slice(homeDir.length);
+    return `~${fullPath.slice(homeDir.length)}`;
   }
   return fullPath;
 }
