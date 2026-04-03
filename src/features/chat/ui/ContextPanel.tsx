@@ -1,21 +1,14 @@
 import { type ReactNode, useState } from "react";
 import {
-  Activity,
-  FileCode,
-  FileText,
-  FolderOpen,
-  GitBranch,
-  RefreshCw,
-  Server,
-} from "lucide-react";
+  IconFolder,
+  IconGitBranch,
+  IconRefresh,
+  IconServer,
+  IconFileCode,
+  IconActivity,
+} from "@tabler/icons-react";
 import { useGitState } from "@/shared/hooks/useGitState";
 import { Badge } from "@/shared/ui/badge";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/shared/ui/accordion";
 import { Button } from "@/shared/ui/button";
 import { Spinner } from "@/shared/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
@@ -28,36 +21,31 @@ interface ContextPanelProps {
 
 type ContextPanelTab = "details" | "files";
 
-function PanelSection({
-  value,
+function Widget({
   title,
   icon,
+  action,
   children,
 }: {
-  value: string;
   title: string;
   icon: ReactNode;
+  action?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <AccordionItem value={value}>
-      <AccordionTrigger className="px-4 py-2.5 text-xs font-medium hover:bg-background-secondary/60 hover:no-underline">
-        <span className="flex items-center gap-2">
+    <div className="overflow-hidden rounded-md border border-border">
+      <div className="flex h-8 items-center justify-between bg-background-alt px-3">
+        <div className="flex items-center gap-2 text-xs font-medium text-foreground">
           {icon}
           <span>{title}</span>
-        </span>
-      </AccordionTrigger>
-      <AccordionContent className="px-4 pb-3">{children}</AccordionContent>
-    </AccordionItem>
+        </div>
+        {action}
+      </div>
+      <div className="px-3 py-2.5 text-xs text-foreground-subtle">
+        {children}
+      </div>
+    </div>
   );
-}
-
-function formatDirtyFileCount(count: number) {
-  if (count === 0) {
-    return "Clean";
-  }
-
-  return count === 1 ? "1 file changed" : `${count} files changed`;
 }
 
 export function ContextPanel({
@@ -74,10 +62,6 @@ export function ContextPanel({
     refetch,
   } = useGitState(projectWorkingDir, activeTab === "details");
 
-  const branchName = gitState?.currentBranch ?? "Detached HEAD";
-  const dirtyLabel = gitState
-    ? formatDirtyFileCount(gitState.dirtyFileCount)
-    : null;
   const gitErrorMessage =
     error instanceof Error ? error.message : "Unable to read git status.";
 
@@ -85,9 +69,9 @@ export function ContextPanel({
     <Tabs
       value={activeTab}
       onValueChange={(value) => setActiveTab(value as ContextPanelTab)}
-      className="h-full"
+      className="flex h-full min-w-0 flex-1 flex-col"
     >
-      <div className="border-b border-border px-3 pb-2 pt-2.5">
+      <div className="shrink-0 border-b border-border px-3 pb-2 pt-2.5">
         <TabsList variant="buttons">
           <TabsTrigger value="details" variant="buttons">
             Details
@@ -98,148 +82,116 @@ export function ContextPanel({
         </TabsList>
       </div>
 
-      <TabsContent value="details">
-        <div className="h-full overflow-y-auto">
-          <Accordion
-            type="multiple"
-            defaultValue={["workspace", "processes", "changes", "mcpServers"]}
+      <TabsContent value="details" className="flex-1 overflow-y-auto">
+        <div className="space-y-2.5 px-3 pb-3 pt-2">
+          <Widget
+            title="Workspace"
+            icon={<IconFolder className="size-3.5" />}
+            action={
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                onClick={() => void refetch()}
+                disabled={!projectWorkingDir || isFetching}
+                className="rounded-md"
+                aria-label="Refresh git status"
+                title="Refresh git status"
+              >
+                {isFetching ? (
+                  <Spinner className="size-3" />
+                ) : (
+                  <IconRefresh className="size-3" />
+                )}
+              </Button>
+            }
           >
-            <PanelSection
-              value="workspace"
-              title="Workspace"
-              icon={<FolderOpen className="h-3.5 w-3.5" />}
-            >
-              <div className="space-y-3 text-xs text-foreground-secondary">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 space-y-2">
-                    {projectName ? (
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="inline-block h-2 w-2 rounded-full"
-                          style={
-                            projectColor
-                              ? { backgroundColor: projectColor }
-                              : undefined
-                          }
-                        />
-                        <span className="truncate text-foreground">
-                          {projectName}
+            <div className="space-y-2">
+              {projectName ? (
+                <div className="flex items-center gap-2">
+                  <span
+                    className="inline-block size-2 shrink-0 rounded-full"
+                    style={
+                      projectColor
+                        ? { backgroundColor: projectColor }
+                        : undefined
+                    }
+                  />
+                  <span className="truncate text-foreground">
+                    {projectName}
+                  </span>
+                </div>
+              ) : (
+                <p className="text-foreground-subtle">No project assigned.</p>
+              )}
+              <p className="truncate">
+                {projectWorkingDir ?? "Folder not set"}
+              </p>
+
+              {!projectWorkingDir ? null : isLoading && !gitState ? (
+                <div className="flex items-center gap-2 text-foreground">
+                  <Spinner className="size-3.5" />
+                  <span>Loading git status…</span>
+                </div>
+              ) : error ? (
+                <p className="text-destructive">{gitErrorMessage}</p>
+              ) : gitState?.isGitRepo ? (
+                <div className="space-y-1 border-t border-border pt-2">
+                  {gitState.worktrees.map((wt) => (
+                    <div
+                      key={wt.path}
+                      className="flex items-center justify-between gap-2"
+                    >
+                      <div className="flex min-w-0 items-center gap-1.5 text-foreground">
+                        <IconGitBranch className="size-3.5 shrink-0" />
+                        <span className="truncate">
+                          {wt.branch ?? "detached"}
                         </span>
                       </div>
-                    ) : (
-                      <p>No project assigned.</p>
-                    )}
-                    <p className="truncate">
-                      {projectWorkingDir
-                        ? `Folder: ${projectWorkingDir}`
-                        : "Folder not set"}
-                    </p>
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    onClick={() => void refetch()}
-                    disabled={!projectWorkingDir || isFetching}
-                    className="rounded-md"
-                    aria-label="Refresh git status"
-                    title="Refresh git status"
-                  >
-                    {isFetching ? (
-                      <Spinner className="size-3" />
-                    ) : (
-                      <RefreshCw className="size-3" />
-                    )}
-                  </Button>
+                      {wt.isMain ? (
+                        <Badge variant="outline" className="text-[10px]">
+                          Main
+                        </Badge>
+                      ) : null}
+                    </div>
+                  ))}
                 </div>
+              ) : (
+                <p>Not a git repository.</p>
+              )}
+            </div>
+          </Widget>
 
-                {!projectWorkingDir ? null : isLoading && !gitState ? (
-                  <div className="flex items-center gap-2 text-foreground">
-                    <Spinner className="size-3.5" />
-                    <span>Loading git status...</span>
-                  </div>
-                ) : error ? (
-                  <p className="text-destructive">{gitErrorMessage}</p>
-                ) : gitState?.isGitRepo ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex min-w-0 items-center gap-2 text-foreground">
-                        <GitBranch className="h-3.5 w-3.5 shrink-0" />
-                        <span className="truncate">{branchName}</span>
-                      </div>
-                      <Badge variant="outline">
-                        {gitState.isWorktree ? "Worktree" : "Main repo"}
-                      </Badge>
-                    </div>
+          <Widget title="Changes" icon={<IconFileCode className="size-3.5" />}>
+            <p className="text-foreground-subtle">No changes</p>
+          </Widget>
 
-                    <div className="flex items-center justify-between gap-2">
-                      <span>{dirtyLabel}</span>
-                      <Badge
-                        variant={
-                          gitState.dirtyFileCount > 0 ? "secondary" : "outline"
-                        }
-                      >
-                        {gitState.dirtyFileCount > 0 ? "Changed" : "Clean"}
-                      </Badge>
-                    </div>
+          <Widget
+            title="MCP Servers"
+            icon={<IconServer className="size-3.5" />}
+          >
+            <p className="text-foreground-subtle">No servers configured</p>
+          </Widget>
 
-                    {gitState.worktrees.length > 1 ? (
-                      <p>{`${gitState.worktrees.length} worktrees detected`}</p>
-                    ) : null}
-                  </div>
-                ) : (
-                  <p>Not a git repository.</p>
-                )}
-              </div>
-            </PanelSection>
-
-            <PanelSection
-              value="processes"
-              title="Processes"
-              icon={<Activity className="h-3.5 w-3.5" />}
-            >
-              <p className="text-xs text-foreground-secondary">
-                Not wired yet in goose2: running/background process state and
-                stop actions.
-              </p>
-            </PanelSection>
-
-            <PanelSection
-              value="changes"
-              title="Changes"
-              icon={<FileCode className="h-3.5 w-3.5" />}
-            >
-              <p className="text-xs text-foreground-secondary">
-                Not wired yet in goose2: git file changes and diff counts.
-              </p>
-            </PanelSection>
-
-            <PanelSection
-              value="mcpServers"
-              title="MCP Servers"
-              icon={<Server className="h-3.5 w-3.5" />}
-            >
-              <p className="text-xs text-foreground-secondary">
-                Not wired yet in goose2: configured MCP server discovery and
-                status.
-              </p>
-            </PanelSection>
-          </Accordion>
+          <Widget
+            title="Processes"
+            icon={<IconActivity className="size-3.5" />}
+          >
+            <p className="text-foreground-subtle">No active processes</p>
+          </Widget>
         </div>
       </TabsContent>
 
-      <TabsContent value="files">
-        <div className="h-full overflow-y-auto">
-          <div className="px-4 pb-4 pt-3">
-            <div className="flex items-center gap-2 text-xs text-foreground-secondary">
-              <FileText className="h-3.5 w-3.5" />
-              <span>Files for this session</span>
-            </div>
-            <p className="mt-2 text-xs text-foreground-secondary">
-              Not wired yet in goose2: artifact list and file opening behavior.
+      <TabsContent value="files" className="flex-1 overflow-y-auto">
+        <div className="p-3">
+          <Widget
+            title="Session Files"
+            icon={<IconFileCode className="size-3.5" />}
+          >
+            <p className="text-foreground-subtle">
+              No files for this session yet.
             </p>
-          </div>
+          </Widget>
         </div>
       </TabsContent>
     </Tabs>

@@ -55,17 +55,14 @@ describe("ContextPanel", () => {
     expect(screen.getByText("Workspace")).toBeInTheDocument();
     expect(screen.getByText("Desktop UX")).toBeInTheDocument();
     expect(screen.getByText("main")).toBeInTheDocument();
-    expect(screen.getByText("3 files changed")).toBeInTheDocument();
-    expect(screen.getByText("Main repo")).toBeInTheDocument();
-    expect(screen.getByText("2 worktrees detected")).toBeInTheDocument();
+    expect(screen.getByText("feat/context-panel")).toBeInTheDocument();
+    expect(screen.getByText("Main")).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: /files/i }));
 
-    expect(screen.getByText("Files for this session")).toBeInTheDocument();
+    expect(screen.getByText("Session Files")).toBeInTheDocument();
     expect(
-      screen.getByText(
-        /Not wired yet in goose2: artifact list and file opening behavior/i,
-      ),
+      screen.getByText("No files for this session yet."),
     ).toBeInTheDocument();
   });
 
