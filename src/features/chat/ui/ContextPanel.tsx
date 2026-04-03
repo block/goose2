@@ -7,6 +7,7 @@ import {
   IconFileCode,
   IconActivity,
 } from "@tabler/icons-react";
+import { FilesList } from "./FilesList";
 import { useGitState } from "@/shared/hooks/useGitState";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -183,16 +184,7 @@ export function ContextPanel({
       </TabsContent>
 
       <TabsContent value="files" className="flex-1 overflow-y-auto">
-        <div className="p-3">
-          <Widget
-            title="Session Files"
-            icon={<IconFileCode className="size-3.5" />}
-          >
-            <p className="text-foreground-subtle">
-              No files for this session yet.
-            </p>
-          </Widget>
-        </div>
+        <FilesList />
       </TabsContent>
     </Tabs>
   );

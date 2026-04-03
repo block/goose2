@@ -9,6 +9,14 @@ vi.mock("@/shared/hooks/useGitState", () => ({
   useGitState: (...args: unknown[]) => mockUseGitState(...args),
 }));
 
+vi.mock("../../hooks/ArtifactPolicyContext", () => ({
+  useArtifactPolicyContext: () => ({
+    getAllSessionArtifacts: () => [],
+    openResolvedPath: vi.fn(),
+    pathExists: () => Promise.resolve(true),
+  }),
+}));
+
 describe("ContextPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -60,10 +68,7 @@ describe("ContextPanel", () => {
 
     await user.click(screen.getByRole("tab", { name: /files/i }));
 
-    expect(screen.getByText("Session Files")).toBeInTheDocument();
-    expect(
-      screen.getByText("No files for this session yet."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("No files yet")).toBeInTheDocument();
   });
 
   it("shows a non-repo fallback message", async () => {

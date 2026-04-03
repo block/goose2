@@ -96,12 +96,16 @@ function shortToolName(toolName: string): string {
 
 export function isWriteOrientedTool(toolName: string): boolean {
   const normalized = toolName.trim().toLowerCase();
-  if (/^(write|create|save)\b/.test(normalized)) return true;
+  if (/^(write|create|save|edit|update|modify|patch)\b/.test(normalized))
+    return true;
   const shortName = shortToolName(toolName);
   return (
     shortName.includes("write_file") ||
     shortName.includes("create_file") ||
-    shortName.includes("save_file")
+    shortName.includes("save_file") ||
+    shortName.includes("edit_file") ||
+    shortName.includes("update_file") ||
+    shortName.includes("modify_file")
   );
 }
 
@@ -210,7 +214,7 @@ function extractResultPathCandidates(result: string): string[] {
   return matches;
 }
 
-function inferHomeDirFromRoots(allowedRoots: string[]): string | null {
+export function inferHomeDirFromRoots(allowedRoots: string[]): string | null {
   for (const root of allowedRoots) {
     const normalized = normalizePath(root);
     const usersMatch = normalized.match(/^\/Users\/[^/]+/);
