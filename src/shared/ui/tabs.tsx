@@ -20,7 +20,7 @@ const tabsListVariants = cva(
 );
 
 const tabsTriggerVariants = cva(
-  "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring inline-flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap transition-[color,box-shadow,background-color,border-color] focus-visible:ring-[1px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap transition-[color,box-shadow,background-color,border-color] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {

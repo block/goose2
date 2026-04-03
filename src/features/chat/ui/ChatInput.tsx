@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import type { AcpProvider } from "@/shared/api/acp";
 import type { Persona } from "@/shared/types/agents";
 import { cn } from "@/shared/lib/cn";
+import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import {
   MentionAutocomplete,
@@ -15,6 +16,7 @@ import { PersonaAvatar } from "./PersonaPicker";
 import { ImageLightbox } from "@/shared/ui/ImageLightbox";
 import type { PastedImage } from "@/shared/types/messages";
 import { resizeImage } from "../lib/resizeImage";
+import { useImageDropTarget } from "../hooks/useImageDropTarget";
 
 export interface ModelOption {
   id: string;
@@ -83,7 +85,7 @@ function PastedImageThumb({
         <button
           type="button"
           onClick={() => setLightboxOpen(true)}
-          className="block cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="block cursor-pointer rounded-lg"
           aria-label={`View attachment ${index + 1}`}
         >
           <img
@@ -308,26 +310,17 @@ export function ChatInput({
     [addImageFile],
   );
 
-  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    const hasImages = Array.from(e.dataTransfer.items).some((item) =>
-      item.type.startsWith("image/"),
-    );
-    if (hasImages) e.preventDefault();
-  }, []);
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent<HTMLDivElement>) => {
-      const files = Array.from(e.dataTransfer.files).filter((f) =>
-        f.type.startsWith("image/"),
-      );
-      if (files.length === 0) return;
-      e.preventDefault();
-      for (const file of files) {
-        addImageFile(file);
-      }
-    },
-    [addImageFile],
-  );
+  const {
+    isImageDragOver,
+    handleDragEnter,
+    handleDragOver,
+    handleDragLeave,
+    handleDrop,
+  } = useImageDropTarget({
+    disabled,
+    isStreaming,
+    onDropFile: addImageFile,
+  });
 
   const removeImage = useCallback((index: number) => {
     setImages((prev) => {
@@ -352,10 +345,25 @@ export function ChatInput({
         <div className="mx-auto max-w-3xl">
           {/* biome-ignore lint/a11y/noStaticElementInteractions: drop zone for image files */}
           <div
-            className="relative rounded-2xl border border-border bg-background px-4 pb-3 pt-4"
+            className={cn(
+              "relative rounded-2xl border border-border bg-background px-4 pb-3 pt-4 transition-colors",
+              isImageDragOver && "bg-muted/20",
+            )}
+            onDragEnter={handleDragEnter}
             onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
+            {isImageDragOver && (
+              <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-2xl border border-dashed border-border bg-background/70">
+                <Badge
+                  variant="secondary"
+                  className="px-3 py-1 text-sm shadow-sm"
+                >
+                  Drop images to attach
+                </Badge>
+              </div>
+            )}
             <MentionAutocomplete
               personas={personas}
               query={mentionQuery}

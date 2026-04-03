@@ -8,7 +8,7 @@ export function ClickableImage({ src, alt }: { src: string; alt: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="cursor-pointer rounded-lg"
         aria-label={`View ${alt}`}
       >
         <img

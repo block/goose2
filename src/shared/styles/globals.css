@@ -755,13 +755,22 @@ body,
 @layer components {
   *:not(body):not(.focus-override) {
     outline: none !important;
+  }
+
+  html[data-keyboard-nav] *:not(body):not(.focus-override) {
     &:focus-visible {
       @apply focus-visible:ring-ring focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-hidden;
     }
   }
 
   .link {
-    @apply hover:text-foreground/80 focus-visible:ring-ring focus-visible:ring-offset-background inline-flex items-center gap-1 rounded-xs font-medium underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden;
+    @apply hover:text-foreground/80 inline-flex items-center gap-1 rounded-xs font-medium underline underline-offset-4;
+  }
+
+  html[data-keyboard-nav] *:not(body):not(.focus-override).link {
+    &:focus-visible {
+      @apply ring-ring ring-offset-background ring-2 ring-offset-2 outline-hidden;
+    }
   }
 }
 

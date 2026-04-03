@@ -103,30 +103,30 @@ export function ChatInputSelector({
                 key={item.value}
                 disabled={item.disabled}
                 onSelect={() => onValueChange(item.value)}
-                className={cn(
-                  "gap-2 justify-between",
-                  item.description ? "items-start" : "items-center",
-                )}
+                className="justify-between gap-2"
               >
-                {item.icon ? (
-                  <span
-                    className={cn("shrink-0", item.description && "mt-1.5")}
-                  >
-                    {item.icon}
-                  </span>
-                ) : null}
-                <div className="min-w-0 flex-1">
-                  <span className="block truncate font-normal">
-                    {item.label}
-                  </span>
-                  {item.description ? (
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {item.description}
-                    </span>
+                <div
+                  className={cn(
+                    "min-w-0 flex flex-1 gap-2",
+                    item.description ? "items-start" : "items-center",
+                  )}
+                >
+                  {item.icon ? (
+                    <span className="shrink-0">{item.icon}</span>
                   ) : null}
+                  <div className="min-w-0 flex-1">
+                    <span className="block truncate font-normal">
+                      {item.label}
+                    </span>
+                    {item.description ? (
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {item.description}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
                 {item.value === value ? (
-                  <Check className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                  <Check className="size-4 shrink-0 self-center text-muted-foreground" />
                 ) : null}
               </DropdownMenuItem>
             ))}

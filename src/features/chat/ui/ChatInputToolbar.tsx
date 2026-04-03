@@ -1,11 +1,4 @@
-import {
-  Paperclip,
-  Mic,
-  ChevronDown,
-  Check,
-  ArrowUp,
-  Square,
-} from "lucide-react";
+import { Mic, ChevronDown, Check, ArrowUp, Square } from "lucide-react";
 import {
   formatProviderLabel,
   getProviderIcon,
@@ -276,16 +269,6 @@ export function ChatInputToolbar({
               <ContextRing tokens={contextTokens} limit={contextLimit} />
             </Button>
           )}
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Attach file"
-            title="Attach file"
-          >
-            <Paperclip />
-          </Button>
 
           <Tooltip>
             <TooltipTrigger asChild>
