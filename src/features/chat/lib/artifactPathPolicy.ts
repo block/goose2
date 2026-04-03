@@ -16,6 +16,7 @@ import {
 export {
   evaluatePathScope,
   extractToolCallCandidates,
+  inferHomeDirFromRoots,
   isExternalHref,
   normalizePath,
   resolveMarkdownLocalHref,

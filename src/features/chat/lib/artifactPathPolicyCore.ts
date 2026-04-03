@@ -210,7 +210,7 @@ function extractResultPathCandidates(result: string): string[] {
   return matches;
 }
 
-function inferHomeDirFromRoots(allowedRoots: string[]): string | null {
+export function inferHomeDirFromRoots(allowedRoots: string[]): string | null {
   for (const root of allowedRoots) {
     const normalized = normalizePath(root);
     const usersMatch = normalized.match(/^\/Users\/[^/]+/);

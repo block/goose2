@@ -11,6 +11,7 @@ import type { Message } from "@/shared/types/messages";
 import { pathExists } from "@/shared/api/system";
 import {
   buildArtifactsIndexForMessages,
+  inferHomeDirFromRoots,
   resolveMarkdownLocalHref,
   type ArtifactPathCandidate,
 } from "@/features/chat/lib/artifactPathPolicy";
@@ -19,6 +20,17 @@ export interface ToolCardDisplay {
   role: "primary_host" | "none";
   primaryCandidate: ArtifactPathCandidate | null;
   secondaryCandidates: ArtifactPathCandidate[];
+}
+
+export interface SessionArtifact {
+  resolvedPath: string;
+  displayPath: string;
+  filename: string;
+  directoryPath: string;
+  versionCount: number;
+  lastTouchedAt: number;
+  kind: "file" | "folder" | "path";
+  toolName: string | null;
 }
 
 interface ArtifactPolicyContextValue {
@@ -30,6 +42,7 @@ interface ArtifactPolicyContextValue {
   resolveMarkdownHref: (href: string) => ArtifactPathCandidate | null;
   pathExists: (path: string) => Promise<boolean>;
   openResolvedPath: (path: string) => Promise<void>;
+  getAllSessionArtifacts: () => SessionArtifact[];
 }
 
 const EMPTY_DISPLAY: ToolCardDisplay = {
@@ -43,11 +56,30 @@ const DEFAULT_CONTEXT_VALUE: ArtifactPolicyContextValue = {
   resolveMarkdownHref: () => null,
   pathExists: async () => false,
   openResolvedPath: async () => {},
+  getAllSessionArtifacts: () => [],
 };
 
 const ArtifactPolicyContext = createContext<ArtifactPolicyContextValue>(
   DEFAULT_CONTEXT_VALUE,
 );
+
+function shortenPath(fullPath: string, homeDir: string | null): string {
+  if (homeDir && fullPath.startsWith(homeDir)) {
+    return "~" + fullPath.slice(homeDir.length);
+  }
+  return fullPath;
+}
+
+function parentDir(path: string): string {
+  const lastSlash = path.lastIndexOf("/");
+  if (lastSlash <= 0) return "/";
+  return path.slice(0, lastSlash + 1);
+}
+
+function basenameOf(path: string): string {
+  const parts = path.split("/").filter(Boolean);
+  return parts[parts.length - 1] ?? path;
+}
 
 export function ArtifactPolicyProvider({
   messages,
@@ -118,15 +150,66 @@ export function ArtifactPolicyProvider({
     [checkPathExists],
   );
 
+  const getAllSessionArtifacts = useCallback((): SessionArtifact[] => {
+    const index = buildArtifactsIndexForMessages(messages, normalizedRoots);
+    const homeDir =
+      normalizedRoots.length > 0
+        ? inferHomeDirFromRoots(normalizedRoots)
+        : null;
+
+    const artifactMap = new Map<string, SessionArtifact>();
+
+    for (const [messageId, ranking] of index.byMessageId.entries()) {
+      const message = messages.find((m) => m.id === messageId);
+      const timestamp = message?.created ?? 0;
+
+      for (const candidates of ranking.candidatesByToolCallId.values()) {
+        for (const candidate of candidates) {
+          if (!candidate.allowed) continue;
+          const key = candidate.resolvedPath.trim().toLowerCase();
+          const existing = artifactMap.get(key);
+
+          if (existing) {
+            existing.versionCount += 1;
+            if (timestamp > existing.lastTouchedAt) {
+              existing.lastTouchedAt = timestamp;
+              existing.toolName = candidate.toolName;
+            }
+          } else {
+            artifactMap.set(key, {
+              resolvedPath: candidate.resolvedPath,
+              displayPath: shortenPath(candidate.resolvedPath, homeDir),
+              filename: basenameOf(candidate.resolvedPath),
+              directoryPath: shortenPath(
+                parentDir(candidate.resolvedPath),
+                homeDir,
+              ),
+              versionCount: 1,
+              lastTouchedAt: timestamp,
+              kind: candidate.kind,
+              toolName: candidate.toolName,
+            });
+          }
+        }
+      }
+    }
+
+    return Array.from(artifactMap.values()).sort(
+      (a, b) => b.lastTouchedAt - a.lastTouchedAt,
+    );
+  }, [messages, normalizedRoots]);
+
   const contextValue = useMemo<ArtifactPolicyContextValue>(
     () => ({
       resolveToolCardDisplay,
       resolveMarkdownHref,
       pathExists: checkPathExists,
       openResolvedPath,
+      getAllSessionArtifacts,
     }),
     [
       checkPathExists,
+      getAllSessionArtifacts,
       openResolvedPath,
       resolveMarkdownHref,
       resolveToolCardDisplay,
