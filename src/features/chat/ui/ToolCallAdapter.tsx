@@ -192,7 +192,7 @@ function FlatFileLabel({
   result,
   statusBadge,
 }: {
-  title: string;
+  title?: string;
   args: Record<string, unknown>;
   name: string;
   result?: string;
@@ -206,14 +206,16 @@ function FlatFileLabel({
   const hasArtifact =
     display.role === "primary_host" && display.primaryCandidate;
 
+  if (!title && !hasArtifact) return null;
+
   return (
     <div className="flex items-center gap-1 text-muted-foreground">
       {hasArtifact ? (
         <ArtifactActions args={args} name={name} result={result} inline>
-          <span className="text-xs">{title}</span>
+          {title && <span className="text-xs">{title}</span>}
         </ArtifactActions>
       ) : (
-        <span className="text-xs">{title}</span>
+        title && <span className="text-xs">{title}</span>
       )}
       {statusBadge}
     </div>
@@ -326,11 +328,11 @@ export function ToolCallAdapter({
               />
             </div>
             <FlatFileLabel
-              title={fileDetail ?? title}
+              title={fileDetail}
               args={args}
               name={name}
               result={result}
-              statusBadge={fileDetail ? null : getStatusBadge(state)}
+              statusBadge={null}
             />
           </div>
         )}
