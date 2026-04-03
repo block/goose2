@@ -13,6 +13,7 @@ vi.mock("../../hooks/ArtifactPolicyContext", () => ({
   useArtifactPolicyContext: () => ({
     getAllSessionArtifacts: () => [],
     openResolvedPath: vi.fn(),
+    pathExists: () => Promise.resolve(true),
   }),
 }));
 
