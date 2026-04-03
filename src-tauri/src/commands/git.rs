@@ -39,16 +39,14 @@ pub fn get_git_state(path: String) -> Result<GitState, String> {
         });
     }
 
-    let current_root = trim_to_option(run_git_success(&repo_path, &["rev-parse", "--show-toplevel"])?)
-        .ok_or("Could not determine repository root")?;
-    let current_branch = trim_to_option(run_git_success(
+    let current_root = trim_to_option(run_git_success(
         &repo_path,
-        &["branch", "--show-current"],
-    )?);
-    let dirty_file_count = count_lines(&run_git_success(
-        &repo_path,
-        &["status", "--porcelain"],
-    )?);
+        &["rev-parse", "--show-toplevel"],
+    )?)
+    .ok_or("Could not determine repository root")?;
+    let current_branch =
+        trim_to_option(run_git_success(&repo_path, &["branch", "--show-current"])?);
+    let dirty_file_count = count_lines(&run_git_success(&repo_path, &["status", "--porcelain"])?);
     let git_common_dir = trim_to_option(run_git_success(
         &repo_path,
         &["rev-parse", "--git-common-dir"],
@@ -131,7 +129,9 @@ fn resolve_main_worktree_path(git_common_dir: &str, current_root: &str) -> Optio
     };
 
     if absolute.file_name().is_some_and(|name| name == ".git") {
-        absolute.parent().map(|parent| parent.to_string_lossy().into_owned())
+        absolute
+            .parent()
+            .map(|parent| parent.to_string_lossy().into_owned())
     } else {
         None
     }
@@ -145,7 +145,11 @@ fn parse_worktrees(output: &str, main_worktree_path: Option<&str>) -> Vec<Worktr
     for line in output.lines() {
         if let Some(path) = line.strip_prefix("worktree ") {
             if let Some(path) = current_path.take() {
-                worktrees.push(build_worktree(path, current_branch.take(), main_worktree_path));
+                worktrees.push(build_worktree(
+                    path,
+                    current_branch.take(),
+                    main_worktree_path,
+                ));
             }
             current_path = Some(path.to_string());
             current_branch = None;
