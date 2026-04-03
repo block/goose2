@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { File, FileCode, FileJson, FileText, FolderOpen } from "lucide-react";
+import {
+  File,
+  FileCode,
+  FileImage,
+  FileJson,
+  FileSpreadsheet,
+  FileText,
+  FolderOpen,
+} from "lucide-react";
 import { SearchBar } from "@/shared/ui/SearchBar";
 import {
   useArtifactPolicyContext,
@@ -13,12 +21,57 @@ const CODE_EXTENSIONS = new Set([
   ".tsx",
   ".js",
   ".jsx",
+  ".mjs",
+  ".cjs",
   ".css",
   ".scss",
+  ".less",
+  ".sass",
   ".html",
+  ".htm",
+  ".xml",
+  ".svg",
   ".py",
+  ".rb",
   ".rs",
   ".go",
+  ".java",
+  ".kt",
+  ".c",
+  ".cpp",
+  ".h",
+  ".hpp",
+  ".cs",
+  ".sh",
+  ".bash",
+  ".zsh",
+  ".fish",
+  ".sql",
+  ".graphql",
+  ".gql",
+  ".toml",
+  ".yaml",
+  ".yml",
+]);
+
+const SPREADSHEET_EXTENSIONS = new Set([
+  ".csv",
+  ".tsv",
+  ".xlsx",
+  ".xls",
+  ".ods",
+]);
+
+const IMAGE_EXTENSIONS = new Set([
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".webp",
+  ".ico",
+  ".bmp",
+  ".tiff",
+  ".avif",
 ]);
 
 function getFileIcon(artifact: SessionArtifact) {
@@ -31,7 +84,11 @@ function getFileIcon(artifact: SessionArtifact) {
     : "";
 
   if (ext === ".json") return <FileJson className={ICON_CLASS} />;
-  if (ext === ".md") return <FileText className={ICON_CLASS} />;
+  if (ext === ".md" || ext === ".mdx" || ext === ".txt")
+    return <FileText className={ICON_CLASS} />;
+  if (SPREADSHEET_EXTENSIONS.has(ext))
+    return <FileSpreadsheet className={ICON_CLASS} />;
+  if (IMAGE_EXTENSIONS.has(ext)) return <FileImage className={ICON_CLASS} />;
   if (CODE_EXTENSIONS.has(ext)) return <FileCode className={ICON_CLASS} />;
   return <File className={ICON_CLASS} />;
 }
