@@ -1,12 +1,6 @@
 import { useEffect, useState } from "react";
-import {
-  File,
-  FileCode,
-  FileJson,
-  FileText,
-  FolderOpen,
-  Search,
-} from "lucide-react";
+import { File, FileCode, FileJson, FileText, FolderOpen } from "lucide-react";
+import { SearchBar } from "@/shared/ui/SearchBar";
 import {
   useArtifactPolicyContext,
   type SessionArtifact,
@@ -27,9 +21,7 @@ const CODE_EXTENSIONS = new Set([
 
 function getFileIcon(artifact: SessionArtifact) {
   if (artifact.kind === "folder") {
-    return (
-      <FolderOpen className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-    );
+    return <FolderOpen className="h-5 w-5 shrink-0 text-muted-foreground" />;
   }
 
   const ext = artifact.filename.includes(".")
@@ -37,15 +29,15 @@ function getFileIcon(artifact: SessionArtifact) {
     : "";
 
   if (ext === ".json") {
-    return <FileJson className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />;
+    return <FileJson className="h-5 w-5 shrink-0 text-muted-foreground" />;
   }
   if (ext === ".md") {
-    return <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />;
+    return <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />;
   }
   if (CODE_EXTENSIONS.has(ext)) {
-    return <FileCode className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />;
+    return <FileCode className="h-5 w-5 shrink-0 text-muted-foreground" />;
   }
-  return <File className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />;
+  return <File className="h-5 w-5 shrink-0 text-muted-foreground" />;
 }
 
 function FileRow({
@@ -60,25 +52,18 @@ function FileRow({
   return (
     <button
       type="button"
-      className="flex w-full min-w-0 cursor-pointer items-start gap-2 overflow-hidden border-b border-border px-3 py-2 text-left hover:bg-muted"
+      className="flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-lg border border-border px-4 py-3 text-left hover:bg-muted"
       onClick={() => onOpenFile(artifact.resolvedPath)}
     >
-      <div className="mt-0.5">{getFileIcon(artifact)}</div>
+      <div className="flex shrink-0 items-center">{getFileIcon(artifact)}</div>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="truncate text-sm font-medium text-foreground">
-            {artifact.filename}
-          </span>
-          {artifact.versionCount > 1 ? (
-            <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-              v{artifact.versionCount}
-            </span>
-          ) : null}
-        </div>
+        <p className="truncate text-sm font-medium text-foreground">
+          {artifact.filename}
+        </p>
         {/* biome-ignore lint/a11y/useKeyWithClickEvents: directory path opens containing folder */}
         {/* biome-ignore lint/a11y/noStaticElementInteractions: interactive span inside button to handle separate click target */}
         <span
-          className="mt-0.5 block cursor-pointer truncate text-xs text-muted-foreground hover:underline"
+          className="mt-0.5 block truncate text-xs text-muted-foreground hover:underline"
           onClick={(e) => {
             e.stopPropagation();
             onOpenDirectory(artifact.resolvedDirectoryPath);
@@ -158,31 +143,24 @@ export function FilesList() {
 
   return (
     <div className="min-w-0 overflow-hidden">
-      <div className="px-3 pb-1 pt-2">
-        <div className="relative">
-          <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="text"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            placeholder="Filter files..."
-            className="w-full rounded-md border border-border bg-background py-1.5 pl-7 pr-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-border"
-          />
-        </div>
+      <div className="px-3 pb-2 pt-3">
+        <SearchBar value={filter} onChange={setFilter} placeholder="Search" />
       </div>
       {filteredArtifacts.length === 0 ? (
         <div className="flex h-20 items-center justify-center">
           <p className="text-sm text-muted-foreground">No matching files</p>
         </div>
       ) : (
-        filteredArtifacts.map((artifact) => (
-          <FileRow
-            key={artifact.resolvedPath}
-            artifact={artifact}
-            onOpenFile={handleOpenFile}
-            onOpenDirectory={handleOpenDirectory}
-          />
-        ))
+        <div className="space-y-2 px-3 pb-3">
+          {filteredArtifacts.map((artifact) => (
+            <FileRow
+              key={artifact.resolvedPath}
+              artifact={artifact}
+              onOpenFile={handleOpenFile}
+              onOpenDirectory={handleOpenDirectory}
+            />
+          ))}
+        </div>
       )}
     </div>
   );

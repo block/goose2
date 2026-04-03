@@ -50,25 +50,6 @@ describe("FilesList", () => {
     expect(screen.getByText("~/project/src/")).toBeInTheDocument();
   });
 
-  it("shows version badge when versionCount > 1", async () => {
-    mockGetAllSessionArtifacts.mockReturnValue([
-      makeArtifact({ versionCount: 3 }),
-    ]);
-    render(<FilesList />);
-    await waitFor(() => {
-      expect(screen.getByText("v3")).toBeInTheDocument();
-    });
-  });
-
-  it("does not show version badge when versionCount is 1", async () => {
-    mockGetAllSessionArtifacts.mockReturnValue([makeArtifact()]);
-    render(<FilesList />);
-    await waitFor(() => {
-      expect(screen.getByText("App.tsx")).toBeInTheDocument();
-    });
-    expect(screen.queryByText("v1")).not.toBeInTheDocument();
-  });
-
   it("hides files that do not exist on disk", async () => {
     mockGetAllSessionArtifacts.mockReturnValue([
       makeArtifact({ filename: "exists.tsx", resolvedPath: "/a/exists.tsx" }),
@@ -112,7 +93,7 @@ describe("FilesList", () => {
     ]);
     render(<FilesList />);
 
-    const input = screen.getByPlaceholderText("Filter files...");
+    const input = screen.getByPlaceholderText("Search");
     await user.type(input, "index");
 
     expect(screen.queryByText("App.tsx")).not.toBeInTheDocument();
@@ -124,7 +105,7 @@ describe("FilesList", () => {
     mockGetAllSessionArtifacts.mockReturnValue([makeArtifact()]);
     render(<FilesList />);
 
-    const input = screen.getByPlaceholderText("Filter files...");
+    const input = screen.getByPlaceholderText("Search");
     await user.type(input, "nonexistent");
 
     expect(screen.getByText("No matching files")).toBeInTheDocument();
@@ -133,8 +114,6 @@ describe("FilesList", () => {
   it("does not show search bar when no artifacts exist", () => {
     mockGetAllSessionArtifacts.mockReturnValue([]);
     render(<FilesList />);
-    expect(
-      screen.queryByPlaceholderText("Filter files..."),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("Search")).not.toBeInTheDocument();
   });
 });
