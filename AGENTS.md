@@ -80,7 +80,7 @@ Not every feature needs every subdirectory. Use only what the feature requires:
 - Use `cn()` from `@/shared/lib/cn` for Tailwind class merging.
 - Import paths use the `@/` alias (maps to `./src`).
 - Components are controlled where possible (state lifted to parent).
-- Use `lucide-react` for icons.
+- Use `@tabler/icons-react` for icons (transitioning from `lucide-react`; existing `lucide-react` usage is fine until migrated).
 - All `<button>` elements must have `type="button"` to prevent form submission.
 - Use semantic HTML (`<aside>`, `<nav>`, `<header>`, `<main>`).
 
@@ -168,7 +168,7 @@ Additional tooling notes:
 - `@tauri-apps/api` 2.x
 - `@tanstack/react-query` 5.x
 - `tailwindcss` 3.x with `tailwindcss-animate`
-- `lucide-react` for icons
+- `@tabler/icons-react` for icons (migrating from `lucide-react`)
 - `class-variance-authority` for component variants
 - `clsx` + `tailwind-merge` for class merging
 - `@radix-ui/react-slot` for polymorphic components

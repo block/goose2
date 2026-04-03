@@ -1,8 +1,14 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import {
+  IconLayoutSidebarRight,
+  IconLayoutSidebarRightFilled,
+} from "@tabler/icons-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { MessageTimeline } from "./MessageTimeline";
 import { ChatInput } from "./ChatInput";
 import type { PastedImage } from "@/shared/types/messages";
 import { LoadingGoose } from "./LoadingGoose";
+import { ContextPanel } from "./ContextPanel";
 import { useChat } from "../hooks/useChat";
 import { useChatStore } from "../stores/chatStore";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
@@ -17,6 +23,7 @@ import {
 } from "@/features/projects/lib/chatProjectContext";
 import { useAvatarSrc } from "@/shared/hooks/useAvatarSrc";
 import { getHomeDir } from "@/shared/api/system";
+import { Button } from "@/shared/ui/button";
 import { ArtifactPolicyProvider } from "../hooks/ArtifactPolicyContext";
 
 interface ChatViewProps {
@@ -36,6 +43,19 @@ interface ChatViewProps {
   }) => void;
 }
 
+const CONTEXT_PANEL_WIDTH = 340;
+const CONTEXT_PANEL_SHELL_PADDING = 12;
+const CONTEXT_PANEL_HEADER_PADDING_X = 12;
+const CONTEXT_PANEL_HEADER_PADDING_TOP = 10;
+const CONTEXT_PANEL_TOTAL_WIDTH =
+  CONTEXT_PANEL_WIDTH + CONTEXT_PANEL_SHELL_PADDING * 2;
+const CONTEXT_PANEL_TOGGLE_RIGHT =
+  CONTEXT_PANEL_SHELL_PADDING + CONTEXT_PANEL_HEADER_PADDING_X;
+const CONTEXT_PANEL_TOGGLE_TOP =
+  CONTEXT_PANEL_SHELL_PADDING + CONTEXT_PANEL_HEADER_PADDING_TOP;
+const CONTEXT_PANEL_FADE_DURATION_SECONDS = 0.15;
+const CONTEXT_PANEL_REFLOW_DURATION_MS = 200;
+
 export function ChatView({
   sessionId,
   agentName = "Goose",
@@ -49,6 +69,14 @@ export function ChatView({
   onCreateProjectFromFolder,
 }: ChatViewProps) {
   const [activeSessionId] = useState(() => sessionId ?? crypto.randomUUID());
+  const [isContextPanelOpen, setIsContextPanelOpen] = useState(true);
+  const shouldReduceMotion = useReducedMotion();
+  const fadeTransition = {
+    duration: shouldReduceMotion ? 0 : CONTEXT_PANEL_FADE_DURATION_SECONDS,
+  };
+  const reflowDuration = shouldReduceMotion
+    ? 0
+    : CONTEXT_PANEL_REFLOW_DURATION_MS;
 
   // Provider state from shared store
   const {
@@ -338,60 +366,120 @@ export function ChatView({
       messages={messages}
       allowedRoots={allowedArtifactRoots}
     >
-      <div className="flex h-full flex-col">
-        <MessageTimeline
-          messages={messages}
-          streamingMessageId={streamingMessageId}
-          agentName={displayAgentName}
-          agentAvatarUrl={personaAvatarSrc ?? agentAvatarUrl}
-        />
-
-        {showIndicator && (
-          <LoadingGoose
+      <div className="relative flex h-full min-w-0">
+        <div className="flex min-w-0 flex-1 flex-col">
+          <MessageTimeline
+            messages={messages}
+            streamingMessageId={streamingMessageId}
             agentName={displayAgentName}
-            chatState={
-              chatState as "thinking" | "streaming" | "waiting" | "compacting"
-            }
+            agentAvatarUrl={personaAvatarSrc ?? agentAvatarUrl}
           />
-        )}
 
-        <ChatInput
-          onSend={handleSend}
-          onStop={stopStreaming}
-          isStreaming={isStreaming || chatState === "thinking"}
-          placeholder={`Message ${displayAgentName}...`}
-          // Personas
-          personas={personas}
-          selectedPersonaId={selectedPersonaId}
-          onPersonaChange={handlePersonaChange}
-          onCreatePersona={handleCreatePersona}
-          // Providers (secondary)
-          providers={providers}
-          providersLoading={providersLoading}
-          selectedProvider={selectedProvider}
-          onProviderChange={handleProviderChange}
-          selectedProjectId={session?.projectId ?? null}
-          availableProjects={availableProjects}
-          onProjectChange={handleProjectChange}
-          onCreateProject={(options) =>
-            onCreateProject?.({
-              onCreated: (projectId) => {
-                handleProjectChange(projectId);
-                options?.onCreated?.(projectId);
-              },
-            })
-          }
-          onCreateProjectFromFolder={(options) =>
-            onCreateProjectFromFolder?.({
-              onCreated: (projectId) => {
-                handleProjectChange(projectId);
-                options?.onCreated?.(projectId);
-              },
-            })
-          }
-          contextTokens={tokenState.accumulatedTotal}
-          contextLimit={tokenState.contextLimit}
-        />
+          {showIndicator && (
+            <LoadingGoose
+              agentName={displayAgentName}
+              chatState={
+                chatState as "thinking" | "streaming" | "waiting" | "compacting"
+              }
+            />
+          )}
+
+          <ChatInput
+            onSend={handleSend}
+            onStop={stopStreaming}
+            isStreaming={isStreaming || chatState === "thinking"}
+            placeholder={`Message ${displayAgentName}...`}
+            personas={personas}
+            selectedPersonaId={selectedPersonaId}
+            onPersonaChange={handlePersonaChange}
+            onCreatePersona={handleCreatePersona}
+            providers={providers}
+            providersLoading={providersLoading}
+            selectedProvider={selectedProvider}
+            onProviderChange={handleProviderChange}
+            selectedProjectId={session?.projectId ?? null}
+            availableProjects={availableProjects}
+            onProjectChange={handleProjectChange}
+            onCreateProject={(options) =>
+              onCreateProject?.({
+                onCreated: (projectId) => {
+                  handleProjectChange(projectId);
+                  options?.onCreated?.(projectId);
+                },
+              })
+            }
+            onCreateProjectFromFolder={(options) =>
+              onCreateProjectFromFolder?.({
+                onCreated: (projectId) => {
+                  handleProjectChange(projectId);
+                  options?.onCreated?.(projectId);
+                },
+              })
+            }
+            contextTokens={tokenState.accumulatedTotal}
+            contextLimit={tokenState.contextLimit}
+          />
+        </div>
+
+        <div
+          className="shrink-0 overflow-hidden"
+          style={{
+            width: isContextPanelOpen ? CONTEXT_PANEL_TOTAL_WIDTH : 0,
+            transition: `width ${reflowDuration}ms ease`,
+          }}
+        >
+          <AnimatePresence initial={false}>
+            {isContextPanelOpen ? (
+              <motion.div
+                key="context-panel"
+                className="flex h-full"
+                style={{
+                  width: CONTEXT_PANEL_TOTAL_WIDTH,
+                  padding: CONTEXT_PANEL_SHELL_PADDING,
+                }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={fadeTransition}
+              >
+                <aside className="flex min-w-0 flex-1 overflow-hidden rounded-xl border border-border bg-background">
+                  <ContextPanel
+                    projectName={project?.name}
+                    projectColor={project?.color}
+                    projectWorkingDir={project?.workingDirs[0] ?? null}
+                  />
+                </aside>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+        </div>
+
+        <div
+          className="absolute z-20"
+          style={{
+            right: CONTEXT_PANEL_TOGGLE_RIGHT,
+            top: CONTEXT_PANEL_TOGGLE_TOP,
+          }}
+        >
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => setIsContextPanelOpen((prev) => !prev)}
+            aria-label={
+              isContextPanelOpen ? "Close context panel" : "Open context panel"
+            }
+            title={
+              isContextPanelOpen ? "Close context panel" : "Open context panel"
+            }
+          >
+            {isContextPanelOpen ? (
+              <IconLayoutSidebarRightFilled className="size-4" />
+            ) : (
+              <IconLayoutSidebarRight className="size-4" />
+            )}
+          </Button>
+        </div>
       </div>
     </ArtifactPolicyProvider>
   );
