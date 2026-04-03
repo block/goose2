@@ -227,17 +227,23 @@ export function useAcpStream(enabled: boolean): void {
         );
         store.setStreamingMessageId(event.payload.sessionId, null);
         store.setChatState(event.payload.sessionId, "idle");
+
+        const sessionStore = useChatSessionStore.getState();
+        const session = sessionStore.getSession(event.payload.sessionId);
+
+        // Skip unread marking and title generation for forked sessions
+        if (session?.forkedFrom) {
+          return;
+        }
+
         if (
-          useChatSessionStore.getState().activeSessionId !==
-          event.payload.sessionId
+          sessionStore.activeSessionId !== event.payload.sessionId
         ) {
           store.markSessionUnread(event.payload.sessionId);
         }
 
         // Generate a title from the first user message if the session still
         // has the default "New Chat" title (i.e. no ACP title was received).
-        const sessionStore = useChatSessionStore.getState();
-        const session = sessionStore.getSession(event.payload.sessionId);
         if (session && session.title === "New Chat") {
           const messages = store.messagesBySession[event.payload.sessionId];
           const firstUserMsg = messages?.find((m) => m.role === "user");
@@ -358,11 +364,13 @@ export function useAcpStream(enabled: boolean): void {
       listen<AcpSessionInfoPayload>("acp:session_info", (event) => {
         if (!active) return;
         if (event.payload.title) {
-          useChatSessionStore
-            .getState()
-            .updateSession(event.payload.sessionId, {
-              title: event.payload.title,
-            });
+          const sessionStore = useChatSessionStore.getState();
+          const session = sessionStore.getSession(event.payload.sessionId);
+          // Skip title update for forked sessions
+          if (session?.forkedFrom) return;
+          sessionStore.updateSession(event.payload.sessionId, {
+            title: event.payload.title,
+          });
         }
       }),
     );

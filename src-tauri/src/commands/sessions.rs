@@ -45,6 +45,15 @@ pub fn delete_session(
 }
 
 #[tauri::command]
+pub fn fork_session(
+    store: State<'_, Arc<SessionStore>>,
+    source_session_id: String,
+    fork_at_message_id: String,
+) -> Result<Session, String> {
+    store.fork_session(&source_session_id, &fork_at_message_id)
+}
+
+#[tauri::command]
 pub fn list_archived_sessions(store: State<'_, Arc<SessionStore>>) -> Vec<Session> {
     store.list_archived_sessions()
 }

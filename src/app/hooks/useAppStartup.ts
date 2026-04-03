@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
+import { useChatStore } from "@/features/chat/stores/chatStore";
 
 export function useAppStartup() {
   useEffect(() => {
@@ -33,10 +34,22 @@ export function useAppStartup() {
       };
 
       const loadSessionState = async () => {
-        const { loadSessions, setActiveSession } =
-          useChatSessionStore.getState();
-        await loadSessions();
-        setActiveSession(null);
+        const sessionStore = useChatSessionStore.getState();
+        await sessionStore.loadSessions();
+        sessionStore.setActiveSession(null);
+
+        // Reconstruct fork trees from all sessions
+        const allSessions = sessionStore.getAllSessions();
+        const chatStore = useChatStore.getState();
+        const rootSessionIds = new Set<string>();
+        for (const s of allSessions) {
+          if (!s.forkedFrom) {
+            rootSessionIds.add(s.id);
+          }
+        }
+        for (const rootId of rootSessionIds) {
+          chatStore.buildForkTreeFromSessions(rootId, allSessions);
+        }
       };
 
       await Promise.allSettled([

@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { cn } from "@/shared/lib/cn";
 import { MessageBubble } from "./MessageBubble";
 import type { Message } from "@/shared/types/messages";
+import type { ForkTree } from "../types/forks";
 
 interface MessageTimelineProps {
   messages: Message[];
@@ -9,6 +10,9 @@ interface MessageTimelineProps {
   agentAvatarUrl?: string;
   streamingMessageId?: string | null;
   onRetryMessage?: (messageId: string) => void;
+  onRetryUserMessage?: (messageId: string) => void;
+  onSwitchBranch?: (messageId: string, branchIndex: number) => void;
+  forkTree?: ForkTree;
   onEditMessage?: (messageId: string) => void;
   className?: string;
 }
@@ -45,6 +49,9 @@ export function MessageTimeline({
   agentAvatarUrl,
   streamingMessageId,
   onRetryMessage,
+  onRetryUserMessage,
+  onSwitchBranch,
+  forkTree,
   onEditMessage,
   className,
 }: MessageTimelineProps) {
@@ -126,6 +133,18 @@ export function MessageTimeline({
                 onRetry={
                   message.role === "assistant" && onRetryMessage
                     ? () => onRetryMessage(message.id)
+                    : message.role === "user" && onRetryUserMessage
+                      ? () => onRetryUserMessage(message.id)
+                      : undefined
+                }
+                forkData={
+                  message.role === "user" && forkTree?.[message.id]
+                    ? forkTree[message.id]
+                    : undefined
+                }
+                onSwitchBranch={
+                  message.role === "user" && onSwitchBranch
+                    ? (index: number) => onSwitchBranch(message.id, index)
                     : undefined
                 }
                 onEdit={

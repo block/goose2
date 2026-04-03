@@ -23,12 +23,15 @@ export interface ChatSession {
   updatedAt: string;
   archivedAt?: string;
   messageCount: number;
+  forkedFrom?: string;
+  forkPointMessageId?: string;
 }
 
 interface ChatSessionStoreState {
   sessions: ChatSession[];
   activeSessionId: string | null;
   isLoading: boolean;
+  _allSessions: ChatSession[];
 }
 
 interface ChatSessionStoreActions {
@@ -46,6 +49,10 @@ interface ChatSessionStoreActions {
   unarchiveSession: (id: string) => Promise<void>;
 
   setActiveSession: (sessionId: string | null) => void;
+
+  // Forked session management
+  addForkedSession: (session: ChatSession) => void;
+  getAllSessions: () => ChatSession[];
 
   // Helpers
   getSession: (id: string) => ChatSession | undefined;
@@ -91,6 +98,8 @@ function sessionToChatSession(session: Session): ChatSession {
     updatedAt: session.updatedAt,
     archivedAt: session.archivedAt,
     messageCount: session.messageCount,
+    forkedFrom: session.forkedFrom,
+    forkPointMessageId: session.forkPointMessageId,
   };
 }
 
@@ -99,6 +108,7 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
   sessions: loadCachedSessions(),
   activeSessionId: null,
   isLoading: false,
+  _allSessions: [],
 
   // Session lifecycle
   createSession: async (opts) => {
@@ -140,8 +150,9 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     try {
       const backendSessions = await apiListSessions();
       const chatSessions = backendSessions.map(sessionToChatSession);
-      set({ sessions: chatSessions });
-      persistSessions(chatSessions);
+      const sidebarSessions = chatSessions.filter((s) => !s.forkedFrom);
+      set({ sessions: sidebarSessions, _allSessions: chatSessions });
+      persistSessions(sidebarSessions);
     } finally {
       set({ isLoading: false });
     }
@@ -219,8 +230,19 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     set({ activeSessionId: sessionId });
   },
 
+  // Forked session management
+  addForkedSession: (session) => {
+    set((state) => ({
+      _allSessions: [...state._allSessions, session],
+    }));
+  },
+
+  getAllSessions: () => get()._allSessions,
+
   // Helpers
-  getSession: (id) => get().sessions.find((s) => s.id === id),
+  getSession: (id) =>
+    get().sessions.find((s) => s.id === id) ??
+    get()._allSessions.find((s) => s.id === id),
 
   getActiveSession: () => {
     const { activeSessionId, sessions } = get();

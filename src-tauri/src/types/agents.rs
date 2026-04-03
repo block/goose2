@@ -173,6 +173,10 @@ pub struct Session {
     pub last_message_preview: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub archived_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub forked_from: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub fork_point_message_id: Option<String>,
 }
 
 /// Partial update for a session — only provided fields are applied.

@@ -275,6 +275,9 @@ export function ChatView({
     sendMessage,
     stopStreaming,
     streamingMessageId,
+    forkTree,
+    retryUserMessage,
+    switchBranch,
   } = useChat(
     activeSessionId,
     selectedProvider,
@@ -373,6 +376,9 @@ export function ChatView({
             streamingMessageId={streamingMessageId}
             agentName={displayAgentName}
             agentAvatarUrl={personaAvatarSrc ?? agentAvatarUrl}
+            forkTree={forkTree}
+            onRetryUserMessage={retryUserMessage}
+            onSwitchBranch={switchBranch}
           />
 
           {showIndicator && (

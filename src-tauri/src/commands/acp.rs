@@ -106,6 +106,7 @@ pub async fn acp_send_message(
     persona_id: Option<String>,
     persona_name: Option<String>,
     images: Vec<(String, String)>,
+    skip_user_message: Option<bool>,
 ) -> Result<(), String> {
     let current_dir = std::env::current_dir()
         .map_err(|error| format!("Failed to determine current working directory: {error}"))?;
@@ -123,6 +124,7 @@ pub async fn acp_send_message(
         persona_id,
         persona_name,
         images,
+        skip_user_message.unwrap_or(false),
     )
     .await
 }

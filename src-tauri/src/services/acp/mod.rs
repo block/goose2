@@ -59,35 +59,48 @@ impl AcpService {
         persona_id: Option<String>,
         persona_name: Option<String>,
         images: Vec<(String, String)>,
+        skip_user_message: bool,
     ) -> Result<(), String> {
         // Ensure the session exists in the SessionStore (create if needed)
         session_store.ensure_session(&session_id, Some(provider_id.clone()));
 
-        // Save the user message to SessionStore, with persona metadata when targeted
-        let user_message_id = uuid::Uuid::new_v4().to_string();
-        let user_message = crate::types::messages::Message {
-            id: user_message_id.clone(),
-            role: MessageRole::User,
-            created: chrono::Utc::now().timestamp_millis(),
-            content: vec![MessageContent::Text {
-                text: prompt.clone(),
-            }],
-            metadata: if persona_id.is_some() {
-                Some(crate::types::messages::MessageMetadata {
-                    target_persona_id: persona_id.clone(),
-                    target_persona_name: persona_name.clone(),
-                    ..Default::default()
-                })
-            } else {
-                None
-            },
+        // Save the user message to SessionStore, with persona metadata when targeted.
+        // Skip when retrying on a forked session (the user message already exists).
+        let user_message_id = if skip_user_message {
+            let messages = session_store.get_messages(&session_id);
+            messages
+                .iter()
+                .rev()
+                .find(|m| m.role == MessageRole::User)
+                .map(|m| m.id.clone())
+                .unwrap_or_else(|| uuid::Uuid::new_v4().to_string())
+        } else {
+            let id = uuid::Uuid::new_v4().to_string();
+            let user_message = crate::types::messages::Message {
+                id: id.clone(),
+                role: MessageRole::User,
+                created: chrono::Utc::now().timestamp_millis(),
+                content: vec![MessageContent::Text {
+                    text: prompt.clone(),
+                }],
+                metadata: if persona_id.is_some() {
+                    Some(crate::types::messages::MessageMetadata {
+                        target_persona_id: persona_id.clone(),
+                        target_persona_name: persona_name.clone(),
+                        ..Default::default()
+                    })
+                } else {
+                    None
+                },
+            };
+            if let Err(e) = session_store.add_message(&session_id, user_message) {
+                eprintln!(
+                    "Failed to save user message for session {}: {}",
+                    session_id, e
+                );
+            }
+            id
         };
-        if let Err(e) = session_store.add_message(&session_id, user_message) {
-            eprintln!(
-                "Failed to save user message for session {}: {}",
-                session_id, e
-            );
-        }
 
         // Build catch-up context from intervening messages for this persona
         let catchup_context = if let Some(ref pid) = persona_id {

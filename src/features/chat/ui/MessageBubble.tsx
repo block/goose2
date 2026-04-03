@@ -14,7 +14,9 @@ import {
 import { ClickableImage } from "./ClickableImage";
 import { ToolChainCards } from "./ToolChainCards";
 import type { ToolChainItem } from "./ToolChainCards";
+import { ForkSelector } from "./ForkSelector";
 import { useArtifactLinkHandler } from "@/features/chat/hooks/useArtifactLinkHandler";
+import type { ForkBranchInfo } from "../types/forks";
 import type {
   Message,
   MessageContent,
@@ -34,6 +36,8 @@ interface MessageBubbleProps {
   onCopy?: () => void;
   onRetry?: () => void;
   onEdit?: () => void;
+  forkData?: ForkBranchInfo;
+  onSwitchBranch?: (index: number) => void;
 }
 
 interface ContentSection {
@@ -231,6 +235,8 @@ export function MessageBubble({
   isStreaming,
   onRetry,
   onEdit,
+  forkData,
+  onSwitchBranch,
 }: MessageBubbleProps) {
   const { role, content, created } = message;
   const { handleContentClick, pathNotice } = useArtifactLinkHandler();
@@ -320,12 +326,22 @@ export function MessageBubble({
         </div>
 
         {/* Hover actions + timestamp */}
-        <MessageActions className="opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+        <MessageActions className="opacity-0 transition-opacity duration-150 group-hover:opacity-100 [&:has(.fork-selector)]:opacity-100">
           {textContent && <CopyAction text={textContent} />}
-          {!isUser && onRetry && (
+          {onRetry && (
             <MessageAction tooltip="Retry" onClick={onRetry}>
               <RotateCcw className="size-3.5" />
             </MessageAction>
+          )}
+          {forkData && onSwitchBranch && (
+            <span className="fork-selector">
+              <ForkSelector
+                currentIndex={forkData.activeBranchIndex}
+                totalBranches={forkData.branches.length}
+                onPrev={() => onSwitchBranch(forkData.activeBranchIndex - 1)}
+                onNext={() => onSwitchBranch(forkData.activeBranchIndex + 1)}
+              />
+            </span>
           )}
           {isUser && onEdit && (
             <MessageAction tooltip="Edit" onClick={onEdit}>

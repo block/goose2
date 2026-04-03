@@ -12,6 +12,7 @@ export interface AcpSendMessageOptions {
   personaName?: string;
   /** Image attachments as [base64Data, mimeType] pairs. */
   images?: [string, string][];
+  skipUserMessage?: boolean;
 }
 
 /** Discover ACP providers installed on the system. */
@@ -26,7 +27,7 @@ export async function acpSendMessage(
   prompt: string,
   options: AcpSendMessageOptions = {},
 ): Promise<void> {
-  const { systemPrompt, workingDir, personaId, personaName, images } = options;
+  const { systemPrompt, workingDir, personaId, personaName, images, skipUserMessage } = options;
   return invoke("acp_send_message", {
     sessionId,
     providerId,
@@ -36,6 +37,7 @@ export async function acpSendMessage(
     personaId: personaId ?? null,
     personaName: personaName ?? null,
     images: images ?? [],
+    skipUserMessage: skipUserMessage ?? null,
   });
 }
 

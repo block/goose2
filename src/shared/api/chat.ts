@@ -47,6 +47,13 @@ export async function deleteSession(sessionId: string): Promise<void> {
   return invoke("delete_session", { sessionId });
 }
 
+export async function forkSession(
+  sourceSessionId: string,
+  forkAtMessageId: string,
+): Promise<Session> {
+  return invoke("fork_session", { sourceSessionId, forkAtMessageId });
+}
+
 export async function archiveSession(sessionId: string): Promise<void> {
   return invoke("archive_session", { sessionId });
 }

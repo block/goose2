@@ -47,6 +47,7 @@ pub fn run() {
             commands::sessions::list_archived_sessions,
             commands::sessions::archive_session,
             commands::sessions::unarchive_session,
+            commands::sessions::fork_session,
             commands::chat::chat_send_message,
             commands::acp::discover_acp_providers,
             commands::acp::acp_send_message,

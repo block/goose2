@@ -121,6 +121,8 @@ impl SessionStore {
             message_count: 0,
             last_message_preview: None,
             archived_at: None,
+            forked_from: None,
+            fork_point_message_id: None,
         };
 
         // Write empty messages file
@@ -161,6 +163,8 @@ impl SessionStore {
                     message_count: 0,
                     last_message_preview: None,
                     archived_at: None,
+                    forked_from: None,
+                    fork_point_message_id: None,
                 };
 
                 self.save_messages(id, &[]);
@@ -295,6 +299,59 @@ impl SessionStore {
         session.updated_at = chrono::Utc::now().to_rfc3339();
         self.save_metadata(&sessions);
         Ok(())
+    }
+
+    pub fn fork_session(
+        &self,
+        source_session_id: &str,
+        fork_at_message_id: &str,
+    ) -> Result<Session, String> {
+        let sessions = self.sessions.lock().unwrap();
+        let source = sessions
+            .get(source_session_id)
+            .ok_or_else(|| format!("Session '{}' not found", source_session_id))?;
+
+        let source_messages = self.load_messages(source_session_id);
+        let fork_index = source_messages
+            .iter()
+            .position(|m| m.id == fork_at_message_id)
+            .ok_or_else(|| {
+                format!(
+                    "Message '{}' not found in session '{}'",
+                    fork_at_message_id, source_session_id
+                )
+            })?;
+
+        let forked_messages: Vec<Message> = source_messages[..=fork_index].to_vec();
+
+        let now = chrono::Utc::now().to_rfc3339();
+        let new_id = uuid::Uuid::new_v4().to_string();
+
+        let new_session = Session {
+            id: new_id.clone(),
+            title: source.title.clone(),
+            agent_id: source.agent_id.clone(),
+            project_id: source.project_id.clone(),
+            provider_id: source.provider_id.clone(),
+            persona_id: source.persona_id.clone(),
+            model_name: source.model_name.clone(),
+            created_at: now.clone(),
+            updated_at: now,
+            message_count: forked_messages.len() as u32,
+            last_message_preview: source.last_message_preview.clone(),
+            archived_at: None,
+            forked_from: Some(source_session_id.to_string()),
+            fork_point_message_id: Some(fork_at_message_id.to_string()),
+        };
+
+        self.save_messages(&new_id, &forked_messages);
+
+        drop(sessions);
+        let mut sessions = self.sessions.lock().unwrap();
+        sessions.insert(new_id, new_session.clone());
+        self.save_metadata(&sessions);
+
+        Ok(new_session)
     }
 
     pub fn delete_session(&self, id: &str) -> Result<(), String> {

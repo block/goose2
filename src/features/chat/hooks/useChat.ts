@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { useChatStore } from "../stores/chatStore";
 import { useChatSessionStore } from "../stores/chatSessionStore";
 import {
@@ -7,8 +7,13 @@ import {
 } from "@/shared/types/messages";
 import type { ChatState, TokenState } from "@/shared/types/chat";
 import { acpSendMessage, acpCancelSession } from "@/shared/api/acp";
+import {
+  forkSession as apiForkSession,
+  getSessionMessages,
+} from "@/shared/api/chat";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { findLastIndex } from "@/shared/lib/arrays";
+import type { ForkTree } from "../types/forks";
 
 function getErrorMessage(error: unknown): string {
   // Tauri command rejections typically arrive as plain strings, so handle
@@ -74,9 +79,23 @@ export function useChat(
   const abortRef = useRef<AbortController | null>(null);
   const streamingPersonaIdRef = useRef<string | null>(null);
 
-  const messages = store.messagesBySession[sessionId] ?? [];
+  const effectiveSessionId = useMemo(
+    () => store.computeLeafSessionId(sessionId),
+    [store, sessionId],
+  );
+
+  const forkTree: ForkTree = store.getForkTree(sessionId);
+  const hasForks = Object.keys(forkTree).length > 0;
+
+  const messages = useMemo(() => {
+    if (hasForks) {
+      return store.computeDisplayMessages(sessionId);
+    }
+    return store.messagesBySession[sessionId] ?? [];
+  }, [hasForks, store, sessionId, store.messagesBySession, store.forkTreeByRoot]);
+
   const { chatState, tokenState, error, streamingMessageId } =
-    store.getSessionRuntime(sessionId);
+    store.getSessionRuntime(effectiveSessionId);
   const isStreaming = chatState === "streaming" || streamingMessageId !== null;
 
   const getStreamingPersonaId = useCallback(() => {
@@ -108,6 +127,79 @@ export function useChat(
     [personaInfo],
   );
 
+  const _sendToBackend = useCallback(
+    async (
+      targetSessionId: string,
+      text: string,
+      effectivePersonaInfo?: { id: string; name: string },
+      images?: { base64: string; mimeType: string }[],
+      options?: { skipUserMessage?: boolean },
+    ) => {
+      const abort = new AbortController();
+      abortRef.current = abort;
+      streamingPersonaIdRef.current = effectivePersonaInfo?.id ?? null;
+
+      try {
+        const agent = useAgentStore.getState().getActiveAgent();
+        const providerId = providerOverride ?? agent?.provider ?? "goose";
+        const systemPrompt =
+          systemPromptOverride ?? agent?.systemPrompt ?? undefined;
+
+        // Send via ACP — response streams back through Tauri events
+        // which are handled by the global useAcpStream listener in AppShell.
+        store.setChatState(targetSessionId, "streaming");
+        // When images are present with no text, pass a single space so the ACP
+        // driver doesn't send an empty text content block that goose rejects.
+        const acpPrompt = text.trim() || (images?.length ? " " : text);
+        await acpSendMessage(targetSessionId, providerId, acpPrompt, {
+          systemPrompt,
+          workingDir: workingDirOverride,
+          personaId: effectivePersonaInfo?.id,
+          personaName: effectivePersonaInfo?.name,
+          images: images?.map(
+            (img) => [img.base64, img.mimeType] as [string, string],
+          ),
+          skipUserMessage: options?.skipUserMessage,
+        });
+        // Note: setChatState("idle") is handled by useAcpStream on "acp:done"
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") {
+          store.setChatState(targetSessionId, "idle");
+        } else {
+          const errorMessage = getErrorMessage(err);
+          const liveStore = useChatStore.getState();
+          const { streamingMessageId } =
+            liveStore.getSessionRuntime(targetSessionId);
+          if (streamingMessageId) {
+            liveStore.updateMessage(
+              targetSessionId,
+              streamingMessageId,
+              (message) => ({
+                ...message,
+                metadata: {
+                  ...message.metadata,
+                  completionStatus: "error",
+                },
+              }),
+            );
+          }
+
+          liveStore.addMessage(
+            targetSessionId,
+            createSystemNotificationMessage(errorMessage, "error"),
+          );
+          store.setError(targetSessionId, errorMessage);
+          store.setChatState(targetSessionId, "idle");
+          store.setStreamingMessageId(targetSessionId, null);
+        }
+      } finally {
+        abortRef.current = null;
+        streamingPersonaIdRef.current = null;
+      }
+    },
+    [store, providerOverride, systemPromptOverride, workingDirOverride],
+  );
+
   const sendMessage = useCallback(
     async (
       text: string,
@@ -125,6 +217,8 @@ export function useChat(
         overridePersona?.id,
         overridePersona?.name,
       );
+
+      const targetSessionId = store.computeLeafSessionId(sessionId);
 
       // Ensure active session
       store.setActiveSession(sessionId);
@@ -151,9 +245,9 @@ export function useChat(
           });
         }
       }
-      store.addMessage(sessionId, userMessage);
-      store.setChatState(sessionId, "thinking");
-      store.setError(sessionId, null);
+      store.addMessage(targetSessionId, userMessage);
+      store.setChatState(targetSessionId, "thinking");
+      store.setError(targetSessionId, null);
 
       // Immediately set the session/sidebar title from the user's message when
       // the session still has the default placeholder.  This gives instant
@@ -168,92 +262,112 @@ export function useChat(
         });
       }
 
-      const abort = new AbortController();
-      abortRef.current = abort;
-      streamingPersonaIdRef.current = effectivePersonaInfo?.id ?? null;
-
-      try {
-        const agent = useAgentStore.getState().getActiveAgent();
-        const providerId = providerOverride ?? agent?.provider ?? "goose";
-        const systemPrompt =
-          systemPromptOverride ?? agent?.systemPrompt ?? undefined;
-
-        // Send via ACP — response streams back through Tauri events
-        // which are handled by the global useAcpStream listener in AppShell.
-        store.setChatState(sessionId, "streaming");
-        // When images are present with no text, pass a single space so the ACP
-        // driver doesn't send an empty text content block that goose rejects.
-        const acpPrompt = text.trim() || (images?.length ? " " : text);
-        await acpSendMessage(sessionId, providerId, acpPrompt, {
-          systemPrompt,
-          workingDir: workingDirOverride,
-          personaId: effectivePersonaInfo?.id,
-          personaName: effectivePersonaInfo?.name,
-          images: images?.map(
-            (img) => [img.base64, img.mimeType] as [string, string],
-          ),
-        });
-        // Note: setChatState("idle") is handled by useAcpStream on "acp:done"
-      } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") {
-          store.setChatState(sessionId, "idle");
-        } else {
-          const errorMessage = getErrorMessage(err);
-          const liveStore = useChatStore.getState();
-          const { streamingMessageId } = liveStore.getSessionRuntime(sessionId);
-          if (streamingMessageId) {
-            liveStore.updateMessage(
-              sessionId,
-              streamingMessageId,
-              (message) => ({
-                ...message,
-                metadata: {
-                  ...message.metadata,
-                  completionStatus: "error",
-                },
-              }),
-            );
-          }
-
-          liveStore.addMessage(
-            sessionId,
-            createSystemNotificationMessage(errorMessage, "error"),
-          );
-          store.setError(sessionId, errorMessage);
-          store.setChatState(sessionId, "idle");
-          store.setStreamingMessageId(sessionId, null);
-        }
-      } finally {
-        abortRef.current = null;
-        streamingPersonaIdRef.current = null;
-      }
+      await _sendToBackend(
+        targetSessionId,
+        text,
+        effectivePersonaInfo,
+        images,
+      );
     },
     [
       sessionId,
       chatState,
       store,
-      providerOverride,
-      systemPromptOverride,
       resolvePersonaInfo,
-      workingDirOverride,
+      _sendToBackend,
     ],
+  );
+
+  const retryUserMessage = useCallback(
+    async (messageId: string) => {
+      const currentLeaf = store.computeLeafSessionId(sessionId);
+
+      // Fork the session at the given message
+      const forkedSession = await apiForkSession(currentLeaf, messageId);
+
+      // Load the forked session's messages
+      const forkedMessages = await getSessionMessages(forkedSession.id);
+      store.setMessages(forkedSession.id, forkedMessages);
+
+      // Register the fork in the session store
+      const sessionStore = useChatSessionStore.getState();
+      sessionStore.addForkedSession({
+        id: forkedSession.id,
+        title: forkedSession.title,
+        agentId: forkedSession.agentId,
+        projectId: forkedSession.projectId,
+        providerId: forkedSession.providerId,
+        personaId: forkedSession.personaId,
+        modelName: forkedSession.modelName,
+        createdAt: forkedSession.createdAt,
+        updatedAt: forkedSession.updatedAt,
+        archivedAt: forkedSession.archivedAt,
+        messageCount: forkedSession.messageCount,
+        forkedFrom: forkedSession.forkedFrom,
+        forkPointMessageId: forkedSession.forkPointMessageId,
+      });
+
+      // Register the fork in the chat store
+      store.addFork(sessionId, messageId, currentLeaf, forkedSession.id);
+
+      // Send to backend with skipUserMessage since the fork already has it
+      store.setChatState(forkedSession.id, "thinking");
+      store.setError(forkedSession.id, null);
+
+      // Find the user message text to resend
+      const allMessages = store.messagesBySession[currentLeaf] ?? [];
+      const userMsg = allMessages.find((m) => m.id === messageId);
+      const textContent = userMsg?.content.find((c) => c.type === "text");
+      const text = textContent && "text" in textContent ? textContent.text : "";
+
+      const persona = userMsg?.metadata?.targetPersonaId
+        ? resolvePersonaInfo(
+            userMsg.metadata.targetPersonaId,
+            userMsg.metadata.targetPersonaName,
+          )
+        : undefined;
+
+      await _sendToBackend(forkedSession.id, text, persona, undefined, {
+        skipUserMessage: true,
+      });
+    },
+    [sessionId, store, resolvePersonaInfo, _sendToBackend],
+  );
+
+  const switchBranch = useCallback(
+    async (messageId: string, branchIndex: number) => {
+      store.setActiveBranch(sessionId, messageId, branchIndex);
+
+      // Lazy-load messages for the branch if not already loaded
+      const tree = store.getForkTree(sessionId);
+      const branchInfo = tree[messageId];
+      if (branchInfo) {
+        const branch = branchInfo.branches[branchIndex];
+        if (branch && !store.messagesBySession[branch.sessionId]) {
+          const msgs = await getSessionMessages(branch.sessionId);
+          store.setMessages(branch.sessionId, msgs);
+        }
+      }
+    },
+    [sessionId, store],
   );
 
   const stopGeneration = useCallback(() => {
     abortRef.current?.abort();
     const activePersonaId =
       streamingPersonaIdRef.current ?? getStreamingPersonaId();
+    const targetSessionId = store.computeLeafSessionId(sessionId);
     const activeStreamingMessageId = useChatStore
       .getState()
-      .getSessionRuntime(sessionId).streamingMessageId;
+      .getSessionRuntime(targetSessionId).streamingMessageId;
 
-    store.setChatState(sessionId, "idle");
-    store.setStreamingMessageId(sessionId, null);
+    store.setChatState(targetSessionId, "idle");
+    store.setStreamingMessageId(targetSessionId, null);
     // Cancel the backend ACP session to stop orphaned streaming events
-    acpCancelSession(sessionId, activePersonaId ?? undefined)
+    acpCancelSession(targetSessionId, activePersonaId ?? undefined)
       .then((wasCancelled) => {
         if (wasCancelled && activeStreamingMessageId) {
-          markMessageStopped(sessionId, activeStreamingMessageId);
+          markMessageStopped(targetSessionId, activeStreamingMessageId);
         }
       })
       .catch(() => {
@@ -262,33 +376,19 @@ export function useChat(
   }, [getStreamingPersonaId, store, sessionId]);
 
   const retryLastMessage = useCallback(async () => {
-    const sessionMessages = store.messagesBySession[sessionId] ?? [];
+    const displayMessages = hasForks
+      ? store.computeDisplayMessages(sessionId)
+      : store.messagesBySession[sessionId] ?? [];
     // Find the last user message
     const lastUserIndex = findLastIndex(
-      sessionMessages,
+      displayMessages,
       (m) => m.role === "user",
     );
     if (lastUserIndex === -1) return;
 
-    const lastUserMessage = sessionMessages[lastUserIndex];
-
-    // Remove all messages after (and including) the last assistant response
-    const messagesToKeep = sessionMessages.slice(0, lastUserIndex);
-    store.setMessages(sessionId, messagesToKeep);
-
-    // Extract the text and resend
-    const textContent = lastUserMessage.content.find((c) => c.type === "text");
-    if (textContent && "text" in textContent) {
-      const targetPersonaId = lastUserMessage.metadata?.targetPersonaId;
-      const targetPersonaName = lastUserMessage.metadata?.targetPersonaName;
-      await sendMessage(
-        textContent.text,
-        targetPersonaId
-          ? { id: targetPersonaId, name: targetPersonaName }
-          : undefined,
-      );
-    }
-  }, [sessionId, store, sendMessage]);
+    const lastUserMessage = displayMessages[lastUserIndex];
+    await retryUserMessage(lastUserMessage.id);
+  }, [sessionId, store, hasForks, retryUserMessage]);
 
   const clearChat = useCallback(() => {
     abortRef.current?.abort();
@@ -311,5 +411,8 @@ export function useChat(
     retryLastMessage,
     clearChat,
     isStreaming,
+    forkTree,
+    retryUserMessage,
+    switchBranch,
   };
 }

@@ -60,6 +60,8 @@ export interface Session {
   updatedAt: string;
   archivedAt?: string;
   messageCount: number;
+  forkedFrom?: string;
+  forkPointMessageId?: string;
 }
 
 // SSE event types (from goosed server)

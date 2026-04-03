@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { Message, MessageContent } from "@/shared/types/messages";
 import type {
   ChatState,
+  Session,
   SessionChatRuntime,
   TokenState,
 } from "@/shared/types/chat";
@@ -9,6 +10,7 @@ import {
   INITIAL_SESSION_CHAT_RUNTIME,
   INITIAL_TOKEN_STATE,
 } from "@/shared/types/chat";
+import type { ForkTree } from "../types/forks";
 
 function createInitialSessionRuntime(): SessionChatRuntime {
   return {
@@ -29,6 +31,9 @@ interface ChatStoreState {
 
   // Connection
   isConnected: boolean;
+
+  // Fork trees indexed by root session ID
+  forkTreeByRoot: Record<string, ForkTree>;
 }
 
 interface ChatStoreActions {
@@ -71,6 +76,26 @@ interface ChatStoreActions {
 
   // Cleanup
   cleanupSession: (sessionId: string) => void;
+
+  // Forking
+  addFork: (
+    rootSessionId: string,
+    forkPointMessageId: string,
+    sourceSessionId: string,
+    newSessionId: string,
+  ) => void;
+  setActiveBranch: (
+    rootSessionId: string,
+    forkPointMessageId: string,
+    branchIndex: number,
+  ) => void;
+  getForkTree: (rootSessionId: string) => ForkTree;
+  buildForkTreeFromSessions: (
+    rootSessionId: string,
+    allSessions: Session[],
+  ) => void;
+  computeDisplayMessages: (rootSessionId: string) => Message[];
+  computeLeafSessionId: (rootSessionId: string) => string;
 }
 
 export type ChatStore = ChatStoreState & ChatStoreActions;
@@ -81,6 +106,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   sessionStateById: {},
   activeSessionId: null,
   isConnected: false,
+  forkTreeByRoot: {},
 
   // Session management
   setActiveSession: (sessionId) =>
@@ -344,11 +370,179 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       const { [sessionId]: _, ...rest } = state.messagesBySession;
       const { [sessionId]: __, ...remainingSessionState } =
         state.sessionStateById;
+      const { [sessionId]: ___, ...remainingForkTrees } = state.forkTreeByRoot;
       return {
         messagesBySession: rest,
         sessionStateById: remainingSessionState,
+        forkTreeByRoot: remainingForkTrees,
         activeSessionId:
           state.activeSessionId === sessionId ? null : state.activeSessionId,
       };
     }),
+
+  // Forking
+  addFork: (rootSessionId, forkPointMessageId, sourceSessionId, newSessionId) =>
+    set((state) => {
+      const tree = { ...(state.forkTreeByRoot[rootSessionId] ?? {}) };
+      const existing = tree[forkPointMessageId];
+      if (existing) {
+        tree[forkPointMessageId] = {
+          ...existing,
+          branches: [...existing.branches, { sessionId: newSessionId }],
+          activeBranchIndex: existing.branches.length,
+        };
+      } else {
+        tree[forkPointMessageId] = {
+          sourceSessionId,
+          branches: [
+            { sessionId: sourceSessionId },
+            { sessionId: newSessionId },
+          ],
+          activeBranchIndex: 1,
+        };
+      }
+      return {
+        forkTreeByRoot: { ...state.forkTreeByRoot, [rootSessionId]: tree },
+      };
+    }),
+
+  setActiveBranch: (rootSessionId, forkPointMessageId, branchIndex) =>
+    set((state) => {
+      const tree = state.forkTreeByRoot[rootSessionId];
+      if (!tree?.[forkPointMessageId]) return state;
+      return {
+        forkTreeByRoot: {
+          ...state.forkTreeByRoot,
+          [rootSessionId]: {
+            ...tree,
+            [forkPointMessageId]: {
+              ...tree[forkPointMessageId],
+              activeBranchIndex: branchIndex,
+            },
+          },
+        },
+      };
+    }),
+
+  getForkTree: (rootSessionId) =>
+    get().forkTreeByRoot[rootSessionId] ?? {},
+
+  buildForkTreeFromSessions: (rootSessionId, allSessions) => {
+    // Collect all session IDs belonging to this tree
+    const treeSessionIds = new Set<string>([rootSessionId]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const s of allSessions) {
+        if (s.forkedFrom && treeSessionIds.has(s.forkedFrom) && !treeSessionIds.has(s.id)) {
+          treeSessionIds.add(s.id);
+          changed = true;
+        }
+      }
+    }
+
+    // Build fork tree entries from forked sessions
+    const tree: ForkTree = {};
+    for (const s of allSessions) {
+      if (!s.forkedFrom || !s.forkPointMessageId || !treeSessionIds.has(s.id)) continue;
+      const key = s.forkPointMessageId;
+      const existing = tree[key];
+      if (existing) {
+        if (!existing.branches.some((b) => b.sessionId === s.id)) {
+          existing.branches.push({ sessionId: s.id });
+          existing.activeBranchIndex = existing.branches.length - 1;
+        }
+      } else {
+        tree[key] = {
+          sourceSessionId: s.forkedFrom,
+          branches: [
+            { sessionId: s.forkedFrom },
+            { sessionId: s.id },
+          ],
+          activeBranchIndex: 1,
+        };
+      }
+    }
+
+    if (Object.keys(tree).length > 0) {
+      set((state) => ({
+        forkTreeByRoot: { ...state.forkTreeByRoot, [rootSessionId]: tree },
+      }));
+    }
+  },
+
+  computeDisplayMessages: (rootSessionId) => {
+    const state = get();
+    const tree = state.forkTreeByRoot[rootSessionId] ?? {};
+    const rootMessages = state.messagesBySession[rootSessionId] ?? [];
+
+    if (Object.keys(tree).length === 0) {
+      return rootMessages;
+    }
+
+    const result: Message[] = [];
+    let currentMessages = rootMessages;
+    let i = 0;
+
+    while (i < currentMessages.length) {
+      const msg = currentMessages[i];
+      result.push(msg);
+
+      // Check if this user message is a fork point
+      if (msg.role === "user" && tree[msg.id]) {
+        const branch = tree[msg.id];
+        const activeBranch = branch.branches[branch.activeBranchIndex];
+        if (activeBranch && activeBranch.sessionId !== rootSessionId) {
+          const branchMessages = state.messagesBySession[activeBranch.sessionId] ?? [];
+          // Find the fork point in the branch messages
+          const forkIdx = branchMessages.findIndex((m) => m.id === msg.id);
+          if (forkIdx !== -1) {
+            currentMessages = branchMessages;
+            i = forkIdx + 1;
+            continue;
+          }
+        }
+      }
+
+      i++;
+    }
+
+    return result;
+  },
+
+  computeLeafSessionId: (rootSessionId) => {
+    const state = get();
+    const tree = state.forkTreeByRoot[rootSessionId] ?? {};
+
+    if (Object.keys(tree).length === 0) {
+      return rootSessionId;
+    }
+
+    let currentSessionId = rootSessionId;
+    let currentMessages = state.messagesBySession[rootSessionId] ?? [];
+    let i = 0;
+
+    while (i < currentMessages.length) {
+      const msg = currentMessages[i];
+
+      if (msg.role === "user" && tree[msg.id]) {
+        const branch = tree[msg.id];
+        const activeBranch = branch.branches[branch.activeBranchIndex];
+        if (activeBranch && activeBranch.sessionId !== currentSessionId) {
+          const branchMessages = state.messagesBySession[activeBranch.sessionId] ?? [];
+          const forkIdx = branchMessages.findIndex((m) => m.id === msg.id);
+          if (forkIdx !== -1) {
+            currentSessionId = activeBranch.sessionId;
+            currentMessages = branchMessages;
+            i = forkIdx + 1;
+            continue;
+          }
+        }
+      }
+
+      i++;
+    }
+
+    return currentSessionId;
+  },
 }));
