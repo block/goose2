@@ -106,12 +106,14 @@ export function ArtifactPolicyProvider({
     const displayByToolCallId = new Map<string, ToolCardDisplay>();
 
     for (const ranking of artifactsIndex.byMessageId.values()) {
-      if (!ranking.primaryToolCallId || !ranking.primaryCandidate) continue;
-      displayByToolCallId.set(ranking.primaryToolCallId, {
-        role: "primary_host",
-        primaryCandidate: ranking.primaryCandidate,
-        secondaryCandidates: ranking.secondaryCandidates,
-      });
+      for (const [toolCallId, candidates] of ranking.candidatesByToolCallId) {
+        if (candidates.length === 0) continue;
+        displayByToolCallId.set(toolCallId, {
+          role: "primary_host",
+          primaryCandidate: candidates[0],
+          secondaryCandidates: candidates.slice(1),
+        });
+      }
     }
 
     return {

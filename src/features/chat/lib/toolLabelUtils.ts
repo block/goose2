@@ -50,7 +50,7 @@ interface VerbEntry {
 }
 
 const VERB_MAP: Record<string, VerbEntry> = {
-  write: { verb: "Wrote", noun: "files" },
+  write: { verb: "Edited", noun: "files" },
   edit: { verb: "Edited", noun: "files" },
   read: { verb: "Read", noun: "files" },
   shell: { verb: "Ran", noun: "commands" },
@@ -138,9 +138,9 @@ export function getToolDetail(name: string): string | undefined {
  * @param rawName  - original name, used as fallback for unknown types
  *
  * Examples:
- *   ("write", 1, "foo.html")        → "Wrote foo.html"
- *   ("write", 1, undefined)         → "Wrote"
- *   ("write", 3)                    → "Wrote 3 files"
+ *   ("write", 1, "foo.html")        → "Edited foo.html"
+ *   ("write", 1, undefined)         → "Edited"
+ *   ("write", 3)                    → "Edited 3 files"
  *   ("shell", 1, "ls /tmp")         → "Ran ls /tmp"
  *   (undefined, 1, undefined, "X")  → "X"
  */
@@ -165,4 +165,62 @@ export function getToolLabel(
   }
 
   return verb;
+}
+
+export function getToolVerb(type: string | undefined): string | undefined {
+  if (!type || !VERB_MAP[type]) return undefined;
+  return VERB_MAP[type].verb;
+}
+
+const PATH_ARG_KEYS = [
+  "path",
+  "file_path",
+  "filePath",
+  "filepath",
+  "filename",
+  "output_path",
+  "target",
+  "to",
+  "destination",
+];
+
+/**
+ * Extracts a filename from a path string.
+ */
+function fileNameFromPath(pathStr: string): string | undefined {
+  const segments = pathStr.split("/");
+  const last = segments[segments.length - 1];
+  return last?.includes(".") ? last : undefined;
+}
+
+/**
+ * Extracts a filename detail from multiple sources:
+ * 1. The tool name itself (e.g. "Write foo.html" → "foo.html")
+ * 2. Common path keys in tool arguments
+ * 3. First file path found in result text
+ */
+export function extractFileDetail(
+  name: string,
+  args?: Record<string, unknown>,
+  result?: string,
+): string | undefined {
+  const fromName = getToolDetail(name);
+  if (fromName) return fromName;
+
+  if (args) {
+    for (const key of PATH_ARG_KEYS) {
+      const val = args[key];
+      if (typeof val === "string" && val) {
+        const fn = fileNameFromPath(val);
+        if (fn) return fn;
+      }
+    }
+  }
+
+  if (result) {
+    const match = result.match(/\/?(?:[\w.-]+\/)+?([\w.-]+\.\w+)/);
+    if (match?.[1]) return match[1];
+  }
+
+  return undefined;
 }
