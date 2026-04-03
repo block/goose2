@@ -157,7 +157,7 @@ export function FilesList() {
   }
 
   return (
-    <div>
+    <div className="min-w-0 overflow-hidden">
       <div className="px-3 pb-1 pt-2">
         <div className="relative">
           <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
