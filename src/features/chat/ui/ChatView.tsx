@@ -432,8 +432,11 @@ export function ChatView({
             {isContextPanelOpen ? (
               <motion.div
                 key="context-panel"
-                className="flex h-full py-3 pl-3 pr-3"
-                style={{ width: CONTEXT_PANEL_TOTAL_WIDTH }}
+                className="flex h-full"
+                style={{
+                  width: CONTEXT_PANEL_TOTAL_WIDTH,
+                  padding: CONTEXT_PANEL_SHELL_PADDING,
+                }}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
