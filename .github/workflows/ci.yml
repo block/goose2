@@ -39,6 +39,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
+        env:
+          NODE_OPTIONS: "--max-old-space-size=8192"
 
   desktop:
     name: Desktop Build & E2E
