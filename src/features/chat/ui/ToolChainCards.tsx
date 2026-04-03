@@ -4,7 +4,8 @@ import { cn } from "@/shared/lib/cn";
 import { ToolCallAdapter } from "./ToolCallAdapter";
 import {
   getToolType,
-  getToolDetail,
+  getToolVerb,
+  extractFileDetail,
   getToolLabel,
 } from "../lib/toolLabelUtils";
 import type {
@@ -164,7 +165,7 @@ function ToolGroupRow({
         />
       </button>
       {expanded && (
-        <div className="ml-[7px] mt-1 flex flex-col gap-3 border-l border-border pl-4 animate-in slide-in-from-top-2 fade-in-0 duration-200">
+        <div className="ml-[7px] mt-1 flex flex-col gap-3 border-l border-border py-3 pl-4 animate-in slide-in-from-top-2 fade-in-0 duration-200">
           {group.items.map((item) => renderToolItem(item, true))}
         </div>
       )}
@@ -182,8 +183,13 @@ export function ToolChainCards({ toolItems }: { toolItems: ToolChainItem[] }) {
     const { request, response } = item;
 
     const type = getToolType(name);
-    const detail = getToolDetail(name);
-    const displayLabel = getToolLabel(type, 1, detail, name);
+    const detail = extractFileDetail(
+      name,
+      request?.arguments,
+      response?.result,
+    );
+    const displayLabel =
+      flat && detail ? detail : getToolLabel(type, 1, detail, name);
 
     return (
       <ToolCallAdapter
@@ -194,6 +200,8 @@ export function ToolChainCards({ toolItems }: { toolItems: ToolChainItem[] }) {
         result={response?.result}
         isError={response?.isError}
         displayLabel={displayLabel}
+        displayVerb={getToolVerb(type)}
+        displayDetail={detail}
         flat={flat}
       />
     );
