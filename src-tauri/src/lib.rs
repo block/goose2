@@ -69,6 +69,7 @@ pub fn run() {
             commands::projects::restore_project,
             commands::doctor::run_doctor,
             commands::doctor::run_doctor_fix,
+            commands::git::get_git_state,
             commands::system::get_home_dir,
             commands::system::path_exists,
         ])

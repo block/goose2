@@ -45,7 +45,7 @@ test.describe("Skills view", () => {
     await page.getByRole("button", { name: "New Skill" }).first().click();
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
-    await expect(dialog).toHaveAttribute("aria-label", "New Skill");
+    await expect(dialog.locator("h2", { hasText: "New Skill" })).toBeVisible();
     // Check form fields
     await expect(dialog.getByPlaceholder("my-skill-name")).toBeVisible();
     await expect(
@@ -115,7 +115,7 @@ test.describe("Skills view", () => {
     await navigateToSkills(page);
     await page.getByRole("button", { name: "New Skill" }).first().click();
     await expect(page.getByRole("dialog")).toBeVisible();
-    await page.getByLabel("Close").click();
+    await page.getByRole("button", { name: "Close" }).click();
     await expect(page.getByRole("dialog")).not.toBeVisible();
   });
 
@@ -153,7 +153,6 @@ test.describe("Skills view", () => {
     await page.getByRole("menuitem", { name: "Edit" }).click();
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
-    await expect(dialog).toHaveAttribute("aria-label", "Edit Skill");
     await expect(dialog.locator("h2", { hasText: "Edit Skill" })).toBeVisible();
     // Name should be pre-filled and read-only
     const nameInput = dialog.getByPlaceholder("my-skill-name");

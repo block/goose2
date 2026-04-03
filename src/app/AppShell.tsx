@@ -3,6 +3,7 @@ import { Sidebar } from "@/features/sidebar/ui/Sidebar";
 import { StatusBar } from "@/features/status/ui/StatusBar";
 import { HomeScreen } from "@/features/home/ui/HomeScreen";
 import { ChatView } from "@/features/chat/ui/ChatView";
+import type { PastedImage } from "@/shared/types/messages";
 import { SkillsView } from "@/features/skills/ui/SkillsView";
 import { AgentsView } from "@/features/agents/ui/AgentsView";
 import { ProjectsView } from "@/features/projects/ui/ProjectsView";
@@ -102,6 +103,9 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   const [pendingInitialMessage, setPendingInitialMessage] = useState<
     string | undefined
+  >();
+  const [pendingInitialImages, setPendingInitialImages] = useState<
+    PastedImage[] | undefined
   >();
   const [homeSelectedPersonaId, setHomeSelectedPersonaId] = useState<
     string | undefined
@@ -285,10 +289,12 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       providerId?: string,
       personaId?: string,
       projectId?: string | null,
+      images?: PastedImage[],
     ) => {
       setHomeSelectedProvider(providerId);
       setHomeSelectedPersonaId(personaId);
       setPendingInitialMessage(initialMessage);
+      setPendingInitialImages(images);
       const selectedProject =
         projectId != null
           ? projectStore.projects.find((project) => project.id === projectId)
@@ -299,6 +305,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         selectedProject,
       ).catch(() => {
         setPendingInitialMessage(undefined);
+        setPendingInitialImages(undefined);
         setHomeSelectedProvider(undefined);
         setHomeSelectedPersonaId(undefined);
       });
@@ -370,10 +377,12 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             initialProvider={homeSelectedProvider}
             initialPersonaId={activeSessionPersonaId ?? homeSelectedPersonaId}
             initialMessage={pendingInitialMessage}
+            initialImages={pendingInitialImages}
             onCreateProject={openCreateProjectDialog}
             onCreateProjectFromFolder={handleCreateProjectFromFolder}
             onInitialMessageConsumed={() => {
               setPendingInitialMessage(undefined);
+              setPendingInitialImages(undefined);
               setHomeSelectedProvider(undefined);
               setHomeSelectedPersonaId(undefined);
             }}
@@ -390,7 +399,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
-      <TopBar onHomeClick={() => handleNavigate("home")} />
+      <TopBar onSettingsClick={() => setSettingsOpen(true)} />
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <div
@@ -406,7 +415,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             collapsed={sidebarCollapsed}
             width={SIDEBAR_WIDTH}
             onCollapse={toggleSidebar}
-            onSettingsClick={() => setSettingsOpen(true)}
             onNavigate={handleNavigate}
             onNewChat={handleNewChat}
             onNewChatInProject={handleNewChatInProject}
@@ -423,7 +431,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           />
         </div>
 
-        <main className="min-h-0 min-w-0 flex-1 overflow-hidden">
+        <main className="min-h-0 min-w-0 flex-1">
           {children ?? renderContent()}
         </main>
       </div>

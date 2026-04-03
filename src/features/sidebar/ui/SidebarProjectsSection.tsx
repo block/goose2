@@ -13,9 +13,9 @@ import type { ProjectInfo } from "@/features/projects/api/projects";
 import { SessionActivityIndicator } from "@/shared/ui/SessionActivityIndicator";
 import { SidebarChatRow } from "./SidebarChatRow";
 
-const MAX_VISIBLE_CHATS = 3;
+const MAX_VISIBLE_CHATS = 5;
 const PROJECT_ROW_TEXT_CLASS =
-  "text-foreground-subtle group-hover:text-foreground hover:bg-transparent";
+  "text-muted-foreground hover:bg-transparent hover:text-foreground group-hover:text-foreground";
 
 interface TabInfo {
   id: string;
@@ -47,6 +47,8 @@ interface SidebarProjectsSectionProps {
   onArchiveProject?: (projectId: string) => void;
   onArchiveChat?: (sessionId: string) => void;
   onRenameChat?: (sessionId: string, nextTitle: string) => void;
+  onItemMouseEnter?: (e: React.MouseEvent<HTMLElement>) => void;
+  activeSessionRefCallback?: (el: HTMLElement | null) => void;
 }
 
 function ItemMenu({
@@ -148,6 +150,8 @@ function ProjectSection({
   onArchiveProject,
   onArchiveChat,
   onRenameChat,
+  onItemMouseEnter,
+  activeSessionRefCallback,
 }: {
   project: ProjectInfo;
   projectChats: TabInfo[];
@@ -161,6 +165,8 @@ function ProjectSection({
   onArchiveProject?: (projectId: string) => void;
   onArchiveChat?: (sessionId: string) => void;
   onRenameChat?: (sessionId: string, nextTitle: string) => void;
+  onItemMouseEnter?: (e: React.MouseEvent<HTMLElement>) => void;
+  activeSessionRefCallback?: (el: HTMLElement | null) => void;
 }) {
   const [showAll, setShowAll] = useState(false);
   const visibleChats = showAll
@@ -171,14 +177,15 @@ function ProjectSection({
   return (
     <div>
       {/* Project row */}
-      <div className="flex items-center group rounded-md transition-colors duration-150 hover:bg-accent/50">
+      <div className="flex items-center group rounded-md transition-colors duration-200">
         <Button
           type="button"
           variant="ghost"
           size="sm"
           onClick={() => toggleProject(project.id)}
+          onMouseEnter={onItemMouseEnter}
           className={cn(
-            "flex-1 min-w-0 justify-start gap-1.5 rounded-md px-2.5 py-1.5 text-[13px]",
+            "flex-1 min-w-0 justify-start gap-2 rounded-md px-3 py-2 text-[13px] font-light",
             PROJECT_ROW_TEXT_CLASS,
           )}
         >
@@ -237,6 +244,8 @@ function ProjectSection({
                 onSelect={onSelectSession}
                 onRename={onRenameChat}
                 onArchive={onArchiveChat}
+                onMouseEnter={onItemMouseEnter}
+                activeRef={isActive ? activeSessionRefCallback : undefined}
               />
             );
           })}
@@ -296,10 +305,13 @@ export function SidebarProjectsSection({
   onArchiveProject,
   onArchiveChat,
   onRenameChat,
+  onItemMouseEnter,
+  activeSessionRefCallback,
 }: SidebarProjectsSectionProps) {
   return (
     <div
       className={cn(
+        "relative z-10",
         labelTransition,
         labelVisible
           ? "opacity-100 max-h-[2000px]"
@@ -318,7 +330,7 @@ export function SidebarProjectsSection({
       >
         <span
           className={cn(
-            "text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex-1 pl-1.5",
+            "text-xs font-light uppercase tracking-wider text-muted-foreground flex-1 pl-3",
             labelTransition,
             labelVisible
               ? "opacity-100 w-auto"
@@ -377,6 +389,8 @@ export function SidebarProjectsSection({
               onArchiveProject={onArchiveProject}
               onArchiveChat={onArchiveChat}
               onRenameChat={onRenameChat}
+              onItemMouseEnter={onItemMouseEnter}
+              activeSessionRefCallback={activeSessionRefCallback}
             />
           ))}
         </div>
@@ -385,6 +399,12 @@ export function SidebarProjectsSection({
       {/* --- RECENTS (standalone chats from all sessions) --- */}
       {projectSessions.standalone.length > 0 && (
         <>
+          <div
+            className={cn(
+              "my-2 -mx-1.5 bg-border transition-all duration-300",
+              collapsed ? "w-5 mx-auto h-px" : "h-px",
+            )}
+          />
           {/* Section header (expanded only) */}
           <div
             className={cn(
@@ -394,7 +414,7 @@ export function SidebarProjectsSection({
           >
             <span
               className={cn(
-                "text-[10px] font-semibold uppercase tracking-wider text-muted-foreground pl-1.5",
+                "text-xs font-light uppercase tracking-wider text-muted-foreground pl-3 mb-2",
                 labelTransition,
                 labelVisible
                   ? "opacity-100 w-auto"
@@ -419,7 +439,7 @@ export function SidebarProjectsSection({
                     "relative rounded-lg",
                     activeSessionId === session.id
                       ? "bg-accent/70 text-foreground hover:bg-accent/70"
-                      : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   <MessageSquare className="size-4" />
@@ -446,6 +466,8 @@ export function SidebarProjectsSection({
                     onSelect={onSelectSession}
                     onRename={onRenameChat}
                     onArchive={onArchiveChat}
+                    onMouseEnter={onItemMouseEnter}
+                    activeRef={isActive ? activeSessionRefCallback : undefined}
                   />
                 );
               })}
