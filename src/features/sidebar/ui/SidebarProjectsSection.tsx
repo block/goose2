@@ -92,7 +92,7 @@ function ItemMenu({
           "size-6 rounded-md",
           open
             ? "visible opacity-100"
-            : "invisible group-hover:visible opacity-0 group-hover:opacity-100",
+            : "invisible group-hover:visible group-focus-within:visible opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
         )}
       >
         <IconDots className="size-3.5" />
@@ -346,7 +346,7 @@ export function SidebarProjectsSection({
             title="New project"
             className={cn(
               "mr-1 size-6 flex-shrink-0 rounded-md",
-              "invisible group-hover:visible opacity-0 group-hover:opacity-100",
+              "invisible group-hover:visible group-focus-within:visible opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
             )}
           >
             <IconLibraryPlusFilled className="size-3.5" />
