@@ -242,11 +242,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     [sessionStore],
   );
 
-  const handleNewChat = useCallback(() => {
-    setHomeSelectedProvider(undefined);
-    createNewTab();
-  }, [createNewTab]);
-
   const openCreateProjectDialog = useCallback(
     (options?: {
       initialWorkingDir?: string | null;
@@ -258,29 +253,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       setCreateProjectOpen(true);
     },
     [],
-  );
-
-  const handleCreateProjectFromFolder = useCallback(
-    async (options?: { onCreated?: (projectId: string) => void }) => {
-      try {
-        const { open } = await import("@tauri-apps/plugin-dialog");
-        const selected = await open({
-          directory: true,
-          multiple: false,
-          title: "Select Folder for New Project",
-        });
-
-        if (selected && typeof selected === "string") {
-          openCreateProjectDialog({
-            initialWorkingDir: selected,
-            onCreated: options?.onCreated,
-          });
-        }
-      } catch {
-        openCreateProjectDialog({ onCreated: options?.onCreated });
-      }
-    },
-    [openCreateProjectDialog],
   );
 
   const handleHomeStartChat = useCallback(
@@ -379,7 +351,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             initialMessage={pendingInitialMessage}
             initialImages={pendingInitialImages}
             onCreateProject={openCreateProjectDialog}
-            onCreateProjectFromFolder={handleCreateProjectFromFolder}
             onInitialMessageConsumed={() => {
               setPendingInitialMessage(undefined);
               setPendingInitialImages(undefined);
@@ -391,7 +362,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           <HomeScreen
             onStartChat={handleHomeStartChat}
             onCreateProject={openCreateProjectDialog}
-            onCreateProjectFromFolder={handleCreateProjectFromFolder}
           />
         );
     }
@@ -416,7 +386,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             width={SIDEBAR_WIDTH}
             onCollapse={toggleSidebar}
             onNavigate={handleNavigate}
-            onNewChat={handleNewChat}
             onNewChatInProject={handleNewChatInProject}
             onCreateProject={() => openCreateProjectDialog()}
             onEditProject={handleEditProject}

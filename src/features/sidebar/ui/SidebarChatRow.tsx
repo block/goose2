@@ -118,7 +118,7 @@ export function SidebarChatRow({
     <div
       ref={activeRef}
       className={cn(
-        "flex items-center group rounded-md transition-colors duration-200",
+        "flex items-center group rounded-md pr-0.5 transition-colors duration-200",
         className,
       )}
       onMouseEnter={onMouseEnter}

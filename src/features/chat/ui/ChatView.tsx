@@ -38,9 +38,6 @@ interface ChatViewProps {
   onCreateProject?: (options?: {
     onCreated?: (projectId: string) => void;
   }) => void;
-  onCreateProjectFromFolder?: (options?: {
-    onCreated?: (projectId: string) => void;
-  }) => void;
 }
 
 const CONTEXT_PANEL_WIDTH = 340;
@@ -66,7 +63,6 @@ export function ChatView({
   initialImages,
   onInitialMessageConsumed,
   onCreateProject,
-  onCreateProjectFromFolder,
 }: ChatViewProps) {
   const [activeSessionId] = useState(() => sessionId ?? crypto.randomUUID());
   const [isContextPanelOpen, setIsContextPanelOpen] = useState(true);
@@ -388,7 +384,6 @@ export function ChatView({
             onSend={handleSend}
             onStop={stopStreaming}
             isStreaming={isStreaming || chatState === "thinking"}
-            placeholder={`Message ${displayAgentName}...`}
             personas={personas}
             selectedPersonaId={selectedPersonaId}
             onPersonaChange={handlePersonaChange}
@@ -402,14 +397,6 @@ export function ChatView({
             onProjectChange={handleProjectChange}
             onCreateProject={(options) =>
               onCreateProject?.({
-                onCreated: (projectId) => {
-                  handleProjectChange(projectId);
-                  options?.onCreated?.(projectId);
-                },
-              })
-            }
-            onCreateProjectFromFolder={(options) =>
-              onCreateProjectFromFolder?.({
                 onCreated: (projectId) => {
                   handleProjectChange(projectId);
                   options?.onCreated?.(projectId);

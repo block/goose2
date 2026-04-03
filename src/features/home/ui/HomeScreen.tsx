@@ -51,16 +51,9 @@ interface HomeScreenProps {
   onCreateProject?: (options?: {
     onCreated?: (projectId: string) => void;
   }) => void;
-  onCreateProjectFromFolder?: (options?: {
-    onCreated?: (projectId: string) => void;
-  }) => void;
 }
 
-export function HomeScreen({
-  onStartChat,
-  onCreateProject,
-  onCreateProjectFromFolder,
-}: HomeScreenProps) {
+export function HomeScreen({ onStartChat, onCreateProject }: HomeScreenProps) {
   const [hour] = useState(() => new Date().getHours());
   const greeting = getGreeting(hour);
 
@@ -145,14 +138,6 @@ export function HomeScreen({
             onProjectChange={setSelectedProjectId}
             onCreateProject={(options) =>
               onCreateProject?.({
-                onCreated: (projectId) => {
-                  setSelectedProjectId(projectId);
-                  options?.onCreated?.(projectId);
-                },
-              })
-            }
-            onCreateProjectFromFolder={(options) =>
-              onCreateProjectFromFolder?.({
                 onCreated: (projectId) => {
                   setSelectedProjectId(projectId);
                   options?.onCreated?.(projectId);

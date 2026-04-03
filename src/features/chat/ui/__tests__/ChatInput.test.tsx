@@ -44,15 +44,10 @@ function StatefulChatInput({
 }
 
 describe("ChatInput", () => {
-  it("renders with placeholder text", () => {
-    render(<ChatInput onSend={vi.fn()} placeholder="Ask anything..." />);
-    expect(screen.getByPlaceholderText("Ask anything...")).toBeInTheDocument();
-  });
-
   it("renders with default placeholder", () => {
     render(<ChatInput onSend={vi.fn()} />);
     expect(
-      screen.getByPlaceholderText("Message Goose... (type @ to mention)"),
+      screen.getByPlaceholderText("Message Goose, @ to mention personas"),
     ).toBeInTheDocument();
   });
 
@@ -109,7 +104,10 @@ describe("ChatInput", () => {
         selectedProvider="goose"
       />,
     );
-    expect(screen.getByText("Goose")).toBeInTheDocument();
+    const providerButton = screen.getByRole("button", {
+      name: /choose a provider/i,
+    });
+    expect(providerButton).toHaveTextContent("Goose");
   });
 
   it("opens the provider selector menu", async () => {
@@ -127,10 +125,10 @@ describe("ChatInput", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: /override provider/i }),
+      screen.getByRole("button", { name: /choose a provider/i }),
     );
 
-    expect(screen.getByText("Provider Override")).toBeInTheDocument();
+    expect(screen.getByText("Choose a provider")).toBeInTheDocument();
     expect(screen.getByText("OpenAI")).toBeInTheDocument();
   });
 
@@ -153,7 +151,7 @@ describe("ChatInput", () => {
 
     await user.click(screen.getByRole("button", { name: /select project/i }));
 
-    expect(screen.getByText("Project")).toBeInTheDocument();
+    expect(screen.getByText("Choose a project")).toBeInTheDocument();
     expect(screen.getByText("No project")).toBeInTheDocument();
   });
 

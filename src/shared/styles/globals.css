@@ -742,6 +742,14 @@ body,
   .dark ::-webkit-scrollbar-thumb:hover {
     background: #666;
   }
+
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @layer components {

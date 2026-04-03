@@ -4,9 +4,13 @@ import {
   ChevronDown,
   Check,
   ArrowUp,
-  Sparkles,
   Square,
 } from "lucide-react";
+import {
+  formatProviderLabel,
+  getProviderIcon,
+} from "@/shared/ui/icons/ProviderIcons";
+import { IconLibraryPlusFilled } from "@tabler/icons-react";
 import type { AcpProvider } from "@/shared/api/acp";
 import type { Persona } from "@/shared/types/agents";
 import { cn } from "@/shared/lib/cn";
@@ -27,7 +31,6 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/shared/ui/tooltip";
 
 const NO_PROJECT_VALUE = "__no_project__";
 const CREATE_PROJECT_VALUE = "__create_project__";
-const CREATE_PROJECT_FROM_FOLDER_VALUE = "__create_project_from_folder__";
 
 function ProjectDot({ color }: { color?: string | null }) {
   return (
@@ -40,14 +43,6 @@ function ProjectDot({ color }: { color?: string | null }) {
       style={color ? { backgroundColor: color } : undefined}
     />
   );
-}
-
-function formatProviderLabel(providerId: string) {
-  return providerId
-    .split(/[-_\s]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
 }
 
 interface ChatInputToolbarProps {
@@ -70,9 +65,6 @@ interface ChatInputToolbarProps {
   availableProjects: ProjectOption[];
   onProjectChange?: (projectId: string | null) => void;
   onCreateProject?: (options?: {
-    onCreated?: (projectId: string) => void;
-  }) => void;
-  onCreateProjectFromFolder?: (options?: {
     onCreated?: (projectId: string) => void;
   }) => void;
   // Context
@@ -103,7 +95,6 @@ export function ChatInputToolbar({
   availableProjects,
   onProjectChange,
   onCreateProject,
-  onCreateProjectFromFolder,
   contextTokens,
   contextLimit,
   canSend,
@@ -138,11 +129,6 @@ export function ChatInputToolbar({
       return;
     }
 
-    if (value === CREATE_PROJECT_FROM_FOLDER_VALUE) {
-      onCreateProjectFromFolder?.();
-      return;
-    }
-
     onProjectChange?.(value === NO_PROJECT_VALUE ? null : value);
   };
 
@@ -152,19 +138,20 @@ export function ChatInputToolbar({
       <div className="flex items-center gap-0.5">
         {(availableProviderItems.length > 0 || providersLoading) && (
           <ChatInputSelector
-            ariaLabel="Override provider"
+            ariaLabel="Choose a provider"
             value={selectedProvider}
             triggerLabel={providersLoading ? "Loading..." : providerLabel}
-            icon={<Sparkles aria-hidden="true" />}
+            icon={getProviderIcon(selectedProvider, "size-3.5")}
             triggerVariant="toolbar"
             triggerSize="sm"
-            menuLabel="Provider Override"
+            menuLabel="Choose a provider"
             disabled={providersLoading}
             sections={[
               {
                 items: availableProviderItems.map((provider) => ({
                   value: provider.id,
                   label: provider.label,
+                  icon: getProviderIcon(provider.id, "size-4"),
                 })),
               },
             ]}
@@ -225,7 +212,7 @@ export function ChatInputToolbar({
           icon={<ProjectDot color={selectedProject?.color} />}
           triggerVariant="toolbar"
           triggerSize="sm"
-          menuLabel="Project"
+          menuLabel="Choose a project"
           contentWidth="wide"
           sections={[
             {
@@ -250,15 +237,10 @@ export function ChatInputToolbar({
                   ? [
                       {
                         value: CREATE_PROJECT_VALUE,
-                        label: "Create project...",
-                      },
-                    ]
-                  : []),
-                ...(onCreateProjectFromFolder
-                  ? [
-                      {
-                        value: CREATE_PROJECT_FROM_FOLDER_VALUE,
-                        label: "Create project from folder...",
+                        label: "Create project",
+                        icon: (
+                          <IconLibraryPlusFilled className="size-4 text-foreground" />
+                        ),
                       },
                     ]
                   : []),
