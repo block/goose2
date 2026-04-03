@@ -120,15 +120,22 @@ function groupByConsecutiveType(items: ToolChainItem[]): ToolGroup[] {
 
   const groups: ToolGroup[] = [];
   let currentType = getToolType(getToolItemName(items[0]));
+  let currentStatus = getToolItemStatus(items[0]);
   let currentItems: ToolChainItem[] = [items[0]];
 
   for (let i = 1; i < items.length; i++) {
     const itemType = getToolType(getToolItemName(items[i]));
-    if (itemType !== undefined && itemType === currentType) {
+    const itemStatus = getToolItemStatus(items[i]);
+    if (
+      itemType !== undefined &&
+      itemType === currentType &&
+      itemStatus === currentStatus
+    ) {
       currentItems.push(items[i]);
     } else {
       groups.push({ type: currentType, items: currentItems });
       currentType = itemType;
+      currentStatus = itemStatus;
       currentItems = [items[i]];
     }
   }
