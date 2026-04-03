@@ -75,9 +75,10 @@ function FileRow({
             </span>
           ) : null}
         </div>
-        <button
-          type="button"
-          className="mt-0.5 block truncate text-xs text-muted-foreground hover:underline"
+        {/* biome-ignore lint/a11y/useKeyWithClickEvents: directory path opens containing folder */}
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: interactive span inside button to handle separate click target */}
+        <span
+          className="mt-0.5 block cursor-pointer truncate text-xs text-muted-foreground hover:underline"
           onClick={(e) => {
             e.stopPropagation();
             onOpenDirectory(artifact.resolvedDirectoryPath);
@@ -85,7 +86,7 @@ function FileRow({
           title={`Open folder: ${artifact.directoryPath}`}
         >
           {artifact.directoryPath}
-        </button>
+        </span>
       </div>
     </button>
   );
