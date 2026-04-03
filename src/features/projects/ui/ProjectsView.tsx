@@ -123,7 +123,7 @@ interface ProjectsViewProps {
 }
 
 export function ProjectsView({ onStartChat }: ProjectsViewProps) {
-  const projectStore = useProjectStore();
+  const fetchProjects = useProjectStore((s) => s.fetchProjects);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<
@@ -149,7 +149,7 @@ export function ProjectsView({ onStartChat }: ProjectsViewProps) {
 
   const loadProjects = useCallback(async () => {
     try {
-      await projectStore.fetchProjects();
+      await fetchProjects();
       setProjects(useProjectStore.getState().projects);
     } catch {
       // projects may not exist yet
@@ -157,7 +157,7 @@ export function ProjectsView({ onStartChat }: ProjectsViewProps) {
     } finally {
       setLoading(false);
     }
-  }, [projectStore]);
+  }, [fetchProjects]);
 
   useEffect(() => {
     loadProjects();
