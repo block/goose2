@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   File,
   FileCode,
@@ -93,20 +93,52 @@ function FileRow({
 }
 
 export function FilesList() {
-  const { getAllSessionArtifacts, openResolvedPath } =
+  const { getAllSessionArtifacts, openResolvedPath, pathExists } =
     useArtifactPolicyContext();
   const [filter, setFilter] = useState("");
+  const [existingPaths, setExistingPaths] = useState<Set<string> | null>(null);
 
   const artifacts = getAllSessionArtifacts();
+
+  useEffect(() => {
+    if (artifacts.length === 0) {
+      setExistingPaths(new Set());
+      return;
+    }
+
+    let cancelled = false;
+    const paths = artifacts.map((a) => a.resolvedPath);
+
+    Promise.all(paths.map((p) => pathExists(p).catch(() => false))).then(
+      (results) => {
+        if (cancelled) return;
+        const existing = new Set<string>();
+        for (let i = 0; i < paths.length; i++) {
+          if (results[i]) existing.add(paths[i]);
+        }
+        setExistingPaths(existing);
+      },
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [artifacts, pathExists]);
+
+  const verifiedArtifacts =
+    existingPaths === null
+      ? artifacts
+      : artifacts.filter((a) => existingPaths.has(a.resolvedPath));
+
   const filteredArtifacts = filter
-    ? artifacts.filter((a) => {
+    ? verifiedArtifacts.filter((a) => {
         const query = filter.toLowerCase();
         return (
           a.filename.toLowerCase().includes(query) ||
           a.directoryPath.toLowerCase().includes(query)
         );
       })
-    : artifacts;
+    : verifiedArtifacts;
 
   const handleOpenFile = (path: string) => {
     void openResolvedPath(path);
@@ -116,7 +148,7 @@ export function FilesList() {
     void openResolvedPath(path);
   };
 
-  if (artifacts.length === 0) {
+  if (verifiedArtifacts.length === 0) {
     return (
       <div className="flex h-32 items-center justify-center">
         <p className="text-sm text-muted-foreground">No files yet</p>
