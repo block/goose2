@@ -234,6 +234,101 @@ describe("MessageBubble", () => {
     expect(screen.getByText("Solo")).toBeInTheDocument();
   });
 
+  it("groups consecutive same-type tool calls under a count label", () => {
+    const msg = assistantMessage([
+      {
+        type: "toolRequest",
+        id: "w1",
+        name: "Write a.md",
+        arguments: {},
+        status: "completed",
+      },
+      {
+        type: "toolRequest",
+        id: "w2",
+        name: "Write b.md",
+        arguments: {},
+        status: "completed",
+      },
+    ]);
+
+    render(<MessageBubble message={msg} />);
+
+    expect(screen.getByText("Edited 2 files")).toBeInTheDocument();
+  });
+
+  it("does not group tool calls with different execution outcomes", () => {
+    const msg = assistantMessage([
+      {
+        type: "toolRequest",
+        id: "w1",
+        name: "Write a.md",
+        arguments: {},
+        status: "completed",
+      },
+      {
+        type: "toolResponse",
+        id: "w1",
+        name: "Write a.md",
+        result: "ok",
+        isError: false,
+      },
+      {
+        type: "toolRequest",
+        id: "w2",
+        name: "Write b.md",
+        arguments: {},
+        status: "completed",
+      },
+      {
+        type: "toolResponse",
+        id: "w2",
+        name: "Write b.md",
+        result: "failed",
+        isError: true,
+      },
+    ]);
+
+    render(<MessageBubble message={msg} />);
+
+    // Should NOT be grouped as "Edited 2 files" since one errored
+    expect(screen.queryByText("Edited 2 files")).not.toBeInTheDocument();
+  });
+
+  it("shows verb label with filename extracted from tool name", () => {
+    const msg = assistantMessage([
+      {
+        type: "toolRequest",
+        id: "w1",
+        name: "Write report.md",
+        arguments: {},
+        status: "completed",
+      },
+    ]);
+
+    render(<MessageBubble message={msg} />);
+
+    // Solo trigger shows verb + filename
+    expect(screen.getAllByText("Edited").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("report.md").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("extracts filename from args path key when tool name has none", () => {
+    const msg = assistantMessage([
+      {
+        type: "toolRequest",
+        id: "w1",
+        name: "Write",
+        arguments: { file_path: "/Users/test/project/notes.md" },
+        status: "completed",
+      },
+    ]);
+
+    render(<MessageBubble message={msg} />);
+
+    expect(screen.getAllByText("notes.md").length).toBeGreaterThanOrEqual(1);
+  });
+
   it("collapses low-signal internal tool steps behind a toggle", async () => {
     const user = userEvent.setup();
     const msg = assistantMessage([

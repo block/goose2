@@ -155,4 +155,35 @@ describe("ToolCallAdapter — ArtifactActions", () => {
       await screen.findByText(`File not found: ${primary.resolvedPath}`),
     ).toBeInTheDocument();
   });
+
+  it("hides bottom label when no filename detail is available", async () => {
+    mockResolveToolCardDisplay.mockReturnValue(EMPTY_DISPLAY);
+
+    // Render without displayDetail — label would just repeat the verb
+    renderAdapter({
+      name: "Shell",
+      displayLabel: "Ran",
+      displayDetail: undefined,
+    });
+    await expandToolCall();
+
+    // "Ran" should only appear in the trigger, not repeated below
+    expect(screen.getAllByText("Ran")).toHaveLength(1);
+  });
+
+  it("shows filename label below content when displayDetail is provided", async () => {
+    mockResolveToolCardDisplay.mockReturnValue(EMPTY_DISPLAY);
+
+    renderAdapter({
+      name: "Write report.md",
+      displayLabel: "Edited report.md",
+      displayVerb: "Edited",
+      displayDetail: "report.md",
+    });
+    await expandToolCall();
+
+    const expandedContent = document.querySelector(".ml-\\[7px\\]");
+    expect(expandedContent).toBeInTheDocument();
+    expect(expandedContent?.textContent).toContain("report.md");
+  });
 });
