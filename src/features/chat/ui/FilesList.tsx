@@ -60,7 +60,7 @@ function FileRow({
   return (
     <button
       type="button"
-      className="flex w-full cursor-pointer items-start gap-2 border-b border-border px-3 py-2 text-left hover:bg-muted"
+      className="flex w-full cursor-pointer items-start gap-2 overflow-hidden border-b border-border px-3 py-2 text-left hover:bg-muted"
       onClick={() => onOpenFile(artifact.resolvedPath)}
     >
       <div className="mt-0.5">{getFileIcon(artifact)}</div>
