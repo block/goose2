@@ -68,6 +68,11 @@ fail_or_skip() {
     exit 1
   fi
   log "${message}"
+  # In check mode, exit 2 so callers (e.g. just dev) can detect "not ready"
+  # and block instead of silently continuing without a goose binary.
+  if [[ "${action}" == "check" ]]; then
+    exit 2
+  fi
   exit 0
 }
 
@@ -226,7 +231,10 @@ else
   git -C "${goose_repo}" checkout -b "${branch}" --track "${remote}/${branch}" >/dev/null 2>&1
 fi
 
-git -C "${goose_repo}" pull --ff-only "${remote}" "${branch}" >/dev/null 2>&1
+# Reset to the remote head. This is a managed build-only checkout, so we
+# always want to match the remote exactly. A plain `pull --ff-only` would
+# fail when the remote branch has been force-pushed (rebased/amended).
+git -C "${goose_repo}" reset --hard "${remote}/${branch}" >/dev/null 2>&1
 
 log "Building goose from ${goose_repo} on ${branch}."
 (
