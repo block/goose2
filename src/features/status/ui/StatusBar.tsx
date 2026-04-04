@@ -26,7 +26,7 @@ export function StatusBar({
   return (
     <div
       className={cn(
-        "flex h-6 w-full items-center justify-between border-t border-border",
+        "flex h-6 w-full items-center justify-between",
         "bg-background/80 px-3 text-xs text-muted-foreground",
       )}
     >

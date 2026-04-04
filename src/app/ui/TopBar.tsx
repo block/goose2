@@ -11,7 +11,7 @@ export function TopBar({ onSettingsClick, className }: TopBarProps) {
   return (
     <header
       className={cn(
-        "flex h-10 items-center gap-2 border-b border-border bg-background/80 pl-20 pr-3 backdrop-blur-sm",
+        "flex h-10 items-center gap-2 bg-background/80 pl-20 pr-3 backdrop-blur-sm",
         className,
       )}
       data-tauri-drag-region
