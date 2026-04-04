@@ -132,7 +132,7 @@ export function HomeScreen({ onStartChat, onCreateProject }: HomeScreenProps) {
             availableProjects={projects.map((project) => ({
               id: project.id,
               name: project.name,
-              workingDir: project.workingDirs[0] ?? null,
+              workingDirs: project.workingDirs,
               color: project.color,
             }))}
             onProjectChange={setSelectedProjectId}
