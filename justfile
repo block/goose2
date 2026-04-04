@@ -79,7 +79,14 @@ dev:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    LOCAL_GOOSE_BIN="$(./scripts/ensure-local-goose.sh --check-bin)"
+    LOCAL_GOOSE_BIN="$(./scripts/ensure-local-goose.sh --check-bin)" || {
+        rc=$?
+        if [[ $rc -eq 2 ]]; then
+            echo "❌ Local goose binary is not ready. Run 'just setup' first." >&2
+            exit 1
+        fi
+        exit $rc
+    }
     if [[ -n "${LOCAL_GOOSE_BIN}" ]]; then
         export GOOSE_BIN="${LOCAL_GOOSE_BIN}"
         echo "Using local goose binary: ${GOOSE_BIN}"
@@ -118,7 +125,14 @@ dev-debug:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    LOCAL_GOOSE_BIN="$(./scripts/ensure-local-goose.sh --check-bin)"
+    LOCAL_GOOSE_BIN="$(./scripts/ensure-local-goose.sh --check-bin)" || {
+        rc=$?
+        if [[ $rc -eq 2 ]]; then
+            echo "❌ Local goose binary is not ready. Run 'just setup' first." >&2
+            exit 1
+        fi
+        exit $rc
+    }
     if [[ -n "${LOCAL_GOOSE_BIN}" ]]; then
         export GOOSE_BIN="${LOCAL_GOOSE_BIN}"
         echo "Using local goose binary: ${GOOSE_BIN}"
