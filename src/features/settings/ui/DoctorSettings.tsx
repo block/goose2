@@ -7,7 +7,6 @@ import {
   type DoctorCheck,
   type DoctorReport,
 } from "@/shared/api/doctor";
-import { discoverAcpProviders } from "@/shared/api/acp";
 import { DoctorCheckRow } from "./DoctorCheckRow";
 
 function formatDebugReport(report: DoctorReport): string {
@@ -66,16 +65,9 @@ export function DoctorSettings() {
     }
   }, []);
 
-  /** Run checks, then refresh the ACP provider list so newly-installed agents appear. */
+  /** Run checks (provider list is now static, no refresh needed). */
   const runChecksAndRefresh = useCallback(async () => {
     await runChecks();
-    if (mountedRef.current) {
-      try {
-        await discoverAcpProviders();
-      } catch (e) {
-        console.error("[Doctor] Failed to refresh providers:", e);
-      }
-    }
   }, [runChecks]);
 
   useEffect(() => {

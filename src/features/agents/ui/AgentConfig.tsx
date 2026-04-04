@@ -17,6 +17,7 @@ import type {
   AgentConnectionType,
   CreateAgentRequest,
 } from "@/shared/types/agents";
+import { discoverAcpProviders, type AcpProvider } from "@/shared/api/acp";
 
 interface AgentConfigProps {
   agent?: Agent;
@@ -25,20 +26,20 @@ interface AgentConfigProps {
   onCancel: () => void;
 }
 
-const PROVIDER_OPTIONS: { value: ProviderType; label: string }[] = [
-  { value: "goose", label: "Goose" },
-  { value: "claude", label: "Claude" },
-  { value: "openai", label: "OpenAI" },
-  { value: "ollama", label: "Ollama" },
-  { value: "custom", label: "Custom" },
-];
-
 export function AgentConfig({
   agent,
   personas,
   onSave,
   onCancel,
 }: AgentConfigProps) {
+  const [acpProviders, setAcpProviders] = useState<AcpProvider[]>([]);
+
+  useEffect(() => {
+    discoverAcpProviders()
+      .then(setAcpProviders)
+      .catch(() => setAcpProviders([]));
+  }, []);
+
   const [name, setName] = useState(agent?.name ?? "");
   const [personaId, setPersonaId] = useState(agent?.personaId ?? "");
   const connectionType: AgentConnectionType = "builtin";
@@ -109,7 +110,7 @@ export function AgentConfig({
         </Label>
         <Select
           value={personaId || "__none__"}
-          onValueChange={(v) => setPersonaId(v === "__none__" ? "" : v)}
+          onValueChange={(v: string) => setPersonaId(v === "__none__" ? "" : v)}
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="None" />
@@ -138,15 +139,15 @@ export function AgentConfig({
         </Label>
         <Select
           value={provider}
-          onValueChange={(v) => setProvider(v as ProviderType)}
+          onValueChange={(v: string) => setProvider(v as ProviderType)}
         >
           <SelectTrigger className="w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {PROVIDER_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
+            {acpProviders.map((providerOption) => (
+              <SelectItem key={providerOption.id} value={providerOption.id}>
+                {providerOption.label}
               </SelectItem>
             ))}
           </SelectContent>

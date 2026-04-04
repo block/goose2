@@ -14,6 +14,11 @@ export interface AcpSendMessageOptions {
   images?: [string, string][];
 }
 
+export interface AcpPrepareSessionOptions {
+  workingDir?: string;
+  personaId?: string;
+}
+
 /** Discover ACP providers installed on the system. */
 export async function discoverAcpProviders(): Promise<AcpProvider[]> {
   return invoke("discover_acp_providers");
@@ -36,6 +41,21 @@ export async function acpSendMessage(
     personaId: personaId ?? null,
     personaName: personaName ?? null,
     images: images ?? [],
+  });
+}
+
+/** Prepare or warm an ACP session ahead of the first prompt. */
+export async function acpPrepareSession(
+  sessionId: string,
+  providerId: string,
+  options: AcpPrepareSessionOptions = {},
+): Promise<void> {
+  const { workingDir, personaId } = options;
+  return invoke("acp_prepare_session", {
+    sessionId,
+    providerId,
+    workingDir: workingDir ?? null,
+    personaId: personaId ?? null,
   });
 }
 

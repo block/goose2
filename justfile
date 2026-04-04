@@ -4,9 +4,14 @@ default:
 
 # ── Dev Environment ──────────────────────────────────────────
 
+# Sync and build the managed local goose checkout used for goose2 integration.
+goose-sync:
+    GOOSE_DEV_MODE=required ./scripts/ensure-local-goose.sh
+
 # Install dependencies
 setup:
     pnpm install
+    GOOSE_DEV_MODE=required ./scripts/ensure-local-goose.sh
     cd src-tauri && cargo build
 
 # ── Build & Check ────────────────────────────────────────────
@@ -74,6 +79,12 @@ dev:
     #!/usr/bin/env bash
     set -euo pipefail
 
+    LOCAL_GOOSE_BIN="$(./scripts/ensure-local-goose.sh --check-bin)"
+    if [[ -n "${LOCAL_GOOSE_BIN}" ]]; then
+        export GOOSE_BIN="${LOCAL_GOOSE_BIN}"
+        echo "Using local goose binary: ${GOOSE_BIN}"
+    fi
+
     # Derive a stable port from the working directory so the same worktree
     # always gets the same port. This avoids changing TAURI_CONFIG between
     # runs, which would invalidate Cargo's build cache and trigger a full
@@ -106,6 +117,12 @@ dev:
 dev-debug:
     #!/usr/bin/env bash
     set -euo pipefail
+
+    LOCAL_GOOSE_BIN="$(./scripts/ensure-local-goose.sh --check-bin)"
+    if [[ -n "${LOCAL_GOOSE_BIN}" ]]; then
+        export GOOSE_BIN="${LOCAL_GOOSE_BIN}"
+        echo "Using local goose binary: ${GOOSE_BIN}"
+    fi
 
     VITE_PORT=$(python3 -c "import hashlib,os; h=int(hashlib.sha256(os.getcwd().encode()).hexdigest(),16); print(10000 + h % 55000)")
     export VITE_PORT

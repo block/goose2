@@ -21,6 +21,7 @@ tauri = { version = "2", features = ["protocol-asset"] }
 tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-window-state = "2"
+tauri-plugin-log = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 dirs = "6.0.0"
@@ -31,8 +32,10 @@ chrono = { version = "0.4", features = ["serde"] }
 serde_yaml = "0.9"
 futures = "0.3"
 tokio-stream = "0.1"
-tokio-util = { version = "0.7", features = ["rt"] }
+tokio-util = { version = "0.7", features = ["compat", "rt"] }
 async-trait = "0.1"
+agent-client-protocol = "0.10.4"
+tokio-tungstenite = "0.21.0"
 acp-client = { git = "https://github.com/block/builderbot", rev = "dbd5bc9c0cd559c7a67ab2d56545dba110f4a4cb" }
 doctor = { git = "https://github.com/block/builderbot", rev = "bfce29264181236a2e5b4fd903ace6291f6a7594" }
 

@@ -16,6 +16,7 @@ import { useProviderSelection } from "@/features/agents/hooks/useProviderSelecti
 import { useChatSessionStore } from "../stores/chatSessionStore";
 import { getProject, type ProjectInfo } from "@/features/projects/api/projects";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
+import { acpPrepareSession } from "@/shared/api/acp";
 import {
   buildProjectSystemPrompt,
   composeSystemPrompt,
@@ -77,7 +78,6 @@ export function ChatView({
     ? 0
     : CONTEXT_PANEL_REFLOW_DURATION_MS;
 
-  // Provider state from shared store
   const {
     providers,
     providersLoading,
@@ -85,7 +85,6 @@ export function ChatView({
     setSelectedProvider: setGlobalSelectedProvider,
   } = useProviderSelection();
 
-  // Persona state
   const personas = useAgentStore((s) => s.personas);
   const [selectedPersonaId, setSelectedPersonaId] = useState<string | null>(
     initialPersonaId ?? null,
@@ -118,7 +117,6 @@ export function ChatView({
         })),
     [projects],
   );
-  // For existing sessions, use their saved provider; otherwise use global selection
   const selectedProvider =
     session?.providerId ??
     initialProvider ??
@@ -267,6 +265,28 @@ export function ChatView({
     ? { id: selectedPersona.id, name: selectedPersona.displayName }
     : undefined;
 
+  useEffect(() => {
+    let cancelled = false;
+
+    acpPrepareSession(activeSessionId, selectedProvider, {
+      workingDir: effectiveWorkingDir,
+      personaId: selectedPersonaId ?? undefined,
+    }).catch((error) => {
+      if (!cancelled) {
+        console.error("Failed to prepare ACP session:", error);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeSessionId,
+    effectiveWorkingDir,
+    selectedPersonaId,
+    selectedProvider,
+  ]);
+
   const {
     messages,
     chatState,
@@ -282,12 +302,10 @@ export function ChatView({
     effectiveWorkingDir,
   );
 
-  // Ref for deferred sends after persona switch (Bug 1 fix: avoid stale system prompt)
   const deferredSend = useRef<{ text: string; images?: PastedImage[] } | null>(
     null,
   );
 
-  // Wrap sendMessage to handle @ mentioned persona overrides
   const chatStore = useChatStore();
   const handleSend = useCallback(
     (text: string, personaId?: string, images?: PastedImage[]) => {
@@ -326,7 +344,6 @@ export function ChatView({
     ],
   );
 
-  // Effect to send deferred message after persona switch completes
   useEffect(() => {
     if (deferredSend.current && selectedPersona) {
       const { text, images } = deferredSend.current;
@@ -335,7 +352,6 @@ export function ChatView({
     }
   }, [sendMessage, selectedPersona]);
 
-  // Auto-send initial message from HomeScreen on mount
   const initialMessageSent = useRef(false);
   useEffect(() => {
     if (
@@ -355,7 +371,6 @@ export function ChatView({
     chatState === "waiting" ||
     chatState === "compacting";
 
-  // Open persona editor
   const handleCreatePersona = useCallback(() => {
     useAgentStore.getState().openPersonaEditor();
   }, []);
