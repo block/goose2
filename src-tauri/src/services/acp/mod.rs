@@ -1,10 +1,13 @@
 mod catchup;
+mod goose_serve;
+mod manager;
 mod payloads;
 mod registry;
 mod store;
 mod writer;
 
 pub use catchup::build_catchup_context;
+pub use manager::GooseAcpManager;
 pub use registry::{AcpRunningSession, AcpSessionRegistry};
 pub use store::TauriStore;
 pub use writer::TauriMessageWriter;
@@ -12,7 +15,7 @@ pub use writer::TauriMessageWriter;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use acp_client::{AcpDriver, AgentDriver, MessageWriter, Store};
+use acp_client::{MessageWriter, Store};
 
 use crate::services::sessions::SessionStore;
 use crate::types::messages::{
@@ -44,6 +47,33 @@ pub fn split_composite_key(key: &str) -> (&str, Option<&str>) {
 pub struct AcpService;
 
 impl AcpService {
+    pub async fn prepare_session(
+        app_handle: tauri::AppHandle,
+        session_id: String,
+        provider_id: String,
+        working_dir: PathBuf,
+        persona_id: Option<String>,
+        session_store: Arc<SessionStore>,
+    ) -> Result<(), String> {
+        session_store.ensure_session(&session_id, Some(provider_id.clone()));
+
+        let manager = GooseAcpManager::start(app_handle).await?;
+        let tauri_store = TauriStore::new(session_store, session_id.clone(), persona_id.clone());
+        let existing_agent_session_id = tauri_store.get_agent_session_id();
+        let store: Arc<dyn Store> = Arc::new(tauri_store);
+
+        manager
+            .prepare_session(
+                make_composite_key(&session_id, persona_id.as_deref()),
+                session_id,
+                provider_id,
+                working_dir,
+                existing_agent_session_id,
+                store,
+            )
+            .await
+    }
+
     /// Send a prompt to the given ACP provider and stream the response via
     /// Tauri events.
     #[allow(clippy::too_many_arguments)]
@@ -97,7 +127,6 @@ impl AcpService {
             None
         };
 
-        let driver = AcpDriver::new(&provider_id)?;
         let registry_key = make_composite_key(&session_id, persona_id.as_deref());
         let cancel_token = registry.register(&registry_key, &provider_id);
 
@@ -143,38 +172,23 @@ impl AcpService {
             prompt.clone()
         };
 
-        // AcpDriver::run may use !Send futures internally, so we run it on a
-        // dedicated thread with a LocalSet.
-        let session_id_inner = session_id.clone();
-        let registry_inner = Arc::clone(&registry);
-        let join_result = tokio::task::spawn_blocking(move || {
-            let rt = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .map_err(|e| format!("Failed to build tokio runtime: {e}"))?;
+        let manager = GooseAcpManager::start(app_handle.clone()).await?;
+        let result = manager
+            .send_prompt(
+                registry_key.clone(),
+                session_id.clone(),
+                provider_id.clone(),
+                working_dir,
+                agent_session_id,
+                store,
+                writer,
+                effective_prompt,
+                images,
+            )
+            .await;
 
-            let local = tokio::task::LocalSet::new();
-            local.block_on(&rt, async move {
-                driver
-                    .run(
-                        &session_id_inner,
-                        &effective_prompt,
-                        &images,
-                        &working_dir,
-                        &store,
-                        &writer,
-                        &cancel_token,
-                        agent_session_id.as_deref(),
-                    )
-                    .await
-            })
-        })
-        .await;
-
-        // Always deregister, even on panic/JoinError
-        registry_inner.deregister(&registry_key);
-
-        let result = join_result.map_err(|e| format!("ACP task panicked: {e}"))?;
+        registry.deregister(&registry_key);
+        drop(cancel_token);
 
         if let Err(ref error) = result {
             let _ = session_store.update_message(

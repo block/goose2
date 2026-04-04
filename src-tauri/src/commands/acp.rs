@@ -3,12 +3,15 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::{AppHandle, State};
 
-use crate::services::acp::{make_composite_key, AcpRunningSession, AcpService, AcpSessionRegistry};
+use crate::services::acp::{
+    make_composite_key, AcpRunningSession, AcpService, AcpSessionRegistry, GooseAcpManager,
+};
 use crate::services::sessions::SessionStore;
 use crate::types::messages::{
     MessageCompletionStatus, MessageContent, MessageMetadata, ToolCallStatus,
 };
-use acp_client::discover_providers;
+
+const DEPRECATED_PROVIDER_IDS: &[&str] = &["claude-code", "codex", "gemini-cli"];
 
 /// Response type for an ACP provider, sent to the frontend.
 #[derive(Serialize)]
@@ -16,6 +19,10 @@ use acp_client::discover_providers;
 pub struct AcpProviderResponse {
     id: String,
     label: String,
+}
+
+fn should_include_provider(provider_id: &str) -> bool {
+    !DEPRECATED_PROVIDER_IDS.contains(&provider_id)
 }
 
 fn default_artifacts_working_dir() -> PathBuf {
@@ -76,16 +83,21 @@ fn resolve_working_dir(
     })
 }
 
-/// Discover all locally available ACP providers.
+/// Return the list of providers available through goose serve.
 #[tauri::command]
-pub async fn discover_acp_providers() -> Vec<AcpProviderResponse> {
-    discover_providers()
+pub async fn discover_acp_providers(
+    app_handle: AppHandle,
+) -> Result<Vec<AcpProviderResponse>, String> {
+    let manager = GooseAcpManager::start(app_handle).await?;
+    let providers = manager.list_providers().await?;
+    Ok(providers
         .into_iter()
-        .map(|p| AcpProviderResponse {
-            id: p.id,
-            label: p.label,
+        .filter(|provider| should_include_provider(&provider.id))
+        .map(|provider| AcpProviderResponse {
+            id: provider.id,
+            label: provider.label,
         })
-        .collect()
+        .collect())
 }
 
 /// Send a prompt to an ACP agent and stream the response via Tauri events.
@@ -127,9 +139,33 @@ pub async fn acp_send_message(
     .await
 }
 
+#[tauri::command]
+pub async fn acp_prepare_session(
+    app_handle: AppHandle,
+    session_store: State<'_, Arc<SessionStore>>,
+    session_id: String,
+    provider_id: String,
+    working_dir: Option<String>,
+    persona_id: Option<String>,
+) -> Result<(), String> {
+    let current_dir = std::env::current_dir()
+        .map_err(|error| format!("Failed to determine current working directory: {error}"))?;
+    let working_dir = resolve_working_dir(working_dir, &current_dir)?;
+
+    AcpService::prepare_session(
+        app_handle,
+        session_id,
+        provider_id,
+        working_dir,
+        persona_id,
+        Arc::clone(&session_store),
+    )
+    .await
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{expand_home_dir, resolve_working_dir};
+    use super::{expand_home_dir, resolve_working_dir, should_include_provider};
     use std::path::PathBuf;
 
     #[test]
@@ -172,6 +208,16 @@ mod tests {
             home_dir.join("Code/goose2")
         );
     }
+
+    #[test]
+    fn provider_discovery_hides_deprecated_cli_providers() {
+        assert!(!should_include_provider("claude-code"));
+        assert!(!should_include_provider("codex"));
+        assert!(!should_include_provider("gemini-cli"));
+        assert!(should_include_provider("goose"));
+        assert!(should_include_provider("claude-acp"));
+        assert!(should_include_provider("codex-acp"));
+    }
 }
 
 /// Cancel a running ACP session.
@@ -180,6 +226,7 @@ mod tests {
 /// is used so only that persona's stream is cancelled.
 #[tauri::command]
 pub async fn acp_cancel_session(
+    app_handle: AppHandle,
     registry: State<'_, Arc<AcpSessionRegistry>>,
     session_store: State<'_, Arc<SessionStore>>,
     session_id: String,
@@ -187,6 +234,8 @@ pub async fn acp_cancel_session(
 ) -> Result<bool, String> {
     let key = make_composite_key(&session_id, persona_id.as_deref());
     let assistant_message_id = registry.cancel(&key);
+    let manager = GooseAcpManager::start(app_handle).await?;
+    let was_cancelled = manager.cancel_session(key).await?;
 
     if let Some(message_id) = assistant_message_id.as_deref() {
         let _ = session_store.update_message(&session_id, message_id, |message| {
@@ -203,7 +252,7 @@ pub async fn acp_cancel_session(
         });
     }
 
-    Ok(assistant_message_id.is_some())
+    Ok(was_cancelled)
 }
 
 /// List all currently running ACP sessions.

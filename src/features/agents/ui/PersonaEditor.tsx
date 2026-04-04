@@ -31,6 +31,7 @@ import type {
   CreatePersonaRequest,
   UpdatePersonaRequest,
 } from "@/shared/types/agents";
+import { discoverAcpProviders, type AcpProvider } from "@/shared/api/acp";
 import { AvatarDropZone } from "./AvatarDropZone";
 
 interface PersonaEditorProps {
@@ -42,14 +43,6 @@ interface PersonaEditorProps {
   isPending?: boolean;
 }
 
-const PROVIDER_OPTIONS: { value: ProviderType; label: string }[] = [
-  { value: "goose", label: "Goose" },
-  { value: "claude", label: "Claude" },
-  { value: "openai", label: "OpenAI" },
-  { value: "ollama", label: "Ollama" },
-  { value: "custom", label: "Custom" },
-];
-
 export function PersonaEditor({
   persona,
   isOpen,
@@ -60,6 +53,16 @@ export function PersonaEditor({
 }: PersonaEditorProps) {
   const isEditing = !!persona;
   const isReadOnly = persona?.isBuiltin ?? false;
+
+  const [acpProviders, setAcpProviders] = useState<AcpProvider[]>([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      discoverAcpProviders()
+        .then(setAcpProviders)
+        .catch(() => setAcpProviders([]));
+    }
+  }, [isOpen]);
 
   const [displayName, setDisplayName] = useState("");
   const [avatar, setAvatar] = useState<Avatar | null>(null);
@@ -203,7 +206,7 @@ export function PersonaEditor({
             </Label>
             <Select
               value={provider || "__none__"}
-              onValueChange={(v) =>
+              onValueChange={(v: string) =>
                 setProvider(
                   v === "__none__"
                     ? ("" as ProviderType | "")
@@ -222,9 +225,9 @@ export function PersonaEditor({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none__">None</SelectItem>
-                {PROVIDER_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
+                {acpProviders.map((providerOption) => (
+                  <SelectItem key={providerOption.id} value={providerOption.id}>
+                    {providerOption.label}
                   </SelectItem>
                 ))}
               </SelectContent>

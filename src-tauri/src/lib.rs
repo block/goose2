@@ -18,6 +18,14 @@ pub fn run() {
     let acp_registry_for_exit = Arc::clone(&acp_registry);
 
     tauri::Builder::default()
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .level(log::LevelFilter::Debug)
+                .targets([tauri_plugin_log::Target::new(
+                    tauri_plugin_log::TargetKind::Stdout,
+                )])
+                .build(),
+        )
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(
@@ -49,6 +57,7 @@ pub fn run() {
             commands::sessions::unarchive_session,
             commands::chat::chat_send_message,
             commands::acp::discover_acp_providers,
+            commands::acp::acp_prepare_session,
             commands::acp::acp_send_message,
             commands::acp::acp_cancel_session,
             commands::acp::acp_list_running,
@@ -73,6 +82,7 @@ pub fn run() {
             commands::system::get_home_dir,
             commands::system::path_exists,
         ])
+        .setup(|_app| Ok(()))
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(move |_app, event| {
