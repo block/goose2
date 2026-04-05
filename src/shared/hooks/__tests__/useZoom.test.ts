@@ -105,6 +105,16 @@ describe("useZoom", () => {
     await vi.waitFor(() => expect(mockSetZoom).toHaveBeenCalledWith(0.7));
   });
 
+  it("clamps at max boundary", async () => {
+    localStorage.setItem("goose-zoom-level", "1.3");
+    renderHook(() => useZoom());
+    await vi.waitFor(() => expect(mockSetZoom).toHaveBeenCalledWith(1.3));
+    mockSetZoom.mockClear();
+    fireKey("=", { metaKey: true });
+    // Still 1.3 — clamped, doesn't go higher
+    await vi.waitFor(() => expect(mockSetZoom).toHaveBeenCalledWith(1.3));
+  });
+
   it("does not call Tauri API without __TAURI_INTERNALS__", async () => {
     delete (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
     mockSetZoom.mockClear();
