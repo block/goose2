@@ -705,7 +705,6 @@ body,
   html {
     -webkit-text-size-adjust: 100%;
     font-variation-settings: normal;
-    scrollbar-color: var(--bg-muted);
   }
 
   body {
@@ -720,7 +719,6 @@ body,
     color: #ffffff;
   }
 
-  /* Custom scrollbars */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -729,18 +727,8 @@ body,
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: #ccc;
+    background: transparent;
     border-radius: 999px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: #999;
-  }
-
-  .dark ::-webkit-scrollbar-thumb {
-    background: #444;
-  }
-  .dark ::-webkit-scrollbar-thumb:hover {
-    background: #666;
   }
 
   .scrollbar-none {
