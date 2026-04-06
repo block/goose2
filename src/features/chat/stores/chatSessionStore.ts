@@ -128,7 +128,10 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
   isLoading: false,
   contextPanelOpenBySession: {},
 
-  // Session lifecycle — createSession is stubbed; use createDraftSession instead
+  // Session lifecycle — local-only for now.
+  // The goose binary creates the real ACP session on first prompt
+  // (via prepare_session / send_prompt). These just manage the
+  // frontend's in-memory session list.
   createSession: async (_opts) => {
     throw new Error("createSession not yet wired to ACP — use createDraftSession");
   },
@@ -154,8 +157,6 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
   promoteDraft: (id) => {
     const session = get().sessions.find((s) => s.id === id);
     if (!session?.draft) return;
-    // Clear draft flag — the backend session is created automatically by
-    // ensure_session when the first message is sent via ACP.
     set((state) => ({
       sessions: state.sessions.map((s) =>
         s.id === id ? { ...s, draft: undefined } : s,
@@ -187,7 +188,7 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
   updateSession: (id, patch, opts) => {
     set((state) => ({
       sessions: state.sessions.map((s) =>
-        s.id === id ? { ...s, ...patch } : s,
+        s.id === id ? { ...s, ...patch, updatedAt: new Date().toISOString() } : s,
       ),
     }));
     persistSessions(get().sessions);
@@ -197,12 +198,16 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     // TODO: wire non-draft updates to ACP when supported
   },
 
-  archiveSession: async (_id) => {
-    throw new Error("archiveSession not yet wired to ACP");
+  archiveSession: async (id) => {
+    set((state) => ({
+      sessions: state.sessions.filter((s) => s.id !== id),
+      activeSessionId:
+        state.activeSessionId === id ? null : state.activeSessionId,
+    }));
   },
 
   unarchiveSession: async (_id) => {
-    throw new Error("unarchiveSession not yet wired to ACP");
+    // No-op — no archive persistence yet
   },
 
   setActiveSession: (sessionId) => {

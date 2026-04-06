@@ -153,7 +153,10 @@ describe("createUserMessage", () => {
     expect(msg.created).toBeGreaterThan(0);
     expect(msg.content).toHaveLength(1);
     expect(msg.content[0]).toEqual({ type: "text", text: "hi there" });
-    expect(msg.metadata).toBeUndefined();
+    expect(msg.metadata).toEqual({
+      userVisible: true,
+      agentVisible: true,
+    });
   });
 
   it("includes attachments when provided", () => {
@@ -162,6 +165,8 @@ describe("createUserMessage", () => {
     ];
     const msg = createUserMessage("check this", attachments);
     expect(msg.metadata).toBeDefined();
+    expect(msg.metadata?.userVisible).toBe(true);
+    expect(msg.metadata?.agentVisible).toBe(true);
     expect(msg.metadata?.attachments).toEqual(attachments);
   });
 });
