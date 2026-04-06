@@ -23,11 +23,16 @@ import { useAppStartup } from "./hooks/useAppStartup";
 
 export type AppView = "home" | "chat" | "skills" | "agents" | "projects";
 
-const SIDEBAR_WIDTH = 240;
+const SIDEBAR_DEFAULT_WIDTH = 240;
+const SIDEBAR_MIN_WIDTH = 180;
+const SIDEBAR_MAX_WIDTH = 380;
+const SIDEBAR_SNAP_COLLAPSE_THRESHOLD = 100;
 const SIDEBAR_COLLAPSED_WIDTH = 48;
 
 export function AppShell({ children }: { children?: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
+  const [isResizing, setIsResizing] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [createProjectOpen, setCreateProjectOpen] = useState(false);
   const [createProjectInitialWorkingDir, setCreateProjectInitialWorkingDir] =
@@ -303,7 +308,10 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           ? projectStore.projects.find((project) => project.id === projectId)
           : undefined;
 
-      createNewTab(initialMessage?.slice(0, 40) || "New Chat", selectedProject);
+      createNewTab(
+        initialMessage?.slice(0, 100) || "New Chat",
+        selectedProject,
+      );
     },
     [createNewTab, projectStore.projects],
   );
@@ -332,6 +340,56 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   );
 
   const toggleSidebar = () => setSidebarCollapsed((prev) => !prev);
+
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      setIsResizing(true);
+      const startX = e.clientX;
+      const startWidth = sidebarCollapsed
+        ? SIDEBAR_COLLAPSED_WIDTH
+        : sidebarWidth;
+      let shouldCollapse = false;
+
+      const onMouseMove = (moveEvent: MouseEvent) => {
+        const delta = moveEvent.clientX - startX;
+        const newWidth = startWidth + delta;
+
+        if (newWidth < SIDEBAR_SNAP_COLLAPSE_THRESHOLD) {
+          shouldCollapse = true;
+          setSidebarWidth(SIDEBAR_MIN_WIDTH);
+        } else {
+          shouldCollapse = false;
+          setSidebarCollapsed(false);
+          setSidebarWidth(
+            Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, newWidth)),
+          );
+        }
+      };
+
+      const onMouseUp = () => {
+        setIsResizing(false);
+        if (shouldCollapse) {
+          setSidebarCollapsed(true);
+        }
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      };
+
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseup", onMouseUp);
+    },
+    [sidebarCollapsed, sidebarWidth],
+  );
+
+  const handleResizeDoubleClick = useCallback(() => {
+    setSidebarCollapsed(false);
+    setSidebarWidth(SIDEBAR_DEFAULT_WIDTH);
+  }, []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -424,13 +482,14 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           style={{
             width: sidebarCollapsed
               ? SIDEBAR_COLLAPSED_WIDTH + 12
-              : SIDEBAR_WIDTH + 12,
-            transition: "width 200ms ease-out",
+              : sidebarWidth + 12,
+            transition: isResizing ? "none" : "width 200ms ease-out",
           }}
         >
           <Sidebar
             collapsed={sidebarCollapsed}
-            width={SIDEBAR_WIDTH}
+            width={sidebarWidth}
+            isResizing={isResizing}
             onCollapse={toggleSidebar}
             onNavigate={handleNavigate}
             onNewChatInProject={handleNewChatInProject}
@@ -446,6 +505,16 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             projects={projectStore.projects}
             className="h-full rounded-xl"
           />
+        </div>
+
+        {/* Resize handle */}
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: drag handle for sidebar resize */}
+        <div
+          onMouseDown={handleResizeStart}
+          onDoubleClick={handleResizeDoubleClick}
+          className="flex-shrink-0 w-2 h-full cursor-col-resize group flex items-center justify-center"
+        >
+          <div className="w-px h-8 rounded-full bg-transparent group-hover:bg-border transition-colors" />
         </div>
 
         <main className="min-h-0 min-w-0 flex-1">

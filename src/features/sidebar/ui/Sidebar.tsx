@@ -18,6 +18,7 @@ import { useSidebarHighlight } from "./useSidebarHighlight";
 interface SidebarProps {
   collapsed: boolean;
   width?: number;
+  isResizing?: boolean;
   onCollapse: () => void;
   onNewChatInProject?: (projectId: string) => void;
   onNewChat?: () => void;
@@ -45,6 +46,7 @@ const EXPANDED_PROJECTS_STORAGE_KEY = "goose:sidebar:expanded-projects";
 export function Sidebar({
   collapsed,
   width = 240,
+  isResizing = false,
   onCollapse,
   onNewChatInProject,
   onNewChat,
@@ -231,7 +233,7 @@ export function Sidebar({
     <div
       className={cn(
         "relative h-full",
-        "transition-[width] duration-300 ease-in-out",
+        !isResizing && "transition-[width] duration-300 ease-in-out",
         className,
       )}
       style={{ width: collapsed ? 54 : width }}
@@ -273,8 +275,8 @@ export function Sidebar({
           className="relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-1.5 py-1 pt-1.5 scrollbar-none"
           onMouseLeave={onNavMouseLeave}
         >
-          {/* Sliding highlight */}
-          {currentRect && (
+          {/* Sliding highlight — hidden when collapsed */}
+          {currentRect && !collapsed && (
             <div
               className="absolute left-1.5 right-1.5 rounded-lg bg-accent/50 pointer-events-none z-0"
               style={{

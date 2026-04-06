@@ -166,7 +166,7 @@ export function useChat(
       if (session && session.title === "New Chat") {
         sessionStore.updateSession(
           sessionId,
-          { title: text.trim().slice(0, 40) },
+          { title: text.trim().slice(0, 100) },
           { localOnly: wasDraft },
         );
       }
