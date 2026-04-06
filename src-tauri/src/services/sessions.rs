@@ -277,8 +277,10 @@ impl SessionStore {
             .get_mut(id)
             .ok_or_else(|| format!("Session '{}' not found", id))?;
 
+        let mut should_bump_timestamp = false;
         if let Some(title) = update.title {
             session.title = title;
+            should_bump_timestamp = true;
         }
         if let Some(provider_id) = update.provider_id {
             session.provider_id = Some(provider_id);
@@ -292,7 +294,9 @@ impl SessionStore {
         if let Some(project_id) = update.project_id {
             session.project_id = project_id;
         }
-        session.updated_at = chrono::Utc::now().to_rfc3339();
+        if should_bump_timestamp {
+            session.updated_at = chrono::Utc::now().to_rfc3339();
+        }
         self.save_metadata(&sessions);
         Ok(())
     }

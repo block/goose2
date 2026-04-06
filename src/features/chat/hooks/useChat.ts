@@ -166,9 +166,16 @@ export function useChat(
       if (session && session.title === "New Chat") {
         sessionStore.updateSession(
           sessionId,
-          { title: text.trim().slice(0, 40) },
+          {
+            title: text.trim().slice(0, 100),
+            updatedAt: new Date().toISOString(),
+          },
           { localOnly: wasDraft },
         );
+      } else {
+        sessionStore.updateSession(sessionId, {
+          updatedAt: new Date().toISOString(),
+        });
       }
 
       store.clearDraft(sessionId);

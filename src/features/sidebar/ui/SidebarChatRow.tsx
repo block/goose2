@@ -128,7 +128,7 @@ export function SidebarChatRow({
     <div
       ref={rowRef}
       className={cn(
-        "flex items-center group rounded-md pr-0.5 transition-colors duration-200",
+        "relative flex items-center group rounded-md transition-colors duration-200",
         className,
       )}
       onMouseEnter={onMouseEnter}
@@ -145,7 +145,7 @@ export function SidebarChatRow({
         }}
         title="Double-click to rename"
         className={cn(
-          "flex-1 min-w-0 justify-start gap-2 rounded-md px-3 py-2 text-[13px] font-light",
+          "flex-1 min-w-0 justify-start gap-2 rounded-md pl-3 pr-8 py-2 text-[13px] font-light",
           isActive ? ACTIVE_CHAT_ROW_CLASS : INACTIVE_CHAT_ROW_CLASS,
         )}
       >
@@ -162,7 +162,7 @@ export function SidebarChatRow({
             aria-label={`Options for ${title}`}
             onClick={(e) => e.stopPropagation()}
             className={cn(
-              "size-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50",
+              "absolute right-1 size-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50",
               menuOpen
                 ? "visible opacity-100"
                 : "invisible group-hover:visible opacity-0 group-hover:opacity-100",
