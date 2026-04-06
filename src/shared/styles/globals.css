@@ -432,6 +432,7 @@
   --radius-card-lg: 24px;
   --radius-card-sm: 14px;
   --radius-dropdown: 10px;
+  --radius-overlay: 20px;
   --radius-modal: 16px;
 
   --radius-sm: calc(var(--radius) - 4px);
