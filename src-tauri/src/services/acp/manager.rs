@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use acp_client::{MessageWriter, Store};
+use acp_client::MessageWriter;
 use agent_client_protocol::{
     Agent, ClientSideConnection, ExtRequest, Implementation, InitializeRequest, ProtocolVersion,
 };
@@ -35,7 +35,6 @@ enum ManagerCommand {
         provider_id: String,
         working_dir: PathBuf,
         existing_agent_session_id: Option<String>,
-        store: Arc<dyn Store>,
         response: oneshot::Sender<Result<(), String>>,
     },
     SendPrompt {
@@ -44,7 +43,6 @@ enum ManagerCommand {
         provider_id: String,
         working_dir: PathBuf,
         existing_agent_session_id: Option<String>,
-        store: Arc<dyn Store>,
         writer: Arc<dyn MessageWriter>,
         prompt: String,
         images: Vec<(String, String)>,
@@ -105,7 +103,6 @@ impl GooseAcpManager {
         provider_id: String,
         working_dir: PathBuf,
         existing_agent_session_id: Option<String>,
-        store: Arc<dyn Store>,
     ) -> Result<(), String> {
         let (response_tx, response_rx) = oneshot::channel();
         self.command_tx
@@ -115,7 +112,6 @@ impl GooseAcpManager {
                 provider_id,
                 working_dir,
                 existing_agent_session_id,
-                store,
                 response: response_tx,
             })
             .map_err(|_| "Goose ACP manager is unavailable".to_string())?;
@@ -144,7 +140,6 @@ impl GooseAcpManager {
         provider_id: String,
         working_dir: PathBuf,
         existing_agent_session_id: Option<String>,
-        store: Arc<dyn Store>,
         writer: Arc<dyn MessageWriter>,
         prompt: String,
         images: Vec<(String, String)>,
@@ -157,7 +152,6 @@ impl GooseAcpManager {
                 provider_id,
                 working_dir,
                 existing_agent_session_id,
-                store,
                 writer,
                 prompt,
                 images,
@@ -367,7 +361,6 @@ fn run_manager_thread(
                     provider_id,
                     working_dir,
                     existing_agent_session_id,
-                    store,
                     response,
                 } => {
                     let connection = Arc::clone(&connection);
@@ -384,7 +377,6 @@ fn run_manager_thread(
                                 provider_id,
                                 working_dir,
                                 existing_agent_session_id,
-                                store,
                             },
                         )
                         .await
@@ -398,7 +390,6 @@ fn run_manager_thread(
                     provider_id,
                     working_dir,
                     existing_agent_session_id,
-                    store,
                     writer,
                     prompt,
                     images,
@@ -417,7 +408,6 @@ fn run_manager_thread(
                             provider_id,
                             working_dir,
                             existing_agent_session_id,
-                            store,
                             writer,
                             prompt,
                             images,

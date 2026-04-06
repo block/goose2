@@ -19,7 +19,6 @@ import { useAcpStream } from "@/features/chat/hooks/useAcpStream";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
 import { findExistingDraft } from "@/features/chat/lib/newChat";
-import { getSessionMessages } from "@/shared/api/chat";
 import { useAppStartup } from "./hooks/useAppStartup";
 
 export type AppView =
@@ -59,36 +58,13 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   useAcpStream(true);
 
-  const loadingSessionsRef = useRef<Set<string>>(new Set());
   const pendingProjectCreatedRef = useRef<((projectId: string) => void) | null>(
     null,
   );
 
-  const loadSessionMessages = useCallback(async (sessionId: string) => {
-    const session = useChatSessionStore
-      .getState()
-      .sessions.find((s) => s.id === sessionId);
-    if (session?.draft) return;
-    const { messagesBySession, setMessages } = useChatStore.getState();
-    const existing = messagesBySession[sessionId];
-    if (
-      (existing && existing.length > 0) ||
-      loadingSessionsRef.current.has(sessionId)
-    ) {
-      return;
-    }
-    loadingSessionsRef.current.add(sessionId);
-    try {
-      const messages = await getSessionMessages(sessionId);
-      const current = useChatStore.getState().messagesBySession[sessionId];
-      if (!current || current.length === 0) {
-        setMessages(sessionId, messages);
-      }
-    } catch (err) {
-      console.error(`Failed to load messages for session ${sessionId}:`, err);
-    } finally {
-      loadingSessionsRef.current.delete(sessionId);
-    }
+  // TODO: wire to ACP load_session replay instead of fetching from SessionStore
+  const loadSessionMessages = useCallback(async (_sessionId: string) => {
+    // No-op stub — messages will come from ACP session replay events
   }, []);
 
   useAppStartup();

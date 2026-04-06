@@ -30,7 +30,7 @@ import { Button } from "@/shared/ui/button";
 import { ArtifactPolicyProvider } from "../hooks/ArtifactPolicyContext";
 
 interface ChatViewProps {
-  sessionId?: string;
+  sessionId: string;
   agentName?: string;
   agentAvatarUrl?: string;
   initialProvider?: string;
@@ -61,7 +61,7 @@ export function ChatView({
   onInitialMessageConsumed,
   onCreateProject,
 }: ChatViewProps) {
-  const [activeSessionId] = useState(() => sessionId ?? crypto.randomUUID());
+  const activeSessionId = sessionId;
   const isContextPanelOpen = useChatSessionStore(
     (s) => s.contextPanelOpenBySession[activeSessionId] ?? false,
   );

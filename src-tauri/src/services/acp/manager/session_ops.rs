@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use acp_client::{MessageWriter, Store};
+use acp_client::MessageWriter;
 use agent_client_protocol::{
     Agent, CancelNotification, ClientSideConnection, ContentBlock as AcpContentBlock, ImageContent,
     LoadSessionRequest, NewSessionRequest, PromptRequest, SessionConfigKind, SessionConfigOption,
@@ -79,7 +79,6 @@ pub(super) struct PrepareSessionInput {
     pub(super) provider_id: String,
     pub(super) working_dir: PathBuf,
     pub(super) existing_agent_session_id: Option<String>,
-    pub(super) store: Arc<dyn Store>,
 }
 
 pub(super) async fn prepare_session_inner(
@@ -94,7 +93,6 @@ pub(super) async fn prepare_session_inner(
         provider_id,
         working_dir,
         existing_agent_session_id,
-        store,
     } = input;
 
     let session_lock = {
@@ -220,9 +218,6 @@ pub(super) async fn prepare_session_inner(
                 .map_err(|error| format!("Failed to create Goose session: {error:?}"))?;
 
             let new_id = response.session_id.to_string();
-            store
-                .set_agent_session_id(&local_session_id, &new_id)
-                .map_err(|error| format!("Failed to save Goose session ID: {error}"))?;
 
             dispatcher.bind_session(&new_id, &local_session_id).await;
 
@@ -282,7 +277,6 @@ pub(super) async fn send_prompt_inner(
     provider_id: String,
     working_dir: PathBuf,
     existing_agent_session_id: Option<String>,
-    store: Arc<dyn Store>,
     writer: Arc<dyn MessageWriter>,
     prompt: String,
     images: Vec<(String, String)>,
@@ -297,7 +291,6 @@ pub(super) async fn send_prompt_inner(
             provider_id,
             working_dir,
             existing_agent_session_id,
-            store,
         },
     )
     .await
