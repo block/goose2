@@ -8,7 +8,6 @@ import { filterSessions } from "../lib/filterSessions";
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
-import { listArchivedSessions } from "@/shared/api/chat";
 import type { ChatSession } from "@/features/chat/stores/chatSessionStore";
 
 interface SessionHistoryViewProps {
@@ -32,33 +31,9 @@ export function SessionHistoryView({
   const [search, setSearch] = useState("");
 
   const loadArchived = useCallback(() => {
-    let cancelled = false;
-    listArchivedSessions()
-      .then((result) => {
-        if (cancelled) return;
-        setArchivedSessions(
-          result.map((s) => ({
-            id: s.id,
-            title: s.title,
-            projectId: s.projectId,
-            agentId: s.agentId,
-            providerId: s.providerId,
-            personaId: s.personaId,
-            modelName: s.modelName,
-            createdAt: s.createdAt,
-            updatedAt: s.updatedAt,
-            archivedAt: s.archivedAt,
-            messageCount: s.messageCount,
-            userSetName: s.userSetName,
-          })),
-        );
-      })
-      .catch(() => {
-        if (!cancelled) setArchivedSessions([]);
-      });
-    return () => {
-      cancelled = true;
-    };
+    // TODO: Wire to ACP when archived sessions are supported
+    // For now, archived sessions aren't persisted to the backend
+    setArchivedSessions([]);
   }, []);
 
   useEffect(loadArchived, [loadArchived]);

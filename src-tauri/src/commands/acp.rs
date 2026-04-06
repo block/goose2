@@ -4,7 +4,8 @@ use std::sync::Arc;
 use tauri::{AppHandle, State};
 
 use crate::services::acp::{
-    make_composite_key, AcpRunningSession, AcpService, AcpSessionRegistry, GooseAcpManager,
+    make_composite_key, AcpRunningSession, AcpService, AcpSessionInfo, AcpSessionRegistry,
+    GooseAcpManager,
 };
 
 const DEPRECATED_PROVIDER_IDS: &[&str] = &["claude-code", "codex", "gemini-cli"];
@@ -145,14 +146,36 @@ pub async fn acp_prepare_session(
         .map_err(|error| format!("Failed to determine current working directory: {error}"))?;
     let working_dir = resolve_working_dir(working_dir, &current_dir)?;
 
-    AcpService::prepare_session(
-        app_handle,
-        session_id,
-        provider_id,
-        working_dir,
-        persona_id,
-    )
-    .await
+    AcpService::prepare_session(app_handle, session_id, provider_id, working_dir, persona_id).await
+}
+
+/// List all sessions known to the goose binary.
+#[tauri::command]
+pub async fn acp_list_sessions(app_handle: AppHandle) -> Result<Vec<AcpSessionInfo>, String> {
+    let manager = GooseAcpManager::start(app_handle).await?;
+    manager.list_sessions().await
+}
+
+/// Load an existing session, replaying its messages as Tauri events.
+///
+/// The goose binary sends `SessionNotification` events for each message in
+/// the session history. The frontend's `useAcpStream` hook picks these up
+/// the same way it handles live streaming.
+#[tauri::command]
+pub async fn acp_load_session(
+    app_handle: AppHandle,
+    session_id: String,
+    goose_session_id: String,
+    working_dir: Option<String>,
+) -> Result<(), String> {
+    let current_dir = std::env::current_dir()
+        .map_err(|error| format!("Failed to determine current working directory: {error}"))?;
+    let working_dir = resolve_working_dir(working_dir, &current_dir)?;
+
+    let manager = GooseAcpManager::start(app_handle).await?;
+    manager
+        .load_session(session_id, goose_session_id, working_dir)
+        .await
 }
 
 #[cfg(test)]

@@ -33,9 +33,14 @@ export function useAppStartup() {
       };
 
       const loadSessionState = async () => {
+        const t0 = performance.now();
+        console.log("[perf:startup] loadSessionState start");
         const { loadSessions, setActiveSession } =
           useChatSessionStore.getState();
         await loadSessions();
+        console.log(
+          `[perf:startup] loadSessions done in ${(performance.now() - t0).toFixed(1)}ms`,
+        );
         setActiveSession(null);
       };
 

@@ -13,13 +13,18 @@ use async_trait::async_trait;
 use tauri::Emitter;
 use tokio::sync::Mutex;
 
-use crate::services::acp::payloads::{ModelStatePayload, SessionInfoPayload};
+use crate::services::acp::payloads::{
+    DonePayload, MessageCreatedPayload, ModelStatePayload, SessionInfoPayload, TextPayload,
+    ToolCallPayload, ToolResultPayload, ToolTitlePayload,
+};
 
 #[derive(Clone)]
 pub(super) struct SessionRoute {
     pub(super) local_session_id: String,
     pub(super) writer: Option<Arc<dyn MessageWriter>>,
     pub(super) canceled: bool,
+    /// Tracks the current assistant message ID during replay (no writer).
+    pub(super) replay_message_id: Option<String>,
 }
 
 pub(super) struct SessionEventDispatcher {
@@ -44,6 +49,7 @@ impl SessionEventDispatcher {
                 local_session_id: local_session_id.to_string(),
                 writer: None,
                 canceled: false,
+                replay_message_id: None,
             });
     }
 
@@ -60,6 +66,7 @@ impl SessionEventDispatcher {
                 local_session_id: local_session_id.to_string(),
                 writer: Some(writer),
                 canceled: false,
+                replay_message_id: None,
             },
         );
     }
@@ -88,6 +95,24 @@ impl SessionEventDispatcher {
         routes
             .get(goose_session_id)
             .is_some_and(|route| route.canceled)
+    }
+
+    /// Finalize any in-progress replay message and clear the replay state.
+    /// Called after `load_session` completes to mark the last replayed
+    /// assistant message as done.
+    pub(super) async fn finalize_replay(&self, goose_session_id: &str) {
+        let mut routes = self.routes.lock().await;
+        if let Some(route) = routes.get_mut(goose_session_id) {
+            if let Some(message_id) = route.replay_message_id.take() {
+                let _ = self.app_handle.emit(
+                    "acp:done",
+                    DonePayload {
+                        session_id: route.local_session_id.clone(),
+                        message_id,
+                    },
+                );
+            }
+        }
     }
 
     pub(super) fn emit_session_info(&self, local_session_id: &str, info: &SessionInfoUpdate) {
@@ -233,30 +258,165 @@ impl Client for SessionEventDispatcher {
             _ => {}
         }
 
-        let Some(writer) = route.writer else {
+        // Live streaming path — writer is present
+        if let Some(writer) = route.writer {
+            match &notification.update {
+                SessionUpdate::AgentMessageChunk(chunk) => {
+                    if let AcpContentBlock::Text(text) = &chunk.content {
+                        writer.append_text(&text.text).await;
+                    }
+                }
+                SessionUpdate::ToolCall(tool_call) => {
+                    writer
+                        .record_tool_call(&tool_call.tool_call_id.0, &tool_call.title)
+                        .await;
+                }
+                SessionUpdate::ToolCallUpdate(update) => {
+                    if let Some(title) = &update.fields.title {
+                        writer
+                            .update_tool_call_title(&update.tool_call_id.0, title)
+                            .await;
+                    }
+                    if let Some(content) = &update.fields.content {
+                        if let Some(result) = extract_content_preview(content) {
+                            writer.record_tool_result(&result).await;
+                        }
+                    }
+                }
+                _ => {}
+            }
             return Ok(());
-        };
+        }
 
+        // Replay path — no writer, emit Tauri events directly.
+        // This handles messages replayed by load_session.
+        let local_session_id = route.local_session_id.clone();
         match &notification.update {
+            SessionUpdate::UserMessageChunk(chunk) => {
+                if let AcpContentBlock::Text(text) = &chunk.content {
+                    // Finalize any in-progress assistant message first
+                    {
+                        let mut routes = self.routes.lock().await;
+                        if let Some(route) = routes.get_mut(&goose_session_id) {
+                            if let Some(prev_msg_id) = route.replay_message_id.take() {
+                                let _ = self.app_handle.emit(
+                                    "acp:done",
+                                    DonePayload {
+                                        session_id: local_session_id.clone(),
+                                        message_id: prev_msg_id,
+                                    },
+                                );
+                            }
+                        }
+                    }
+
+                    let message_id = uuid::Uuid::new_v4().to_string();
+                    let _ = self.app_handle.emit(
+                        "acp:replay_user_message",
+                        serde_json::json!({
+                            "sessionId": local_session_id,
+                            "messageId": message_id,
+                            "text": text.text,
+                        }),
+                    );
+                }
+            }
             SessionUpdate::AgentMessageChunk(chunk) => {
                 if let AcpContentBlock::Text(text) = &chunk.content {
-                    writer.append_text(&text.text).await;
+                    // Check if we already have a replay message in progress
+                    let replay_msg_id = {
+                        let routes = self.routes.lock().await;
+                        routes
+                            .get(&goose_session_id)
+                            .and_then(|r| r.replay_message_id.clone())
+                    };
+
+                    let message_id = if let Some(id) = replay_msg_id {
+                        id
+                    } else {
+                        // Start a new assistant message
+                        let new_id = uuid::Uuid::new_v4().to_string();
+                        let _ = self.app_handle.emit(
+                            "acp:message_created",
+                            MessageCreatedPayload {
+                                session_id: local_session_id.clone(),
+                                message_id: new_id.clone(),
+                                persona_id: None,
+                                persona_name: None,
+                            },
+                        );
+                        let mut routes = self.routes.lock().await;
+                        if let Some(route) = routes.get_mut(&goose_session_id) {
+                            route.replay_message_id = Some(new_id.clone());
+                        }
+                        new_id
+                    };
+
+                    let _ = self.app_handle.emit(
+                        "acp:text",
+                        TextPayload {
+                            session_id: local_session_id,
+                            message_id: message_id.clone(),
+                            text: text.text.clone(),
+                        },
+                    );
                 }
             }
             SessionUpdate::ToolCall(tool_call) => {
-                writer
-                    .record_tool_call(&tool_call.tool_call_id.0, &tool_call.title)
-                    .await;
+                let replay_msg_id = {
+                    let routes = self.routes.lock().await;
+                    routes
+                        .get(&goose_session_id)
+                        .and_then(|r| r.replay_message_id.clone())
+                };
+
+                if let Some(message_id) = replay_msg_id {
+                    let _ = self.app_handle.emit(
+                        "acp:tool_call",
+                        ToolCallPayload {
+                            session_id: local_session_id,
+                            message_id,
+                            tool_call_id: tool_call.tool_call_id.0.to_string(),
+                            title: tool_call.title.clone(),
+                        },
+                    );
+                }
             }
             SessionUpdate::ToolCallUpdate(update) => {
-                if let Some(title) = &update.fields.title {
-                    writer
-                        .update_tool_call_title(&update.tool_call_id.0, title)
-                        .await;
-                }
-                if let Some(content) = &update.fields.content {
-                    if let Some(result) = extract_content_preview(content) {
-                        writer.record_tool_result(&result).await;
+                let replay_msg_id = {
+                    let routes = self.routes.lock().await;
+                    routes
+                        .get(&goose_session_id)
+                        .and_then(|r| r.replay_message_id.clone())
+                };
+
+                if let Some(message_id) = replay_msg_id {
+                    if let Some(title) = &update.fields.title {
+                        let _ = self.app_handle.emit(
+                            "acp:tool_title",
+                            ToolTitlePayload {
+                                session_id: local_session_id.clone(),
+                                message_id: message_id.clone(),
+                                tool_call_id: update.tool_call_id.0.to_string(),
+                                title: title.clone(),
+                            },
+                        );
+                    }
+                    if let Some(content) = &update.fields.content {
+                        // During replay, always emit a tool_result so the
+                        // frontend can mark the tool request as completed.
+                        // Fall back to a generic summary when the content
+                        // type has no preview extractor.
+                        let result =
+                            extract_content_preview(content).unwrap_or_else(|| "Done".to_string());
+                        let _ = self.app_handle.emit(
+                            "acp:tool_result",
+                            ToolResultPayload {
+                                session_id: local_session_id,
+                                message_id,
+                                content: result,
+                            },
+                        );
                     }
                 }
             }

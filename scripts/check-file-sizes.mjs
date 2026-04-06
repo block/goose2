@@ -24,6 +24,11 @@ const EXCEPTIONS = {
     limit: 575,
     justification: "Added search-as-you-type filtering for sidebar sessions.",
   },
+  "src-tauri/src/services/acp/manager.rs": {
+    limit: 520,
+    justification:
+      "ACP manager command dispatch loop — each new command variant adds ~10 lines of boilerplate.",
+  },
 };
 
 // Directories excluded from size checks (imported library code)

@@ -46,6 +46,8 @@ pub fn run() {
             commands::acp::acp_prepare_session,
             commands::acp::acp_send_message,
             commands::acp::acp_cancel_session,
+            commands::acp::acp_list_sessions,
+            commands::acp::acp_load_session,
             commands::acp::acp_list_running,
             commands::acp::acp_cancel_all,
             commands::skills::create_skill,

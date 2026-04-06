@@ -4,7 +4,7 @@ mod payloads;
 mod registry;
 mod writer;
 
-pub use manager::GooseAcpManager;
+pub use manager::{AcpSessionInfo, GooseAcpManager};
 pub use registry::{AcpRunningSession, AcpSessionRegistry};
 pub use writer::TauriMessageWriter;
 

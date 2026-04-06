@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { Session } from "@/shared/types/chat";
+import { acpListSessions } from "@/shared/api/acp";
 
 // Extended session metadata used by the frontend session list
 export interface ChatSession {
@@ -133,7 +134,9 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
   // (via prepare_session / send_prompt). These just manage the
   // frontend's in-memory session list.
   createSession: async (_opts) => {
-    throw new Error("createSession not yet wired to ACP — use createDraftSession");
+    throw new Error(
+      "createSession not yet wired to ACP — use createDraftSession",
+    );
   },
 
   createDraftSession: (opts) => {
@@ -178,17 +181,41 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
   },
 
   loadSessions: async () => {
-    // TODO: wire to ACP list_sessions
-    // For now, just load cached drafts from localStorage
-    const cached = loadCachedSessions();
-    const drafts = cached.filter((s) => s.draft);
-    set({ sessions: drafts });
+    set({ isLoading: true });
+    try {
+      const acpSessions = await acpListSessions();
+      const sessions: ChatSession[] = acpSessions.map((s) => ({
+        id: s.sessionId,
+        title: s.title ?? "Untitled",
+        createdAt: s.updatedAt ?? new Date().toISOString(),
+        updatedAt: s.updatedAt ?? new Date().toISOString(),
+        messageCount: 0,
+      }));
+      // Sort by updatedAt descending (most recent first)
+      sessions.sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      );
+      // Preserve local drafts
+      const drafts = get().sessions.filter((s) => s.draft);
+      set({ sessions: [...sessions, ...drafts] });
+    } catch (err) {
+      console.error("Failed to load sessions from ACP:", err);
+      // On error, at least load cached drafts
+      const cached = loadCachedSessions();
+      const drafts = cached.filter((s) => s.draft);
+      set({ sessions: drafts });
+    } finally {
+      set({ isLoading: false });
+    }
   },
 
   updateSession: (id, patch, opts) => {
     set((state) => ({
       sessions: state.sessions.map((s) =>
-        s.id === id ? { ...s, ...patch, updatedAt: new Date().toISOString() } : s,
+        s.id === id
+          ? { ...s, ...patch, updatedAt: new Date().toISOString() }
+          : s,
       ),
     }));
     persistSessions(get().sessions);
