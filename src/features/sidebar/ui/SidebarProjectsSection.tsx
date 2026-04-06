@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import {
   IconChevronDown,
   IconChevronRight,
@@ -8,8 +8,15 @@ import {
   IconMessagePlus,
   IconPlus,
 } from "@tabler/icons-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
 import type { AppView } from "@/app/AppShell";
 import type { ProjectInfo } from "@/features/projects/api/projects";
 import { SessionActivityIndicator } from "@/shared/ui/SessionActivityIndicator";
@@ -62,79 +69,41 @@ function ItemMenu({
   onArchive?: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [open]);
 
   return (
-    <div ref={ref} className="relative shrink-0">
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        aria-label={`Options for ${label}`}
-        aria-haspopup="true"
-        aria-expanded={open}
-        onClick={(e) => {
-          e.stopPropagation();
-          setOpen((prev) => !prev);
-        }}
-        className={cn(
-          "size-6 rounded-md",
-          open
-            ? "visible opacity-100"
-            : "invisible group-hover:visible group-focus-within:visible opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
-        )}
-      >
-        <IconDots className="size-3.5" />
-      </Button>
-      {open && (
-        <div
-          role="menu"
-          className="absolute right-0 top-full z-10 mt-1 w-32 rounded-card border border-border bg-background p-1 shadow-popover"
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          aria-label={`Options for ${label}`}
+          onClick={(e) => e.stopPropagation()}
+          className={cn(
+            "size-6 rounded-md",
+            open
+              ? "visible opacity-100"
+              : "invisible group-hover:visible group-focus-within:visible opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+          )}
         >
-          {onEdit && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              role="menuitem"
-              onClick={() => {
-                setOpen(false);
-                onEdit();
-              }}
-              className="w-full justify-start rounded-pill"
-            >
-              Edit
-            </Button>
-          )}
-          {onArchive && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              role="menuitem"
-              onClick={() => {
-                setOpen(false);
-                onArchive();
-              }}
-              className="w-full justify-start rounded-pill"
-            >
-              Archive
-            </Button>
-          )}
-        </div>
-      )}
-    </div>
+          <IconDots className="size-3.5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" sideOffset={4}>
+        {onEdit && (
+          <DropdownMenuItem onClick={onEdit}>
+            <Pencil className="size-3.5" />
+            Edit
+          </DropdownMenuItem>
+        )}
+        {onArchive && (
+          <DropdownMenuItem onClick={onArchive}>
+            <Trash2 className="size-3.5" />
+            Archive
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 function ProjectSection({
