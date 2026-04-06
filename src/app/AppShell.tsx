@@ -406,6 +406,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             onCollapse={toggleSidebar}
             onNavigate={handleNavigate}
             onNewChatInProject={handleNewChatInProject}
+            onNewChat={() => createNewTab()}
             onCreateProject={() => openCreateProjectDialog()}
             onEditProject={handleEditProject}
             onArchiveProject={handleArchiveProject}

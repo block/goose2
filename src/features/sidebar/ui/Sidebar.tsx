@@ -20,6 +20,7 @@ interface SidebarProps {
   width?: number;
   onCollapse: () => void;
   onNewChatInProject?: (projectId: string) => void;
+  onNewChat?: () => void;
   onCreateProject?: () => void;
   onEditProject?: (projectId: string) => void;
   onArchiveProject?: (projectId: string) => void;
@@ -46,6 +47,7 @@ export function Sidebar({
   width = 240,
   onCollapse,
   onNewChatInProject,
+  onNewChat,
   onCreateProject,
   onEditProject,
   onArchiveProject,
@@ -278,7 +280,7 @@ export function Sidebar({
                 top: currentRect.top,
                 height: currentRect.height,
                 transition: isHovering
-                  ? "top 150ms ease, height 150ms ease"
+                  ? "top 0ms, height 0ms"
                   : "top 200ms ease, height 200ms ease, opacity 200ms ease",
               }}
             />
@@ -456,6 +458,7 @@ export function Sidebar({
                 onNavigate={onNavigate}
                 onSelectSession={onSelectSession}
                 onNewChatInProject={onNewChatInProject}
+                onNewChat={onNewChat}
                 onCreateProject={onCreateProject}
                 onEditProject={onEditProject}
                 onArchiveProject={onArchiveProject}

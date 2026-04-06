@@ -100,31 +100,32 @@ export function SidebarChatRow({
 
   if (editing) {
     return (
-      <div className={cn("flex items-center group rounded-md", className)}>
-        <div className="flex items-center flex-1 min-w-0 py-1.5 rounded-md text-[13px] px-2.5">
-          <Input
-            ref={inputRef}
-            type="text"
-            value={draftTitle}
-            onChange={(e) => setDraftTitle(e.target.value)}
-            onBlur={commitRename}
-            onClick={(e) => {
+      <div
+        className={cn("flex items-center group rounded-md pr-0.5", className)}
+      >
+        <Input
+          ref={inputRef}
+          type="text"
+          value={draftTitle}
+          onChange={(e) => setDraftTitle(e.target.value)}
+          onBlur={commitRename}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
               e.preventDefault();
-              e.stopPropagation();
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                commitRename();
-              }
-              if (e.key === "Escape") {
-                e.preventDefault();
-                cancelRename();
-              }
-            }}
-            className="h-6 min-w-0 px-1.5 text-[13px]"
-          />
-        </div>
+              commitRename();
+            }
+            if (e.key === "Escape") {
+              e.preventDefault();
+              cancelRename();
+            }
+          }}
+          className="flex-1 min-w-0 px-3 text-[13px] font-light"
+          style={{ height: 32 }}
+        />
       </div>
     );
   }
@@ -184,15 +185,16 @@ export function SidebarChatRow({
         {menuOpen && (
           <div
             role="menu"
-            className="absolute right-0 top-full z-10 mt-1 w-32 rounded-lg border border-border bg-background py-1 shadow-popover"
+            className="absolute right-0 top-full z-10 mt-1 w-32 overflow-hidden rounded-sm border border-border bg-background shadow-popover"
           >
             <Button
               type="button"
               variant="ghost"
-              size="xs"
+              size="sm"
               role="menuitem"
               onClick={startRename}
               className="w-full justify-start"
+              style={{ borderRadius: 0 }}
             >
               <Pencil className="size-3.5" />
               Rename
@@ -200,13 +202,14 @@ export function SidebarChatRow({
             <Button
               type="button"
               variant="ghost"
-              size="xs"
+              size="sm"
               role="menuitem"
               onClick={() => {
                 setMenuOpen(false);
                 onArchive?.(id);
               }}
               className="w-full justify-start"
+              style={{ borderRadius: 0 }}
             >
               <Trash2 className="size-3.5" />
               Archive
