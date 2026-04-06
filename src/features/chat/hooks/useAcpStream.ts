@@ -247,7 +247,10 @@ export function useAcpStream(enabled: boolean): void {
             );
             if (textContent && "text" in textContent) {
               const title = textContent.text.slice(0, 100);
-              sessionStore.updateSession(event.payload.sessionId, { title });
+              sessionStore.updateSession(event.payload.sessionId, {
+                title,
+                updatedAt: new Date().toISOString(),
+              });
             }
           }
         }

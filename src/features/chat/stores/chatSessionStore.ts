@@ -206,9 +206,7 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
   updateSession: (id, patch, opts) => {
     set((state) => ({
       sessions: state.sessions.map((s) =>
-        s.id === id
-          ? { ...s, ...patch, updatedAt: new Date().toISOString() }
-          : s,
+        s.id === id ? { ...s, ...patch } : s,
       ),
     }));
     persistSessions(get().sessions);
