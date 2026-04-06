@@ -185,7 +185,7 @@ export function SidebarChatRow({
         {menuOpen && (
           <div
             role="menu"
-            className="absolute right-0 top-full z-10 mt-1 w-32 overflow-hidden rounded-sm border border-border bg-background shadow-popover"
+            className="absolute right-0 top-full z-10 mt-1 w-36 rounded-card border border-border bg-background p-1 shadow-popover"
           >
             <Button
               type="button"
@@ -193,8 +193,7 @@ export function SidebarChatRow({
               size="sm"
               role="menuitem"
               onClick={startRename}
-              className="w-full justify-start"
-              style={{ borderRadius: 0 }}
+              className="w-full justify-start rounded-pill"
             >
               <Pencil className="size-3.5" />
               Rename
@@ -208,8 +207,7 @@ export function SidebarChatRow({
                 setMenuOpen(false);
                 onArchive?.(id);
               }}
-              className="w-full justify-start"
-              style={{ borderRadius: 0 }}
+              className="w-full justify-start rounded-pill"
             >
               <Trash2 className="size-3.5" />
               Archive

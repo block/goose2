@@ -100,7 +100,7 @@ function ItemMenu({
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full z-10 mt-1 w-28 overflow-hidden rounded-sm border border-border bg-background shadow-popover"
+          className="absolute right-0 top-full z-10 mt-1 w-32 rounded-card border border-border bg-background p-1 shadow-popover"
         >
           {onEdit && (
             <Button
@@ -112,8 +112,7 @@ function ItemMenu({
                 setOpen(false);
                 onEdit();
               }}
-              className="w-full justify-start"
-              style={{ borderRadius: 0 }}
+              className="w-full justify-start rounded-pill"
             >
               Edit
             </Button>
@@ -128,8 +127,7 @@ function ItemMenu({
                 setOpen(false);
                 onArchive();
               }}
-              className="w-full justify-start"
-              style={{ borderRadius: 0 }}
+              className="w-full justify-start rounded-pill"
             >
               Archive
             </Button>
