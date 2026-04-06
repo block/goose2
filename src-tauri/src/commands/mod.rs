@@ -7,3 +7,4 @@ pub mod projects;
 pub mod sessions;
 pub mod skills;
 pub mod system;
+pub mod widgets;

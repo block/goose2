@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 import {
   IconFolder,
   IconGitBranch,
@@ -6,6 +6,7 @@ import {
   IconServer,
   IconFileCode,
   IconActivity,
+  IconPuzzle2,
 } from "@tabler/icons-react";
 import { FilesList } from "./FilesList";
 import { useGitState } from "@/shared/hooks/useGitState";
@@ -13,6 +14,9 @@ import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Spinner } from "@/shared/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
+import { WidgetCard } from "@/features/widgets/ui/WidgetCard";
+import { WidgetFrame } from "@/features/widgets/ui/WidgetFrame";
+import { useWidgets } from "@/features/widgets/hooks/useWidgets";
 
 interface ContextPanelProps {
   projectName?: string;
@@ -21,33 +25,6 @@ interface ContextPanelProps {
 }
 
 type ContextPanelTab = "details" | "files";
-
-function Widget({
-  title,
-  icon,
-  action,
-  children,
-}: {
-  title: string;
-  icon: ReactNode;
-  action?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <div className="overflow-hidden rounded-md border border-border">
-      <div className="flex h-8 items-center justify-between bg-background-alt px-3">
-        <div className="flex items-center gap-2 text-xs font-medium text-foreground">
-          {icon}
-          <span>{title}</span>
-        </div>
-        {action}
-      </div>
-      <div className="px-3 py-2.5 text-xs text-foreground-subtle">
-        {children}
-      </div>
-    </div>
-  );
-}
 
 export function ContextPanel({
   projectName,
@@ -63,6 +40,11 @@ export function ContextPanel({
     isFetching,
     refetch,
   } = useGitState(primaryWorkingDir, activeTab === "details");
+
+  const { widgets: dynamicWidgets } = useWidgets(
+    "context-panel",
+    projectWorkingDir,
+  );
 
   const gitErrorMessage =
     error instanceof Error ? error.message : "Unable to read git status.";
@@ -86,7 +68,7 @@ export function ContextPanel({
 
       <TabsContent value="details" className="flex-1 overflow-y-auto">
         <div className="space-y-2.5 px-3 pb-3 pt-2">
-          <Widget
+          <WidgetCard
             title="Workspace"
             icon={<IconFolder className="size-3.5" />}
             action={
@@ -108,7 +90,7 @@ export function ContextPanel({
               </Button>
             }
           >
-            <div className="space-y-2">
+            <div className="space-y-2 px-3 py-2.5">
               {projectName ? (
                 <div className="flex items-center gap-2">
                   <span
@@ -168,25 +150,42 @@ export function ContextPanel({
                 <p>Not a git repository.</p>
               )}
             </div>
-          </Widget>
+          </WidgetCard>
 
-          <Widget title="Changes" icon={<IconFileCode className="size-3.5" />}>
-            <p className="text-foreground-subtle">No changes</p>
-          </Widget>
+          <WidgetCard
+            title="Changes"
+            icon={<IconFileCode className="size-3.5" />}
+          >
+            <p className="px-3 py-2.5 text-foreground-subtle">No changes</p>
+          </WidgetCard>
 
-          <Widget
+          <WidgetCard
             title="MCP Servers"
             icon={<IconServer className="size-3.5" />}
           >
-            <p className="text-foreground-subtle">No servers configured</p>
-          </Widget>
+            <p className="px-3 py-2.5 text-foreground-subtle">
+              No servers configured
+            </p>
+          </WidgetCard>
 
-          <Widget
+          <WidgetCard
             title="Processes"
             icon={<IconActivity className="size-3.5" />}
           >
-            <p className="text-foreground-subtle">No active processes</p>
-          </Widget>
+            <p className="px-3 py-2.5 text-foreground-subtle">
+              No active processes
+            </p>
+          </WidgetCard>
+
+          {dynamicWidgets.map((manifest) => (
+            <WidgetCard
+              key={manifest.id}
+              title={manifest.name}
+              icon={<IconPuzzle2 className="size-3.5" />}
+            >
+              <WidgetFrame manifest={manifest} />
+            </WidgetCard>
+          ))}
         </div>
       </TabsContent>
 
