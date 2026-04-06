@@ -188,8 +188,8 @@ function ProjectSection({
           }}
           title="New chat in project"
           className={cn(
-            "mr-1 size-6 flex-shrink-0 rounded-md",
-            "invisible group-hover:visible group-focus-within:visible opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+            "mr-1 size-6 flex-shrink-0 rounded-md text-muted-foreground hover:text-foreground",
+            "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
           )}
         >
           <IconPlus className="size-3.5" />
