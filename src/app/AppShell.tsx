@@ -367,21 +367,20 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         }
       };
 
-      const onMouseUp = () => {
+      const cleanup = () => {
         setIsResizing(false);
-        if (shouldCollapse) {
-          setSidebarCollapsed(true);
-        }
+        if (shouldCollapse) setSidebarCollapsed(true);
         document.removeEventListener("mousemove", onMouseMove);
-        document.removeEventListener("mouseup", onMouseUp);
+        document.removeEventListener("mouseup", cleanup);
+        window.removeEventListener("blur", cleanup);
         document.body.style.cursor = "";
         document.body.style.userSelect = "";
       };
-
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
       document.addEventListener("mousemove", onMouseMove);
-      document.addEventListener("mouseup", onMouseUp);
+      document.addEventListener("mouseup", cleanup);
+      window.addEventListener("blur", cleanup);
     },
     [sidebarCollapsed, sidebarWidth],
   );
