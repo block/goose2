@@ -20,7 +20,8 @@
     "test:e2e": "pnpm build && playwright test",
     "test:e2e:smoke": "pnpm build && playwright test --project=smoke",
     "test:e2e:personas": "pnpm build && playwright test --project=personas",
-    "test:e2e:skills": "pnpm build && playwright test --project=skills"
+    "test:e2e:skills": "pnpm build && playwright test --project=skills",
+    "test:e2e:drafts": "pnpm build && playwright test --project=drafts"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",

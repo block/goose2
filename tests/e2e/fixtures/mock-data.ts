@@ -41,6 +41,39 @@ export const MOCK_PERSONAS = [
   },
 ];
 
+export const MOCK_PROJECTS = [
+  {
+    id: "project-alpha",
+    name: "Alpha",
+    description: "Test project Alpha",
+    prompt: "",
+    icon: null,
+    color: "#3b82f6",
+    order: 0,
+    preferredProvider: null,
+    preferredModel: null,
+    workingDirs: ["/tmp/alpha"],
+    useWorktrees: false,
+    createdAt: now,
+    updatedAt: now,
+  },
+  {
+    id: "project-beta",
+    name: "Beta",
+    description: "Test project Beta",
+    prompt: "",
+    icon: null,
+    color: "#10b981",
+    order: 1,
+    preferredProvider: null,
+    preferredModel: null,
+    workingDirs: ["/tmp/beta"],
+    useWorktrees: false,
+    createdAt: now,
+    updatedAt: now,
+  },
+];
+
 export const MOCK_SKILLS = [
   {
     name: "code-review",
