@@ -66,6 +66,7 @@ interface ChatInputToolbarProps {
   // Actions
   canSend: boolean;
   isStreaming: boolean;
+  hasQueuedMessage: boolean;
   onSend: () => void;
   onStop?: () => void;
   // Layout
@@ -92,6 +93,7 @@ export function ChatInputToolbar({
   contextLimit,
   canSend,
   isStreaming,
+  hasQueuedMessage,
   onSend,
   onStop,
   isCompact,
@@ -293,7 +295,7 @@ export function ChatInputToolbar({
         </div>
 
         <div className="ml-2">
-          {isStreaming ? (
+          {isStreaming && !canSend && !hasQueuedMessage ? (
             <Button
               type="button"
               onClick={onStop}
@@ -313,8 +315,9 @@ export function ChatInputToolbar({
               size="icon-sm"
               className={cn(
                 "rounded-full",
+                "shadow-none",
                 canSend
-                  ? "bg-foreground text-background shadow-none hover:bg-foreground/90"
+                  ? "bg-foreground text-background hover:bg-foreground/90"
                   : "cursor-default bg-foreground/10 text-muted-foreground disabled:opacity-100",
               )}
               aria-label="Send message"

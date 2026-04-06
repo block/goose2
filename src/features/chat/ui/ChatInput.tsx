@@ -37,6 +37,8 @@ interface ChatInputProps {
   onStop?: () => void;
   isStreaming?: boolean;
   disabled?: boolean;
+  queuedMessage?: { text: string } | null;
+  onDismissQueue?: () => void;
   className?: string;
   // Personas
   personas?: Persona[];
@@ -122,6 +124,8 @@ export function ChatInput({
   onStop,
   isStreaming = false,
   disabled = false,
+  queuedMessage = null,
+  onDismissQueue,
   className,
   personas = [],
   selectedPersonaId = null,
@@ -153,8 +157,11 @@ export function ChatInput({
   );
   const stickyPersona = activePersona;
 
+  const hasQueuedMessage = queuedMessage !== null;
   const canSend =
-    (text.trim().length > 0 || images.length > 0) && !isStreaming && !disabled;
+    (text.trim().length > 0 || images.length > 0) &&
+    !hasQueuedMessage &&
+    !disabled;
 
   const {
     mentionOpen,
@@ -405,6 +412,22 @@ export function ChatInput({
               </div>
             )}
 
+            {queuedMessage && (
+              <div className="mb-2 flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-1.5">
+                <span className="flex-1 truncate text-xs text-muted-foreground">
+                  Queued: {queuedMessage.text}
+                </span>
+                <button
+                  type="button"
+                  onClick={onDismissQueue}
+                  className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground"
+                  aria-label="Dismiss queued message"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </div>
+            )}
+
             <textarea
               ref={textareaRef}
               value={text}
@@ -412,7 +435,7 @@ export function ChatInput({
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
               placeholder={effectivePlaceholder}
-              disabled={disabled || isStreaming}
+              disabled={disabled}
               rows={1}
               className="mb-3 min-h-[36px] max-h-[200px] w-full resize-none bg-transparent px-1 text-[14px] leading-relaxed text-foreground placeholder:font-light placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 disabled:opacity-60"
               aria-label="Chat message input"
@@ -438,6 +461,7 @@ export function ChatInput({
               contextLimit={contextLimit}
               canSend={canSend}
               isStreaming={isStreaming}
+              hasQueuedMessage={hasQueuedMessage}
               onSend={handleSend}
               onStop={onStop}
               isCompact={isCompact}

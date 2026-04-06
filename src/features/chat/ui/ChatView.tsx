@@ -10,6 +10,7 @@ import type { PastedImage } from "@/shared/types/messages";
 import { LoadingGoose } from "./LoadingGoose";
 import { ContextPanel } from "./ContextPanel";
 import { useChat } from "../hooks/useChat";
+import { useMessageQueue } from "../hooks/useMessageQueue";
 import { useChatStore } from "../stores/chatStore";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { useProviderSelection } from "@/features/agents/hooks/useProviderSelection";
@@ -286,7 +287,6 @@ export function ChatView({
     selectedPersonaId,
     selectedProvider,
   ]);
-
   const {
     messages,
     chatState,
@@ -305,7 +305,7 @@ export function ChatView({
   const deferredSend = useRef<{ text: string; images?: PastedImage[] } | null>(
     null,
   );
-
+  const queue = useMessageQueue(chatState, sendMessage);
   const chatStore = useChatStore();
   const handleSend = useCallback(
     (text: string, personaId?: string, images?: PastedImage[]) => {
@@ -332,6 +332,12 @@ export function ChatView({
         deferredSend.current = { text, images };
         return;
       }
+      // Queue if agent is busy and no message already queued
+      if (chatState !== "idle" && !queue.queuedMessage) {
+        queue.enqueue(text, personaId, images);
+        return;
+      }
+
       sendMessage(text, undefined, images);
     },
     [
@@ -341,6 +347,8 @@ export function ChatView({
       personas,
       chatStore,
       activeSessionId,
+      chatState,
+      queue,
     ],
   );
 
@@ -351,7 +359,6 @@ export function ChatView({
       sendMessage(text, undefined, images);
     }
   }, [sendMessage, selectedPersona]);
-
   const initialMessageSent = useRef(false);
   useEffect(() => {
     if (
@@ -363,18 +370,15 @@ export function ChatView({
       onInitialMessageConsumed?.();
     }
   }, [initialMessage, initialImages, handleSend, onInitialMessageConsumed]);
-
   const isStreaming = chatState === "streaming";
   const showIndicator =
     chatState === "thinking" ||
     chatState === "streaming" ||
     chatState === "waiting" ||
     chatState === "compacting";
-
   const handleCreatePersona = useCallback(() => {
     useAgentStore.getState().openPersonaEditor();
   }, []);
-
   return (
     <ArtifactPolicyProvider
       messages={messages}
@@ -400,6 +404,8 @@ export function ChatView({
 
           <ChatInput
             onSend={handleSend}
+            queuedMessage={queue.queuedMessage}
+            onDismissQueue={queue.dismiss}
             onStop={stopStreaming}
             isStreaming={isStreaming || chatState === "thinking"}
             personas={personas}
