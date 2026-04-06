@@ -194,9 +194,18 @@ export function ChatInput({
   const imagesRef = useRef(images);
   imagesRef.current = images;
 
+  const textRef = useRef(text);
+  textRef.current = text;
+
+  const onDraftChangeRef = useRef(onDraftChange);
+  onDraftChangeRef.current = onDraftChange;
+
   useEffect(() => {
     return () => {
-      clearTimeout(draftTimerRef.current);
+      if (draftTimerRef.current) {
+        clearTimeout(draftTimerRef.current);
+        onDraftChangeRef.current?.(textRef.current);
+      }
       for (const img of imagesRef.current) {
         URL.revokeObjectURL(img.objectUrl);
       }

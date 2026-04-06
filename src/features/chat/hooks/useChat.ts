@@ -198,7 +198,18 @@ export function useChat(
             (img) => [img.base64, img.mimeType] as [string, string],
           ),
         });
-        // Note: setChatState("idle") is handled by useAcpStream on "acp:done"
+
+        if (wasDraft) {
+          const promoted = sessionStore.getSession(sessionId);
+          if (promoted) {
+            sessionStore.updateSession(sessionId, {
+              title: promoted.title,
+              providerId: promoted.providerId,
+              personaId: promoted.personaId,
+              projectId: promoted.projectId,
+            });
+          }
+        }
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") {
           store.setChatState(sessionId, "idle");
