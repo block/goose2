@@ -5,6 +5,7 @@ import {
   IconDots,
   IconLibraryPlusFilled,
   IconMessage,
+  IconMessagePlus,
   IconPlus,
 } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
@@ -27,7 +28,6 @@ interface TabInfo {
   isRunning?: boolean;
   hasUnread?: boolean;
 }
-
 interface SidebarProjectsSectionProps {
   projects: ProjectInfo[];
   projectSessions: {
@@ -43,6 +43,7 @@ interface SidebarProjectsSectionProps {
   onNavigate?: (view: AppView) => void;
   onSelectSession?: (sessionId: string) => void;
   onNewChatInProject?: (projectId: string) => void;
+  onNewChat?: () => void;
   onCreateProject?: () => void;
   onEditProject?: (projectId: string) => void;
   onArchiveProject?: (projectId: string) => void;
@@ -51,7 +52,6 @@ interface SidebarProjectsSectionProps {
   onItemMouseEnter?: (e: React.MouseEvent<HTMLElement>) => void;
   activeSessionRefCallback?: (el: HTMLElement | null) => void;
 }
-
 function ItemMenu({
   label,
   onEdit,
@@ -100,19 +100,20 @@ function ItemMenu({
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full z-10 mt-1 w-28 rounded-lg border border-border bg-background py-1 shadow-popover"
+          className="absolute right-0 top-full z-10 mt-1 w-28 overflow-hidden rounded-sm border border-border bg-background shadow-popover"
         >
           {onEdit && (
             <Button
               type="button"
               variant="ghost"
-              size="xs"
+              size="sm"
               role="menuitem"
               onClick={() => {
                 setOpen(false);
                 onEdit();
               }}
               className="w-full justify-start"
+              style={{ borderRadius: 0 }}
             >
               Edit
             </Button>
@@ -121,13 +122,14 @@ function ItemMenu({
             <Button
               type="button"
               variant="ghost"
-              size="xs"
+              size="sm"
               role="menuitem"
               onClick={() => {
                 setOpen(false);
                 onArchive();
               }}
               className="w-full justify-start"
+              style={{ borderRadius: 0 }}
             >
               Archive
             </Button>
@@ -298,6 +300,7 @@ export function SidebarProjectsSection({
   onNavigate,
   onSelectSession,
   onNewChatInProject,
+  onNewChat,
   onCreateProject,
   onEditProject,
   onArchiveProject,
@@ -409,13 +412,13 @@ export function SidebarProjectsSection({
           {/* Section header (expanded only) */}
           <div
             className={cn(
-              "flex items-center transition-all duration-300",
+              "group flex items-center transition-all duration-300",
               collapsed ? "px-0 pt-0 pb-1 justify-center" : "pt-2 pb-1",
             )}
           >
             <span
               className={cn(
-                "text-xs font-light uppercase tracking-wider text-muted-foreground pl-3 mb-2",
+                "text-xs font-light uppercase tracking-wider text-muted-foreground flex-1 pl-3",
                 labelTransition,
                 labelVisible
                   ? "opacity-100 w-auto"
@@ -424,6 +427,21 @@ export function SidebarProjectsSection({
             >
               Recents
             </span>
+            {!collapsed && onNewChat && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                onClick={onNewChat}
+                title="New chat"
+                className={cn(
+                  "mr-1 size-6 flex-shrink-0 rounded-md",
+                  "invisible group-hover:visible group-focus-within:visible opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+                )}
+              >
+                <IconMessagePlus className="size-3.5" />
+              </Button>
+            )}
           </div>
 
           {collapsed ? (
