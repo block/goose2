@@ -139,7 +139,6 @@ function ItemMenu({
     </div>
   );
 }
-
 function ProjectSection({
   project,
   projectChats,
@@ -433,10 +432,11 @@ export function SidebarProjectsSection({
                 variant="ghost"
                 size="icon-xs"
                 onClick={onNewChat}
+                aria-label="New chat"
                 title="New chat"
                 className={cn(
                   "mr-1 size-6 flex-shrink-0 rounded-md",
-                  "invisible group-hover:visible group-focus-within:visible opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+                  "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100",
                 )}
               >
                 <IconMessagePlus className="size-3.5" />
