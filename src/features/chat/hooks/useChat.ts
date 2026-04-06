@@ -157,15 +157,18 @@ export function useChat(
 
       const sessionStore = useChatSessionStore.getState();
       const session = sessionStore.getSession(sessionId);
+      const wasDraft = !!session?.draft;
 
-      if (session?.draft) {
+      if (wasDraft) {
         sessionStore.promoteDraft(sessionId);
       }
 
       if (session && session.title === "New Chat") {
-        sessionStore.updateSession(sessionId, {
-          title: text.trim().slice(0, 40),
-        });
+        sessionStore.updateSession(
+          sessionId,
+          { title: text.trim().slice(0, 40) },
+          { localOnly: wasDraft },
+        );
       }
 
       store.clearDraft(sessionId);

@@ -48,7 +48,11 @@ interface ChatSessionStoreActions {
   promoteDraft: (id: string) => void;
   removeDraft: (id: string) => void;
   loadSessions: () => Promise<void>;
-  updateSession: (id: string, patch: Partial<ChatSession>) => void;
+  updateSession: (
+    id: string,
+    patch: Partial<ChatSession>,
+    opts?: { localOnly?: boolean },
+  ) => void;
   archiveSession: (id: string) => Promise<void>;
   unarchiveSession: (id: string) => Promise<void>;
 
@@ -199,7 +203,7 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     }
   },
 
-  updateSession: (id, patch) => {
+  updateSession: (id, patch, opts) => {
     set((state) => ({
       sessions: state.sessions.map((s) =>
         s.id === id
@@ -208,6 +212,7 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
       ),
     }));
     persistSessions(get().sessions);
+    if (opts?.localOnly) return;
     const session = get().sessions.find((s) => s.id === id);
     if (session?.draft) return;
     const backendPatch: {
