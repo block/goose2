@@ -5,7 +5,6 @@ import {
   IconDots,
   IconLibraryPlusFilled,
   IconMessage,
-  IconMessagePlus,
   IconPlus,
 } from "@tabler/icons-react";
 import { Pencil, Trash2 } from "lucide-react";
@@ -187,10 +186,7 @@ function ProjectSection({
             onNewChatInProject?.(project.id);
           }}
           title="New chat in project"
-          className={cn(
-            "mr-1 size-6 flex-shrink-0 rounded-md text-muted-foreground hover:text-foreground",
-            "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
-          )}
+          className="mr-1 size-6 flex-shrink-0 rounded-md text-muted-foreground hover:text-foreground"
         >
           <IconPlus className="size-3.5" />
         </Button>
@@ -316,7 +312,10 @@ export function SidebarProjectsSection({
             size="icon-xs"
             onClick={onCreateProject}
             title="New project"
-            className="mr-1 size-6 flex-shrink-0 rounded-md text-muted-foreground hover:text-foreground"
+            className={cn(
+              "mr-1 size-6 flex-shrink-0 rounded-md text-muted-foreground hover:text-foreground",
+              "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+            )}
           >
             <IconLibraryPlusFilled className="size-3.5" />
           </Button>
@@ -403,7 +402,7 @@ export function SidebarProjectsSection({
                 title="New chat"
                 className="mr-1 size-6 flex-shrink-0 rounded-md text-muted-foreground hover:text-foreground"
               >
-                <IconMessagePlus className="size-3.5" />
+                <IconPlus className="size-3.5" />
               </Button>
             )}
           </div>
