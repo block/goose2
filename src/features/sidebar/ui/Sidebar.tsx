@@ -109,6 +109,7 @@ export function Sidebar({
     const byProject: Record<string, SessionItem[]> = {};
     const standalone: SessionItem[] = [];
     for (const session of sessions) {
+      if (session.draft) continue;
       const runtime = chatStore.getSessionRuntime(session.id);
       const item: SessionItem = {
         id: session.id,

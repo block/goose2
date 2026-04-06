@@ -17,7 +17,7 @@ import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
 import { useAcpStream } from "@/features/chat/hooks/useAcpStream";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
-import { findReusableNewChatSession } from "@/features/chat/lib/newChat";
+import { findExistingDraft } from "@/features/chat/lib/newChat";
 import { getSessionMessages } from "@/shared/api/chat";
 import { useAppStartup } from "./hooks/useAppStartup";
 
@@ -53,9 +53,12 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   );
 
   const loadSessionMessages = useCallback(async (sessionId: string) => {
+    const session = useChatSessionStore
+      .getState()
+      .sessions.find((s) => s.id === sessionId);
+    if (session?.draft) return;
     const { messagesBySession, setMessages } = useChatStore.getState();
     const existing = messagesBySession[sessionId];
-    // Skip if messages are already loaded or currently being loaded
     if (
       (existing && existing.length > 0) ||
       loadingSessionsRef.current.has(sessionId)
@@ -65,7 +68,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     loadingSessionsRef.current.add(sessionId);
     try {
       const messages = await getSessionMessages(sessionId);
-      // Only set if still empty (another path may have populated it)
       const current = useChatStore.getState().messagesBySession[sessionId];
       if (!current || current.length === 0) {
         setMessages(sessionId, messages);
@@ -111,16 +113,32 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     string | undefined
   >();
 
+  const cleanupEmptyDraft = useCallback(
+    (sessionId: string | null) => {
+      if (!sessionId) return;
+      const state = useChatSessionStore.getState();
+      const session = state.sessions.find((s) => s.id === sessionId);
+      if (!session?.draft) return;
+      const draft = useChatStore.getState().getDraft(sessionId);
+      if (draft.length > 0) return;
+      chatStore.cleanupSession(sessionId);
+      state.removeDraft(sessionId);
+    },
+    [chatStore],
+  );
+
   const createNewTab = useCallback(
-    async (title = "New Chat", project?: ProjectInfo) => {
+    (title = "New Chat", project?: ProjectInfo) => {
       const agentId = agentStore.activeAgentId ?? undefined;
       const providerId = project?.preferredProvider ?? homeSelectedProvider;
       const personaId = homeSelectedPersonaId;
       const sessionState = useChatSessionStore.getState();
-      const reusableSession = findReusableNewChatSession({
+      const chatStoreState = useChatStore.getState();
+      const existingDraft = findExistingDraft({
         sessions: sessionState.sessions,
         activeSessionId: sessionState.activeSessionId,
-        messagesBySession: useChatStore.getState().messagesBySession,
+        draftsBySession: chatStoreState.draftsBySession,
+        messagesBySession: chatStoreState.messagesBySession,
         request: {
           title,
           projectId: project?.id,
@@ -130,14 +148,17 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         },
       });
 
-      if (reusableSession) {
-        sessionState.setActiveSession(reusableSession.id);
+      if (existingDraft) {
+        cleanupEmptyDraft(sessionState.activeSessionId);
+        sessionState.setActiveSession(existingDraft.id);
         setActiveView("chat");
-        chatStore.setActiveSession(reusableSession.id);
-        return reusableSession;
+        chatStore.setActiveSession(existingDraft.id);
+        return existingDraft;
       }
 
-      const session = await sessionStore.createSession({
+      cleanupEmptyDraft(sessionState.activeSessionId);
+
+      const session = sessionStore.createDraftSession({
         title,
         projectId: project?.id,
         agentId,
@@ -158,6 +179,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       agentStore.activeAgentId,
       homeSelectedPersonaId,
       homeSelectedProvider,
+      cleanupEmptyDraft,
     ],
   );
 
@@ -194,7 +216,16 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   const clearActiveSession = useCallback(
     (sessionId: string) => {
-      chatStore.cleanupSession(sessionId);
+      const session = useChatSessionStore
+        .getState()
+        .sessions.find((s) => s.id === sessionId);
+      if (session?.draft) {
+        const draft = useChatStore.getState().getDraft(sessionId);
+        if (draft.length === 0) {
+          chatStore.cleanupSession(sessionId);
+          useChatSessionStore.getState().removeDraft(sessionId);
+        }
+      }
       sessionStore.setActiveSession(null);
       setActiveView("home");
     },
@@ -272,36 +303,33 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           ? projectStore.projects.find((project) => project.id === projectId)
           : undefined;
 
-      createNewTab(
-        initialMessage?.slice(0, 40) || "New Chat",
-        selectedProject,
-      ).catch(() => {
-        setPendingInitialMessage(undefined);
-        setPendingInitialImages(undefined);
-        setHomeSelectedProvider(undefined);
-        setHomeSelectedPersonaId(undefined);
-      });
+      createNewTab(initialMessage?.slice(0, 40) || "New Chat", selectedProject);
     },
     [createNewTab, projectStore.projects],
   );
 
   const handleSelectSession = useCallback(
     (id: string) => {
+      cleanupEmptyDraft(useChatSessionStore.getState().activeSessionId);
       sessionStore.setActiveSession(id);
       setActiveView("chat");
       chatStore.setActiveSession(id);
       useChatStore.getState().markSessionRead(id);
       loadSessionMessages(id);
     },
-    [sessionStore, chatStore, loadSessionMessages],
+    [sessionStore, chatStore, loadSessionMessages, cleanupEmptyDraft],
   );
 
-  const handleNavigate = (view: AppView) => {
-    setActiveView(view);
-    if (view !== "chat") {
-      sessionStore.setActiveSession(null);
-    }
-  };
+  const handleNavigate = useCallback(
+    (view: AppView) => {
+      if (view !== "chat") {
+        cleanupEmptyDraft(useChatSessionStore.getState().activeSessionId);
+        sessionStore.setActiveSession(null);
+      }
+      setActiveView(view);
+    },
+    [sessionStore, cleanupEmptyDraft],
+  );
 
   const toggleSidebar = () => setSidebarCollapsed((prev) => !prev);
 

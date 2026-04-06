@@ -9,9 +9,10 @@ interface NewChatRequest {
   personaId?: string;
 }
 
-interface FindReusableNewChatSessionArgs {
+interface FindExistingDraftArgs {
   sessions: ChatSession[];
   activeSessionId: string | null;
+  draftsBySession: Record<string, string>;
   messagesBySession: Record<string, Message[]>;
   request: NewChatRequest;
 }
@@ -28,44 +29,52 @@ function isMatchingContext(
   );
 }
 
-function isReusableNewChatSession(
+function isReusableDraft(
   session: ChatSession,
   localMessages: Message[] | undefined,
 ): boolean {
   return (
+    !!session.draft &&
     !session.archivedAt &&
-    session.title === "New Chat" &&
     session.messageCount === 0 &&
     (localMessages?.length ?? 0) === 0
   );
 }
 
-export function findReusableNewChatSession({
+export function findExistingDraft({
   sessions,
   activeSessionId,
+  draftsBySession,
   messagesBySession,
   request,
-}: FindReusableNewChatSessionArgs): ChatSession | undefined {
+}: FindExistingDraftArgs): ChatSession | undefined {
   if (request.title !== "New Chat") {
     return undefined;
   }
 
-  const matchingSessions = sessions.filter(
+  const candidates = sessions.filter(
     (session) =>
-      session.id === activeSessionId &&
       isMatchingContext(session, request) &&
-      isReusableNewChatSession(session, messagesBySession[session.id]),
+      isReusableDraft(session, messagesBySession[session.id]),
   );
 
-  if (matchingSessions.length === 0) {
+  if (candidates.length === 0) {
     return undefined;
   }
 
-  return (
-    matchingSessions.find((session) => session.id === activeSessionId) ??
-    matchingSessions.sort(
-      (a, b) =>
-        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-    )[0]
+  const withContent = candidates.filter(
+    (s) => (draftsBySession[s.id] ?? "").length > 0,
   );
+  if (withContent.length > 0) {
+    return withContent.find((s) => s.id === activeSessionId) ?? withContent[0];
+  }
+
+  const active = candidates.find((s) => s.id === activeSessionId);
+  if (active) {
+    return active;
+  }
+
+  return candidates.sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+  )[0];
 }

@@ -375,6 +375,16 @@ export function ChatView({
     useAgentStore.getState().openPersonaEditor();
   }, []);
 
+  const draftValue = useChatStore(
+    (s) => s.draftsBySession[activeSessionId] ?? "",
+  );
+  const handleDraftChange = useCallback(
+    (text: string) => {
+      useChatStore.getState().setDraft(activeSessionId, text);
+    },
+    [activeSessionId],
+  );
+
   return (
     <ArtifactPolicyProvider
       messages={messages}
@@ -402,6 +412,8 @@ export function ChatView({
             onSend={handleSend}
             onStop={stopStreaming}
             isStreaming={isStreaming || chatState === "thinking"}
+            initialValue={draftValue}
+            onDraftChange={handleDraftChange}
             personas={personas}
             selectedPersonaId={selectedPersonaId}
             onPersonaChange={handlePersonaChange}

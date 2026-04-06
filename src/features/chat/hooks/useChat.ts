@@ -155,18 +155,20 @@ export function useChat(
       store.setChatState(sessionId, "thinking");
       store.setError(sessionId, null);
 
-      // Immediately set the session/sidebar title from the user's message when
-      // the session still has the default placeholder.  This gives instant
-      // feedback instead of waiting for acp:done or acp:session_info.
-      // A better backend-generated title will overwrite this if it arrives
-      // via the acp:session_info event.
       const sessionStore = useChatSessionStore.getState();
       const session = sessionStore.getSession(sessionId);
+
+      if (session?.draft) {
+        sessionStore.promoteDraft(sessionId);
+      }
+
       if (session && session.title === "New Chat") {
         sessionStore.updateSession(sessionId, {
           title: text.trim().slice(0, 40),
         });
       }
+
+      store.clearDraft(sessionId);
 
       const abort = new AbortController();
       abortRef.current = abort;
