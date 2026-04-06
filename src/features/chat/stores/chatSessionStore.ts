@@ -23,6 +23,7 @@ export interface ChatSession {
   updatedAt: string;
   archivedAt?: string;
   messageCount: number;
+  draft?: boolean;
 }
 
 interface ChatSessionStoreState {
@@ -32,17 +33,26 @@ interface ChatSessionStoreState {
   contextPanelOpenBySession: Record<string, boolean>;
 }
 
+interface CreateSessionOpts {
+  title?: string;
+  projectId?: string;
+  agentId?: string;
+  providerId?: string;
+  personaId?: string;
+}
+
 interface ChatSessionStoreActions {
   // Session lifecycle
-  createSession: (opts?: {
-    title?: string;
-    projectId?: string;
-    agentId?: string;
-    providerId?: string;
-    personaId?: string;
-  }) => Promise<ChatSession>;
+  createSession: (opts?: CreateSessionOpts) => Promise<ChatSession>;
+  createDraftSession: (opts?: CreateSessionOpts) => ChatSession;
+  promoteDraft: (id: string) => void;
+  removeDraft: (id: string) => void;
   loadSessions: () => Promise<void>;
-  updateSession: (id: string, patch: Partial<ChatSession>) => void;
+  updateSession: (
+    id: string,
+    patch: Partial<ChatSession>,
+    opts?: { localOnly?: boolean },
+  ) => void;
   archiveSession: (id: string) => Promise<void>;
   unarchiveSession: (id: string) => Promise<void>;
 
@@ -72,9 +82,10 @@ function loadCachedSessions(): ChatSession[] {
 function persistSessions(sessions: ChatSession[]): void {
   if (typeof window === "undefined") return;
   try {
+    const persistable = sessions.filter((s) => !s.draft);
     window.localStorage.setItem(
       SESSION_CACHE_STORAGE_KEY,
-      JSON.stringify(sessions),
+      JSON.stringify(persistable),
     );
   } catch {
     // localStorage may be unavailable
@@ -122,7 +133,6 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
       updatedAt: backendSession.updatedAt ?? now,
       messageCount: backendSession.messageCount ?? 0,
     };
-    // Persist initial metadata (title, persona, provider) to backend
     const initialUpdate: Record<string, string> = {};
     if (opts?.title) initialUpdate.title = opts.title;
     if (opts?.providerId) initialUpdate.providerId = opts.providerId;
@@ -139,19 +149,61 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     return chatSession;
   },
 
+  createDraftSession: (opts) => {
+    const now = new Date().toISOString();
+    const chatSession: ChatSession = {
+      id: crypto.randomUUID(),
+      title: opts?.title ?? "New Chat",
+      projectId: opts?.projectId,
+      agentId: opts?.agentId,
+      providerId: opts?.providerId,
+      personaId: opts?.personaId,
+      createdAt: now,
+      updatedAt: now,
+      messageCount: 0,
+      draft: true,
+    };
+    set((state) => ({
+      sessions: [...state.sessions, chatSession],
+    }));
+    return chatSession;
+  },
+
+  promoteDraft: (id) => {
+    set((state) => ({
+      sessions: state.sessions.map((s) =>
+        s.id === id ? { ...s, draft: undefined } : s,
+      ),
+    }));
+    persistSessions(get().sessions);
+  },
+
+  removeDraft: (id) => {
+    const session = get().sessions.find((s) => s.id === id);
+    if (!session?.draft) return;
+    const { [id]: _, ...remainingPanelState } = get().contextPanelOpenBySession;
+    set((state) => ({
+      sessions: state.sessions.filter((s) => s.id !== id),
+      activeSessionId:
+        state.activeSessionId === id ? null : state.activeSessionId,
+      contextPanelOpenBySession: remainingPanelState,
+    }));
+  },
+
   loadSessions: async () => {
     set({ isLoading: true });
     try {
       const backendSessions = await apiListSessions();
       const chatSessions = backendSessions.map(sessionToChatSession);
-      set({ sessions: chatSessions });
+      const drafts = get().sessions.filter((s) => s.draft);
+      set({ sessions: [...chatSessions, ...drafts] });
       persistSessions(chatSessions);
     } finally {
       set({ isLoading: false });
     }
   },
 
-  updateSession: (id, patch) => {
+  updateSession: (id, patch, opts) => {
     set((state) => ({
       sessions: state.sessions.map((s) =>
         s.id === id
@@ -160,6 +212,9 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
       ),
     }));
     persistSessions(get().sessions);
+    if (opts?.localOnly) return;
+    const session = get().sessions.find((s) => s.id === id);
+    if (session?.draft) return;
     const backendPatch: {
       title?: string;
       providerId?: string;

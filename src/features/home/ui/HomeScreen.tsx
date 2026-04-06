@@ -5,8 +5,11 @@ import {
 } from "@/features/agents/stores/agentStore";
 import { useProviderSelection } from "@/features/agents/hooks/useProviderSelection";
 import { ChatInput } from "@/features/chat/ui/ChatInput";
+import { useChatStore } from "@/features/chat/stores/chatStore";
 import type { PastedImage } from "@/shared/types/messages";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
+
+const HOME_DRAFT_KEY = "home";
 
 function HomeClock() {
   const [time, setTime] = useState(new Date());
@@ -90,10 +93,18 @@ export function HomeScreen({ onStartChat, onCreateProject }: HomeScreenProps) {
     useAgentStore.getState().openPersonaEditor();
   }, []);
 
+  const homeDraft = useChatStore(
+    (s) => s.draftsBySession[HOME_DRAFT_KEY] ?? "",
+  );
+  const handleDraftChange = useCallback((text: string) => {
+    useChatStore.getState().setDraft(HOME_DRAFT_KEY, text);
+  }, []);
+
   const handleSend = useCallback(
     (message: string, personaId?: string, images?: PastedImage[]) => {
       const effectivePersonaId = personaId ?? selectedPersonaId ?? undefined;
 
+      useChatStore.getState().clearDraft(HOME_DRAFT_KEY);
       onStartChat?.(
         message,
         selectedProvider,
@@ -120,6 +131,8 @@ export function HomeScreen({ onStartChat, onCreateProject }: HomeScreenProps) {
           {/* Chat input */}
           <ChatInput
             onSend={handleSend}
+            initialValue={homeDraft}
+            onDraftChange={handleDraftChange}
             personas={personas}
             selectedPersonaId={selectedPersonaId}
             onPersonaChange={handlePersonaChange}

@@ -17,12 +17,45 @@ function createInitialSessionRuntime(): SessionChatRuntime {
   };
 }
 
+const DRAFTS_STORAGE_KEY = "goose:chat-drafts";
+
+function loadCachedDrafts(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    const stored = window.localStorage.getItem(DRAFTS_STORAGE_KEY);
+    if (!stored) return {};
+    const parsed = JSON.parse(stored);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function persistDrafts(drafts: Record<string, string>): void {
+  if (typeof window === "undefined") return;
+  try {
+    const nonEmpty = Object.fromEntries(
+      Object.entries(drafts).filter(([, v]) => v.length > 0),
+    );
+    if (Object.keys(nonEmpty).length === 0) {
+      window.localStorage.removeItem(DRAFTS_STORAGE_KEY);
+    } else {
+      window.localStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(nonEmpty));
+    }
+  } catch {
+    // localStorage may be unavailable
+  }
+}
+
 interface ChatStoreState {
   // Per-session messages
   messagesBySession: Record<string, Message[]>;
 
   // Per-session runtime state
   sessionStateById: Record<string, SessionChatRuntime>;
+
+  // Per-session draft input text
+  draftsBySession: Record<string, string>;
 
   // Current session
   activeSessionId: string | null;
@@ -69,6 +102,11 @@ interface ChatStoreActions {
   updateTokenState: (sessionId: string, state: Partial<TokenState>) => void;
   resetTokenState: (sessionId: string) => void;
 
+  // Drafts
+  setDraft: (sessionId: string, text: string) => void;
+  getDraft: (sessionId: string) => string;
+  clearDraft: (sessionId: string) => void;
+
   // Cleanup
   cleanupSession: (sessionId: string) => void;
 }
@@ -79,6 +117,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   // State
   messagesBySession: {},
   sessionStateById: {},
+  draftsBySession: loadCachedDrafts(),
   activeSessionId: null,
   isConnected: false,
 
@@ -338,15 +377,36 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       },
     })),
 
+  // Drafts
+  setDraft: (sessionId, text) => {
+    set((state) => ({
+      draftsBySession: { ...state.draftsBySession, [sessionId]: text },
+    }));
+    persistDrafts(get().draftsBySession);
+  },
+
+  getDraft: (sessionId) => get().draftsBySession[sessionId] ?? "",
+
+  clearDraft: (sessionId) => {
+    set((state) => {
+      const { [sessionId]: _, ...rest } = state.draftsBySession;
+      return { draftsBySession: rest };
+    });
+    persistDrafts(get().draftsBySession);
+  },
+
   // Cleanup
   cleanupSession: (sessionId) =>
     set((state) => {
       const { [sessionId]: _, ...rest } = state.messagesBySession;
       const { [sessionId]: __, ...remainingSessionState } =
         state.sessionStateById;
+      const { [sessionId]: ___, ...remainingDrafts } = state.draftsBySession;
+      persistDrafts(remainingDrafts);
       return {
         messagesBySession: rest,
         sessionStateById: remainingSessionState,
+        draftsBySession: remainingDrafts,
         activeSessionId:
           state.activeSessionId === sessionId ? null : state.activeSessionId,
       };

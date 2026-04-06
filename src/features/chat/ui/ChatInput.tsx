@@ -32,12 +32,16 @@ export interface ProjectOption {
   color?: string | null;
 }
 
+const DRAFT_DEBOUNCE_MS = 300;
+
 interface ChatInputProps {
   onSend: (text: string, personaId?: string, images?: PastedImage[]) => void;
   onStop?: () => void;
   isStreaming?: boolean;
   disabled?: boolean;
   className?: string;
+  initialValue?: string;
+  onDraftChange?: (text: string) => void;
   // Personas
   personas?: Persona[];
   selectedPersonaId?: string | null;
@@ -123,6 +127,8 @@ export function ChatInput({
   isStreaming = false,
   disabled = false,
   className,
+  initialValue = "",
+  onDraftChange,
   personas = [],
   selectedPersonaId = null,
   onPersonaChange,
@@ -141,11 +147,14 @@ export function ChatInput({
   contextTokens = 0,
   contextLimit = 0,
 }: ChatInputProps) {
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialValue);
   const [images, setImages] = useState<PastedImage[]>([]);
   const [isCompact, setIsCompact] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const draftTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
 
   const activePersona = useMemo(
     () => personas.find((persona) => persona.id === selectedPersonaId) ?? null,
@@ -185,8 +194,18 @@ export function ChatInput({
   const imagesRef = useRef(images);
   imagesRef.current = images;
 
+  const textRef = useRef(text);
+  textRef.current = text;
+
+  const onDraftChangeRef = useRef(onDraftChange);
+  onDraftChangeRef.current = onDraftChange;
+
   useEffect(() => {
     return () => {
+      if (draftTimerRef.current) {
+        clearTimeout(draftTimerRef.current);
+        onDraftChangeRef.current?.(textRef.current);
+      }
       for (const img of imagesRef.current) {
         URL.revokeObjectURL(img.objectUrl);
       }
@@ -201,6 +220,8 @@ export function ChatInput({
       images.length > 0 ? images : undefined,
     );
     setText("");
+    clearTimeout(draftTimerRef.current);
+    onDraftChange?.("");
     setImages((prev) => {
       for (const img of prev) URL.revokeObjectURL(img.objectUrl);
       return [];
@@ -208,7 +229,7 @@ export function ChatInput({
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
-  }, [canSend, text, images, onSend, selectedPersonaId]);
+  }, [canSend, text, images, onSend, selectedPersonaId, onDraftChange]);
 
   const handleMentionSelect = useCallback(
     (persona: Persona) => {
@@ -268,6 +289,13 @@ export function ChatInput({
     const textarea = e.target;
     textarea.style.height = "auto";
     textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
+
+    if (onDraftChange) {
+      clearTimeout(draftTimerRef.current);
+      draftTimerRef.current = setTimeout(() => {
+        onDraftChange(value);
+      }, DRAFT_DEBOUNCE_MS);
+    }
   };
 
   const addImageFile = useCallback((file: File) => {

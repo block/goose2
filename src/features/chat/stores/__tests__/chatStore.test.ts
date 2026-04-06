@@ -23,6 +23,7 @@ describe("chatStore", () => {
     useChatStore.setState({
       messagesBySession: {},
       sessionStateById: {},
+      draftsBySession: {},
       activeSessionId: null,
       isConnected: false,
     });
