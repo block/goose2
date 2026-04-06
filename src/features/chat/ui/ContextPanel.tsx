@@ -43,7 +43,7 @@ export function ContextPanel({
 
   const { widgets: dynamicWidgets } = useWidgets(
     "context-panel",
-    projectWorkingDir,
+    primaryWorkingDir,
   );
 
   const gitErrorMessage =
