@@ -11,6 +11,7 @@ import { LoadingGoose } from "./LoadingGoose";
 import { ContextPanel } from "./ContextPanel";
 import { useChat } from "../hooks/useChat";
 import { useMessageQueue } from "../hooks/useMessageQueue";
+import { useSessionAutoTitle } from "@/features/sessions/hooks/useSessionAutoTitle";
 import { useChatStore } from "../stores/chatStore";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { useProviderSelection } from "@/features/agents/hooks/useProviderSelection";
@@ -288,6 +289,8 @@ export function ChatView({
     personaInfo,
     effectiveWorkingDir,
   );
+
+  useSessionAutoTitle(activeSessionId);
 
   const deferredSend = useRef<{ text: string; images?: PastedImage[] } | null>(
     null,
