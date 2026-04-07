@@ -435,59 +435,59 @@ export function SidebarProjectsSection({
         </div>
       )}
 
-      {/* --- RECENTS (standalone chats from all sessions) — entire section is a drop target --- */}
-      {projectSessions.standalone.length > 0 && (
-        // biome-ignore lint/a11y/noStaticElementInteractions: drop target for drag-and-drop
+      {/* --- RECENTS — always rendered as a drop target so chats can be unassigned from projects --- */}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: drop target for drag-and-drop */}
+      <div
+        onDragOver={handleRecentsDragOver}
+        onDragLeave={handleRecentsDragLeave}
+        onDrop={handleRecentsDrop}
+      >
         <div
-          onDragOver={handleRecentsDragOver}
-          onDragLeave={handleRecentsDragLeave}
-          onDrop={handleRecentsDrop}
+          className={cn(
+            "my-2 -mx-1.5 bg-border transition-all duration-300",
+            collapsed ? "w-5 mx-auto h-px" : "h-px",
+          )}
+        />
+        {/* Section header (expanded only) */}
+        <div
+          className={cn(
+            "relative group flex items-center transition-all duration-300",
+            collapsed ? "px-0 pt-0 pb-1 justify-center" : "pt-2 pb-1",
+          )}
         >
-          <div
+          <span
             className={cn(
-              "my-2 -mx-1.5 bg-border transition-all duration-300",
-              collapsed ? "w-5 mx-auto h-px" : "h-px",
-            )}
-          />
-          {/* Section header (expanded only) */}
-          <div
-            className={cn(
-              "relative group flex items-center transition-all duration-300",
-              collapsed ? "px-0 pt-0 pb-1 justify-center" : "pt-2 pb-1",
+              "text-xs font-light uppercase tracking-wider text-muted-foreground flex-1 pl-3",
+              labelTransition,
+              labelVisible
+                ? "opacity-100 w-auto"
+                : "opacity-0 w-0 overflow-hidden",
             )}
           >
-            <span
-              className={cn(
-                "text-xs font-light uppercase tracking-wider text-muted-foreground flex-1 pl-3",
-                labelTransition,
-                labelVisible
-                  ? "opacity-100 w-auto"
-                  : "opacity-0 w-0 overflow-hidden",
-              )}
+            Recents
+          </span>
+          {!collapsed && onNewChat && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              onClick={onNewChat}
+              aria-label="New chat"
+              title="New chat"
+              className="mr-1 size-6 flex-shrink-0 rounded-md text-muted-foreground hover:text-foreground"
             >
-              Recents
-            </span>
-            {!collapsed && onNewChat && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-xs"
-                onClick={onNewChat}
-                aria-label="New chat"
-                title="New chat"
-                className="mr-1 size-6 flex-shrink-0 rounded-md text-muted-foreground hover:text-foreground"
-              >
-                <IconPlus className="size-3.5" />
-              </Button>
-            )}
+              <IconPlus className="size-3.5" />
+            </Button>
+          )}
 
-            {/* Drop indicator line */}
-            {recentsDragOver && (
-              <div className="absolute bottom-0 left-3 right-3 h-px bg-foreground" />
-            )}
-          </div>
+          {/* Drop indicator line */}
+          {recentsDragOver && (
+            <div className="absolute bottom-0 left-3 right-3 h-px bg-foreground" />
+          )}
+        </div>
 
-          {collapsed ? (
+        {projectSessions.standalone.length > 0 &&
+          (collapsed ? (
             <div className="flex flex-col items-center gap-1">
               {projectSessions.standalone.map((session) => (
                 <Button
@@ -534,9 +534,8 @@ export function SidebarProjectsSection({
                 );
               })}
             </div>
-          )}
-        </div>
-      )}
+          ))}
+      </div>
     </div>
   );
 }
