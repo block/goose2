@@ -138,6 +138,7 @@ export function SessionHistoryView({
               type="button"
               variant="ghost"
               size="xs"
+              className="font-normal"
               onClick={() => {
                 setShowArchived((prev) => !prev);
                 setSearch("");
