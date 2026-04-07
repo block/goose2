@@ -136,7 +136,7 @@ export function SessionHistoryView({
             </div>
             <Button
               type="button"
-              variant={showArchived ? "outline" : "ghost"}
+              variant="ghost"
               size="xs"
               onClick={() => {
                 setShowArchived((prev) => !prev);
