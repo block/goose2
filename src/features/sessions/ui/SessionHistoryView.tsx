@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { History } from "lucide-react";
 import { SearchBar } from "@/shared/ui/SearchBar";
 import { SessionCard } from "./SessionCard";
@@ -17,15 +17,19 @@ interface SessionHistoryViewProps {
 export function SessionHistoryView({
   onSelectSession,
 }: SessionHistoryViewProps) {
-  const activeSessions = useChatSessionStore((s) =>
-    s.sessions.filter((session) => !session.draft),
+  const sessions = useChatSessionStore((s) => s.sessions);
+  const activeSessions = useMemo(
+    () => sessions.filter((session) => !session.draft),
+    [sessions],
   );
   const [archivedSessions, setArchivedSessions] = useState<ChatSession[]>([]);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
+    let cancelled = false;
     listArchivedSessions()
-      .then((sessions) =>
+      .then((sessions) => {
+        if (cancelled) return;
         setArchivedSessions(
           sessions.map((s) => ({
             id: s.id,
@@ -41,9 +45,14 @@ export function SessionHistoryView({
             messageCount: s.messageCount,
             userSetName: s.userSetName,
           })),
-        ),
-      )
-      .catch(() => setArchivedSessions([]));
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setArchivedSessions([]);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const allSessions = [...activeSessions, ...archivedSessions];
