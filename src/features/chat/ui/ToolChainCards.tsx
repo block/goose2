@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import { getStatusBadge } from "@/shared/ui/ai-elements/tool";
 import { ToolCallAdapter } from "./ToolCallAdapter";
 import { ToolCallTrigger } from "./ToolCallTrigger";
+import { toolStatusMap } from "../lib/toolStatusMap";
 import {
   getToolType,
   getToolVerb,
@@ -155,10 +157,26 @@ function ToolGroupRow({
   const [expanded, setExpanded] = useState(false);
   const label = getToolLabel(group.type, group.items.length);
 
+  // Surface the worst status across items: error > executing > pending > completed
+  const groupStatus = group.items.reduce<ReturnType<typeof getToolItemStatus>>(
+    (worst, item) => {
+      const s = getToolItemStatus(item);
+      if (s === "error") return "error";
+      if (worst === "error") return worst;
+      if (s === "executing") return "executing";
+      if (worst === "executing") return worst;
+      if (s === "pending") return "pending";
+      return worst;
+    },
+    "completed",
+  );
+  const groupBadge = getStatusBadge(toolStatusMap[groupStatus]);
+
   return (
     <div className="w-full flex flex-col">
       <ToolCallTrigger
         label={label}
+        statusBadge={groupBadge}
         expanded={expanded}
         onClick={() => setExpanded((prev) => !prev)}
       />

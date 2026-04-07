@@ -108,10 +108,16 @@ export function ArtifactPolicyProvider({
     for (const ranking of artifactsIndex.byMessageId.values()) {
       for (const [toolCallId, candidates] of ranking.candidatesByToolCallId) {
         if (candidates.length === 0) continue;
+        const primaryIndex = candidates.findIndex((c) => c.allowed);
+        const primary =
+          primaryIndex !== -1 ? candidates[primaryIndex] : candidates[0];
+        const secondary = candidates.filter(
+          (_, i) => i !== (primaryIndex !== -1 ? primaryIndex : 0),
+        );
         displayByToolCallId.set(toolCallId, {
           role: "primary_host",
-          primaryCandidate: candidates[0],
-          secondaryCandidates: candidates.slice(1),
+          primaryCandidate: primary,
+          secondaryCandidates: secondary,
         });
       }
     }
