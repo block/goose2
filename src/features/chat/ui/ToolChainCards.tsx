@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { ToolCallAdapter } from "./ToolCallAdapter";
+import { ToolCallTrigger } from "./ToolCallTrigger";
 import {
   getToolType,
   getToolVerb,
@@ -156,21 +157,11 @@ function ToolGroupRow({
 
   return (
     <div className="w-full flex flex-col">
-      <button
-        type="button"
+      <ToolCallTrigger
+        label={label}
+        expanded={expanded}
         onClick={() => setExpanded((prev) => !prev)}
-        className="inline-flex items-center gap-1 py-px font-medium text-sm"
-      >
-        <span className={cn(!expanded && "text-muted-foreground")}>
-          {label}
-        </span>
-        <ChevronRight
-          className={cn(
-            "h-3.5 w-3.5 text-muted-foreground transition-transform",
-            expanded && "rotate-90",
-          )}
-        />
-      </button>
+      />
       {expanded && (
         <div className="ml-[7px] mt-1 flex flex-col gap-3 border-l border-border py-3 pl-4 animate-in slide-in-from-top-2 fade-in-0 duration-200">
           {group.items.map((item) => renderToolItem(item, true))}

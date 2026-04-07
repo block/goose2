@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { AnimatePresence, LayoutGroup, motion } from "motion/react";
-import { FolderOpen, ArrowUpRight, ChevronDownIcon } from "lucide-react";
+import { LayoutGroup } from "motion/react";
+import { FolderOpen, ArrowUpRight } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import {
   Tool,
@@ -9,6 +9,7 @@ import {
   getStatusBadge,
 } from "@/shared/ui/ai-elements/tool";
 import { CollapsibleTrigger } from "@/shared/ui/collapsible";
+import { ToolCallTrigger } from "./ToolCallTrigger";
 import { toolStatusMap } from "../lib/toolStatusMap";
 import type { ToolCallStatus } from "@/shared/types/messages";
 import { useArtifactPolicyContext } from "@/features/chat/hooks/ArtifactPolicyContext";
@@ -275,46 +276,12 @@ export function ToolCallAdapter({
       <div className="relative w-full">
         <Tool open={isOpen} onOpenChange={setIsOpen}>
           <CollapsibleTrigger asChild>
-            <motion.button
-              layout
-              type="button"
-              className={cn(
-                "flex w-full items-center gap-1.5 py-px",
-                !isOpen && "text-muted-foreground",
-              )}
-              transition={{ duration: 0.15 }}
-            >
-              <motion.span
-                layout="position"
-                transition={{ duration: 0.15 }}
-                className="font-medium text-sm"
-              >
-                {verb ?? title}
-              </motion.span>
-              <AnimatePresence mode="popLayout">
-                {!isOpen && fileDetail && (
-                  <motion.span
-                    key="file-detail"
-                    layout="position"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.15 }}
-                    className="font-medium text-sm"
-                  >
-                    {fileDetail}
-                  </motion.span>
-                )}
-              </AnimatePresence>
-              {getStatusBadge(state)}
-              <motion.div
-                layout="position"
-                animate={{ rotate: isOpen ? 0 : -90 }}
-                transition={{ duration: 0.15 }}
-              >
-                <ChevronDownIcon className="size-3.5 text-muted-foreground" />
-              </motion.div>
-            </motion.button>
+            <ToolCallTrigger
+              label={verb ?? title}
+              detail={fileDetail}
+              statusBadge={getStatusBadge(state)}
+              expanded={isOpen}
+            />
           </CollapsibleTrigger>
         </Tool>
         {isOpen && (
