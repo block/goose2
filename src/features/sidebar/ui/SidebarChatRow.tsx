@@ -45,6 +45,7 @@ export function SidebarChatRow({
 }: SidebarChatRowProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const [draftTitle, setDraftTitle] = useState(title);
   const inputRef = useRef<HTMLInputElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
@@ -127,8 +128,16 @@ export function SidebarChatRow({
     // biome-ignore lint/a11y/noStaticElementInteractions: wrapper div for hover detection, interactive content is the inner Button
     <div
       ref={rowRef}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData("text/x-session-id", id);
+        e.dataTransfer.effectAllowed = "move";
+        setDragging(true);
+      }}
+      onDragEnd={() => setDragging(false)}
       className={cn(
-        "relative flex items-center group rounded-md transition-colors duration-200",
+        "relative flex items-center group rounded-md transition-colors duration-200 active:cursor-grabbing",
+        dragging && "opacity-40 bg-accent/30",
         className,
       )}
       onMouseEnter={onMouseEnter}
@@ -145,7 +154,7 @@ export function SidebarChatRow({
         }}
         title="Double-click to rename"
         className={cn(
-          "flex-1 min-w-0 justify-start gap-2 rounded-md pl-3 pr-8 py-2 text-[13px] font-light",
+          "flex-1 min-w-0 justify-start gap-2 rounded-md pl-3 pr-8 py-2 text-[13px] font-light active:cursor-grabbing",
           isActive ? ACTIVE_CHAT_ROW_CLASS : INACTIVE_CHAT_ROW_CLASS,
         )}
       >

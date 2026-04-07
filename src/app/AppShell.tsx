@@ -278,6 +278,13 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     [projectStore.projects],
   );
 
+  const handleMoveToProject = useCallback(
+    (sessionId: string, projectId: string | null) => {
+      sessionStore.updateSession(sessionId, { projectId });
+    },
+    [sessionStore],
+  );
+
   const handleRenameChat = useCallback(
     (sessionId: string, nextTitle: string) => {
       sessionStore.updateSession(sessionId, {
@@ -516,6 +523,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             onArchiveProject={handleArchiveProject}
             onArchiveChat={handleArchiveChat}
             onRenameChat={handleRenameChat}
+            onMoveToProject={handleMoveToProject}
             onSelectSession={handleSelectSession}
             activeView={activeView}
             activeSessionId={activeSessionId}

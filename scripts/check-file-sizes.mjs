@@ -6,9 +6,14 @@ const DEFAULT_LIMIT = 500;
 // Add narrowly scoped exceptions here with justification
 const EXCEPTIONS = {
   "src/app/AppShell.tsx": {
-    limit: 580,
+    limit: 590,
     justification:
-      "Temporary allowance while project creation, home/chat handoff, and session-history routing remain in the shell.",
+      "Temporary allowance while project creation, home/chat handoff, session-history routing, and drag-drop wiring remain in the shell.",
+  },
+  "src/features/sidebar/ui/SidebarProjectsSection.tsx": {
+    limit: 545,
+    justification:
+      "Added drag-and-drop handlers for moving chats between projects.",
   },
   "src/features/chat/ui/ChatView.tsx": {
     limit: 505,

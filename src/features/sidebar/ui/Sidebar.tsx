@@ -30,6 +30,7 @@ interface SidebarProps {
   onArchiveProject?: (projectId: string) => void;
   onArchiveChat?: (sessionId: string) => void;
   onRenameChat?: (sessionId: string, nextTitle: string) => void;
+  onMoveToProject?: (sessionId: string, projectId: string | null) => void;
   onNavigate?: (view: AppView) => void;
   onSelectSession?: (sessionId: string) => void;
   activeView?: AppView;
@@ -59,6 +60,7 @@ export function Sidebar({
   onArchiveProject,
   onArchiveChat,
   onRenameChat,
+  onMoveToProject,
   onNavigate,
   onSelectSession,
   activeView,
@@ -545,6 +547,7 @@ export function Sidebar({
                 onArchiveProject={onArchiveProject}
                 onArchiveChat={onArchiveChat}
                 onRenameChat={onRenameChat}
+                onMoveToProject={onMoveToProject}
                 onItemMouseEnter={onItemMouseEnter}
                 activeSessionRefCallback={activeSessionRefCallback}
               />
