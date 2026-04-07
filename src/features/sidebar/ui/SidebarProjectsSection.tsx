@@ -140,17 +140,26 @@ function ProjectSection({
   activeSessionRefCallback?: (el: HTMLElement | null) => void;
 }) {
   const [showAll, setShowAll] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     if (e.dataTransfer.types.includes("text/x-session-id")) {
       e.preventDefault();
       e.dataTransfer.dropEffect = "move";
+      setDragOver(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setDragOver(false);
     }
   }, []);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
+      setDragOver(false);
       const sessionId = e.dataTransfer.getData("text/x-session-id");
       if (sessionId) {
         onMoveToProject?.(sessionId, project.id);
@@ -166,8 +175,9 @@ function ProjectSection({
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: drop target for drag-and-drop
     <div
-      className={cn("rounded-md")}
+      className="rounded-md"
       onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
       {/* Project row */}
@@ -217,6 +227,9 @@ function ProjectSection({
           <IconPlus className="size-3.5" />
         </Button>
       </div>
+
+      {/* Drop indicator line */}
+      {dragOver && <div className="mx-3 h-px bg-foreground" />}
 
       {/* Nested chats */}
       {isExpanded && (
@@ -301,16 +314,26 @@ export function SidebarProjectsSection({
   onItemMouseEnter,
   activeSessionRefCallback,
 }: SidebarProjectsSectionProps) {
+  const [recentsDragOver, setRecentsDragOver] = useState(false);
+
   const handleRecentsDragOver = useCallback((e: React.DragEvent) => {
     if (e.dataTransfer.types.includes("text/x-session-id")) {
       e.preventDefault();
       e.dataTransfer.dropEffect = "move";
+      setRecentsDragOver(true);
+    }
+  }, []);
+
+  const handleRecentsDragLeave = useCallback((e: React.DragEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setRecentsDragOver(false);
     }
   }, []);
 
   const handleRecentsDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
+      setRecentsDragOver(false);
       const sessionId = e.dataTransfer.getData("text/x-session-id");
       if (sessionId) {
         onMoveToProject?.(sessionId, null);
@@ -415,8 +438,9 @@ export function SidebarProjectsSection({
       {projectSessions.standalone.length > 0 && (
         // biome-ignore lint/a11y/noStaticElementInteractions: drop target for drag-and-drop
         <div
-          className={cn("rounded-md")}
+          className="rounded-md"
           onDragOver={handleRecentsDragOver}
+          onDragLeave={handleRecentsDragLeave}
           onDrop={handleRecentsDrop}
         >
           <div
@@ -457,6 +481,9 @@ export function SidebarProjectsSection({
               </Button>
             )}
           </div>
+
+          {/* Drop indicator line */}
+          {recentsDragOver && <div className="mx-3 h-px bg-foreground" />}
 
           {collapsed ? (
             <div className="flex flex-col items-center gap-1">

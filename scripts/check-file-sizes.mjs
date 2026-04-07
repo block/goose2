@@ -11,7 +11,7 @@ const EXCEPTIONS = {
       "Temporary allowance while project creation, home/chat handoff, session-history routing, and drag-drop wiring remain in the shell.",
   },
   "src/features/sidebar/ui/SidebarProjectsSection.tsx": {
-    limit: 540,
+    limit: 545,
     justification:
       "Added drag-and-drop handlers for moving chats between projects.",
   },
