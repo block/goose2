@@ -60,6 +60,7 @@ export interface Session {
   updatedAt: string;
   archivedAt?: string;
   messageCount: number;
+  userSetName?: boolean;
 }
 
 // SSE event types (from goosed server)

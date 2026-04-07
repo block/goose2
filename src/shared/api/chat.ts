@@ -38,6 +38,7 @@ export async function updateSession(
     personaId?: string;
     modelName?: string;
     projectId?: string | null;
+    userSetName?: boolean;
   },
 ): Promise<void> {
   return invoke("update_session", { sessionId, update });
@@ -53,4 +54,8 @@ export async function archiveSession(sessionId: string): Promise<void> {
 
 export async function unarchiveSession(sessionId: string): Promise<void> {
   return invoke("unarchive_session", { sessionId });
+}
+
+export async function generateSessionTitle(sessionId: string): Promise<string> {
+  return invoke("generate_session_title", { sessionId });
 }
