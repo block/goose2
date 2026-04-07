@@ -436,7 +436,13 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       case "projects":
         return <ProjectsView onStartChat={handleStartChatFromProject} />;
       case "session-history":
-        return <SessionHistoryView onSelectSession={handleSelectSession} />;
+        return (
+          <SessionHistoryView
+            onSelectSession={handleSelectSession}
+            onRenameChat={handleRenameChat}
+            onArchiveChat={handleArchiveChat}
+          />
+        );
       case "chat":
       case "home":
         return activeSession ? (

@@ -1,5 +1,23 @@
-import { Calendar, MessageSquare, Folder, Bot } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  Calendar,
+  MessageSquare,
+  Folder,
+  Bot,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  ArchiveRestore,
+} from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import { Button } from "@/shared/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
+import { Input } from "@/shared/ui/input";
 
 function formatRelativeDate(isoString: string): string {
   const date = new Date(isoString);
@@ -32,6 +50,9 @@ interface SessionCardProps {
   workingDir?: string;
   archivedAt?: string;
   onSelect?: (id: string) => void;
+  onRename?: (id: string, nextTitle: string) => void;
+  onArchive?: (id: string) => void;
+  onUnarchive?: (id: string) => void;
 }
 
 export function SessionCard({
@@ -45,17 +66,82 @@ export function SessionCard({
   workingDir,
   archivedAt,
   onSelect,
+  onRename,
+  onArchive,
+  onUnarchive,
 }: SessionCardProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draftTitle, setDraftTitle] = useState(title);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setDraftTitle(title);
+  }, [title]);
+
+  useEffect(() => {
+    if (!editing) return;
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, [editing]);
+
+  const startRename = () => {
+    setDraftTitle(title);
+    setMenuOpen(false);
+    setEditing(true);
+  };
+
+  const commitRename = () => {
+    const nextTitle = draftTitle.trim();
+    setEditing(false);
+    if (!nextTitle || nextTitle === title) return;
+    onRename?.(id, nextTitle);
+  };
+
+  const cancelRename = () => {
+    setDraftTitle(title);
+    setEditing(false);
+  };
+
   return (
-    <button
-      type="button"
-      onClick={() => onSelect?.(id)}
+    <div
       className={cn(
-        "flex flex-col gap-2 rounded-lg border border-border bg-background p-4 text-left transition-shadow hover:shadow-card",
+        "group relative flex flex-col gap-2 rounded-lg border border-border bg-background p-4 text-left transition-shadow hover:shadow-card",
         archivedAt && "opacity-60",
       )}
     >
-      <p className="text-sm font-medium line-clamp-2 break-words">{title}</p>
+      {/* Click-to-open overlay */}
+      <button
+        type="button"
+        onClick={() => onSelect?.(id)}
+        className="absolute inset-0 z-0 rounded-lg"
+        aria-label={`Open ${title}`}
+      />
+
+      {/* Title — editable or static */}
+      {editing ? (
+        <Input
+          ref={inputRef}
+          type="text"
+          value={draftTitle}
+          onChange={(e) => setDraftTitle(e.target.value)}
+          onBlur={commitRename}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              commitRename();
+            }
+            if (e.key === "Escape") {
+              e.preventDefault();
+              cancelRename();
+            }
+          }}
+          className="relative z-10 text-sm font-medium"
+        />
+      ) : (
+        <p className="text-sm font-medium line-clamp-2 break-words">{title}</p>
+      )}
 
       <div className="flex flex-col gap-1 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5">
@@ -93,11 +179,57 @@ export function SessionCard({
             <span className="truncate">{workingDir}</span>
           </div>
         )}
-
-        {archivedAt && (
-          <span className="text-muted-foreground text-xs">Archived</span>
-        )}
       </div>
-    </button>
+
+      {/* Actions menu */}
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            aria-label={`Options for ${title}`}
+            onClick={(e) => e.stopPropagation()}
+            className={cn(
+              "absolute right-2 top-2 z-10 size-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50",
+              menuOpen
+                ? "visible opacity-100"
+                : "invisible group-hover:visible opacity-0 group-hover:opacity-100",
+            )}
+          >
+            <MoreHorizontal className="size-3.5" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" sideOffset={4}>
+          {archivedAt ? (
+            <DropdownMenuItem
+              onClick={() => {
+                setMenuOpen(false);
+                onUnarchive?.(id);
+              }}
+            >
+              <ArchiveRestore className="size-3.5" />
+              Restore
+            </DropdownMenuItem>
+          ) : (
+            <>
+              <DropdownMenuItem onClick={startRename}>
+                <Pencil className="size-3.5" />
+                Rename
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  setMenuOpen(false);
+                  onArchive?.(id);
+                }}
+              >
+                <Trash2 className="size-3.5" />
+                Archive
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 }

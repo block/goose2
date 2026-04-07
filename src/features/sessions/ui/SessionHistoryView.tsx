@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { History } from "lucide-react";
+import { Archive, History } from "lucide-react";
 import { SearchBar } from "@/shared/ui/SearchBar";
+import { Button } from "@/shared/ui/button";
 import { SessionCard } from "./SessionCard";
 import { groupSessionsByDate } from "../lib/groupSessionsByDate";
 import { filterSessions } from "../lib/filterSessions";
@@ -12,10 +13,14 @@ import type { ChatSession } from "@/features/chat/stores/chatSessionStore";
 
 interface SessionHistoryViewProps {
   onSelectSession?: (sessionId: string) => void;
+  onRenameChat?: (sessionId: string, nextTitle: string) => void;
+  onArchiveChat?: (sessionId: string) => void;
 }
 
 export function SessionHistoryView({
   onSelectSession,
+  onRenameChat,
+  onArchiveChat,
 }: SessionHistoryViewProps) {
   const sessions = useChatSessionStore((s) => s.sessions);
   const activeSessions = useMemo(
@@ -23,15 +28,16 @@ export function SessionHistoryView({
     [sessions],
   );
   const [archivedSessions, setArchivedSessions] = useState<ChatSession[]>([]);
+  const [showArchived, setShowArchived] = useState(false);
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
+  const loadArchived = useCallback(() => {
     let cancelled = false;
     listArchivedSessions()
-      .then((sessions) => {
+      .then((result) => {
         if (cancelled) return;
         setArchivedSessions(
-          sessions.map((s) => ({
+          result.map((s) => ({
             id: s.id,
             title: s.title,
             projectId: s.projectId,
@@ -55,7 +61,9 @@ export function SessionHistoryView({
     };
   }, []);
 
-  const allSessions = [...activeSessions, ...archivedSessions];
+  useEffect(loadArchived, [loadArchived]);
+
+  const displaySessions = showArchived ? archivedSessions : activeSessions;
 
   const getPersonaName = useCallback(
     (personaId: string) =>
@@ -81,28 +89,74 @@ export function SessionHistoryView({
   );
 
   const resolvers = { getPersonaName, getProjectName };
-  const filtered = filterSessions(allSessions, search, resolvers);
+  const filtered = filterSessions(displaySessions, search, resolvers);
   const dateGroups = groupSessionsByDate(filtered);
+
+  const handleUnarchive = useCallback(
+    async (sessionId: string) => {
+      try {
+        await useChatSessionStore.getState().unarchiveSession(sessionId);
+        loadArchived();
+      } catch {
+        // best-effort
+      }
+    },
+    [loadArchived],
+  );
+
+  const handleArchive = useCallback(
+    async (sessionId: string) => {
+      onArchiveChat?.(sessionId);
+      // Refresh archived list after a short delay so the backend has time to persist
+      setTimeout(loadArchived, 300);
+    },
+    [onArchiveChat, loadArchived],
+  );
+
+  const emptyLabel = showArchived ? "No archived sessions" : "No sessions yet";
+  const emptyHint = showArchived
+    ? "Archived sessions will appear here."
+    : "Start a chat to see it here.";
 
   return (
     <div className="flex flex-1 flex-col h-full min-h-0">
       <div className="flex-1 overflow-y-auto min-h-0">
         <div className="max-w-5xl mx-auto w-full px-6 py-8 space-y-5 page-transition">
           {/* Header */}
-          <div>
-            <h1 className="text-lg font-semibold font-display tracking-tight">
-              Session History
-            </h1>
-            <p className="text-xs text-muted-foreground">
-              Browse and search past sessions
-            </p>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h1 className="text-lg font-semibold font-display tracking-tight">
+                {showArchived ? "Archived Sessions" : "Session History"}
+              </h1>
+              <p className="text-xs text-muted-foreground">
+                {showArchived
+                  ? "Sessions you've archived"
+                  : "Browse and search past sessions"}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant={showArchived ? "outline" : "ghost"}
+              size="xs"
+              onClick={() => {
+                setShowArchived((prev) => !prev);
+                setSearch("");
+              }}
+            >
+              <Archive className="size-3.5" />
+              {showArchived ? "Back to active" : "Archived"}
+            </Button>
           </div>
 
           {/* Search */}
           <SearchBar
             value={search}
             onChange={setSearch}
-            placeholder="Search sessions by title, persona, or project..."
+            placeholder={
+              showArchived
+                ? "Search archived sessions..."
+                : "Search sessions by title, persona, or project..."
+            }
           />
 
           {/* Session cards grouped by date */}
@@ -142,6 +196,9 @@ export function SessionHistoryView({
                       }
                       archivedAt={session.archivedAt}
                       onSelect={onSelectSession}
+                      onRename={onRenameChat}
+                      onArchive={handleArchive}
+                      onUnarchive={handleUnarchive}
                     />
                   ))}
                 </div>
@@ -154,13 +211,13 @@ export function SessionHistoryView({
               <History className="h-10 w-10 opacity-30" />
               <div className="text-center">
                 <p className="text-sm font-medium">
-                  {allSessions.length === 0
-                    ? "No sessions yet"
+                  {displaySessions.length === 0
+                    ? emptyLabel
                     : "No matching sessions"}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {allSessions.length === 0
-                    ? "Start a chat to see it here."
+                  {displaySessions.length === 0
+                    ? emptyHint
                     : "Try a different search term."}
                 </p>
               </div>

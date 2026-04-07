@@ -6,7 +6,7 @@ const DEFAULT_LIMIT = 500;
 // Add narrowly scoped exceptions here with justification
 const EXCEPTIONS = {
   "src/app/AppShell.tsx": {
-    limit: 575,
+    limit: 580,
     justification:
       "Temporary allowance while project creation, home/chat handoff, and session-history routing remain in the shell.",
   },

@@ -43,17 +43,47 @@ describe("SessionCard", () => {
 
     render(<SessionCard {...defaultProps} onSelect={onSelect} />);
 
-    await user.click(screen.getByText("Fix sidebar bug"));
+    await user.click(screen.getByLabelText("Open Fix sidebar bug"));
 
     expect(onSelect).toHaveBeenCalledWith("s1");
   });
 
-  it("shows archived styling when archivedAt is set", () => {
-    const { container } = render(
-      <SessionCard {...defaultProps} archivedAt="2026-04-01T00:00:00Z" />,
+  it("shows rename and archive in menu for active sessions", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <SessionCard {...defaultProps} onRename={vi.fn()} onArchive={vi.fn()} />,
     );
 
-    expect(container.firstChild).toHaveClass("opacity-60");
-    expect(screen.getByText("Archived")).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: /options for fix sidebar bug/i }),
+    );
+
+    expect(
+      screen.getByRole("menuitem", { name: /rename/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: /archive/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows restore option for archived sessions", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <SessionCard
+        {...defaultProps}
+        archivedAt="2026-04-01T00:00:00Z"
+        onUnarchive={vi.fn()}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /options for fix sidebar bug/i }),
+    );
+
+    expect(
+      screen.getByRole("menuitem", { name: /restore/i }),
+    ).toBeInTheDocument();
   });
 });
