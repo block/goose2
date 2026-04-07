@@ -111,8 +111,22 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     string | undefined
   >();
 
+  const cleanupEmptyDraft = useCallback(
+    (sessionId: string | null) => {
+      if (!sessionId) return;
+      const state = useChatSessionStore.getState();
+      const session = state.sessions.find((s) => s.id === sessionId);
+      if (!session?.draft) return;
+      const draft = useChatStore.getState().draftsBySession[sessionId] ?? "";
+      if (draft.length > 0) return; // has typed text — keep it
+      chatStore.cleanupSession(sessionId);
+      state.removeDraft(sessionId);
+    },
+    [chatStore],
+  );
+
   const createNewTab = useCallback(
-    async (title = "New Chat", project?: ProjectInfo) => {
+    (title = "New Chat", project?: ProjectInfo) => {
       const agentId = agentStore.activeAgentId ?? undefined;
       const providerId = project?.preferredProvider ?? homeSelectedProvider;
       const personaId = homeSelectedPersonaId;
@@ -131,13 +145,16 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       });
 
       if (reusableSession) {
+        cleanupEmptyDraft(sessionState.activeSessionId);
         sessionState.setActiveSession(reusableSession.id);
         setActiveView("chat");
         chatStore.setActiveSession(reusableSession.id);
         return reusableSession;
       }
 
-      const session = await sessionStore.createSession({
+      cleanupEmptyDraft(sessionState.activeSessionId);
+
+      const session = sessionStore.createDraftSession({
         title,
         projectId: project?.id,
         agentId,
@@ -147,7 +164,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
       sessionStore.setActiveSession(session.id);
       setActiveView("chat");
-
       chatStore.setActiveSession(session.id);
 
       return session;
@@ -158,6 +174,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       agentStore.activeAgentId,
       homeSelectedPersonaId,
       homeSelectedProvider,
+      cleanupEmptyDraft,
     ],
   );
 
@@ -194,11 +211,12 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   const clearActiveSession = useCallback(
     (sessionId: string) => {
+      cleanupEmptyDraft(sessionId);
       chatStore.cleanupSession(sessionId);
       sessionStore.setActiveSession(null);
       setActiveView("home");
     },
-    [chatStore, sessionStore],
+    [chatStore, sessionStore, cleanupEmptyDraft],
   );
 
   const handleArchiveChat = useCallback(
@@ -272,36 +290,33 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           ? projectStore.projects.find((project) => project.id === projectId)
           : undefined;
 
-      createNewTab(
-        initialMessage?.slice(0, 40) || "New Chat",
-        selectedProject,
-      ).catch(() => {
-        setPendingInitialMessage(undefined);
-        setPendingInitialImages(undefined);
-        setHomeSelectedProvider(undefined);
-        setHomeSelectedPersonaId(undefined);
-      });
+      createNewTab(initialMessage?.slice(0, 40) || "New Chat", selectedProject);
     },
     [createNewTab, projectStore.projects],
   );
 
   const handleSelectSession = useCallback(
     (id: string) => {
+      cleanupEmptyDraft(useChatSessionStore.getState().activeSessionId);
       sessionStore.setActiveSession(id);
       setActiveView("chat");
       chatStore.setActiveSession(id);
       useChatStore.getState().markSessionRead(id);
       loadSessionMessages(id);
     },
-    [sessionStore, chatStore, loadSessionMessages],
+    [sessionStore, chatStore, loadSessionMessages, cleanupEmptyDraft],
   );
 
-  const handleNavigate = (view: AppView) => {
-    setActiveView(view);
-    if (view !== "chat") {
-      sessionStore.setActiveSession(null);
-    }
-  };
+  const handleNavigate = useCallback(
+    (view: AppView) => {
+      if (view !== "chat") {
+        cleanupEmptyDraft(useChatSessionStore.getState().activeSessionId);
+        sessionStore.setActiveSession(null);
+      }
+      setActiveView(view);
+    },
+    [sessionStore, cleanupEmptyDraft],
+  );
 
   const toggleSidebar = () => setSidebarCollapsed((prev) => !prev);
 
