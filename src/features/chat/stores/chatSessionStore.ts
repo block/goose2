@@ -24,6 +24,7 @@ export interface ChatSession {
   archivedAt?: string;
   messageCount: number;
   draft?: boolean;
+  userSetName?: boolean;
 }
 
 interface ChatSessionStoreState {
@@ -105,6 +106,7 @@ function sessionToChatSession(session: Session): ChatSession {
     updatedAt: session.updatedAt,
     archivedAt: session.archivedAt,
     messageCount: session.messageCount,
+    userSetName: session.userSetName,
   };
 }
 
@@ -219,6 +221,7 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
       personaId?: string;
       modelName?: string;
       projectId?: string | null;
+      userSetName?: boolean;
     } = {};
     if (patch.title) backendPatch.title = patch.title;
     if (patch.providerId) backendPatch.providerId = patch.providerId;
@@ -226,6 +229,9 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     if (patch.modelName) backendPatch.modelName = patch.modelName;
     if ("projectId" in patch) {
       backendPatch.projectId = patch.projectId ?? null;
+    }
+    if ("userSetName" in patch) {
+      backendPatch.userSetName = patch.userSetName;
     }
     if (Object.keys(backendPatch).length > 0) {
       apiUpdateSession(id, backendPatch).catch((err) => {

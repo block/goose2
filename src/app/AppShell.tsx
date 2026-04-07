@@ -273,7 +273,10 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   const handleRenameChat = useCallback(
     (sessionId: string, nextTitle: string) => {
-      sessionStore.updateSession(sessionId, { title: nextTitle });
+      sessionStore.updateSession(sessionId, {
+        title: nextTitle,
+        userSetName: true,
+      });
     },
     [sessionStore],
   );
