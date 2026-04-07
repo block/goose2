@@ -175,7 +175,6 @@ function ProjectSection({
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: drop target for drag-and-drop
     <div
-      className="rounded-md"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -440,7 +439,6 @@ export function SidebarProjectsSection({
       {projectSessions.standalone.length > 0 && (
         // biome-ignore lint/a11y/noStaticElementInteractions: drop target for drag-and-drop
         <div
-          className="rounded-md"
           onDragOver={handleRecentsDragOver}
           onDragLeave={handleRecentsDragLeave}
           onDrop={handleRecentsDrop}
