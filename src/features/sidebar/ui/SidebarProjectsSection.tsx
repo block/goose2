@@ -181,7 +181,7 @@ function ProjectSection({
       onDrop={handleDrop}
     >
       {/* Project row */}
-      <div className="flex items-center group rounded-md transition-colors duration-200">
+      <div className="relative flex items-center group rounded-md transition-colors duration-200">
         <Button
           type="button"
           variant="ghost"
@@ -226,10 +226,12 @@ function ProjectSection({
         >
           <IconPlus className="size-3.5" />
         </Button>
-      </div>
 
-      {/* Drop indicator line */}
-      {dragOver && <div className="mx-3 h-px bg-foreground" />}
+        {/* Drop indicator line — absolutely positioned to avoid layout shift */}
+        {dragOver && (
+          <div className="absolute bottom-0 left-3 right-3 h-px bg-foreground" />
+        )}
+      </div>
 
       {/* Nested chats */}
       {isExpanded && (
@@ -452,7 +454,7 @@ export function SidebarProjectsSection({
           {/* Section header (expanded only) */}
           <div
             className={cn(
-              "group flex items-center transition-all duration-300",
+              "relative group flex items-center transition-all duration-300",
               collapsed ? "px-0 pt-0 pb-1 justify-center" : "pt-2 pb-1",
             )}
           >
@@ -480,10 +482,12 @@ export function SidebarProjectsSection({
                 <IconPlus className="size-3.5" />
               </Button>
             )}
-          </div>
 
-          {/* Drop indicator line */}
-          {recentsDragOver && <div className="mx-3 h-px bg-foreground" />}
+            {/* Drop indicator line */}
+            {recentsDragOver && (
+              <div className="absolute bottom-0 left-3 right-3 h-px bg-foreground" />
+            )}
+          </div>
 
           {collapsed ? (
             <div className="flex flex-col items-center gap-1">

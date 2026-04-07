@@ -136,7 +136,7 @@ export function SidebarChatRow({
       }}
       onDragEnd={() => setDragging(false)}
       className={cn(
-        "relative flex items-center group rounded-md transition-colors duration-200 cursor-grab active:cursor-grabbing",
+        "relative flex items-center group rounded-md transition-colors duration-200 active:cursor-grabbing",
         dragging && "opacity-40 bg-accent/30",
         className,
       )}
@@ -154,7 +154,7 @@ export function SidebarChatRow({
         }}
         title="Double-click to rename"
         className={cn(
-          "flex-1 min-w-0 justify-start gap-2 rounded-md pl-3 pr-8 py-2 text-[13px] font-light cursor-grab active:cursor-grabbing",
+          "flex-1 min-w-0 justify-start gap-2 rounded-md pl-3 pr-8 py-2 text-[13px] font-light active:cursor-grabbing",
           isActive ? ACTIVE_CHAT_ROW_CLASS : INACTIVE_CHAT_ROW_CLASS,
         )}
       >
