@@ -3,7 +3,7 @@ import {
   IconLayoutSidebar,
   IconLayoutSidebarFilled,
 } from "@tabler/icons-react";
-import { BookOpen, Bot, Home } from "lucide-react";
+import { BookOpen, Bot, History, Home } from "lucide-react";
 import { GooseIcon } from "@/shared/ui/icons/GooseIcon";
 import { cn } from "@/shared/lib/cn";
 import type { AppView } from "@/app/AppShell";
@@ -39,6 +39,7 @@ interface SidebarProps {
 const NAV_ITEMS: readonly { id: AppView; label: string; icon: typeof Bot }[] = [
   { id: "agents", label: "Personas", icon: Bot },
   { id: "skills", label: "Skills", icon: BookOpen },
+  { id: "session-history", label: "Session History", icon: History },
 ];
 
 const EXPANDED_PROJECTS_STORAGE_KEY = "goose:sidebar:expanded-projects";

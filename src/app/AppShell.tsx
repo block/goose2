@@ -7,6 +7,7 @@ import type { PastedImage } from "@/shared/types/messages";
 import { SkillsView } from "@/features/skills/ui/SkillsView";
 import { AgentsView } from "@/features/agents/ui/AgentsView";
 import { ProjectsView } from "@/features/projects/ui/ProjectsView";
+import { SessionHistoryView } from "@/features/sessions/ui/SessionHistoryView";
 import { CreateProjectDialog } from "@/features/projects/ui/CreateProjectDialog";
 import { archiveProject } from "@/features/projects/api/projects";
 import type { ProjectInfo } from "@/features/projects/api/projects";
@@ -21,7 +22,13 @@ import { findExistingDraft } from "@/features/chat/lib/newChat";
 import { getSessionMessages } from "@/shared/api/chat";
 import { useAppStartup } from "./hooks/useAppStartup";
 
-export type AppView = "home" | "chat" | "skills" | "agents" | "projects";
+export type AppView =
+  | "home"
+  | "chat"
+  | "skills"
+  | "agents"
+  | "projects"
+  | "session-history";
 
 const SIDEBAR_DEFAULT_WIDTH = 240;
 const SIDEBAR_MIN_WIDTH = 180;
@@ -428,6 +435,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         return <AgentsView />;
       case "projects":
         return <ProjectsView onStartChat={handleStartChatFromProject} />;
+      case "session-history":
+        return <SessionHistoryView onSelectSession={handleSelectSession} />;
       case "chat":
       case "home":
         return activeSession ? (
