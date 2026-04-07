@@ -222,6 +222,74 @@ describe("ChatInput", () => {
     expect(screen.getByText("@Reviewer")).toBeInTheDocument();
   });
 
+  // ---------------------------------------------------------------------------
+  // Message queue & streaming behavior
+  // ---------------------------------------------------------------------------
+
+  it("textarea is enabled during streaming", () => {
+    render(<ChatInput onSend={vi.fn()} isStreaming />);
+    expect(screen.getByRole("textbox")).not.toBeDisabled();
+  });
+
+  it("shows send button instead of stop when streaming with text entered", async () => {
+    const user = userEvent.setup();
+    render(<ChatInput onSend={vi.fn()} onStop={vi.fn()} isStreaming />);
+
+    await user.type(screen.getByRole("textbox"), "follow up");
+
+    expect(
+      screen.getByRole("button", { name: /send message/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /stop generation/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("calls onSend during streaming when text is entered", async () => {
+    const onSend = vi.fn();
+    const user = userEvent.setup();
+    render(<ChatInput onSend={onSend} isStreaming />);
+
+    await user.type(screen.getByRole("textbox"), "follow up");
+    await user.keyboard("{Enter}");
+
+    expect(onSend).toHaveBeenCalledWith("follow up", undefined, undefined);
+  });
+
+  it("shows disabled send button (not stop) when queue is full", () => {
+    render(
+      <ChatInput
+        onSend={vi.fn()}
+        onStop={vi.fn()}
+        isStreaming
+        queuedMessage={{ text: "queued msg" }}
+      />,
+    );
+
+    const sendButton = screen.getByRole("button", { name: /send message/i });
+    expect(sendButton).toBeDisabled();
+    expect(
+      screen.queryByRole("button", { name: /stop generation/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not send when queue is full", async () => {
+    const onSend = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <ChatInput
+        onSend={onSend}
+        isStreaming
+        queuedMessage={{ text: "queued msg" }}
+      />,
+    );
+
+    await user.type(screen.getByRole("textbox"), "another message");
+    await user.keyboard("{Enter}");
+
+    expect(onSend).not.toHaveBeenCalled();
+  });
+
   it("keeps the selected assistant chip after sending subsequent messages", async () => {
     const onSend = vi.fn();
     const user = userEvent.setup();

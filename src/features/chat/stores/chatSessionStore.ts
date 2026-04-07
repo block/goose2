@@ -23,7 +23,7 @@ export interface ChatSession {
   updatedAt: string;
   archivedAt?: string;
   messageCount: number;
-  draft?: boolean;
+  draft?: boolean; // local-only session, not yet persisted to backend
   userSetName?: boolean;
 }
 
@@ -80,10 +80,27 @@ function loadCachedSessions(): ChatSession[] {
   }
 }
 
+function draftsWithText(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const stored = window.localStorage.getItem("goose:chat-drafts");
+    if (!stored) return new Set();
+    const parsed = JSON.parse(stored);
+    return new Set(
+      Object.entries(parsed)
+        .filter(([, v]) => typeof v === "string" && (v as string).length > 0)
+        .map(([k]) => k),
+    );
+  } catch {
+    return new Set();
+  }
+}
+
 function persistSessions(sessions: ChatSession[]): void {
   if (typeof window === "undefined") return;
   try {
-    const persistable = sessions.filter((s) => !s.draft);
+    const withText = draftsWithText();
+    const persistable = sessions.filter((s) => !s.draft || withText.has(s.id));
     window.localStorage.setItem(
       SESSION_CACHE_STORAGE_KEY,
       JSON.stringify(persistable),
@@ -165,13 +182,15 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
       messageCount: 0,
       draft: true,
     };
-    set((state) => ({
-      sessions: [...state.sessions, chatSession],
-    }));
+    set((state) => ({ sessions: [...state.sessions, chatSession] }));
     return chatSession;
   },
 
   promoteDraft: (id) => {
+    const session = get().sessions.find((s) => s.id === id);
+    if (!session?.draft) return;
+    // Clear draft flag — the backend session is created automatically by
+    // ensure_session when the first message is sent via ACP.
     set((state) => ({
       sessions: state.sessions.map((s) =>
         s.id === id ? { ...s, draft: undefined } : s,
@@ -214,7 +233,7 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     persistSessions(get().sessions);
     if (opts?.localOnly) return;
     const session = get().sessions.find((s) => s.id === id);
-    if (session?.draft) return;
+    if (session?.draft) return; // skip backend for drafts
     const backendPatch: {
       title?: string;
       providerId?: string;

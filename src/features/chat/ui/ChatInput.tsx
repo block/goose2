@@ -32,16 +32,16 @@ export interface ProjectOption {
   color?: string | null;
 }
 
-const DRAFT_DEBOUNCE_MS = 300;
-
 interface ChatInputProps {
   onSend: (text: string, personaId?: string, images?: PastedImage[]) => void;
   onStop?: () => void;
   isStreaming?: boolean;
   disabled?: boolean;
-  className?: string;
+  queuedMessage?: { text: string } | null;
+  onDismissQueue?: () => void;
   initialValue?: string;
   onDraftChange?: (text: string) => void;
+  className?: string;
   // Personas
   personas?: Persona[];
   selectedPersonaId?: string | null;
@@ -126,9 +126,11 @@ export function ChatInput({
   onStop,
   isStreaming = false,
   disabled = false,
-  className,
+  queuedMessage = null,
+  onDismissQueue,
   initialValue = "",
   onDraftChange,
+  className,
   personas = [],
   selectedPersonaId = null,
   onPersonaChange,
@@ -147,14 +149,18 @@ export function ChatInput({
   contextTokens = 0,
   contextLimit = 0,
 }: ChatInputProps) {
-  const [text, setText] = useState(initialValue);
+  const [text, setTextRaw] = useState(initialValue);
+  const setText = useCallback(
+    (value: string) => {
+      setTextRaw(value);
+      onDraftChange?.(value);
+    },
+    [onDraftChange],
+  );
   const [images, setImages] = useState<PastedImage[]>([]);
   const [isCompact, setIsCompact] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const draftTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined,
-  );
 
   const activePersona = useMemo(
     () => personas.find((persona) => persona.id === selectedPersonaId) ?? null,
@@ -162,8 +168,11 @@ export function ChatInput({
   );
   const stickyPersona = activePersona;
 
+  const hasQueuedMessage = queuedMessage !== null;
   const canSend =
-    (text.trim().length > 0 || images.length > 0) && !isStreaming && !disabled;
+    (text.trim().length > 0 || images.length > 0) &&
+    !hasQueuedMessage &&
+    !disabled;
 
   const {
     mentionOpen,
@@ -194,18 +203,8 @@ export function ChatInput({
   const imagesRef = useRef(images);
   imagesRef.current = images;
 
-  const textRef = useRef(text);
-  textRef.current = text;
-
-  const onDraftChangeRef = useRef(onDraftChange);
-  onDraftChangeRef.current = onDraftChange;
-
   useEffect(() => {
     return () => {
-      if (draftTimerRef.current) {
-        clearTimeout(draftTimerRef.current);
-        onDraftChangeRef.current?.(textRef.current);
-      }
       for (const img of imagesRef.current) {
         URL.revokeObjectURL(img.objectUrl);
       }
@@ -220,8 +219,6 @@ export function ChatInput({
       images.length > 0 ? images : undefined,
     );
     setText("");
-    clearTimeout(draftTimerRef.current);
-    onDraftChange?.("");
     setImages((prev) => {
       for (const img of prev) URL.revokeObjectURL(img.objectUrl);
       return [];
@@ -229,7 +226,7 @@ export function ChatInput({
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
-  }, [canSend, text, images, onSend, selectedPersonaId, onDraftChange]);
+  }, [canSend, text, images, onSend, selectedPersonaId, setText]);
 
   const handleMentionSelect = useCallback(
     (persona: Persona) => {
@@ -251,7 +248,14 @@ export function ChatInput({
         }
       });
     },
-    [text, mentionStartIndex, mentionQuery, closeMention, onPersonaChange],
+    [
+      text,
+      mentionStartIndex,
+      mentionQuery,
+      closeMention,
+      onPersonaChange,
+      setText,
+    ],
   );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -289,13 +293,6 @@ export function ChatInput({
     const textarea = e.target;
     textarea.style.height = "auto";
     textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
-
-    if (onDraftChange) {
-      clearTimeout(draftTimerRef.current);
-      draftTimerRef.current = setTimeout(() => {
-        onDraftChange(value);
-      }, DRAFT_DEBOUNCE_MS);
-    }
   };
 
   const addImageFile = useCallback((file: File) => {
@@ -433,6 +430,22 @@ export function ChatInput({
               </div>
             )}
 
+            {queuedMessage && (
+              <div className="mb-2 flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-1.5">
+                <span className="flex-1 truncate text-xs text-muted-foreground">
+                  Queued: {queuedMessage.text}
+                </span>
+                <button
+                  type="button"
+                  onClick={onDismissQueue}
+                  className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground"
+                  aria-label="Dismiss queued message"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </div>
+            )}
+
             <textarea
               ref={textareaRef}
               value={text}
@@ -440,7 +453,7 @@ export function ChatInput({
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
               placeholder={effectivePlaceholder}
-              disabled={disabled || isStreaming}
+              disabled={disabled}
               rows={1}
               className="mb-3 min-h-[36px] max-h-[200px] w-full resize-none bg-transparent px-1 text-[14px] leading-relaxed text-foreground placeholder:font-light placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 disabled:opacity-60"
               aria-label="Chat message input"
@@ -466,6 +479,7 @@ export function ChatInput({
               contextLimit={contextLimit}
               canSend={canSend}
               isStreaming={isStreaming}
+              hasQueuedMessage={hasQueuedMessage}
               onSend={handleSend}
               onStop={onStop}
               isCompact={isCompact}

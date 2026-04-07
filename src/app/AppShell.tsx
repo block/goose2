@@ -131,8 +131,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       const state = useChatSessionStore.getState();
       const session = state.sessions.find((s) => s.id === sessionId);
       if (!session?.draft) return;
-      const draft = useChatStore.getState().getDraft(sessionId);
-      if (draft.length > 0) return;
+      const draft = useChatStore.getState().draftsBySession[sessionId] ?? "";
+      if (draft.length > 0) return; // has typed text — keep it
       chatStore.cleanupSession(sessionId);
       state.removeDraft(sessionId);
     },
@@ -161,7 +161,9 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       });
 
       if (existingDraft) {
-        cleanupEmptyDraft(sessionState.activeSessionId);
+        if (sessionState.activeSessionId !== existingDraft.id) {
+          cleanupEmptyDraft(sessionState.activeSessionId);
+        }
         sessionState.setActiveSession(existingDraft.id);
         setActiveView("chat");
         chatStore.setActiveSession(existingDraft.id);
@@ -180,7 +182,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
       sessionStore.setActiveSession(session.id);
       setActiveView("chat");
-
       chatStore.setActiveSession(session.id);
 
       return session;
@@ -228,20 +229,12 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   const clearActiveSession = useCallback(
     (sessionId: string) => {
-      const session = useChatSessionStore
-        .getState()
-        .sessions.find((s) => s.id === sessionId);
-      if (session?.draft) {
-        const draft = useChatStore.getState().getDraft(sessionId);
-        if (draft.length === 0) {
-          chatStore.cleanupSession(sessionId);
-          useChatSessionStore.getState().removeDraft(sessionId);
-        }
-      }
+      cleanupEmptyDraft(sessionId);
+      chatStore.cleanupSession(sessionId);
       sessionStore.setActiveSession(null);
       setActiveView("home");
     },
-    [chatStore, sessionStore],
+    [chatStore, sessionStore, cleanupEmptyDraft],
   );
 
   const handleArchiveChat = useCallback(
@@ -325,10 +318,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           ? projectStore.projects.find((project) => project.id === projectId)
           : undefined;
 
-      createNewTab(
-        initialMessage?.slice(0, 100) || "New Chat",
-        selectedProject,
-      );
+      createNewTab(initialMessage?.slice(0, 40) || "New Chat", selectedProject);
     },
     [createNewTab, projectStore.projects],
   );

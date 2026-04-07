@@ -10,6 +10,7 @@ import type { PastedImage } from "@/shared/types/messages";
 import { LoadingGoose } from "./LoadingGoose";
 import { ContextPanel } from "./ContextPanel";
 import { useChat } from "../hooks/useChat";
+import { useMessageQueue } from "../hooks/useMessageQueue";
 import { useSessionAutoTitle } from "@/features/sessions/hooks/useSessionAutoTitle";
 import { useChatStore } from "../stores/chatStore";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
@@ -66,9 +67,7 @@ export function ChatView({
   );
   const setContextPanelOpen = useChatSessionStore((s) => s.setContextPanelOpen);
   const shouldReduceMotion = useReducedMotion();
-  const fadeTransition = {
-    duration: shouldReduceMotion ? 0 : CP_FADE_S,
-  };
+  const fadeTransition = { duration: shouldReduceMotion ? 0 : CP_FADE_S };
   const reflowDuration = shouldReduceMotion ? 0 : CP_REFLOW_MS;
 
   const {
@@ -265,11 +264,8 @@ export function ChatView({
       workingDir: effectiveWorkingDir,
       personaId: selectedPersonaId ?? undefined,
     }).catch((error) => {
-      if (!cancelled) {
-        console.error("Failed to prepare ACP session:", error);
-      }
+      if (!cancelled) console.error("Failed to prepare ACP session:", error);
     });
-
     return () => {
       cancelled = true;
     };
@@ -279,7 +275,6 @@ export function ChatView({
     selectedPersonaId,
     selectedProvider,
   ]);
-
   const {
     messages,
     chatState,
@@ -300,7 +295,7 @@ export function ChatView({
   const deferredSend = useRef<{ text: string; images?: PastedImage[] } | null>(
     null,
   );
-
+  const queue = useMessageQueue(activeSessionId, chatState, sendMessage);
   const chatStore = useChatStore();
   const handleSend = useCallback(
     (text: string, personaId?: string, images?: PastedImage[]) => {
@@ -327,6 +322,12 @@ export function ChatView({
         deferredSend.current = { text, images };
         return;
       }
+      // Queue if agent is busy and no message already queued
+      if (chatState !== "idle" && !queue.queuedMessage) {
+        queue.enqueue(text, personaId, images);
+        return;
+      }
+
       sendMessage(text, undefined, images);
     },
     [
@@ -336,6 +337,8 @@ export function ChatView({
       personas,
       chatStore,
       activeSessionId,
+      chatState,
+      queue,
     ],
   );
 
@@ -346,7 +349,6 @@ export function ChatView({
       sendMessage(text, undefined, images);
     }
   }, [sendMessage, selectedPersona]);
-
   const initialMessageSent = useRef(false);
   useEffect(() => {
     if (
@@ -358,18 +360,15 @@ export function ChatView({
       onInitialMessageConsumed?.();
     }
   }, [initialMessage, initialImages, handleSend, onInitialMessageConsumed]);
-
   const isStreaming = chatState === "streaming";
   const showIndicator =
     chatState === "thinking" ||
     chatState === "streaming" ||
     chatState === "waiting" ||
     chatState === "compacting";
-
   const handleCreatePersona = useCallback(() => {
     useAgentStore.getState().openPersonaEditor();
   }, []);
-
   const draftValue = useChatStore(
     (s) => s.draftsBySession[activeSessionId] ?? "",
   );
@@ -379,7 +378,6 @@ export function ChatView({
     },
     [activeSessionId],
   );
-
   return (
     <ArtifactPolicyProvider
       messages={messages}
@@ -405,10 +403,12 @@ export function ChatView({
 
           <ChatInput
             onSend={handleSend}
-            onStop={stopStreaming}
-            isStreaming={isStreaming || chatState === "thinking"}
+            queuedMessage={queue.queuedMessage}
+            onDismissQueue={queue.dismiss}
             initialValue={draftValue}
             onDraftChange={handleDraftChange}
+            onStop={stopStreaming}
+            isStreaming={isStreaming || chatState === "thinking"}
             personas={personas}
             selectedPersonaId={selectedPersonaId}
             onPersonaChange={handlePersonaChange}
