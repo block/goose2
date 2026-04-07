@@ -10,6 +10,11 @@ const EXCEPTIONS = {
     justification:
       "Temporary allowance while project creation and home/chat handoff wiring remain in the shell.",
   },
+  "src/features/chat/ui/ChatView.tsx": {
+    limit: 505,
+    justification:
+      "Added useSessionAutoTitle hook call for smart session naming.",
+  },
 };
 
 // Directories excluded from size checks (imported library code)
