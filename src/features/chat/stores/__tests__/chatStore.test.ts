@@ -23,6 +23,7 @@ describe("chatStore", () => {
     useChatStore.setState({
       messagesBySession: {},
       sessionStateById: {},
+      queuedMessageBySession: {},
       activeSessionId: null,
       isConnected: false,
     });
@@ -116,16 +117,31 @@ describe("chatStore", () => {
     expect(getRuntime("s1").hasUnread).toBe(false);
   });
 
-  it("removes session data during cleanup", () => {
+  it("enqueues and dismisses messages per session", () => {
+    const store = useChatStore.getState();
+
+    store.enqueueMessage("s1", { text: "follow up" });
+    expect(useChatStore.getState().queuedMessageBySession.s1).toEqual({
+      text: "follow up",
+    });
+    expect(useChatStore.getState().queuedMessageBySession.s2).toBeUndefined();
+
+    store.dismissQueuedMessage("s1");
+    expect(useChatStore.getState().queuedMessageBySession.s1).toBeUndefined();
+  });
+
+  it("removes session data during cleanup including queued messages", () => {
     const store = useChatStore.getState();
 
     store.addMessage("s1", makeMessage());
     store.setChatState("s1", "streaming");
+    store.enqueueMessage("s1", { text: "queued" });
     store.setActiveSession("s1");
     store.cleanupSession("s1");
 
     expect(store.messagesBySession.s1).toBeUndefined();
     expect(store.sessionStateById.s1).toBeUndefined();
+    expect(store.queuedMessageBySession.s1).toBeUndefined();
     expect(store.activeSessionId).toBeNull();
   });
 });

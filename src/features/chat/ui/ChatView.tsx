@@ -305,7 +305,7 @@ export function ChatView({
   const deferredSend = useRef<{ text: string; images?: PastedImage[] } | null>(
     null,
   );
-  const queue = useMessageQueue(chatState, sendMessage);
+  const queue = useMessageQueue(activeSessionId, chatState, sendMessage);
   const chatStore = useChatStore();
   const handleSend = useCallback(
     (text: string, personaId?: string, images?: PastedImage[]) => {

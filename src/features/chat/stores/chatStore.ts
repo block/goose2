@@ -17,12 +17,21 @@ function createInitialSessionRuntime(): SessionChatRuntime {
   };
 }
 
+export interface QueuedMessage {
+  text: string;
+  personaId?: string;
+  images?: { base64: string; mimeType: string }[];
+}
+
 interface ChatStoreState {
   // Per-session messages
   messagesBySession: Record<string, Message[]>;
 
   // Per-session runtime state
   sessionStateById: Record<string, SessionChatRuntime>;
+
+  // Per-session queued message (single-slot, survives tab switches)
+  queuedMessageBySession: Record<string, QueuedMessage>;
 
   // Current session
   activeSessionId: string | null;
@@ -69,6 +78,10 @@ interface ChatStoreActions {
   updateTokenState: (sessionId: string, state: Partial<TokenState>) => void;
   resetTokenState: (sessionId: string) => void;
 
+  // Message queue
+  enqueueMessage: (sessionId: string, message: QueuedMessage) => void;
+  dismissQueuedMessage: (sessionId: string) => void;
+
   // Cleanup
   cleanupSession: (sessionId: string) => void;
 }
@@ -79,6 +92,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   // State
   messagesBySession: {},
   sessionStateById: {},
+  queuedMessageBySession: {},
   activeSessionId: null,
   isConnected: false,
 
@@ -338,15 +352,33 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       },
     })),
 
+  // Message queue
+  enqueueMessage: (sessionId, message) =>
+    set((state) => ({
+      queuedMessageBySession: {
+        ...state.queuedMessageBySession,
+        [sessionId]: message,
+      },
+    })),
+
+  dismissQueuedMessage: (sessionId) =>
+    set((state) => {
+      const { [sessionId]: _, ...rest } = state.queuedMessageBySession;
+      return { queuedMessageBySession: rest };
+    }),
+
   // Cleanup
   cleanupSession: (sessionId) =>
     set((state) => {
       const { [sessionId]: _, ...rest } = state.messagesBySession;
       const { [sessionId]: __, ...remainingSessionState } =
         state.sessionStateById;
+      const { [sessionId]: ___, ...remainingQueued } =
+        state.queuedMessageBySession;
       return {
         messagesBySession: rest,
         sessionStateById: remainingSessionState,
+        queuedMessageBySession: remainingQueued,
         activeSessionId:
           state.activeSessionId === sessionId ? null : state.activeSessionId,
       };
