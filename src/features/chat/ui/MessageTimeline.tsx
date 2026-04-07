@@ -52,8 +52,7 @@ export function MessageTimeline({
   const containerRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
 
-  // Auto-scroll when near bottom — use scrollTo on the container instead of
-  // scrollIntoView which can scroll parent/document-level ancestors.
+  // Use scrollTo instead of scrollIntoView to avoid scrolling parent/document-level ancestors.
   // biome-ignore lint/correctness/useExhaustiveDependencies: refs are stable and don't need to be in deps
   useEffect(() => {
     if (isNearBottomRef.current && containerRef.current) {

@@ -432,6 +432,7 @@
   --radius-card-lg: 24px;
   --radius-card-sm: 14px;
   --radius-dropdown: 10px;
+  --radius-overlay: 20px;
   --radius-modal: 16px;
 
   --radius-sm: calc(var(--radius) - 4px);
@@ -705,7 +706,6 @@ body,
   html {
     -webkit-text-size-adjust: 100%;
     font-variation-settings: normal;
-    scrollbar-color: var(--bg-muted);
   }
 
   body {
@@ -720,7 +720,6 @@ body,
     color: #ffffff;
   }
 
-  /* Custom scrollbars */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -729,18 +728,8 @@ body,
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: #ccc;
+    background: transparent;
     border-radius: 999px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: #999;
-  }
-
-  .dark ::-webkit-scrollbar-thumb {
-    background: #444;
-  }
-  .dark ::-webkit-scrollbar-thumb:hover {
-    background: #666;
   }
 
   .scrollbar-none {

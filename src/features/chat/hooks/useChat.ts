@@ -158,7 +158,9 @@ export function useChat(
       // Promote draft to real backend session before first send
       const sessionStore = useChatSessionStore.getState();
       const session = sessionStore.getSession(sessionId);
-      if (session?.draft) {
+      const wasDraft = !!session?.draft;
+
+      if (wasDraft) {
         sessionStore.promoteDraft(sessionId);
       }
 
@@ -168,8 +170,17 @@ export function useChat(
       // A better backend-generated title will overwrite this if it arrives
       // via the acp:session_info event.
       if (session && session.title === "New Chat") {
+        sessionStore.updateSession(
+          sessionId,
+          {
+            title: text.trim().slice(0, 100),
+            updatedAt: new Date().toISOString(),
+          },
+          { localOnly: wasDraft },
+        );
+      } else {
         sessionStore.updateSession(sessionId, {
-          title: text.trim().slice(0, 40),
+          updatedAt: new Date().toISOString(),
         });
       }
 
@@ -200,7 +211,18 @@ export function useChat(
             (img) => [img.base64, img.mimeType] as [string, string],
           ),
         });
-        // Note: setChatState("idle") is handled by useAcpStream on "acp:done"
+
+        if (wasDraft) {
+          const promoted = sessionStore.getSession(sessionId);
+          if (promoted) {
+            sessionStore.updateSession(sessionId, {
+              title: promoted.title,
+              providerId: promoted.providerId,
+              personaId: promoted.personaId,
+              projectId: promoted.projectId,
+            });
+          }
+        }
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") {
           store.setChatState(sessionId, "idle");

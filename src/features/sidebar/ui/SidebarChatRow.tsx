@@ -2,6 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
 import { Input } from "@/shared/ui/input";
 import { SessionActivityIndicator } from "@/shared/ui/SessionActivityIndicator";
 
@@ -40,21 +46,8 @@ export function SidebarChatRow({
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draftTitle, setDraftTitle] = useState(title);
-  const menuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [menuOpen]);
 
   useEffect(() => {
     setDraftTitle(title);
@@ -100,31 +93,32 @@ export function SidebarChatRow({
 
   if (editing) {
     return (
-      <div className={cn("flex items-center group rounded-md", className)}>
-        <div className="flex items-center flex-1 min-w-0 py-1.5 rounded-md text-[13px] px-2.5">
-          <Input
-            ref={inputRef}
-            type="text"
-            value={draftTitle}
-            onChange={(e) => setDraftTitle(e.target.value)}
-            onBlur={commitRename}
-            onClick={(e) => {
+      <div
+        className={cn("flex items-center group rounded-md pr-0.5", className)}
+      >
+        <Input
+          ref={inputRef}
+          type="text"
+          value={draftTitle}
+          onChange={(e) => setDraftTitle(e.target.value)}
+          onBlur={commitRename}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
               e.preventDefault();
-              e.stopPropagation();
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                commitRename();
-              }
-              if (e.key === "Escape") {
-                e.preventDefault();
-                cancelRename();
-              }
-            }}
-            className="h-6 min-w-0 px-1.5 text-[13px]"
-          />
-        </div>
+              commitRename();
+            }
+            if (e.key === "Escape") {
+              e.preventDefault();
+              cancelRename();
+            }
+          }}
+          className="flex-1 min-w-0 px-3 text-[13px] font-light"
+          style={{ height: 32 }}
+        />
       </div>
     );
   }
@@ -134,7 +128,7 @@ export function SidebarChatRow({
     <div
       ref={rowRef}
       className={cn(
-        "flex items-center group rounded-md pr-0.5 transition-colors duration-200",
+        "relative flex items-center group rounded-md transition-colors duration-200",
         className,
       )}
       onMouseEnter={onMouseEnter}
@@ -151,7 +145,7 @@ export function SidebarChatRow({
         }}
         title="Double-click to rename"
         className={cn(
-          "flex-1 min-w-0 justify-start gap-2 rounded-md px-3 py-2 text-[13px] font-light",
+          "flex-1 min-w-0 justify-start gap-2 rounded-md pl-3 pr-8 py-2 text-[13px] font-light",
           isActive ? ACTIVE_CHAT_ROW_CLASS : INACTIVE_CHAT_ROW_CLASS,
         )}
       >
@@ -159,61 +153,39 @@ export function SidebarChatRow({
         <SessionActivityIndicator isRunning={isRunning} hasUnread={hasUnread} />
       </Button>
 
-      <div ref={menuRef} className="relative shrink-0">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          aria-label={`Options for ${title}`}
-          aria-haspopup="true"
-          aria-expanded={menuOpen}
-          onClick={(e) => {
-            e.stopPropagation();
-            setMenuOpen((prev) => !prev);
-          }}
-          className={cn(
-            "size-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50",
-            menuOpen
-              ? "visible opacity-100"
-              : "invisible group-hover:visible opacity-0 group-hover:opacity-100",
-          )}
-        >
-          <MoreHorizontal className="size-3.5" />
-        </Button>
-
-        {menuOpen && (
-          <div
-            role="menu"
-            className="absolute right-0 top-full z-10 mt-1 w-32 rounded-lg border border-border bg-background py-1 shadow-popover"
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            aria-label={`Options for ${title}`}
+            onClick={(e) => e.stopPropagation()}
+            className={cn(
+              "absolute right-1 size-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50",
+              menuOpen
+                ? "visible opacity-100"
+                : "invisible group-hover:visible opacity-0 group-hover:opacity-100",
+            )}
           >
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              role="menuitem"
-              onClick={startRename}
-              className="w-full justify-start"
-            >
-              <Pencil className="size-3.5" />
-              Rename
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              role="menuitem"
-              onClick={() => {
-                setMenuOpen(false);
-                onArchive?.(id);
-              }}
-              className="w-full justify-start"
-            >
-              <Trash2 className="size-3.5" />
-              Archive
-            </Button>
-          </div>
-        )}
-      </div>
+            <MoreHorizontal className="size-3.5" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" sideOffset={4}>
+          <DropdownMenuItem onClick={startRename}>
+            <Pencil className="size-3.5" />
+            Rename
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => {
+              onArchive?.(id);
+            }}
+          >
+            <Trash2 className="size-3.5" />
+            Archive
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }

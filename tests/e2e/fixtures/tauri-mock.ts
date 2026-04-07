@@ -5,7 +5,7 @@
  */
 
 import { test as base, expect, type Page } from "@playwright/test";
-import { MOCK_PERSONAS, MOCK_SKILLS } from "./mock-data";
+import { MOCK_PERSONAS, MOCK_PROJECTS, MOCK_SKILLS } from "./mock-data";
 
 /**
  * Build the init script that will be injected into the page via
@@ -19,14 +19,17 @@ import { MOCK_PERSONAS, MOCK_SKILLS } from "./mock-data";
 export function buildInitScript(options?: {
   personas?: unknown[];
   skills?: unknown[];
+  projects?: unknown[];
 }): string {
   const personas = JSON.stringify(options?.personas ?? MOCK_PERSONAS);
   const skills = JSON.stringify(options?.skills ?? MOCK_SKILLS);
+  const projects = JSON.stringify(options?.projects ?? MOCK_PROJECTS);
 
   return `
     (() => {
       const PERSONAS = ${personas};
       const SKILLS = ${skills};
+      const PROJECTS = ${projects};
 
       window.__TAURI_INTERNALS__ = {
         invoke(cmd, args) {
@@ -93,8 +96,30 @@ export function buildInitScript(options?: {
             // ---- Sessions / Misc ----
             case "list_sessions":
               return Promise.resolve([]);
-            case "list_projects":
+            case "create_session":
+              return Promise.resolve({
+                id: "session-" + Math.random().toString(36).slice(2, 10),
+                title: "New Chat",
+                agentId: args?.agentId ?? null,
+                projectId: args?.projectId ?? null,
+                providerId: null,
+                personaId: null,
+                modelName: null,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                archivedAt: null,
+                messageCount: 0,
+              });
+            case "update_session":
+              return Promise.resolve(null);
+            case "get_session_messages":
               return Promise.resolve([]);
+            case "archive_session":
+              return Promise.resolve(null);
+            case "list_projects":
+              return Promise.resolve(PROJECTS);
+            case "get_project":
+              return Promise.resolve(PROJECTS.find(p => p.id === args?.id) ?? null);
             case "get_avatars_dir":
               return Promise.resolve("/tmp/avatars");
             case "save_persona_avatar_bytes":
@@ -137,6 +162,12 @@ export { expect };
 // ---------------------------------------------------------------------------
 // Navigation helpers
 // ---------------------------------------------------------------------------
+
+export async function waitForHome(page: Page) {
+  await expect(page.getByText(/Good (morning|afternoon|evening)/)).toBeVisible({
+    timeout: 10_000,
+  });
+}
 
 export async function navigateToPersonas(page: Page) {
   await page.goto("/");

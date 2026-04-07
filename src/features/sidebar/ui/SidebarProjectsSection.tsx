@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import {
   IconChevronDown,
   IconChevronRight,
@@ -7,8 +7,15 @@ import {
   IconMessage,
   IconPlus,
 } from "@tabler/icons-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
 import type { AppView } from "@/app/AppShell";
 import type { ProjectInfo } from "@/features/projects/api/projects";
 import { SessionActivityIndicator } from "@/shared/ui/SessionActivityIndicator";
@@ -27,7 +34,6 @@ interface TabInfo {
   isRunning?: boolean;
   hasUnread?: boolean;
 }
-
 interface SidebarProjectsSectionProps {
   projects: ProjectInfo[];
   projectSessions: {
@@ -43,6 +49,7 @@ interface SidebarProjectsSectionProps {
   onNavigate?: (view: AppView) => void;
   onSelectSession?: (sessionId: string) => void;
   onNewChatInProject?: (projectId: string) => void;
+  onNewChat?: () => void;
   onCreateProject?: () => void;
   onEditProject?: (projectId: string) => void;
   onArchiveProject?: (projectId: string) => void;
@@ -51,7 +58,6 @@ interface SidebarProjectsSectionProps {
   onItemMouseEnter?: (e: React.MouseEvent<HTMLElement>) => void;
   activeSessionRefCallback?: (el: HTMLElement | null) => void;
 }
-
 function ItemMenu({
   label,
   onEdit,
@@ -62,82 +68,43 @@ function ItemMenu({
   onArchive?: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [open]);
 
   return (
-    <div ref={ref} className="relative shrink-0">
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        aria-label={`Options for ${label}`}
-        aria-haspopup="true"
-        aria-expanded={open}
-        onClick={(e) => {
-          e.stopPropagation();
-          setOpen((prev) => !prev);
-        }}
-        className={cn(
-          "size-6 rounded-md",
-          open
-            ? "visible opacity-100"
-            : "invisible group-hover:visible group-focus-within:visible opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
-        )}
-      >
-        <IconDots className="size-3.5" />
-      </Button>
-      {open && (
-        <div
-          role="menu"
-          className="absolute right-0 top-full z-10 mt-1 w-28 rounded-lg border border-border bg-background py-1 shadow-popover"
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          aria-label={`Options for ${label}`}
+          onClick={(e) => e.stopPropagation()}
+          className={cn(
+            "size-6 rounded-md",
+            open
+              ? "visible opacity-100"
+              : "invisible group-hover:visible group-focus-within:visible opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+          )}
         >
-          {onEdit && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              role="menuitem"
-              onClick={() => {
-                setOpen(false);
-                onEdit();
-              }}
-              className="w-full justify-start"
-            >
-              Edit
-            </Button>
-          )}
-          {onArchive && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              role="menuitem"
-              onClick={() => {
-                setOpen(false);
-                onArchive();
-              }}
-              className="w-full justify-start"
-            >
-              Archive
-            </Button>
-          )}
-        </div>
-      )}
-    </div>
+          <IconDots className="size-3.5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" sideOffset={4}>
+        {onEdit && (
+          <DropdownMenuItem onClick={onEdit}>
+            <Pencil className="size-3.5" />
+            Edit
+          </DropdownMenuItem>
+        )}
+        {onArchive && (
+          <DropdownMenuItem onClick={onArchive}>
+            <Trash2 className="size-3.5" />
+            Archive
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
-
 function ProjectSection({
   project,
   projectChats,
@@ -219,7 +186,7 @@ function ProjectSection({
             onNewChatInProject?.(project.id);
           }}
           title="New chat in project"
-          className="mr-1 size-6 flex-shrink-0 rounded-md"
+          className="mr-1 size-6 flex-shrink-0 rounded-md text-muted-foreground hover:text-foreground"
         >
           <IconPlus className="size-3.5" />
         </Button>
@@ -298,6 +265,7 @@ export function SidebarProjectsSection({
   onNavigate,
   onSelectSession,
   onNewChatInProject,
+  onNewChat,
   onCreateProject,
   onEditProject,
   onArchiveProject,
@@ -345,8 +313,8 @@ export function SidebarProjectsSection({
             onClick={onCreateProject}
             title="New project"
             className={cn(
-              "mr-1 size-6 flex-shrink-0 rounded-md",
-              "invisible group-hover:visible group-focus-within:visible opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+              "mr-1 size-6 flex-shrink-0 rounded-md text-muted-foreground hover:text-foreground",
+              "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
             )}
           >
             <IconLibraryPlusFilled className="size-3.5" />
@@ -409,13 +377,13 @@ export function SidebarProjectsSection({
           {/* Section header (expanded only) */}
           <div
             className={cn(
-              "flex items-center transition-all duration-300",
+              "group flex items-center transition-all duration-300",
               collapsed ? "px-0 pt-0 pb-1 justify-center" : "pt-2 pb-1",
             )}
           >
             <span
               className={cn(
-                "text-xs font-light uppercase tracking-wider text-muted-foreground pl-3 mb-2",
+                "text-xs font-light uppercase tracking-wider text-muted-foreground flex-1 pl-3",
                 labelTransition,
                 labelVisible
                   ? "opacity-100 w-auto"
@@ -424,6 +392,19 @@ export function SidebarProjectsSection({
             >
               Recents
             </span>
+            {!collapsed && onNewChat && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                onClick={onNewChat}
+                aria-label="New chat"
+                title="New chat"
+                className="mr-1 size-6 flex-shrink-0 rounded-md text-muted-foreground hover:text-foreground"
+              >
+                <IconPlus className="size-3.5" />
+              </Button>
+            )}
           </div>
 
           {collapsed ? (

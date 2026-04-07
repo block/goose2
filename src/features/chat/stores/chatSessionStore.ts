@@ -48,7 +48,11 @@ interface ChatSessionStoreActions {
   promoteDraft: (id: string) => void;
   removeDraft: (id: string) => void;
   loadSessions: () => Promise<void>;
-  updateSession: (id: string, patch: Partial<ChatSession>) => void;
+  updateSession: (
+    id: string,
+    patch: Partial<ChatSession>,
+    opts?: { localOnly?: boolean },
+  ) => void;
   archiveSession: (id: string) => Promise<void>;
   unarchiveSession: (id: string) => Promise<void>;
 
@@ -129,7 +133,6 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
       updatedAt: backendSession.updatedAt ?? now,
       messageCount: backendSession.messageCount ?? 0,
     };
-    // Persist initial metadata (title, persona, provider) to backend
     const initialUpdate: Record<string, string> = {};
     if (opts?.title) initialUpdate.title = opts.title;
     if (opts?.providerId) initialUpdate.providerId = opts.providerId;
@@ -202,15 +205,14 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     }
   },
 
-  updateSession: (id, patch) => {
+  updateSession: (id, patch, opts) => {
     set((state) => ({
       sessions: state.sessions.map((s) =>
-        s.id === id
-          ? { ...s, ...patch, updatedAt: new Date().toISOString() }
-          : s,
+        s.id === id ? { ...s, ...patch } : s,
       ),
     }));
     persistSessions(get().sessions);
+    if (opts?.localOnly) return;
     const session = get().sessions.find((s) => s.id === id);
     if (session?.draft) return; // skip backend for drafts
     const backendPatch: {

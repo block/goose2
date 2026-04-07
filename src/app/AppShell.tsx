@@ -17,17 +17,22 @@ import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
 import { useAcpStream } from "@/features/chat/hooks/useAcpStream";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
-import { findReusableNewChatSession } from "@/features/chat/lib/newChat";
+import { findExistingDraft } from "@/features/chat/lib/newChat";
 import { getSessionMessages } from "@/shared/api/chat";
 import { useAppStartup } from "./hooks/useAppStartup";
 
 export type AppView = "home" | "chat" | "skills" | "agents" | "projects";
 
-const SIDEBAR_WIDTH = 240;
+const SIDEBAR_DEFAULT_WIDTH = 240;
+const SIDEBAR_MIN_WIDTH = 180;
+const SIDEBAR_MAX_WIDTH = 380;
+const SIDEBAR_SNAP_COLLAPSE_THRESHOLD = 100;
 const SIDEBAR_COLLAPSED_WIDTH = 48;
 
 export function AppShell({ children }: { children?: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
+  const [isResizing, setIsResizing] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [createProjectOpen, setCreateProjectOpen] = useState(false);
   const [createProjectInitialWorkingDir, setCreateProjectInitialWorkingDir] =
@@ -53,9 +58,12 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   );
 
   const loadSessionMessages = useCallback(async (sessionId: string) => {
+    const session = useChatSessionStore
+      .getState()
+      .sessions.find((s) => s.id === sessionId);
+    if (session?.draft) return;
     const { messagesBySession, setMessages } = useChatStore.getState();
     const existing = messagesBySession[sessionId];
-    // Skip if messages are already loaded or currently being loaded
     if (
       (existing && existing.length > 0) ||
       loadingSessionsRef.current.has(sessionId)
@@ -65,7 +73,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     loadingSessionsRef.current.add(sessionId);
     try {
       const messages = await getSessionMessages(sessionId);
-      // Only set if still empty (another path may have populated it)
       const current = useChatStore.getState().messagesBySession[sessionId];
       if (!current || current.length === 0) {
         setMessages(sessionId, messages);
@@ -131,10 +138,12 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       const providerId = project?.preferredProvider ?? homeSelectedProvider;
       const personaId = homeSelectedPersonaId;
       const sessionState = useChatSessionStore.getState();
-      const reusableSession = findReusableNewChatSession({
+      const chatStoreState = useChatStore.getState();
+      const existingDraft = findExistingDraft({
         sessions: sessionState.sessions,
         activeSessionId: sessionState.activeSessionId,
-        messagesBySession: useChatStore.getState().messagesBySession,
+        draftsBySession: chatStoreState.draftsBySession,
+        messagesBySession: chatStoreState.messagesBySession,
         request: {
           title,
           projectId: project?.id,
@@ -144,12 +153,12 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         },
       });
 
-      if (reusableSession) {
+      if (existingDraft) {
         cleanupEmptyDraft(sessionState.activeSessionId);
-        sessionState.setActiveSession(reusableSession.id);
+        sessionState.setActiveSession(existingDraft.id);
         setActiveView("chat");
-        chatStore.setActiveSession(reusableSession.id);
-        return reusableSession;
+        chatStore.setActiveSession(existingDraft.id);
+        return existingDraft;
       }
 
       cleanupEmptyDraft(sessionState.activeSessionId);
@@ -320,6 +329,55 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   const toggleSidebar = () => setSidebarCollapsed((prev) => !prev);
 
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      setIsResizing(true);
+      const startX = e.clientX;
+      const startWidth = sidebarCollapsed
+        ? SIDEBAR_COLLAPSED_WIDTH
+        : sidebarWidth;
+      let shouldCollapse = false;
+
+      const onMouseMove = (moveEvent: MouseEvent) => {
+        const delta = moveEvent.clientX - startX;
+        const newWidth = startWidth + delta;
+
+        if (newWidth < SIDEBAR_SNAP_COLLAPSE_THRESHOLD) {
+          shouldCollapse = true;
+          setSidebarWidth(SIDEBAR_MIN_WIDTH);
+        } else {
+          shouldCollapse = false;
+          setSidebarCollapsed(false);
+          setSidebarWidth(
+            Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, newWidth)),
+          );
+        }
+      };
+
+      const cleanup = () => {
+        setIsResizing(false);
+        if (shouldCollapse) setSidebarCollapsed(true);
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", cleanup);
+        window.removeEventListener("blur", cleanup);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      };
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseup", cleanup);
+      window.addEventListener("blur", cleanup);
+    },
+    [sidebarCollapsed, sidebarWidth],
+  );
+
+  const handleResizeDoubleClick = useCallback(() => {
+    setSidebarCollapsed(false);
+    setSidebarWidth(SIDEBAR_DEFAULT_WIDTH);
+  }, []);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       // Cmd+, for settings
@@ -411,16 +469,18 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           style={{
             width: sidebarCollapsed
               ? SIDEBAR_COLLAPSED_WIDTH + 12
-              : SIDEBAR_WIDTH + 12,
-            transition: "width 200ms ease-out",
+              : sidebarWidth + 12,
+            transition: isResizing ? "none" : "width 200ms ease-out",
           }}
         >
           <Sidebar
             collapsed={sidebarCollapsed}
-            width={SIDEBAR_WIDTH}
+            width={sidebarWidth}
+            isResizing={isResizing}
             onCollapse={toggleSidebar}
             onNavigate={handleNavigate}
             onNewChatInProject={handleNewChatInProject}
+            onNewChat={() => createNewTab()}
             onCreateProject={() => openCreateProjectDialog()}
             onEditProject={handleEditProject}
             onArchiveProject={handleArchiveProject}
@@ -432,6 +492,16 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             projects={projectStore.projects}
             className="h-full rounded-xl"
           />
+        </div>
+
+        {/* Resize handle */}
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: drag handle for sidebar resize */}
+        <div
+          onMouseDown={handleResizeStart}
+          onDoubleClick={handleResizeDoubleClick}
+          className="flex-shrink-0 w-2 h-full cursor-col-resize group flex items-center justify-center"
+        >
+          <div className="w-px h-8 rounded-full bg-transparent group-hover:bg-border transition-colors" />
         </div>
 
         <main className="min-h-0 min-w-0 flex-1">

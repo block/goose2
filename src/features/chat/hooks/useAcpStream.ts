@@ -246,8 +246,11 @@ export function useAcpStream(enabled: boolean): void {
               (c) => c.type === "text" && "text" in c,
             );
             if (textContent && "text" in textContent) {
-              const title = textContent.text.slice(0, 40);
-              sessionStore.updateSession(event.payload.sessionId, { title });
+              const title = textContent.text.slice(0, 100);
+              sessionStore.updateSession(event.payload.sessionId, {
+                title,
+                updatedAt: new Date().toISOString(),
+              });
             }
           }
         }

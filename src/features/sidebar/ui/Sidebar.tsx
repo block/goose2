@@ -18,8 +18,10 @@ import { useSidebarHighlight } from "./useSidebarHighlight";
 interface SidebarProps {
   collapsed: boolean;
   width?: number;
+  isResizing?: boolean;
   onCollapse: () => void;
   onNewChatInProject?: (projectId: string) => void;
+  onNewChat?: () => void;
   onCreateProject?: () => void;
   onEditProject?: (projectId: string) => void;
   onArchiveProject?: (projectId: string) => void;
@@ -44,8 +46,10 @@ const EXPANDED_PROJECTS_STORAGE_KEY = "goose:sidebar:expanded-projects";
 export function Sidebar({
   collapsed,
   width = 240,
+  isResizing = false,
   onCollapse,
   onNewChatInProject,
+  onNewChat,
   onCreateProject,
   onEditProject,
   onArchiveProject,
@@ -107,6 +111,7 @@ export function Sidebar({
     const byProject: Record<string, SessionItem[]> = {};
     const standalone: SessionItem[] = [];
     for (const session of sessions) {
+      if (session.draft) continue;
       const runtime = chatStore.getSessionRuntime(session.id);
       const item: SessionItem = {
         id: session.id,
@@ -228,7 +233,7 @@ export function Sidebar({
     <div
       className={cn(
         "relative h-full",
-        "transition-[width] duration-300 ease-in-out",
+        !isResizing && "transition-[width] duration-300 ease-in-out",
         className,
       )}
       style={{ width: collapsed ? 54 : width }}
@@ -270,15 +275,15 @@ export function Sidebar({
           className="relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-1.5 py-1 pt-1.5 scrollbar-none"
           onMouseLeave={onNavMouseLeave}
         >
-          {/* Sliding highlight */}
-          {currentRect && (
+          {/* Sliding highlight — hidden when collapsed */}
+          {currentRect && !collapsed && (
             <div
               className="absolute left-1.5 right-1.5 rounded-lg bg-accent/50 pointer-events-none z-0"
               style={{
                 top: currentRect.top,
                 height: currentRect.height,
                 transition: isHovering
-                  ? "top 150ms ease, height 150ms ease"
+                  ? "top 0ms, height 0ms"
                   : "top 200ms ease, height 200ms ease, opacity 200ms ease",
               }}
             />
@@ -456,6 +461,7 @@ export function Sidebar({
                 onNavigate={onNavigate}
                 onSelectSession={onSelectSession}
                 onNewChatInProject={onNewChatInProject}
+                onNewChat={onNewChat}
                 onCreateProject={onCreateProject}
                 onEditProject={onEditProject}
                 onArchiveProject={onArchiveProject}

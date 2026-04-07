@@ -381,7 +381,7 @@ export function ChatView({
       allowedRoots={allowedArtifactRoots}
     >
       <div className="relative flex h-full min-w-0">
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col pr-1">
           <MessageTimeline
             messages={messages}
             streamingMessageId={streamingMessageId}
