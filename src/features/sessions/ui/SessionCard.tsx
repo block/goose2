@@ -140,7 +140,9 @@ export function SessionCard({
           className="relative z-10 text-sm font-medium"
         />
       ) : (
-        <p className="text-sm font-medium line-clamp-2 break-words">{title}</p>
+        <p className="text-sm font-medium line-clamp-2 break-words pr-6">
+          {title}
+        </p>
       )}
 
       <div className="flex flex-col gap-1 text-xs text-muted-foreground">
