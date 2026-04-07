@@ -127,8 +127,13 @@ export function SidebarChatRow({
     // biome-ignore lint/a11y/noStaticElementInteractions: wrapper div for hover detection, interactive content is the inner Button
     <div
       ref={rowRef}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData("text/x-session-id", id);
+        e.dataTransfer.effectAllowed = "move";
+      }}
       className={cn(
-        "relative flex items-center group rounded-md transition-colors duration-200",
+        "relative flex items-center group rounded-md transition-colors duration-200 cursor-grab active:cursor-grabbing",
         className,
       )}
       onMouseEnter={onMouseEnter}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   IconChevronDown,
   IconChevronRight,
@@ -55,6 +55,7 @@ interface SidebarProjectsSectionProps {
   onArchiveProject?: (projectId: string) => void;
   onArchiveChat?: (sessionId: string) => void;
   onRenameChat?: (sessionId: string, nextTitle: string) => void;
+  onMoveToProject?: (sessionId: string, projectId: string | null) => void;
   onItemMouseEnter?: (e: React.MouseEvent<HTMLElement>) => void;
   activeSessionRefCallback?: (el: HTMLElement | null) => void;
 }
@@ -118,6 +119,7 @@ function ProjectSection({
   onArchiveProject,
   onArchiveChat,
   onRenameChat,
+  onMoveToProject,
   onItemMouseEnter,
   activeSessionRefCallback,
 }: {
@@ -133,10 +135,36 @@ function ProjectSection({
   onArchiveProject?: (projectId: string) => void;
   onArchiveChat?: (sessionId: string) => void;
   onRenameChat?: (sessionId: string, nextTitle: string) => void;
+  onMoveToProject?: (sessionId: string, projectId: string | null) => void;
   onItemMouseEnter?: (e: React.MouseEvent<HTMLElement>) => void;
   activeSessionRefCallback?: (el: HTMLElement | null) => void;
 }) {
   const [showAll, setShowAll] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes("text/x-session-id")) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      setDragOver(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragOver(false);
+      const sessionId = e.dataTransfer.getData("text/x-session-id");
+      if (sessionId) {
+        onMoveToProject?.(sessionId, project.id);
+      }
+    },
+    [onMoveToProject, project.id],
+  );
   const visibleChats = showAll
     ? projectChats
     : projectChats.slice(0, MAX_VISIBLE_CHATS);
@@ -144,8 +172,17 @@ function ProjectSection({
 
   return (
     <div>
-      {/* Project row */}
-      <div className="flex items-center group rounded-md transition-colors duration-200">
+      {/* Project row — drop target for dragged chats */}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: drop target for drag-and-drop */}
+      <div
+        className={cn(
+          "flex items-center group rounded-md transition-colors duration-200",
+          dragOver && "bg-accent/50 ring-1 ring-ring",
+        )}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
         <Button
           type="button"
           variant="ghost"
@@ -271,9 +308,36 @@ export function SidebarProjectsSection({
   onArchiveProject,
   onArchiveChat,
   onRenameChat,
+  onMoveToProject,
   onItemMouseEnter,
   activeSessionRefCallback,
 }: SidebarProjectsSectionProps) {
+  const [recentsDragOver, setRecentsDragOver] = useState(false);
+
+  const handleRecentsDragOver = useCallback((e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes("text/x-session-id")) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      setRecentsDragOver(true);
+    }
+  }, []);
+
+  const handleRecentsDragLeave = useCallback(() => {
+    setRecentsDragOver(false);
+  }, []);
+
+  const handleRecentsDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setRecentsDragOver(false);
+      const sessionId = e.dataTransfer.getData("text/x-session-id");
+      if (sessionId) {
+        onMoveToProject?.(sessionId, null);
+      }
+    },
+    [onMoveToProject],
+  );
+
   return (
     <div
       className={cn(
@@ -358,6 +422,7 @@ export function SidebarProjectsSection({
               onArchiveProject={onArchiveProject}
               onArchiveChat={onArchiveChat}
               onRenameChat={onRenameChat}
+              onMoveToProject={onMoveToProject}
               onItemMouseEnter={onItemMouseEnter}
               activeSessionRefCallback={activeSessionRefCallback}
             />
@@ -374,12 +439,17 @@ export function SidebarProjectsSection({
               collapsed ? "w-5 mx-auto h-px" : "h-px",
             )}
           />
-          {/* Section header (expanded only) */}
+          {/* Section header (expanded only) — drop target to unassign from project */}
+          {/* biome-ignore lint/a11y/noStaticElementInteractions: drop target for drag-and-drop */}
           <div
             className={cn(
-              "group flex items-center transition-all duration-300",
+              "group flex items-center transition-all duration-300 rounded-md",
               collapsed ? "px-0 pt-0 pb-1 justify-center" : "pt-2 pb-1",
+              recentsDragOver && "bg-accent/50 ring-1 ring-ring",
             )}
+            onDragOver={handleRecentsDragOver}
+            onDragLeave={handleRecentsDragLeave}
+            onDrop={handleRecentsDrop}
           >
             <span
               className={cn(
