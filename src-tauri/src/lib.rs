@@ -6,14 +6,10 @@ use std::sync::Arc;
 
 use services::acp::AcpSessionRegistry;
 use services::personas::PersonaStore;
-use services::sessions::SessionStore;
 use tauri_plugin_window_state::StateFlags;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Clean up stale ACP session files older than 24 hours.
-    services::acp::TauriStore::cleanup_stale_sessions(std::time::Duration::from_secs(24 * 60 * 60));
-
     let acp_registry = Arc::new(AcpSessionRegistry::new());
     let acp_registry_for_exit = Arc::clone(&acp_registry);
 
@@ -34,7 +30,6 @@ pub fn run() {
                 .build(),
         )
         .manage(PersonaStore::new())
-        .manage(Arc::new(SessionStore::new()))
         .manage(acp_registry)
         .invoke_handler(tauri::generate_handler![
             commands::agents::list_personas,
@@ -47,19 +42,12 @@ pub fn run() {
             commands::agents::save_persona_avatar,
             commands::agents::save_persona_avatar_bytes,
             commands::agents::get_avatars_dir,
-            commands::sessions::create_session,
-            commands::sessions::list_sessions,
-            commands::sessions::get_session_messages,
-            commands::sessions::update_session,
-            commands::sessions::delete_session,
-            commands::sessions::list_archived_sessions,
-            commands::sessions::archive_session,
-            commands::sessions::unarchive_session,
-            commands::chat::chat_send_message,
             commands::acp::discover_acp_providers,
             commands::acp::acp_prepare_session,
             commands::acp::acp_send_message,
             commands::acp::acp_cancel_session,
+            commands::acp::acp_list_sessions,
+            commands::acp::acp_load_session,
             commands::acp::acp_list_running,
             commands::acp::acp_cancel_all,
             commands::skills::create_skill,

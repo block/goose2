@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { INITIAL_TOKEN_STATE } from "@/shared/types/chat";
 import type { Message } from "@/shared/types/messages";
 import { useChatStore } from "../chatStore";
@@ -23,6 +23,7 @@ describe("chatStore", () => {
     useChatStore.setState({
       messagesBySession: {},
       sessionStateById: {},
+      queuedMessageBySession: {},
       draftsBySession: {},
       activeSessionId: null,
       isConnected: false,
@@ -117,16 +118,162 @@ describe("chatStore", () => {
     expect(getRuntime("s1").hasUnread).toBe(false);
   });
 
-  it("removes session data during cleanup", () => {
+  it("enqueues and dismisses messages per session", () => {
+    const store = useChatStore.getState();
+
+    store.enqueueMessage("s1", { text: "follow up" });
+    expect(useChatStore.getState().queuedMessageBySession.s1).toEqual({
+      text: "follow up",
+    });
+    expect(useChatStore.getState().queuedMessageBySession.s2).toBeUndefined();
+
+    store.dismissQueuedMessage("s1");
+    expect(useChatStore.getState().queuedMessageBySession.s1).toBeUndefined();
+  });
+
+  it("persists and clears draft text per session", () => {
+    const store = useChatStore.getState();
+
+    store.setDraft("s1", "hello world");
+    expect(useChatStore.getState().draftsBySession.s1).toBe("hello world");
+    expect(useChatStore.getState().draftsBySession.s2).toBeUndefined();
+
+    store.clearDraft("s1");
+    expect(useChatStore.getState().draftsBySession.s1).toBeUndefined();
+  });
+
+  it("removes session data during cleanup including queued messages and drafts", () => {
     const store = useChatStore.getState();
 
     store.addMessage("s1", makeMessage());
     store.setChatState("s1", "streaming");
+    store.enqueueMessage("s1", { text: "queued" });
+    store.setDraft("s1", "draft text");
     store.setActiveSession("s1");
     store.cleanupSession("s1");
 
     expect(store.messagesBySession.s1).toBeUndefined();
     expect(store.sessionStateById.s1).toBeUndefined();
+    expect(store.queuedMessageBySession.s1).toBeUndefined();
+    expect(store.draftsBySession.s1).toBeUndefined();
     expect(store.activeSessionId).toBeNull();
+  });
+});
+
+describe("chatStore draft localStorage persistence", () => {
+  const STORAGE_KEY = "goose:chat-drafts";
+
+  beforeEach(() => {
+    window.localStorage.removeItem(STORAGE_KEY);
+    useChatStore.setState({
+      messagesBySession: {},
+      sessionStateById: {},
+      queuedMessageBySession: {},
+      draftsBySession: {},
+      activeSessionId: null,
+      isConnected: false,
+    });
+  });
+
+  afterEach(() => {
+    window.localStorage.removeItem(STORAGE_KEY);
+  });
+
+  it("persists non-empty drafts to localStorage on setDraft", () => {
+    useChatStore.getState().setDraft("s1", "hello");
+
+    const stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "{}");
+    expect(stored).toEqual({ s1: "hello" });
+  });
+
+  it("removes empty drafts from localStorage", () => {
+    useChatStore.getState().setDraft("s1", "hello");
+    useChatStore.getState().setDraft("s1", "");
+
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    expect(stored).toBeNull();
+  });
+
+  it("removes draft from localStorage on clearDraft", () => {
+    useChatStore.getState().setDraft("s1", "hello");
+    useChatStore.getState().clearDraft("s1");
+
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    expect(stored).toBeNull();
+  });
+
+  it("removes draft from localStorage on cleanupSession", () => {
+    useChatStore.getState().setDraft("s1", "hello");
+    useChatStore.getState().setDraft("s2", "world");
+    useChatStore.getState().cleanupSession("s1");
+
+    const stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "{}");
+    expect(stored).toEqual({ s2: "world" });
+  });
+
+  it("preserves other session drafts when one is cleared", () => {
+    useChatStore.getState().setDraft("s1", "hello");
+    useChatStore.getState().setDraft("s2", "world");
+    useChatStore.getState().clearDraft("s1");
+
+    const stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "{}");
+    expect(stored).toEqual({ s2: "world" });
+  });
+});
+
+describe("chatStore session loading state", () => {
+  beforeEach(() => {
+    useChatStore.setState({
+      messagesBySession: {},
+      sessionStateById: {},
+      queuedMessageBySession: {},
+      draftsBySession: {},
+      activeSessionId: null,
+      isConnected: false,
+      loadingSessionIds: new Set<string>(),
+    });
+  });
+
+  it("starts with empty loadingSessionIds", () => {
+    expect(useChatStore.getState().loadingSessionIds.size).toBe(0);
+  });
+
+  it("adds session to loadingSessionIds when setSessionLoading(true)", () => {
+    useChatStore.getState().setSessionLoading("s1", true);
+
+    expect(useChatStore.getState().loadingSessionIds.has("s1")).toBe(true);
+  });
+
+  it("removes session from loadingSessionIds when setSessionLoading(false)", () => {
+    useChatStore.getState().setSessionLoading("s1", true);
+    useChatStore.getState().setSessionLoading("s1", false);
+
+    expect(useChatStore.getState().loadingSessionIds.has("s1")).toBe(false);
+  });
+
+  it("tracks multiple sessions independently", () => {
+    useChatStore.getState().setSessionLoading("s1", true);
+    useChatStore.getState().setSessionLoading("s2", true);
+
+    expect(useChatStore.getState().loadingSessionIds.has("s1")).toBe(true);
+    expect(useChatStore.getState().loadingSessionIds.has("s2")).toBe(true);
+
+    useChatStore.getState().setSessionLoading("s1", false);
+
+    expect(useChatStore.getState().loadingSessionIds.has("s1")).toBe(false);
+    expect(useChatStore.getState().loadingSessionIds.has("s2")).toBe(true);
+  });
+
+  it("is idempotent for adding the same session", () => {
+    useChatStore.getState().setSessionLoading("s1", true);
+    useChatStore.getState().setSessionLoading("s1", true);
+
+    expect(useChatStore.getState().loadingSessionIds.size).toBe(1);
+  });
+
+  it("is idempotent for removing a non-existent session", () => {
+    useChatStore.getState().setSessionLoading("s1", false);
+
+    expect(useChatStore.getState().loadingSessionIds.size).toBe(0);
   });
 });

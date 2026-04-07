@@ -59,6 +59,36 @@ export async function acpPrepareSession(
   });
 }
 
+/** Session info returned by the goose binary's list_sessions. */
+export interface AcpSessionInfo {
+  sessionId: string;
+  title: string | null;
+  updatedAt: string | null;
+}
+
+/** List all sessions known to the goose binary. */
+export async function acpListSessions(): Promise<AcpSessionInfo[]> {
+  return invoke("acp_list_sessions");
+}
+
+/**
+ * Load an existing session from the goose binary.
+ *
+ * This triggers message replay via SessionNotification events that the
+ * frontend's useAcpStream hook picks up automatically.
+ */
+export async function acpLoadSession(
+  sessionId: string,
+  gooseSessionId: string,
+  workingDir?: string,
+): Promise<void> {
+  return invoke("acp_load_session", {
+    sessionId,
+    gooseSessionId,
+    workingDir: workingDir ?? null,
+  });
+}
+
 /** Cancel an in-progress ACP session so the backend stops streaming. */
 export async function acpCancelSession(
   sessionId: string,

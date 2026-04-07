@@ -19,7 +19,6 @@ import { useAcpStream } from "@/features/chat/hooks/useAcpStream";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
 import { findExistingDraft } from "@/features/chat/lib/newChat";
-import { getSessionMessages } from "@/shared/api/chat";
 import { useAppStartup } from "./hooks/useAppStartup";
 
 export type AppView =
@@ -59,35 +58,45 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   useAcpStream(true);
 
-  const loadingSessionsRef = useRef<Set<string>>(new Set());
   const pendingProjectCreatedRef = useRef<((projectId: string) => void) | null>(
     null,
   );
 
+  // TODO: wire to ACP load_session replay instead of fetching from SessionStore
   const loadSessionMessages = useCallback(async (sessionId: string) => {
-    const session = useChatSessionStore
-      .getState()
-      .sessions.find((s) => s.id === sessionId);
-    if (session?.draft) return;
-    const { messagesBySession, setMessages } = useChatStore.getState();
-    const existing = messagesBySession[sessionId];
-    if (
-      (existing && existing.length > 0) ||
-      loadingSessionsRef.current.has(sessionId)
-    ) {
+    // Skip if we already have messages for this session (e.g. it was just created)
+    const existing = useChatStore.getState().messagesBySession[sessionId];
+    if (existing && existing.length > 0) {
+      console.log(
+        `[perf:load] ${sessionId.slice(0, 8)} skip — already has messages`,
+      );
       return;
     }
-    loadingSessionsRef.current.add(sessionId);
+
+    const t0 = performance.now();
+    console.log(`[perf:load] ${sessionId.slice(0, 8)} start`);
+    const store = useChatStore.getState();
+    store.setSessionLoading(sessionId, true);
     try {
-      const messages = await getSessionMessages(sessionId);
-      const current = useChatStore.getState().messagesBySession[sessionId];
-      if (!current || current.length === 0) {
-        setMessages(sessionId, messages);
-      }
+      const t1 = performance.now();
+      const { acpLoadSession } = await import("@/shared/api/acp");
+      const t2 = performance.now();
+      console.log(
+        `[perf:load] ${sessionId.slice(0, 8)} import took ${(t2 - t1).toFixed(1)}ms`,
+      );
+      // For sessions loaded from ACP, the session ID is the goose session ID
+      await acpLoadSession(sessionId, sessionId);
+      const t3 = performance.now();
+      console.log(
+        `[perf:load] ${sessionId.slice(0, 8)} acpLoadSession resolved in ${(t3 - t2).toFixed(1)}ms (total ${(t3 - t0).toFixed(1)}ms)`,
+      );
     } catch (err) {
-      console.error(`Failed to load messages for session ${sessionId}:`, err);
+      console.error("Failed to load session messages:", err);
     } finally {
-      loadingSessionsRef.current.delete(sessionId);
+      useChatStore.getState().setSessionLoading(sessionId, false);
+      console.log(
+        `[perf:load] ${sessionId.slice(0, 8)} done, loading=false at +${(performance.now() - t0).toFixed(1)}ms`,
+      );
     }
   }, []);
 
@@ -131,8 +140,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       const state = useChatSessionStore.getState();
       const session = state.sessions.find((s) => s.id === sessionId);
       if (!session?.draft) return;
-      const draft = useChatStore.getState().getDraft(sessionId);
-      if (draft.length > 0) return;
+      const draft = useChatStore.getState().draftsBySession[sessionId] ?? "";
+      if (draft.length > 0) return; // has typed text — keep it
       chatStore.cleanupSession(sessionId);
       state.removeDraft(sessionId);
     },
@@ -161,7 +170,9 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       });
 
       if (existingDraft) {
-        cleanupEmptyDraft(sessionState.activeSessionId);
+        if (sessionState.activeSessionId !== existingDraft.id) {
+          cleanupEmptyDraft(sessionState.activeSessionId);
+        }
         sessionState.setActiveSession(existingDraft.id);
         setActiveView("chat");
         chatStore.setActiveSession(existingDraft.id);
@@ -180,7 +191,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
       sessionStore.setActiveSession(session.id);
       setActiveView("chat");
-
       chatStore.setActiveSession(session.id);
 
       return session;
@@ -228,20 +238,12 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   const clearActiveSession = useCallback(
     (sessionId: string) => {
-      const session = useChatSessionStore
-        .getState()
-        .sessions.find((s) => s.id === sessionId);
-      if (session?.draft) {
-        const draft = useChatStore.getState().getDraft(sessionId);
-        if (draft.length === 0) {
-          chatStore.cleanupSession(sessionId);
-          useChatSessionStore.getState().removeDraft(sessionId);
-        }
-      }
+      cleanupEmptyDraft(sessionId);
+      chatStore.cleanupSession(sessionId);
       sessionStore.setActiveSession(null);
       setActiveView("home");
     },
-    [chatStore, sessionStore],
+    [chatStore, sessionStore, cleanupEmptyDraft],
   );
 
   const handleArchiveChat = useCallback(
@@ -325,10 +327,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           ? projectStore.projects.find((project) => project.id === projectId)
           : undefined;
 
-      createNewTab(
-        initialMessage?.slice(0, 100) || "New Chat",
-        selectedProject,
-      );
+      createNewTab(initialMessage?.slice(0, 40) || "New Chat", selectedProject);
     },
     [createNewTab, projectStore.projects],
   );

@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use acp_client::{MessageWriter, Store};
+use acp_client::MessageWriter;
 use agent_client_protocol::{
     Agent, ClientSideConnection, ExtRequest, Implementation, InitializeRequest, ProtocolVersion,
 };
@@ -20,14 +20,24 @@ use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
 use super::goose_serve::{GooseServeProcess, WS_BRIDGE_BUFFER_BYTES};
 use dispatcher::{SessionEventDispatcher, SessionRoute};
+pub use session_ops::AcpSessionInfo;
 use session_ops::{
-    cancel_session_inner, prepare_session_inner, send_prompt_inner, ManagerState,
-    PrepareSessionInput,
+    cancel_session_inner, list_sessions_inner, load_session_inner, prepare_session_inner,
+    send_prompt_inner, ManagerState, PrepareSessionInput,
 };
 
 enum ManagerCommand {
     ListProviders {
         response: oneshot::Sender<Result<Vec<GooseAcpProvider>, String>>,
+    },
+    ListSessions {
+        response: oneshot::Sender<Result<Vec<AcpSessionInfo>, String>>,
+    },
+    LoadSession {
+        local_session_id: String,
+        goose_session_id: String,
+        working_dir: PathBuf,
+        response: oneshot::Sender<Result<(), String>>,
     },
     PrepareSession {
         composite_key: String,
@@ -35,7 +45,6 @@ enum ManagerCommand {
         provider_id: String,
         working_dir: PathBuf,
         existing_agent_session_id: Option<String>,
-        store: Arc<dyn Store>,
         response: oneshot::Sender<Result<(), String>>,
     },
     SendPrompt {
@@ -44,7 +53,6 @@ enum ManagerCommand {
         provider_id: String,
         working_dir: PathBuf,
         existing_agent_session_id: Option<String>,
-        store: Arc<dyn Store>,
         writer: Arc<dyn MessageWriter>,
         prompt: String,
         images: Vec<(String, String)>,
@@ -98,6 +106,38 @@ impl GooseAcpManager {
             .map(Arc::clone)
     }
 
+    pub async fn list_sessions(&self) -> Result<Vec<AcpSessionInfo>, String> {
+        let (response_tx, response_rx) = oneshot::channel();
+        self.command_tx
+            .send(ManagerCommand::ListSessions {
+                response: response_tx,
+            })
+            .map_err(|_| "Goose ACP manager is unavailable".to_string())?;
+        response_rx
+            .await
+            .map_err(|_| "Goose ACP manager dropped list sessions request".to_string())?
+    }
+
+    pub async fn load_session(
+        &self,
+        local_session_id: String,
+        goose_session_id: String,
+        working_dir: PathBuf,
+    ) -> Result<(), String> {
+        let (response_tx, response_rx) = oneshot::channel();
+        self.command_tx
+            .send(ManagerCommand::LoadSession {
+                local_session_id,
+                goose_session_id,
+                working_dir,
+                response: response_tx,
+            })
+            .map_err(|_| "Goose ACP manager is unavailable".to_string())?;
+        response_rx
+            .await
+            .map_err(|_| "Goose ACP manager dropped load session request".to_string())?
+    }
+
     pub async fn prepare_session(
         &self,
         composite_key: String,
@@ -105,7 +145,6 @@ impl GooseAcpManager {
         provider_id: String,
         working_dir: PathBuf,
         existing_agent_session_id: Option<String>,
-        store: Arc<dyn Store>,
     ) -> Result<(), String> {
         let (response_tx, response_rx) = oneshot::channel();
         self.command_tx
@@ -115,7 +154,6 @@ impl GooseAcpManager {
                 provider_id,
                 working_dir,
                 existing_agent_session_id,
-                store,
                 response: response_tx,
             })
             .map_err(|_| "Goose ACP manager is unavailable".to_string())?;
@@ -144,7 +182,6 @@ impl GooseAcpManager {
         provider_id: String,
         working_dir: PathBuf,
         existing_agent_session_id: Option<String>,
-        store: Arc<dyn Store>,
         writer: Arc<dyn MessageWriter>,
         prompt: String,
         images: Vec<(String, String)>,
@@ -157,7 +194,6 @@ impl GooseAcpManager {
                 provider_id,
                 working_dir,
                 existing_agent_session_id,
-                store,
                 writer,
                 prompt,
                 images,
@@ -361,13 +397,41 @@ fn run_manager_thread(
                         let _ = response.send(result);
                     });
                 }
+                ManagerCommand::ListSessions { response } => {
+                    let connection = Arc::clone(&connection);
+                    tokio::task::spawn_local(async move {
+                        let result = list_sessions_inner(&connection).await;
+                        let _ = response.send(result);
+                    });
+                }
+                ManagerCommand::LoadSession {
+                    local_session_id,
+                    goose_session_id,
+                    working_dir,
+                    response,
+                } => {
+                    let connection = Arc::clone(&connection);
+                    let dispatcher = dispatcher.clone();
+                    let state = Arc::clone(&state);
+                    tokio::task::spawn_local(async move {
+                        let result = load_session_inner(
+                            &connection,
+                            &dispatcher,
+                            &state,
+                            &local_session_id,
+                            &goose_session_id,
+                            working_dir,
+                        )
+                        .await;
+                        let _ = response.send(result);
+                    });
+                }
                 ManagerCommand::PrepareSession {
                     composite_key,
                     local_session_id,
                     provider_id,
                     working_dir,
                     existing_agent_session_id,
-                    store,
                     response,
                 } => {
                     let connection = Arc::clone(&connection);
@@ -384,7 +448,6 @@ fn run_manager_thread(
                                 provider_id,
                                 working_dir,
                                 existing_agent_session_id,
-                                store,
                             },
                         )
                         .await
@@ -398,7 +461,6 @@ fn run_manager_thread(
                     provider_id,
                     working_dir,
                     existing_agent_session_id,
-                    store,
                     writer,
                     prompt,
                     images,
@@ -417,7 +479,6 @@ fn run_manager_thread(
                             provider_id,
                             working_dir,
                             existing_agent_session_id,
-                            store,
                             writer,
                             prompt,
                             images,

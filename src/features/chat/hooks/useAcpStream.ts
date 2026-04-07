@@ -155,15 +155,23 @@ export function useAcpStream(enabled: boolean): void {
     unlisteners.push(
       listen<AcpMessageCreatedPayload>("acp:message_created", (event) => {
         if (!active) return;
+        console.log(
+          `[perf:stream] ${event.payload.sessionId.slice(0, 8)} message_created mid=${event.payload.messageId.slice(0, 8)} at ${performance.now().toFixed(1)}ms`,
+        );
         const store = useChatStore.getState();
-        if (
-          !shouldTrackStreamingEvent(
-            store,
-            event.payload.sessionId,
-            event.payload.messageId,
-          )
-        ) {
-          return;
+
+        // Accept if: session is loading (replay), or we're actively streaming/thinking
+        const isLoading = store.loadingSessionIds.has(event.payload.sessionId);
+        if (!isLoading) {
+          if (
+            !shouldTrackStreamingEvent(
+              store,
+              event.payload.sessionId,
+              event.payload.messageId,
+            )
+          ) {
+            return;
+          }
         }
 
         const existing = store.messagesBySession[event.payload.sessionId]?.find(
@@ -197,6 +205,9 @@ export function useAcpStream(enabled: boolean): void {
     unlisteners.push(
       listen<AcpTextPayload>("acp:text", (event) => {
         if (!active) return;
+        console.log(
+          `[perf:stream] ${event.payload.sessionId.slice(0, 8)} text mid=${event.payload.messageId.slice(0, 8)} len=${event.payload.text.length} at ${performance.now().toFixed(1)}ms`,
+        );
         const store = useChatStore.getState();
         if (
           !shouldTrackStreamingEvent(
@@ -219,13 +230,33 @@ export function useAcpStream(enabled: boolean): void {
     unlisteners.push(
       listen<AcpDonePayload>("acp:done", (event) => {
         if (!active) return;
+        console.log(
+          `[perf:stream] ${event.payload.sessionId.slice(0, 8)} done mid=${event.payload.messageId.slice(0, 8)} at ${performance.now().toFixed(1)}ms`,
+        );
         const store = useChatStore.getState();
+        const isLoading = store.loadingSessionIds.has(event.payload.sessionId);
+
         store.updateMessage(
           event.payload.sessionId,
           event.payload.messageId,
-          (message) => updateCompletionStatus(message, "completed"),
+          (message) => {
+            // Mark any tool requests still in "executing" as completed.
+            // During replay, tool_result events may not fire for every
+            // tool call (e.g. when the result content type has no preview),
+            // so we finalize them here to stop running timers.
+            const content = message.content.map((block) =>
+              block.type === "toolRequest" && block.status === "executing"
+                ? { ...block, status: "completed" as const }
+                : block,
+            );
+            return updateCompletionStatus({ ...message, content }, "completed");
+          },
         );
         store.setStreamingMessageId(event.payload.sessionId, null);
+
+        // During replay, don't reset chat state or trigger side effects
+        if (isLoading) return;
+
         store.setChatState(event.payload.sessionId, "idle");
         if (
           useChatSessionStore.getState().activeSessionId !==
@@ -357,6 +388,30 @@ export function useAcpStream(enabled: boolean): void {
     );
 
     // acp:session_info — update session title from ACP provider
+    // Replay: user messages from load_session history
+    unlisteners.push(
+      listen<{ sessionId: string; messageId: string; text: string }>(
+        "acp:replay_user_message",
+        (event) => {
+          if (!active) return;
+          console.log(
+            `[perf:stream] ${event.payload.sessionId.slice(0, 8)} replay_user_message at ${performance.now().toFixed(1)}ms`,
+          );
+          const store = useChatStore.getState();
+          store.addMessage(event.payload.sessionId, {
+            id: event.payload.messageId,
+            role: "user",
+            created: Date.now(),
+            content: [{ type: "text", text: event.payload.text }],
+            metadata: {
+              userVisible: true,
+              agentVisible: true,
+            },
+          });
+        },
+      ),
+    );
+
     unlisteners.push(
       listen<AcpSessionInfoPayload>("acp:session_info", (event) => {
         if (!active) return;

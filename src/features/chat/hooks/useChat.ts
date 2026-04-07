@@ -155,6 +155,7 @@ export function useChat(
       store.setChatState(sessionId, "thinking");
       store.setError(sessionId, null);
 
+      // Promote draft to real backend session before first send
       const sessionStore = useChatSessionStore.getState();
       const session = sessionStore.getSession(sessionId);
       const wasDraft = !!session?.draft;
@@ -163,6 +164,11 @@ export function useChat(
         sessionStore.promoteDraft(sessionId);
       }
 
+      // Immediately set the session/sidebar title from the user's message when
+      // the session still has the default placeholder.  This gives instant
+      // feedback instead of waiting for acp:done or acp:session_info.
+      // A better backend-generated title will overwrite this if it arrives
+      // via the acp:session_info event.
       if (session && session.title === "New Chat") {
         sessionStore.updateSession(
           sessionId,

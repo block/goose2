@@ -10,13 +10,6 @@ import {
   INITIAL_TOKEN_STATE,
 } from "@/shared/types/chat";
 
-function createInitialSessionRuntime(): SessionChatRuntime {
-  return {
-    ...INITIAL_SESSION_CHAT_RUNTIME,
-    tokenState: { ...INITIAL_TOKEN_STATE },
-  };
-}
-
 const DRAFTS_STORAGE_KEY = "goose:chat-drafts";
 
 function loadCachedDrafts(): Record<string, string> {
@@ -47,6 +40,19 @@ function persistDrafts(drafts: Record<string, string>): void {
   }
 }
 
+function createInitialSessionRuntime(): SessionChatRuntime {
+  return {
+    ...INITIAL_SESSION_CHAT_RUNTIME,
+    tokenState: { ...INITIAL_TOKEN_STATE },
+  };
+}
+
+export interface QueuedMessage {
+  text: string;
+  personaId?: string;
+  images?: { base64: string; mimeType: string }[];
+}
+
 interface ChatStoreState {
   // Per-session messages
   messagesBySession: Record<string, Message[]>;
@@ -54,7 +60,10 @@ interface ChatStoreState {
   // Per-session runtime state
   sessionStateById: Record<string, SessionChatRuntime>;
 
-  // Per-session draft input text
+  // Per-session queued message (single-slot, survives tab switches)
+  queuedMessageBySession: Record<string, QueuedMessage>;
+
+  // Per-session draft input text (survives tab switches)
   draftsBySession: Record<string, string>;
 
   // Current session
@@ -62,6 +71,9 @@ interface ChatStoreState {
 
   // Connection
   isConnected: boolean;
+
+  // Sessions currently being loaded from history (replay in progress)
+  loadingSessionIds: Set<string>;
 }
 
 interface ChatStoreActions {
@@ -102,10 +114,16 @@ interface ChatStoreActions {
   updateTokenState: (sessionId: string, state: Partial<TokenState>) => void;
   resetTokenState: (sessionId: string) => void;
 
+  // Message queue
+  enqueueMessage: (sessionId: string, message: QueuedMessage) => void;
+  dismissQueuedMessage: (sessionId: string) => void;
+
   // Drafts
   setDraft: (sessionId: string, text: string) => void;
-  getDraft: (sessionId: string) => string;
   clearDraft: (sessionId: string) => void;
+
+  // Session loading (replay)
+  setSessionLoading: (sessionId: string, loading: boolean) => void;
 
   // Cleanup
   cleanupSession: (sessionId: string) => void;
@@ -117,9 +135,11 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   // State
   messagesBySession: {},
   sessionStateById: {},
+  queuedMessageBySession: {},
   draftsBySession: loadCachedDrafts(),
   activeSessionId: null,
   isConnected: false,
+  loadingSessionIds: new Set<string>(),
 
   // Session management
   setActiveSession: (sessionId) =>
@@ -377,6 +397,21 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       },
     })),
 
+  // Message queue
+  enqueueMessage: (sessionId, message) =>
+    set((state) => ({
+      queuedMessageBySession: {
+        ...state.queuedMessageBySession,
+        [sessionId]: message,
+      },
+    })),
+
+  dismissQueuedMessage: (sessionId) =>
+    set((state) => {
+      const { [sessionId]: _, ...rest } = state.queuedMessageBySession;
+      return { queuedMessageBySession: rest };
+    }),
+
   // Drafts
   setDraft: (sessionId, text) => {
     set((state) => ({
@@ -384,8 +419,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }));
     persistDrafts(get().draftsBySession);
   },
-
-  getDraft: (sessionId) => get().draftsBySession[sessionId] ?? "",
 
   clearDraft: (sessionId) => {
     set((state) => {
@@ -395,20 +428,36 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     persistDrafts(get().draftsBySession);
   },
 
+  // Session loading (replay)
+  setSessionLoading: (sessionId, loading) =>
+    set((state) => {
+      const next = new Set(state.loadingSessionIds);
+      if (loading) {
+        next.add(sessionId);
+      } else {
+        next.delete(sessionId);
+      }
+      return { loadingSessionIds: next };
+    }),
+
   // Cleanup
-  cleanupSession: (sessionId) =>
+  cleanupSession: (sessionId) => {
     set((state) => {
       const { [sessionId]: _, ...rest } = state.messagesBySession;
       const { [sessionId]: __, ...remainingSessionState } =
         state.sessionStateById;
-      const { [sessionId]: ___, ...remainingDrafts } = state.draftsBySession;
-      persistDrafts(remainingDrafts);
+      const { [sessionId]: ___, ...remainingQueued } =
+        state.queuedMessageBySession;
+      const { [sessionId]: ____, ...remainingDrafts } = state.draftsBySession;
       return {
         messagesBySession: rest,
         sessionStateById: remainingSessionState,
+        queuedMessageBySession: remainingQueued,
         draftsBySession: remainingDrafts,
         activeSessionId:
           state.activeSessionId === sessionId ? null : state.activeSessionId,
       };
-    }),
+    });
+    persistDrafts(get().draftsBySession);
+  },
 }));

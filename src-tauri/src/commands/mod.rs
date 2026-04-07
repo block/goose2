@@ -1,9 +1,7 @@
 pub mod acp;
 pub mod agents;
-pub mod chat;
 pub mod doctor;
 pub mod git;
 pub mod projects;
-pub mod sessions;
 pub mod skills;
 pub mod system;

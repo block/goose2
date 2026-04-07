@@ -30,7 +30,7 @@ import {
 } from "@/features/projects/api/projects";
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
-import { listArchivedSessions } from "@/shared/api/chat";
+
 import type { Session } from "@/shared/types/chat";
 
 const NAV_ITEMS = [
@@ -74,12 +74,10 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
       .finally(() => setLoadingArchived(false));
   }, []);
 
-  // Load archived chats on mount
+  // TODO: wire to ACP for archived session listing
   useEffect(() => {
-    listArchivedSessions()
-      .then(setArchivedChats)
-      .catch(() => setArchivedChats([]))
-      .finally(() => setLoadingArchivedChats(false));
+    setArchivedChats([]);
+    setLoadingArchivedChats(false);
   }, []);
 
   const handleRestoreProject = async (id: string) => {
