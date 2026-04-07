@@ -3,7 +3,7 @@ import {
   IconLayoutSidebar,
   IconLayoutSidebarFilled,
 } from "@tabler/icons-react";
-import { BookOpen, Bot, History, Home } from "lucide-react";
+import { BookOpen, Bot, History, Home, Search } from "lucide-react";
 import { GooseIcon } from "@/shared/ui/icons/GooseIcon";
 import { cn } from "@/shared/lib/cn";
 import type { AppView } from "@/app/AppShell";
@@ -11,6 +11,9 @@ import type { ProjectInfo } from "@/features/projects/api/projects";
 import { useChatStore } from "@/features/chat/stores/chatStore";
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
 import { isSessionRunning } from "@/features/chat/lib/sessionActivity";
+import { filterSessions } from "@/features/sessions/lib/filterSessions";
+import { useAgentStore } from "@/features/agents/stores/agentStore";
+import { useProjectStore } from "@/features/projects/stores/projectStore";
 import { Button } from "@/shared/ui/button";
 import { SidebarProjectsSection } from "./SidebarProjectsSection";
 import { useSidebarHighlight } from "./useSidebarHighlight";
@@ -64,6 +67,8 @@ export function Sidebar({
   projects,
 }: SidebarProps) {
   const [expanded, setExpanded] = useState(!collapsed);
+  const [sidebarSearch, setSidebarSearch] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const prevCollapsed = useRef(collapsed);
   const [expandedProjects, setExpandedProjects] = useState<
     Record<string, boolean>
@@ -147,6 +152,62 @@ export function Sidebar({
     return { byProject, standalone: limitedStandalone };
   })();
 
+  const agentStoreState = useAgentStore();
+  const projectStoreState = useProjectStore();
+
+  const sidebarResolvers = {
+    getPersonaName: (personaId: string) =>
+      agentStoreState.getPersonaById(personaId)?.displayName,
+    getProjectName: (projectId: string) =>
+      projectStoreState.projects.find((p: { id: string }) => p.id === projectId)
+        ?.name,
+  };
+
+  const filteredProjectSessions = (() => {
+    if (!sidebarSearch.trim()) return projectSessions;
+
+    const allSessionItems = [
+      ...Object.values(projectSessions.byProject).flat(),
+      ...projectSessions.standalone,
+    ];
+    const matchingIds = new Set(
+      filterSessions(
+        allSessionItems.map((item) => ({
+          id: item.id,
+          title: item.title,
+          projectId: item.projectId,
+          createdAt: item.updatedAt,
+          updatedAt: item.updatedAt,
+          messageCount: 0,
+        })),
+        sidebarSearch,
+        sidebarResolvers,
+      ).map((s) => s.id),
+    );
+
+    const filteredByProject: Record<string, typeof projectSessions.standalone> =
+      {};
+    for (const [projectId, items] of Object.entries(
+      projectSessions.byProject,
+    )) {
+      const matching = items.filter((item) => matchingIds.has(item.id));
+      const projectNameMatches = sidebarResolvers
+        .getProjectName(projectId)
+        ?.toLowerCase()
+        .includes(sidebarSearch.trim().toLowerCase());
+      if (matching.length > 0 || projectNameMatches) {
+        filteredByProject[projectId] = matching.length > 0 ? matching : items;
+      }
+    }
+
+    return {
+      byProject: filteredByProject,
+      standalone: projectSessions.standalone.filter((item) =>
+        matchingIds.has(item.id),
+      ),
+    };
+  })();
+
   // Auto-expand the project containing the active session
   useEffect(() => {
     if (!activeSessionId) return;
@@ -185,6 +246,17 @@ export function Sidebar({
         : next;
     });
   }, [projects]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "k" && e.metaKey) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   const toggleProject = (projectId: string) => {
     setExpandedProjects((prev) => ({
@@ -304,11 +376,8 @@ export function Sidebar({
               </button>
             )}
 
-            {/* TODO: Search bar — uncomment when onSearchClick is wired up */}
-            {/* <button
-              type="button"
-              onClick={onSearchClick}
-              title={collapsed ? "Search ⌘K" : undefined}
+            {/* Search bar */}
+            <div
               className={cn(
                 "flex items-center w-full rounded-md transition-all duration-300 ease-out",
                 collapsed
@@ -317,29 +386,37 @@ export function Sidebar({
               )}
             >
               <Search className="size-3.5 flex-shrink-0" />
-              <span
-                className={cn(
-                  "whitespace-nowrap",
-                  labelTransition,
-                  labelVisible
-                    ? "opacity-100 w-auto flex-1 text-left"
-                    : "opacity-0 w-0 overflow-hidden",
-                )}
-              >
-                Search...
-              </span>
-              <kbd
-                className={cn(
-                  "text-[10px] text-muted-foreground px-1 py-0.5 rounded font-mono flex-shrink-0",
-                  labelTransition,
-                  labelVisible
-                    ? "opacity-100 w-auto"
-                    : "opacity-0 w-0 overflow-hidden px-0",
-                )}
-              >
-                ⌘K
-              </kbd>
-            </button> */}
+              {!collapsed && (
+                <>
+                  <input
+                    ref={searchInputRef}
+                    type="search"
+                    value={sidebarSearch}
+                    onChange={(e) => setSidebarSearch(e.target.value)}
+                    placeholder="Search..."
+                    className={cn(
+                      "bg-transparent border-none outline-none text-xs flex-1 min-w-0 placeholder:text-muted-foreground",
+                      labelTransition,
+                      labelVisible
+                        ? "opacity-100 w-auto"
+                        : "opacity-0 w-0 overflow-hidden",
+                    )}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <kbd
+                    className={cn(
+                      "text-[10px] text-muted-foreground px-1 py-0.5 rounded font-mono flex-shrink-0",
+                      labelTransition,
+                      labelVisible
+                        ? "opacity-100 w-auto"
+                        : "opacity-0 w-0 overflow-hidden px-0",
+                    )}
+                  >
+                    ⌘K
+                  </kbd>
+                </>
+              )}
+            </div>
 
             {/* Home */}
             <button
@@ -452,7 +529,7 @@ export function Sidebar({
               {/* Projects + Chats section */}
               <SidebarProjectsSection
                 projects={projects}
-                projectSessions={projectSessions}
+                projectSessions={filteredProjectSessions}
                 expandedProjects={expandedProjects}
                 toggleProject={toggleProject}
                 collapsed={collapsed}

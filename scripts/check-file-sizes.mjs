@@ -15,6 +15,10 @@ const EXCEPTIONS = {
     justification:
       "Added useSessionAutoTitle hook call for smart session naming.",
   },
+  "src/features/sidebar/ui/Sidebar.tsx": {
+    limit: 575,
+    justification: "Added search-as-you-type filtering for sidebar sessions.",
+  },
 };
 
 // Directories excluded from size checks (imported library code)
