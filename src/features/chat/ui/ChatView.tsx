@@ -42,18 +42,12 @@ interface ChatViewProps {
   }) => void;
 }
 
-const CONTEXT_PANEL_WIDTH = 340;
-const CONTEXT_PANEL_SHELL_PADDING = 12;
-const CONTEXT_PANEL_HEADER_PADDING_X = 12;
-const CONTEXT_PANEL_HEADER_PADDING_TOP = 10;
-const CONTEXT_PANEL_TOTAL_WIDTH =
-  CONTEXT_PANEL_WIDTH + CONTEXT_PANEL_SHELL_PADDING * 2;
-const CONTEXT_PANEL_TOGGLE_RIGHT =
-  CONTEXT_PANEL_SHELL_PADDING + CONTEXT_PANEL_HEADER_PADDING_X;
-const CONTEXT_PANEL_TOGGLE_TOP =
-  CONTEXT_PANEL_SHELL_PADDING + CONTEXT_PANEL_HEADER_PADDING_TOP;
-const CONTEXT_PANEL_FADE_DURATION_SECONDS = 0.15;
-const CONTEXT_PANEL_REFLOW_DURATION_MS = 200;
+const CP_PAD = 12;
+const CP_TOTAL_W = 340 + CP_PAD * 2;
+const CP_TOGGLE_RIGHT = CP_PAD + 12;
+const CP_TOGGLE_TOP = CP_PAD + 10;
+const CP_FADE_S = 0.15;
+const CP_REFLOW_MS = 200;
 
 export function ChatView({
   sessionId,
@@ -72,12 +66,8 @@ export function ChatView({
   );
   const setContextPanelOpen = useChatSessionStore((s) => s.setContextPanelOpen);
   const shouldReduceMotion = useReducedMotion();
-  const fadeTransition = {
-    duration: shouldReduceMotion ? 0 : CONTEXT_PANEL_FADE_DURATION_SECONDS,
-  };
-  const reflowDuration = shouldReduceMotion
-    ? 0
-    : CONTEXT_PANEL_REFLOW_DURATION_MS;
+  const fadeTransition = { duration: shouldReduceMotion ? 0 : CP_FADE_S };
+  const reflowDuration = shouldReduceMotion ? 0 : CP_REFLOW_MS;
 
   const {
     providers,
@@ -273,11 +263,8 @@ export function ChatView({
       workingDir: effectiveWorkingDir,
       personaId: selectedPersonaId ?? undefined,
     }).catch((error) => {
-      if (!cancelled) {
-        console.error("Failed to prepare ACP session:", error);
-      }
+      if (!cancelled) console.error("Failed to prepare ACP session:", error);
     });
-
     return () => {
       cancelled = true;
     };
@@ -379,6 +366,15 @@ export function ChatView({
   const handleCreatePersona = useCallback(() => {
     useAgentStore.getState().openPersonaEditor();
   }, []);
+  const draftValue = useChatStore(
+    (s) => s.draftsBySession[activeSessionId] ?? "",
+  );
+  const handleDraftChange = useCallback(
+    (text: string) => {
+      useChatStore.getState().setDraft(activeSessionId, text);
+    },
+    [activeSessionId],
+  );
   return (
     <ArtifactPolicyProvider
       messages={messages}
@@ -406,6 +402,8 @@ export function ChatView({
             onSend={handleSend}
             queuedMessage={queue.queuedMessage}
             onDismissQueue={queue.dismiss}
+            initialValue={draftValue}
+            onDraftChange={handleDraftChange}
             onStop={stopStreaming}
             isStreaming={isStreaming || chatState === "thinking"}
             personas={personas}
@@ -435,7 +433,7 @@ export function ChatView({
         <div
           className="shrink-0 overflow-hidden"
           style={{
-            width: isContextPanelOpen ? CONTEXT_PANEL_TOTAL_WIDTH : 0,
+            width: isContextPanelOpen ? CP_TOTAL_W : 0,
             transition: `width ${reflowDuration}ms ease`,
           }}
         >
@@ -445,8 +443,8 @@ export function ChatView({
                 key="context-panel"
                 className="flex h-full"
                 style={{
-                  width: CONTEXT_PANEL_TOTAL_WIDTH,
-                  padding: CONTEXT_PANEL_SHELL_PADDING,
+                  width: CP_TOTAL_W,
+                  padding: CP_PAD,
                 }}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -468,8 +466,8 @@ export function ChatView({
         <div
           className="absolute z-20"
           style={{
-            right: CONTEXT_PANEL_TOGGLE_RIGHT,
-            top: CONTEXT_PANEL_TOGGLE_TOP,
+            right: CP_TOGGLE_RIGHT,
+            top: CP_TOGGLE_TOP,
           }}
         >
           <Button

@@ -39,6 +39,8 @@ interface ChatInputProps {
   disabled?: boolean;
   queuedMessage?: { text: string } | null;
   onDismissQueue?: () => void;
+  initialValue?: string;
+  onDraftChange?: (text: string) => void;
   className?: string;
   // Personas
   personas?: Persona[];
@@ -126,6 +128,8 @@ export function ChatInput({
   disabled = false,
   queuedMessage = null,
   onDismissQueue,
+  initialValue = "",
+  onDraftChange,
   className,
   personas = [],
   selectedPersonaId = null,
@@ -145,7 +149,14 @@ export function ChatInput({
   contextTokens = 0,
   contextLimit = 0,
 }: ChatInputProps) {
-  const [text, setText] = useState("");
+  const [text, setTextRaw] = useState(initialValue);
+  const setText = useCallback(
+    (value: string) => {
+      setTextRaw(value);
+      onDraftChange?.(value);
+    },
+    [onDraftChange],
+  );
   const [images, setImages] = useState<PastedImage[]>([]);
   const [isCompact, setIsCompact] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -215,7 +226,7 @@ export function ChatInput({
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
-  }, [canSend, text, images, onSend, selectedPersonaId]);
+  }, [canSend, text, images, onSend, selectedPersonaId, setText]);
 
   const handleMentionSelect = useCallback(
     (persona: Persona) => {
@@ -237,7 +248,14 @@ export function ChatInput({
         }
       });
     },
-    [text, mentionStartIndex, mentionQuery, closeMention, onPersonaChange],
+    [
+      text,
+      mentionStartIndex,
+      mentionQuery,
+      closeMention,
+      onPersonaChange,
+      setText,
+    ],
   );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

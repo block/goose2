@@ -24,6 +24,7 @@ describe("chatStore", () => {
       messagesBySession: {},
       sessionStateById: {},
       queuedMessageBySession: {},
+      draftsBySession: {},
       activeSessionId: null,
       isConnected: false,
     });
@@ -130,18 +131,31 @@ describe("chatStore", () => {
     expect(useChatStore.getState().queuedMessageBySession.s1).toBeUndefined();
   });
 
-  it("removes session data during cleanup including queued messages", () => {
+  it("persists and clears draft text per session", () => {
+    const store = useChatStore.getState();
+
+    store.setDraft("s1", "hello world");
+    expect(useChatStore.getState().draftsBySession.s1).toBe("hello world");
+    expect(useChatStore.getState().draftsBySession.s2).toBeUndefined();
+
+    store.clearDraft("s1");
+    expect(useChatStore.getState().draftsBySession.s1).toBeUndefined();
+  });
+
+  it("removes session data during cleanup including queued messages and drafts", () => {
     const store = useChatStore.getState();
 
     store.addMessage("s1", makeMessage());
     store.setChatState("s1", "streaming");
     store.enqueueMessage("s1", { text: "queued" });
+    store.setDraft("s1", "draft text");
     store.setActiveSession("s1");
     store.cleanupSession("s1");
 
     expect(store.messagesBySession.s1).toBeUndefined();
     expect(store.sessionStateById.s1).toBeUndefined();
     expect(store.queuedMessageBySession.s1).toBeUndefined();
+    expect(store.draftsBySession.s1).toBeUndefined();
     expect(store.activeSessionId).toBeNull();
   });
 });

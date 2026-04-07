@@ -33,6 +33,9 @@ interface ChatStoreState {
   // Per-session queued message (single-slot, survives tab switches)
   queuedMessageBySession: Record<string, QueuedMessage>;
 
+  // Per-session draft input text (survives tab switches)
+  draftsBySession: Record<string, string>;
+
   // Current session
   activeSessionId: string | null;
 
@@ -82,6 +85,10 @@ interface ChatStoreActions {
   enqueueMessage: (sessionId: string, message: QueuedMessage) => void;
   dismissQueuedMessage: (sessionId: string) => void;
 
+  // Drafts
+  setDraft: (sessionId: string, text: string) => void;
+  clearDraft: (sessionId: string) => void;
+
   // Cleanup
   cleanupSession: (sessionId: string) => void;
 }
@@ -93,6 +100,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   messagesBySession: {},
   sessionStateById: {},
   queuedMessageBySession: {},
+  draftsBySession: {},
   activeSessionId: null,
   isConnected: false,
 
@@ -367,6 +375,18 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       return { queuedMessageBySession: rest };
     }),
 
+  // Drafts
+  setDraft: (sessionId, text) =>
+    set((state) => ({
+      draftsBySession: { ...state.draftsBySession, [sessionId]: text },
+    })),
+
+  clearDraft: (sessionId) =>
+    set((state) => {
+      const { [sessionId]: _, ...rest } = state.draftsBySession;
+      return { draftsBySession: rest };
+    }),
+
   // Cleanup
   cleanupSession: (sessionId) =>
     set((state) => {
@@ -375,10 +395,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         state.sessionStateById;
       const { [sessionId]: ___, ...remainingQueued } =
         state.queuedMessageBySession;
+      const { [sessionId]: ____, ...remainingDrafts } = state.draftsBySession;
       return {
         messagesBySession: rest,
         sessionStateById: remainingSessionState,
         queuedMessageBySession: remainingQueued,
+        draftsBySession: remainingDrafts,
         activeSessionId:
           state.activeSessionId === sessionId ? null : state.activeSessionId,
       };
