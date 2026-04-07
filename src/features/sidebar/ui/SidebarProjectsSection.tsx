@@ -140,24 +140,17 @@ function ProjectSection({
   activeSessionRefCallback?: (el: HTMLElement | null) => void;
 }) {
   const [showAll, setShowAll] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     if (e.dataTransfer.types.includes("text/x-session-id")) {
       e.preventDefault();
       e.dataTransfer.dropEffect = "move";
-      setDragOver(true);
     }
-  }, []);
-
-  const handleDragLeave = useCallback(() => {
-    setDragOver(false);
   }, []);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
-      setDragOver(false);
       const sessionId = e.dataTransfer.getData("text/x-session-id");
       if (sessionId) {
         onMoveToProject?.(sessionId, project.id);
@@ -173,12 +166,8 @@ function ProjectSection({
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: drop target for drag-and-drop
     <div
-      className={cn(
-        "rounded-md transition-colors duration-200",
-        dragOver && "bg-accent/50 ring-1 ring-ring",
-      )}
+      className={cn("rounded-md")}
       onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
       {/* Project row */}
@@ -312,24 +301,16 @@ export function SidebarProjectsSection({
   onItemMouseEnter,
   activeSessionRefCallback,
 }: SidebarProjectsSectionProps) {
-  const [recentsDragOver, setRecentsDragOver] = useState(false);
-
   const handleRecentsDragOver = useCallback((e: React.DragEvent) => {
     if (e.dataTransfer.types.includes("text/x-session-id")) {
       e.preventDefault();
       e.dataTransfer.dropEffect = "move";
-      setRecentsDragOver(true);
     }
-  }, []);
-
-  const handleRecentsDragLeave = useCallback(() => {
-    setRecentsDragOver(false);
   }, []);
 
   const handleRecentsDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
-      setRecentsDragOver(false);
       const sessionId = e.dataTransfer.getData("text/x-session-id");
       if (sessionId) {
         onMoveToProject?.(sessionId, null);
@@ -434,12 +415,8 @@ export function SidebarProjectsSection({
       {projectSessions.standalone.length > 0 && (
         // biome-ignore lint/a11y/noStaticElementInteractions: drop target for drag-and-drop
         <div
-          className={cn(
-            "rounded-md transition-colors duration-200",
-            recentsDragOver && "bg-accent/50 ring-1 ring-ring",
-          )}
+          className={cn("rounded-md")}
           onDragOver={handleRecentsDragOver}
-          onDragLeave={handleRecentsDragLeave}
           onDrop={handleRecentsDrop}
         >
           <div

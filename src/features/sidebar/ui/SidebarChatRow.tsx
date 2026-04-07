@@ -45,6 +45,7 @@ export function SidebarChatRow({
 }: SidebarChatRowProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const [draftTitle, setDraftTitle] = useState(title);
   const inputRef = useRef<HTMLInputElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
@@ -131,9 +132,12 @@ export function SidebarChatRow({
       onDragStart={(e) => {
         e.dataTransfer.setData("text/x-session-id", id);
         e.dataTransfer.effectAllowed = "move";
+        setDragging(true);
       }}
+      onDragEnd={() => setDragging(false)}
       className={cn(
         "relative flex items-center group rounded-md transition-colors duration-200 cursor-grab active:cursor-grabbing",
+        dragging && "opacity-40 bg-accent/30",
         className,
       )}
       onMouseEnter={onMouseEnter}
