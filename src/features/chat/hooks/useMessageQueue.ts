@@ -15,7 +15,7 @@ export function useMessageQueue(
   chatState: ChatState,
   sendMessage: (
     text: string,
-    persona?: undefined,
+    overridePersona?: { id: string; name?: string },
     images?: { base64: string; mimeType: string }[],
   ) => void,
 ) {
@@ -25,9 +25,9 @@ export function useMessageQueue(
 
   useEffect(() => {
     if (chatState === "idle" && queuedMessage) {
-      const { text, images } = queuedMessage;
+      const { text, personaId, images } = queuedMessage;
       useChatStore.getState().dismissQueuedMessage(sessionId);
-      sendMessage(text, undefined, images);
+      sendMessage(text, personaId ? { id: personaId } : undefined, images);
     }
   }, [chatState, queuedMessage, sendMessage, sessionId]);
 

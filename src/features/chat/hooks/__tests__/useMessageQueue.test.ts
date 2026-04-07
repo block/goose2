@@ -114,4 +114,24 @@ describe("useMessageQueue", () => {
 
     expect(sendMessage).toHaveBeenCalledWith("with image", undefined, images);
   });
+
+  it("preserves personaId when auto-sending", () => {
+    const sendMessage = vi.fn();
+    useChatStore.getState().enqueueMessage("s1", {
+      text: "for persona A",
+      personaId: "persona-a",
+    });
+
+    renderHook(
+      ({ chatState }: { chatState: ChatState }) =>
+        useMessageQueue("s1", chatState, sendMessage),
+      { initialProps: { chatState: "idle" as ChatState } },
+    );
+
+    expect(sendMessage).toHaveBeenCalledWith(
+      "for persona A",
+      { id: "persona-a" },
+      undefined,
+    );
+  });
 });

@@ -79,10 +79,27 @@ function loadCachedSessions(): ChatSession[] {
   }
 }
 
+function draftsWithText(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const stored = window.localStorage.getItem("goose:chat-drafts");
+    if (!stored) return new Set();
+    const parsed = JSON.parse(stored);
+    return new Set(
+      Object.entries(parsed)
+        .filter(([, v]) => typeof v === "string" && (v as string).length > 0)
+        .map(([k]) => k),
+    );
+  } catch {
+    return new Set();
+  }
+}
+
 function persistSessions(sessions: ChatSession[]): void {
   if (typeof window === "undefined") return;
   try {
-    const persistable = sessions.filter((s) => !s.draft);
+    const withText = draftsWithText();
+    const persistable = sessions.filter((s) => !s.draft || withText.has(s.id));
     window.localStorage.setItem(
       SESSION_CACHE_STORAGE_KEY,
       JSON.stringify(persistable),

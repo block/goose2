@@ -154,7 +154,9 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       });
 
       if (existingDraft) {
-        cleanupEmptyDraft(sessionState.activeSessionId);
+        if (sessionState.activeSessionId !== existingDraft.id) {
+          cleanupEmptyDraft(sessionState.activeSessionId);
+        }
         sessionState.setActiveSession(existingDraft.id);
         setActiveView("chat");
         chatStore.setActiveSession(existingDraft.id);
