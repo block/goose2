@@ -171,18 +171,18 @@ function ProjectSection({
   const hasMore = projectChats.length > MAX_VISIBLE_CHATS;
 
   return (
-    <div>
-      {/* Project row — drop target for dragged chats */}
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: drop target for drag-and-drop */}
-      <div
-        className={cn(
-          "flex items-center group rounded-md transition-colors duration-200",
-          dragOver && "bg-accent/50 ring-1 ring-ring",
-        )}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
+    // biome-ignore lint/a11y/noStaticElementInteractions: drop target for drag-and-drop
+    <div
+      className={cn(
+        "rounded-md transition-colors duration-200",
+        dragOver && "bg-accent/50 ring-1 ring-ring",
+      )}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Project row */}
+      <div className="flex items-center group rounded-md transition-colors duration-200">
         <Button
           type="button"
           variant="ghost"
@@ -430,26 +430,30 @@ export function SidebarProjectsSection({
         </div>
       )}
 
-      {/* --- RECENTS (standalone chats from all sessions) --- */}
+      {/* --- RECENTS (standalone chats from all sessions) — entire section is a drop target --- */}
       {projectSessions.standalone.length > 0 && (
-        <>
+        // biome-ignore lint/a11y/noStaticElementInteractions: drop target for drag-and-drop
+        <div
+          className={cn(
+            "rounded-md transition-colors duration-200",
+            recentsDragOver && "bg-accent/50 ring-1 ring-ring",
+          )}
+          onDragOver={handleRecentsDragOver}
+          onDragLeave={handleRecentsDragLeave}
+          onDrop={handleRecentsDrop}
+        >
           <div
             className={cn(
               "my-2 -mx-1.5 bg-border transition-all duration-300",
               collapsed ? "w-5 mx-auto h-px" : "h-px",
             )}
           />
-          {/* Section header (expanded only) — drop target to unassign from project */}
-          {/* biome-ignore lint/a11y/noStaticElementInteractions: drop target for drag-and-drop */}
+          {/* Section header (expanded only) */}
           <div
             className={cn(
-              "group flex items-center transition-all duration-300 rounded-md",
+              "group flex items-center transition-all duration-300",
               collapsed ? "px-0 pt-0 pb-1 justify-center" : "pt-2 pb-1",
-              recentsDragOver && "bg-accent/50 ring-1 ring-ring",
             )}
-            onDragOver={handleRecentsDragOver}
-            onDragLeave={handleRecentsDragLeave}
-            onDrop={handleRecentsDrop}
           >
             <span
               className={cn(
@@ -525,7 +529,7 @@ export function SidebarProjectsSection({
               })}
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );

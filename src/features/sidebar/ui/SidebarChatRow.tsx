@@ -150,7 +150,7 @@ export function SidebarChatRow({
         }}
         title="Double-click to rename"
         className={cn(
-          "flex-1 min-w-0 justify-start gap-2 rounded-md pl-3 pr-8 py-2 text-[13px] font-light",
+          "flex-1 min-w-0 justify-start gap-2 rounded-md pl-3 pr-8 py-2 text-[13px] font-light cursor-grab active:cursor-grabbing",
           isActive ? ACTIVE_CHAT_ROW_CLASS : INACTIVE_CHAT_ROW_CLASS,
         )}
       >
