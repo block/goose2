@@ -1,12 +1,10 @@
 import { useEffect } from "react";
 
 import { AppShell } from "@/app/AppShell";
-import { useKeyboardNavDetection } from "@/shared/hooks/useKeyboardNavDetection";
 import { useScrollFade } from "@/shared/hooks/useScrollFade";
 import { useZoom } from "@/shared/hooks/useZoom";
 
 export function App() {
-  useKeyboardNavDetection();
   useScrollFade();
   useZoom();
   useEffect(() => {
