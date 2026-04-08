@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import {
   getStoredProvider,
   useAgentStore,
@@ -8,39 +9,40 @@ import { ChatInput } from "@/features/chat/ui/ChatInput";
 import { useChatStore } from "@/features/chat/stores/chatStore";
 import type { PastedImage } from "@/shared/types/messages";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
+import { useLocaleFormatting } from "@/shared/i18n";
 
 const HOME_DRAFT_KEY = "home";
 
 function HomeClock() {
   const [time, setTime] = useState(new Date());
+  const { getTimeParts } = useLocaleFormatting();
 
   useEffect(() => {
     const interval = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
 
-  const hours = time
-    .toLocaleTimeString("en-US", { hour: "numeric", hour12: true })
-    .replace(/\s?(AM|PM)$/i, "");
-  const minutes = time
-    .toLocaleTimeString("en-US", { minute: "2-digit" })
-    .padStart(2, "0");
-  const period = time.getHours() >= 12 ? "PM" : "AM";
+  const { hour, minute, dayPeriod } = getTimeParts(time, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 
   return (
     <div className="mb-1 flex items-baseline gap-1.5 pl-4">
       <span className="text-6xl font-light font-display tracking-tight text-foreground">
-        {hours}:{minutes}
+        {hour}:{minute}
       </span>
-      <span className="text-lg text-muted-foreground">{period}</span>
+      {dayPeriod ? (
+        <span className="text-lg text-muted-foreground">{dayPeriod}</span>
+      ) : null}
     </div>
   );
 }
 
-function getGreeting(hour: number): string {
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
+function getGreetingKey(hour: number): "morning" | "afternoon" | "evening" {
+  if (hour < 12) return "morning";
+  if (hour < 17) return "afternoon";
+  return "evening";
 }
 
 interface HomeScreenProps {
@@ -57,8 +59,9 @@ interface HomeScreenProps {
 }
 
 export function HomeScreen({ onStartChat, onCreateProject }: HomeScreenProps) {
+  const { t } = useTranslation("home");
   const [hour] = useState(() => new Date().getHours());
-  const greeting = getGreeting(hour);
+  const greeting = t(`greeting.${getGreetingKey(hour)}`);
 
   const personas = useAgentStore((s) => s.personas);
   const {

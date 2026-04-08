@@ -1,0 +1,96 @@
+{
+  "about": {
+    "description": "About information will appear here.",
+    "title": "About"
+  },
+  "appearance": {
+    "accent": {
+      "colors": {
+        "blue": "Blue",
+        "cyan": "Cyan",
+        "green": "Green",
+        "indigo": "Indigo",
+        "orange": "Orange",
+        "pink": "Pink",
+        "purple": "Purple",
+        "red": "Red"
+      },
+      "description": "Choose your accent color",
+      "label": "Accent Color"
+    },
+    "density": {
+      "description": "Adjust the spacing of UI elements",
+      "label": "Interface Density",
+      "options": {
+        "comfortable": "Comfortable",
+        "compact": "Compact",
+        "spacious": "Spacious"
+      }
+    },
+    "description": "Customize the look and feel of Goose",
+    "theme": {
+      "description": "Choose your preferred color scheme",
+      "label": "Theme",
+      "options": {
+        "dark": "Dark",
+        "light": "Light",
+        "system": "System"
+      }
+    },
+    "title": "Appearance"
+  },
+  "chats": {
+    "description": "Restore archived chats.",
+    "empty": "No archived chats.",
+    "messageCount_one": "{{displayCount}} message",
+    "messageCount_other": "{{displayCount}} messages",
+    "sectionTitle": "Archived Chats",
+    "title": "Chats",
+    "types": {
+      "project": "Project chat",
+      "standalone": "Standalone chat"
+    }
+  },
+  "deleteProject": {
+    "description": "Are you sure you want to permanently delete \"{{name}}\"? This cannot be undone.",
+    "title": "Delete project permanently?"
+  },
+  "doctor": {
+    "agents": "Agents",
+    "copied": "Copied",
+    "copyDetails": "Copy details",
+    "description": "Verify required tools and agent availability for Goose.",
+    "empty": "No checks are available yet.",
+    "rerun": "Re-run",
+    "runFix": "Run fix command?",
+    "running": "Running checks...",
+    "title": "Doctor",
+    "tools": "Tools"
+  },
+  "general": {
+    "description": "Manage language and other app preferences.",
+    "language": {
+      "description": "Choose how Goose formats and displays the interface.",
+      "english": "English",
+      "label": "Language",
+      "spanish": "Spanish",
+      "system": "System default ({{language}})"
+    },
+    "title": "General"
+  },
+  "nav": {
+    "about": "About",
+    "appearance": "Appearance",
+    "chats": "Chats",
+    "doctor": "Doctor",
+    "general": "General",
+    "projects": "Projects"
+  },
+  "projects": {
+    "description": "Manage your projects.",
+    "empty": "No archived projects.",
+    "sectionTitle": "Archived Projects",
+    "title": "Projects"
+  },
+  "title": "Settings"
+}

@@ -1,0 +1,29 @@
+{
+  "actions": {
+    "archive": "Archivar",
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "fix": "Corregir",
+    "rename": "Renombrar",
+    "restore": "Restaurar",
+    "retry": "Reintentar",
+    "run": "Ejecutar",
+    "running": "Ejecutando"
+  },
+  "buttons": {
+    "openFixUrl": "Abrir URL de solución"
+  },
+  "session": {
+    "defaultTitle": "Nuevo chat"
+  },
+  "usage": {
+    "cache": "Caché",
+    "input": "Entrada",
+    "modelContext": "Uso del contexto del modelo",
+    "output": "Salida",
+    "reasoning": "Razonamiento",
+    "totalCost": "Costo total"
+  }
+}

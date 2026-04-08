@@ -1,0 +1,96 @@
+{
+  "about": {
+    "description": "La información de Goose aparecerá aquí.",
+    "title": "Acerca de"
+  },
+  "appearance": {
+    "accent": {
+      "colors": {
+        "blue": "Azul",
+        "cyan": "Cian",
+        "green": "Verde",
+        "indigo": "Índigo",
+        "orange": "Naranja",
+        "pink": "Rosa",
+        "purple": "Morado",
+        "red": "Rojo"
+      },
+      "description": "Elige tu color de acento",
+      "label": "Color de acento"
+    },
+    "density": {
+      "description": "Ajusta el espaciado de los elementos de la interfaz",
+      "label": "Densidad de la interfaz",
+      "options": {
+        "comfortable": "Cómoda",
+        "compact": "Compacta",
+        "spacious": "Espaciosa"
+      }
+    },
+    "description": "Personaliza el aspecto de Goose",
+    "theme": {
+      "description": "Elige tu esquema de color preferido",
+      "label": "Tema",
+      "options": {
+        "dark": "Oscuro",
+        "light": "Claro",
+        "system": "Sistema"
+      }
+    },
+    "title": "Apariencia"
+  },
+  "chats": {
+    "description": "Restaura chats archivados.",
+    "empty": "No hay chats archivados.",
+    "messageCount_one": "{{displayCount}} mensaje",
+    "messageCount_other": "{{displayCount}} mensajes",
+    "sectionTitle": "Chats archivados",
+    "title": "Chats",
+    "types": {
+      "project": "Chat del proyecto",
+      "standalone": "Chat independiente"
+    }
+  },
+  "deleteProject": {
+    "description": "¿Seguro que quieres eliminar permanentemente \"{{name}}\"? Esta acción no se puede deshacer.",
+    "title": "¿Eliminar el proyecto de forma permanente?"
+  },
+  "doctor": {
+    "agents": "Agentes",
+    "copied": "Copiado",
+    "copyDetails": "Copiar detalles",
+    "description": "Verifica las herramientas necesarias y la disponibilidad de agentes para Goose.",
+    "empty": "Todavía no hay comprobaciones disponibles.",
+    "rerun": "Volver a ejecutar",
+    "runFix": "¿Ejecutar el comando de corrección?",
+    "running": "Ejecutando comprobaciones...",
+    "title": "Diagnóstico",
+    "tools": "Herramientas"
+  },
+  "general": {
+    "description": "Administra el idioma y otras preferencias de la app.",
+    "language": {
+      "description": "Elige cómo Goose formatea y muestra la interfaz.",
+      "english": "Inglés",
+      "label": "Idioma",
+      "spanish": "Español",
+      "system": "Predeterminado del sistema ({{language}})"
+    },
+    "title": "General"
+  },
+  "nav": {
+    "about": "Acerca de",
+    "appearance": "Apariencia",
+    "chats": "Chats",
+    "doctor": "Diagnóstico",
+    "general": "General",
+    "projects": "Proyectos"
+  },
+  "projects": {
+    "description": "Administra tus proyectos.",
+    "empty": "No hay proyectos archivados.",
+    "sectionTitle": "Proyectos archivados",
+    "title": "Proyectos"
+  },
+  "title": "Configuración"
+}

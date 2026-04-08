@@ -5,6 +5,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/shared/ui/collapsible";
+import { useLocaleFormatting } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
 import {
   CheckIcon,
@@ -144,32 +145,19 @@ export type CommitTimestampProps = HTMLAttributes<HTMLTimeElement> & {
   date: Date;
 };
 
-const relativeTimeFormat = new Intl.RelativeTimeFormat("en", {
-  numeric: "auto",
-});
-
-const formatRelativeDate = (date: Date) => {
-  const days = Math.round(
-    (date.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
-  );
-  return relativeTimeFormat.format(days, "day");
-};
-
 export const CommitTimestamp = ({
   date,
   className,
   children,
   ...props
 }: CommitTimestampProps) => {
-  const [formatted, setFormatted] = useState("");
-
-  const updateFormatted = useCallback(() => {
-    setFormatted(formatRelativeDate(date));
-  }, [date]);
-
-  useEffect(() => {
-    updateFormatted();
-  }, [updateFormatted]);
+  const { formatRelativeTime } = useLocaleFormatting();
+  const days = Math.round(
+    (date.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+  );
+  const formatted = formatRelativeTime(days, "day", {
+    numeric: "auto",
+  });
 
   return (
     <time

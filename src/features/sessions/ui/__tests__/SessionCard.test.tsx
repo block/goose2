@@ -16,7 +16,7 @@ describe("SessionCard", () => {
     render(<SessionCard {...defaultProps} />);
 
     expect(screen.getByText("Fix sidebar bug")).toBeInTheDocument();
-    expect(screen.getByText("12")).toBeInTheDocument();
+    expect(screen.getByText("12 messages")).toBeInTheDocument();
   });
 
   it("renders persona name when provided", () => {

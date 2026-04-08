@@ -1,4 +1,5 @@
 import { User } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
 
@@ -8,6 +9,8 @@ interface TopBarProps {
 }
 
 export function TopBar({ onSettingsClick, className }: TopBarProps) {
+  const { t } = useTranslation("settings");
+
   return (
     <header
       className={cn(
@@ -24,7 +27,7 @@ export function TopBar({ onSettingsClick, className }: TopBarProps) {
         size="icon-xs"
         onClick={onSettingsClick}
         className="bg-accent text-muted-foreground hover:bg-accent/80"
-        title="Settings"
+        title={t("title")}
       >
         <User className="size-3.5" />
       </Button>

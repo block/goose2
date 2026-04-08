@@ -2,6 +2,8 @@ import React from "react";
 import "@testing-library/jest-dom/vitest";
 import { beforeEach, vi } from "vitest";
 
+import { DEFAULT_LOCALE, TRANSLATION_NAMESPACES, i18n } from "@/shared/i18n";
+
 vi.mock("react-syntax-highlighter", () => ({
   Prism: ({ children }: { children: React.ReactNode }) =>
     React.createElement(
@@ -76,6 +78,9 @@ function ensureLocalStorage() {
   });
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   ensureLocalStorage();
+  localStorage.removeItem("goose:locale");
+  await i18n.changeLanguage(DEFAULT_LOCALE);
+  await i18n.loadNamespaces(TRANSLATION_NAMESPACES);
 });

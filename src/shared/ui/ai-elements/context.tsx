@@ -6,9 +6,11 @@ import {
 } from "@/shared/ui/hover-card";
 import { Progress } from "@/shared/ui/progress";
 import { cn } from "@/shared/lib/cn";
+import { useLocaleFormatting } from "@/shared/i18n";
 import type { LanguageModelUsage } from "ai";
 import type { ComponentProps } from "react";
 import { createContext, useContext, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { getUsage } from "tokenlens";
 
 const PERCENT_MAX = 100;
@@ -60,6 +62,7 @@ export const Context = ({
 };
 
 const ContextIcon = () => {
+  const { t } = useTranslation("common");
   const { usedTokens, maxTokens } = useContextValue();
   const circumference = 2 * Math.PI * ICON_RADIUS;
   const usedPercent = usedTokens / maxTokens;
@@ -67,7 +70,7 @@ const ContextIcon = () => {
 
   return (
     <svg
-      aria-label="Model context usage"
+      aria-label={t("usage.modelContext")}
       height="20"
       role="img"
       style={{ color: "currentcolor" }}
@@ -103,12 +106,13 @@ const ContextIcon = () => {
 export type ContextTriggerProps = ComponentProps<typeof Button>;
 
 export const ContextTrigger = ({ children, ...props }: ContextTriggerProps) => {
+  const { formatNumber } = useLocaleFormatting();
   const { usedTokens, maxTokens } = useContextValue();
   const usedPercent = usedTokens / maxTokens;
-  const renderedPercent = new Intl.NumberFormat("en-US", {
+  const renderedPercent = formatNumber(usedPercent, {
     maximumFractionDigits: 1,
     style: "percent",
-  }).format(usedPercent);
+  });
 
   return (
     <HoverCardTrigger asChild>
@@ -143,18 +147,19 @@ export const ContextContentHeader = ({
   className,
   ...props
 }: ContextContentHeaderProps) => {
+  const { formatNumber } = useLocaleFormatting();
   const { usedTokens, maxTokens } = useContextValue();
   const usedPercent = usedTokens / maxTokens;
-  const displayPct = new Intl.NumberFormat("en-US", {
+  const displayPct = formatNumber(usedPercent, {
     maximumFractionDigits: 1,
     style: "percent",
-  }).format(usedPercent);
-  const used = new Intl.NumberFormat("en-US", {
+  });
+  const used = formatNumber(usedTokens, {
     notation: "compact",
-  }).format(usedTokens);
-  const total = new Intl.NumberFormat("en-US", {
+  });
+  const total = formatNumber(maxTokens, {
     notation: "compact",
-  }).format(maxTokens);
+  });
 
   return (
     <div className={cn("w-full space-y-2 p-3", className)} {...props}>
@@ -194,6 +199,8 @@ export const ContextContentFooter = ({
   className,
   ...props
 }: ContextContentFooterProps) => {
+  const { t } = useTranslation("common");
+  const { formatNumber } = useLocaleFormatting();
   const { modelId, usage } = useContextValue();
   const costUSD = modelId
     ? getUsage({
@@ -204,10 +211,10 @@ export const ContextContentFooter = ({
         },
       }).costUSD?.totalUSD
     : undefined;
-  const totalCost = new Intl.NumberFormat("en-US", {
+  const totalCost = formatNumber(costUSD ?? 0, {
     currency: "USD",
     style: "currency",
-  }).format(costUSD ?? 0);
+  });
 
   return (
     <div
@@ -219,7 +226,7 @@ export const ContextContentFooter = ({
     >
       {children ?? (
         <>
-          <span className="text-muted-foreground">Total cost</span>
+          <span className="text-muted-foreground">{t("usage.totalCost")}</span>
           <span>{totalCost}</span>
         </>
       )}
@@ -233,18 +240,22 @@ const TokensWithCost = ({
 }: {
   tokens?: number;
   costText?: string;
-}) => (
-  <span>
-    {tokens === undefined
-      ? "—"
-      : new Intl.NumberFormat("en-US", {
-          notation: "compact",
-        }).format(tokens)}
-    {costText ? (
-      <span className="ml-2 text-muted-foreground">• {costText}</span>
-    ) : null}
-  </span>
-);
+}) => {
+  const { formatNumber } = useLocaleFormatting();
+
+  return (
+    <span>
+      {tokens === undefined
+        ? "—"
+        : formatNumber(tokens, {
+            notation: "compact",
+          })}
+      {costText ? (
+        <span className="ml-2 text-muted-foreground">• {costText}</span>
+      ) : null}
+    </span>
+  );
+};
 
 export type ContextInputUsageProps = ComponentProps<"div">;
 
@@ -253,6 +264,8 @@ export const ContextInputUsage = ({
   children,
   ...props
 }: ContextInputUsageProps) => {
+  const { t } = useTranslation("common");
+  const { formatNumber } = useLocaleFormatting();
   const { usage, modelId } = useContextValue();
   const inputTokens = usage?.inputTokens ?? 0;
 
@@ -270,17 +283,17 @@ export const ContextInputUsage = ({
         usage: { input: inputTokens, output: 0 },
       }).costUSD?.totalUSD
     : undefined;
-  const inputCostText = new Intl.NumberFormat("en-US", {
+  const inputCostText = formatNumber(inputCost ?? 0, {
     currency: "USD",
     style: "currency",
-  }).format(inputCost ?? 0);
+  });
 
   return (
     <div
       className={cn("flex items-center justify-between text-xs", className)}
       {...props}
     >
-      <span className="text-muted-foreground">Input</span>
+      <span className="text-muted-foreground">{t("usage.input")}</span>
       <TokensWithCost costText={inputCostText} tokens={inputTokens} />
     </div>
   );
@@ -293,6 +306,8 @@ export const ContextOutputUsage = ({
   children,
   ...props
 }: ContextOutputUsageProps) => {
+  const { t } = useTranslation("common");
+  const { formatNumber } = useLocaleFormatting();
   const { usage, modelId } = useContextValue();
   const outputTokens = usage?.outputTokens ?? 0;
 
@@ -310,17 +325,17 @@ export const ContextOutputUsage = ({
         usage: { input: 0, output: outputTokens },
       }).costUSD?.totalUSD
     : undefined;
-  const outputCostText = new Intl.NumberFormat("en-US", {
+  const outputCostText = formatNumber(outputCost ?? 0, {
     currency: "USD",
     style: "currency",
-  }).format(outputCost ?? 0);
+  });
 
   return (
     <div
       className={cn("flex items-center justify-between text-xs", className)}
       {...props}
     >
-      <span className="text-muted-foreground">Output</span>
+      <span className="text-muted-foreground">{t("usage.output")}</span>
       <TokensWithCost costText={outputCostText} tokens={outputTokens} />
     </div>
   );
@@ -333,6 +348,8 @@ export const ContextReasoningUsage = ({
   children,
   ...props
 }: ContextReasoningUsageProps) => {
+  const { t } = useTranslation("common");
+  const { formatNumber } = useLocaleFormatting();
   const { usage, modelId } = useContextValue();
   const reasoningTokens = usage?.reasoningTokens ?? 0;
 
@@ -350,17 +367,17 @@ export const ContextReasoningUsage = ({
         usage: { reasoningTokens },
       }).costUSD?.totalUSD
     : undefined;
-  const reasoningCostText = new Intl.NumberFormat("en-US", {
+  const reasoningCostText = formatNumber(reasoningCost ?? 0, {
     currency: "USD",
     style: "currency",
-  }).format(reasoningCost ?? 0);
+  });
 
   return (
     <div
       className={cn("flex items-center justify-between text-xs", className)}
       {...props}
     >
-      <span className="text-muted-foreground">Reasoning</span>
+      <span className="text-muted-foreground">{t("usage.reasoning")}</span>
       <TokensWithCost costText={reasoningCostText} tokens={reasoningTokens} />
     </div>
   );
@@ -373,6 +390,8 @@ export const ContextCacheUsage = ({
   children,
   ...props
 }: ContextCacheUsageProps) => {
+  const { t } = useTranslation("common");
+  const { formatNumber } = useLocaleFormatting();
   const { usage, modelId } = useContextValue();
   const cacheTokens = usage?.cachedInputTokens ?? 0;
 
@@ -390,17 +409,17 @@ export const ContextCacheUsage = ({
         usage: { cacheReads: cacheTokens, input: 0, output: 0 },
       }).costUSD?.totalUSD
     : undefined;
-  const cacheCostText = new Intl.NumberFormat("en-US", {
+  const cacheCostText = formatNumber(cacheCost ?? 0, {
     currency: "USD",
     style: "currency",
-  }).format(cacheCost ?? 0);
+  });
 
   return (
     <div
       className={cn("flex items-center justify-between text-xs", className)}
       {...props}
     >
-      <span className="text-muted-foreground">Cache</span>
+      <span className="text-muted-foreground">{t("usage.cache")}</span>
       <TokensWithCost costText={cacheCostText} tokens={cacheTokens} />
     </div>
   );

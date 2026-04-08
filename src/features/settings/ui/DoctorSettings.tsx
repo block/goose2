@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { RefreshCw, ClipboardCopy, Check, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/shared/ui/button";
 import { Separator } from "@/shared/ui/separator";
 import {
@@ -48,6 +49,7 @@ function formatDebugReport(report: DoctorReport): string {
 }
 
 export function DoctorSettings() {
+  const { t } = useTranslation(["settings", "common"]);
   const [report, setReport] = useState<DoctorReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -95,10 +97,10 @@ export function DoctorSettings() {
       <div className="flex items-start justify-between gap-4 pr-8">
         <div>
           <h3 className="text-lg font-semibold font-display tracking-tight">
-            Doctor
+            {t("doctor.title")}
           </h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Verify required tools and agent availability for Goose.
+            {t("doctor.description")}
           </p>
         </div>
 
@@ -116,7 +118,7 @@ export function DoctorSettings() {
               ) : (
                 <ClipboardCopy className="size-3.5" />
               )}
-              {copied ? "Copied" : "Copy details"}
+              {copied ? t("doctor.copied") : t("doctor.copyDetails")}
             </Button>
           )}
 
@@ -129,7 +131,7 @@ export function DoctorSettings() {
               className="text-muted-foreground hover:text-foreground"
             >
               <RefreshCw className="size-3.5" />
-              Re-run
+              {t("doctor.rerun")}
             </Button>
           )}
         </div>
@@ -140,13 +142,13 @@ export function DoctorSettings() {
       {loading ? (
         <div className="flex min-h-[160px] items-center justify-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" />
-          Running checks...
+          {t("doctor.running")}
         </div>
       ) : report ? (
         <div className="space-y-6">
           <div className="mx-auto w-full max-w-xl space-y-2">
             <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Tools
+              {t("doctor.tools")}
             </h4>
             <div className="space-y-2">
               {toolChecks.map((check) => (
@@ -162,7 +164,7 @@ export function DoctorSettings() {
           {agentChecks.length > 0 && (
             <div className="mx-auto w-full max-w-xl space-y-2">
               <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Agents
+                {t("doctor.agents")}
               </h4>
               <div className="space-y-2">
                 {agentChecks.map((check) => (
@@ -178,7 +180,7 @@ export function DoctorSettings() {
         </div>
       ) : (
         <div className="flex min-h-[160px] items-center justify-center text-sm text-muted-foreground">
-          No checks are available yet.
+          {t("doctor.empty")}
         </div>
       )}
     </div>
