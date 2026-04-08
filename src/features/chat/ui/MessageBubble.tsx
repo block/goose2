@@ -56,31 +56,11 @@ interface ToolChainItem {
   response?: ToolResponseContent;
 }
 
-const INTERNAL_TOOL_PREFIXES = new Set([
-  "awk",
-  "bash",
-  "cat",
-  "chmod",
-  "cp",
-  "echo",
-  "find",
-  "grep",
-  "head",
-  "ls",
-  "mv",
-  "open",
-  "pip",
-  "pip3",
-  "python",
-  "python3",
-  "rm",
-  "sed",
-  "sh",
-  "tail",
-  "wc",
-  "which",
-  "zsh",
-]);
+const INTERNAL_TOOL_PREFIXES = new Set(
+  "awk bash cat chmod cp echo find grep head ls mv open pip pip3 python python3 rm sed sh tail wc which zsh".split(
+    " ",
+  ),
+);
 
 function getToolItemName(item: ToolChainItem): string {
   return item.request?.name || item.response?.name || "Tool result";
@@ -284,10 +264,18 @@ function renderContentBlock(
   content: MessageContent,
   index: number,
   isStreamingMsg?: boolean,
+  isUserMessage?: boolean,
 ) {
   switch (content.type) {
     case "text": {
       const tc = content as TextContent;
+      if (isUserMessage) {
+        return (
+          <p key={`text-${index}`} className="whitespace-pre-wrap break-words">
+            {tc.text}
+          </p>
+        );
+      }
       return (
         <MessageResponse key={`text-${index}`} isAnimating={isStreamingMsg}>
           {tc.text}
@@ -459,7 +447,7 @@ export function MessageBubble({
             const block = section.items[0] as MessageContent;
             return (
               <div key={`${message.id}-${section.key}`}>
-                {renderContentBlock(block, sectionIdx, isStreaming)}
+                {renderContentBlock(block, sectionIdx, isStreaming, isUser)}
               </div>
             );
           })}
