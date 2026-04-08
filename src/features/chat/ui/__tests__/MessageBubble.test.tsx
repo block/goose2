@@ -70,11 +70,11 @@ describe("MessageBubble", () => {
   });
 
   it("shows action buttons on hover (retry for assistant)", () => {
-    const onRetry = vi.fn();
+    const onRetryMessage = vi.fn();
     render(
       <MessageBubble
         message={assistantMessage([{ type: "text", text: "response" }])}
-        onRetry={onRetry}
+        onRetryMessage={onRetryMessage}
       />,
     );
     const retryBtn = screen.getByRole("button", { name: /retry/i });

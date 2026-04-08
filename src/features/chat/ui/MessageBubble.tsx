@@ -31,8 +31,8 @@ interface MessageBubbleProps {
   agentAvatarUrl?: string;
   isStreaming?: boolean;
   onCopy?: () => void;
-  onRetry?: () => void;
-  onEdit?: () => void;
+  onRetryMessage?: (messageId: string) => void;
+  onEditMessage?: (messageId: string) => void;
 }
 
 interface ContentSection {
@@ -236,8 +236,8 @@ export const MessageBubble = memo(function MessageBubble({
   agentName,
   agentAvatarUrl,
   isStreaming,
-  onRetry,
-  onEdit,
+  onRetryMessage,
+  onEditMessage,
 }: MessageBubbleProps) {
   const { role, content, created } = message;
   const { handleContentClick, pathNotice } = useArtifactLinkHandler();
@@ -325,13 +325,19 @@ export const MessageBubble = memo(function MessageBubble({
         {/* Hover actions + timestamp */}
         <MessageActions className="opacity-0 transition-opacity duration-150 group-hover:opacity-100">
           {textContent && <CopyAction text={textContent} />}
-          {!isUser && onRetry && (
-            <MessageAction tooltip="Retry" onClick={onRetry}>
+          {!isUser && onRetryMessage && (
+            <MessageAction
+              tooltip="Retry"
+              onClick={() => onRetryMessage(message.id)}
+            >
               <RotateCcw className="size-3.5" />
             </MessageAction>
           )}
-          {isUser && onEdit && (
-            <MessageAction tooltip="Edit" onClick={onEdit}>
+          {isUser && onEditMessage && (
+            <MessageAction
+              tooltip="Edit"
+              onClick={() => onEditMessage(message.id)}
+            >
               <Pencil className="size-3.5" />
             </MessageAction>
           )}
