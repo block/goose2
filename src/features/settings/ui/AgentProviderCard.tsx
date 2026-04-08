@@ -80,17 +80,15 @@ export function AgentProviderCard({ provider }: AgentProviderCardProps) {
   useEffect(() => {
     if (!hasBinary || isBuiltIn || !provider.binaryName) return;
 
-    checkAgentInstalled(provider.binaryName)
+    checkAgentInstalled(provider.id)
       .then((installed) => {
         if (!isMountedRef.current) return;
         setIsInstalled(installed);
         if (installed && provider.authStatusCommand) {
-          return checkAgentAuth(provider.authStatusCommand).then(
-            (authenticated) => {
-              if (!isMountedRef.current) return;
-              setIsAuthenticated(authenticated);
-            },
-          );
+          return checkAgentAuth(provider.id).then((authenticated) => {
+            if (!isMountedRef.current) return;
+            setIsAuthenticated(authenticated);
+          });
         }
         if (installed && !provider.authStatusCommand) {
           setIsAuthenticated(getAuthHint() ? true : null);
@@ -108,6 +106,7 @@ export function AgentProviderCard({ provider }: AgentProviderCardProps) {
     getAuthHint,
     hasBinary,
     isBuiltIn,
+    provider.id,
     provider.binaryName,
     provider.authStatusCommand,
     setAuthHint,
@@ -156,7 +155,7 @@ export function AgentProviderCard({ provider }: AgentProviderCardProps) {
     unlistenRef.current = unlisten;
 
     try {
-      await installAgent(provider.id, provider.installCommand);
+      await installAgent(provider.id);
       clearListener();
       if (!isMountedRef.current) return;
 
@@ -203,7 +202,7 @@ export function AgentProviderCard({ provider }: AgentProviderCardProps) {
     unlistenRef.current = unlisten;
 
     try {
-      await authenticateAgent(provider.id, provider.authCommand);
+      await authenticateAgent(provider.id);
       clearListener();
       if (!isMountedRef.current) return;
       setAuthHint(true);
