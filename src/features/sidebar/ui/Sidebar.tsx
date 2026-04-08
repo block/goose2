@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   IconLayoutSidebar,
   IconLayoutSidebarFilled,
@@ -154,16 +154,6 @@ export function Sidebar({
     return { byProject, standalone: limitedStandalone };
   })();
 
-  // Invalidates ref callbacks below when list order changes, so SidebarChatRow
-  // re-measures the highlight pill position after re-sorts.
-  const listOrderKey = useMemo(() => {
-    const all = [
-      ...Object.values(projectSessions.byProject).flat(),
-      ...projectSessions.standalone,
-    ];
-    return all.map((s) => s.id).join(",");
-  }, [projectSessions]);
-
   const agentStoreState = useAgentStore();
   const projectStoreState = useProjectStore();
 
@@ -315,20 +305,17 @@ export function Sidebar({
   ]);
 
   // Ref callbacks to position the highlight on active session or project row.
-  // listOrderKey invalidates these so downstream effects re-measure after re-sorts.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: listOrderKey intentionally included to invalidate callback identity on re-sort
   const activeSessionRefCallback = useCallback(
     (el: HTMLElement | null) => {
       if (activeSessionId && el) updateActiveRect(el);
     },
-    [activeSessionId, updateActiveRect, listOrderKey],
+    [activeSessionId, updateActiveRect],
   );
-  // biome-ignore lint/correctness/useExhaustiveDependencies: listOrderKey intentionally included to invalidate callback identity on re-sort
   const activeProjectRefCallback = useCallback(
     (el: HTMLElement | null) => {
       if (activeProjectId && el) updateActiveRect(el);
     },
-    [activeProjectId, updateActiveRect, listOrderKey],
+    [activeProjectId, updateActiveRect],
   );
 
   return (

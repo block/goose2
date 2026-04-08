@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface HighlightRect {
   top: number;
@@ -28,6 +28,23 @@ export function useSidebarHighlight(
     },
     [navRef],
   );
+
+  // Re-measure the active element whenever the nav subtree changes
+  // (project expand/collapse, list re-sort, filtering, show-more, etc.).
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+
+    const observer = new MutationObserver(() => {
+      const el = activeElRef.current;
+      if (!el) return;
+      const rect = measureElement(el);
+      if (rect) setActiveRect(rect);
+    });
+
+    observer.observe(nav, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [navRef, measureElement]);
 
   const onItemMouseEnter = useCallback(
     (e: React.MouseEvent<HTMLElement>) => {
