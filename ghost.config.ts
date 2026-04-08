@@ -9,17 +9,4 @@ export default defineConfig({
       styleEntry: "src/shared/styles/globals.css",
     },
   ],
-  scan: {
-    values: true,
-    structure: true,
-    visual: false,
-    analysis: false,
-  },
-  rules: {
-    "hardcoded-color": "error",
-    "token-override": "warn",
-    "missing-token": "warn",
-    "structural-divergence": "error",
-    "missing-component": "warn",
-  },
 });
