@@ -1,7 +1,10 @@
 pub mod acp;
+pub mod agent_setup;
 pub mod agents;
+pub mod credentials;
 pub mod doctor;
 pub mod git;
+pub mod model_setup;
 pub mod projects;
 pub mod skills;
 pub mod system;
