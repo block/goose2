@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { getDisplaySessionTitle } from "@/features/chat/lib/sessionTitle";
+import {
+  getDisplaySessionTitle,
+  getEditableSessionTitle,
+  isSessionTitleUnchanged,
+} from "@/features/chat/lib/sessionTitle";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
 import {
@@ -49,17 +53,21 @@ export function SidebarChatRow({
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [dragging, setDragging] = useState(false);
-  const [draftTitle, setDraftTitle] = useState(title);
   const inputRef = useRef<HTMLInputElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
   const displayTitle = getDisplaySessionTitle(
     title,
     t("common:session.defaultTitle"),
   );
+  const editableTitle = getEditableSessionTitle(
+    title,
+    t("common:session.defaultTitle"),
+  );
+  const [draftTitle, setDraftTitle] = useState(editableTitle);
 
   useEffect(() => {
-    setDraftTitle(title);
-  }, [title]);
+    setDraftTitle(editableTitle);
+  }, [editableTitle]);
 
   useEffect(() => {
     if (!editing) return;
@@ -82,20 +90,29 @@ export function SidebarChatRow({
   }, [activeRef, isActive]);
 
   const startRename = () => {
-    setDraftTitle(title);
+    setDraftTitle(editableTitle);
     setMenuOpen(false);
     setEditing(true);
   };
 
   const cancelRename = () => {
-    setDraftTitle(title);
+    setDraftTitle(editableTitle);
     setEditing(false);
   };
 
   const commitRename = () => {
     const nextTitle = draftTitle.trim();
     setEditing(false);
-    if (!nextTitle || nextTitle === title) return;
+    if (
+      !nextTitle ||
+      isSessionTitleUnchanged(
+        nextTitle,
+        title,
+        t("common:session.defaultTitle"),
+      )
+    ) {
+      return;
+    }
     onRename?.(id, nextTitle);
   };
 

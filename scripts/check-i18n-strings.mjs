@@ -65,9 +65,12 @@ function walkPath(targetPath) {
 
 function isExcluded(filePath) {
   const rel = relative(".", filePath);
+  const normalizedRel = rel.replace(/\\/g, "/");
+  const pathSegments = normalizedRel.split("/");
+
   return (
-    EXCLUDED_PATH_SEGMENTS.some((segment) => rel.includes(`/${segment}/`)) ||
-    EXCLUDED_FILE_MARKERS.some((marker) => rel.includes(marker))
+    EXCLUDED_PATH_SEGMENTS.some((segment) => pathSegments.includes(segment)) ||
+    EXCLUDED_FILE_MARKERS.some((marker) => normalizedRel.includes(marker))
   );
 }
 
