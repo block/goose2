@@ -21,9 +21,9 @@ const EXCEPTIONS = {
       "Added useSessionAutoTitle hook call for smart session naming.",
   },
   "src/features/sidebar/ui/Sidebar.tsx": {
-    limit: 580,
+    limit: 590,
     justification:
-      "Search-as-you-type filtering plus draft-aware sidebar highlight logic.",
+      "Search-as-you-type filtering, draft-aware sidebar highlight logic, and listOrderKey for re-sort re-measurement.",
   },
   "src-tauri/src/services/acp/manager.rs": {
     limit: 520,
