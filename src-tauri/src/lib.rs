@@ -83,7 +83,7 @@ pub fn run() {
             commands::agent_setup::install_agent,
             commands::agent_setup::authenticate_agent,
             commands::system::get_home_dir,
-            commands::system::write_text_file,
+            commands::system::save_exported_session_file,
             commands::system::path_exists,
         ])
         .setup(|_app| Ok(()))

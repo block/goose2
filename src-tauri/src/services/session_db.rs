@@ -486,7 +486,7 @@ pub fn read_session(
     // Fallback: read from threads + thread_messages tables
     let thread = conn
         .query_row(
-            "SELECT id, name, created_at, updated_at, user_set_name
+            "SELECT id, name, working_dir, created_at, updated_at, user_set_name
              FROM threads WHERE id = ?1",
             params![session_id],
             |row| {
@@ -495,13 +495,14 @@ pub fn read_session(
                     row.get::<_, Option<String>>(1)?,
                     row.get::<_, Option<String>>(2)?,
                     row.get::<_, Option<String>>(3)?,
-                    row.get::<_, Option<bool>>(4)?,
+                    row.get::<_, Option<String>>(4)?,
+                    row.get::<_, Option<bool>>(5)?,
                 ))
             },
         )
         .map_err(|e| format!("Session '{session_id}' not found in sessions or threads: {e}"))?;
 
-    let (thread_id, name, created_at, updated_at, user_set_name) = thread;
+    let (thread_id, name, working_dir, created_at, updated_at, user_set_name) = thread;
 
     // Build a SessionRow from thread data (with sensible defaults for missing fields)
     let session = SessionRow {
@@ -510,7 +511,7 @@ pub fn read_session(
         description: None,
         user_set_name: Some(user_set_name.unwrap_or(false)),
         session_type: Some("acp".to_string()),
-        working_dir: None,
+        working_dir,
         created_at,
         updated_at,
         extension_data: Some("{}".to_string()),

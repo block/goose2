@@ -172,17 +172,17 @@ pub async fn acp_prepare_session(
 #[tauri::command]
 pub async fn acp_list_sessions(app_handle: AppHandle) -> Result<Vec<AcpSessionInfo>, String> {
     let manager = GooseAcpManager::start(app_handle).await?;
-    let db_path = session_db::session_db_path()?;
-    let counts = session_db::thread_message_counts(&db_path)?;
-    let sessions = manager.list_sessions().await?;
+    let mut sessions = manager.list_sessions().await?;
 
-    Ok(sessions
-        .into_iter()
-        .map(|mut session| {
-            session.message_count = counts.get(&session.session_id).copied().unwrap_or(0);
-            session
-        })
-        .collect())
+    if let Ok(db_path) = session_db::session_db_path() {
+        if let Ok(counts) = session_db::thread_message_counts(&db_path) {
+            for session in &mut sessions {
+                session.message_count = counts.get(&session.session_id).copied().unwrap_or(0);
+            }
+        }
+    }
+
+    Ok(sessions)
 }
 
 /// Load an existing session, replaying its messages as Tauri events.
@@ -336,7 +336,7 @@ pub async fn acp_import_session(
 
     // 1. Create session via ACP so the binary knows about it
     let working_dir = resolve_working_dir(
-        Some(exported.working_dir.clone().unwrap_or_default()),
+        exported.working_dir.clone(),
         &std::env::current_dir().unwrap_or_default(),
     )?;
     let manager = GooseAcpManager::start(app_handle).await?;
@@ -382,7 +382,7 @@ pub async fn acp_duplicate_session(
 
     // 2. Create new session via ACP
     let working_dir = resolve_working_dir(
-        Some(exported.working_dir.clone().unwrap_or_default()),
+        exported.working_dir.clone(),
         &std::env::current_dir().unwrap_or_default(),
     )?;
     let manager = GooseAcpManager::start(app_handle).await?;

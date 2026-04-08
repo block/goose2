@@ -16,7 +16,7 @@ import {
   acpExportSession,
   acpImportSession,
 } from "@/shared/api/acp";
-import { writeTextFile } from "@/shared/api/system";
+import { saveExportedSessionFile } from "@/shared/api/system";
 import { defaultExportFilename, downloadJson } from "../lib/exportSession";
 import { parseImportedSession } from "../lib/importSession";
 
@@ -100,18 +100,10 @@ export function SessionHistoryView({
         const filename = defaultExportFilename(session?.title ?? "session");
 
         if (window.__TAURI_INTERNALS__) {
-          const { save } = await import("@tauri-apps/plugin-dialog");
-          const selectedPath = await save({
-            title: "Export Session",
-            defaultPath: filename,
-            filters: [{ name: "JSON", extensions: ["json"] }],
-          });
-
-          if (!selectedPath) {
+          const savedPath = await saveExportedSessionFile(filename, json);
+          if (!savedPath) {
             return;
           }
-
-          await writeTextFile(selectedPath, json);
           toast.success(`Exported session to ${filename}`);
           return;
         }
