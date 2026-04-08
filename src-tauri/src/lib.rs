@@ -5,6 +5,7 @@ mod types;
 use std::sync::Arc;
 
 use services::acp::AcpSessionRegistry;
+use services::goose_config::GooseConfig;
 use services::personas::PersonaStore;
 use tauri_plugin_window_state::StateFlags;
 
@@ -30,6 +31,7 @@ pub fn run() {
                 .build(),
         )
         .manage(PersonaStore::new())
+        .manage(GooseConfig::new())
         .manage(acp_registry)
         .invoke_handler(tauri::generate_handler![
             commands::agents::list_personas,
@@ -67,6 +69,16 @@ pub fn run() {
             commands::doctor::run_doctor,
             commands::doctor::run_doctor_fix,
             commands::git::get_git_state,
+            commands::credentials::get_provider_config,
+            commands::credentials::save_provider_field,
+            commands::credentials::delete_provider_config,
+            commands::credentials::check_all_provider_status,
+            commands::credentials::restart_app,
+            commands::model_setup::authenticate_model_provider,
+            commands::agent_setup::check_agent_installed,
+            commands::agent_setup::check_agent_auth,
+            commands::agent_setup::install_agent,
+            commands::agent_setup::authenticate_agent,
             commands::system::get_home_dir,
             commands::system::path_exists,
         ])

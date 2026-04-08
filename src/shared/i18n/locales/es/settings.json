@@ -84,7 +84,8 @@
     "chats": "Chats",
     "doctor": "Diagnóstico",
     "general": "General",
-    "projects": "Proyectos"
+    "projects": "Proyectos",
+    "providers": "Proveedores"
   },
   "projects": {
     "description": "Administra tus proyectos.",

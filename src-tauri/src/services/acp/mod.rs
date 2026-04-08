@@ -5,6 +5,7 @@ mod registry;
 mod writer;
 
 pub use manager::{AcpSessionInfo, GooseAcpManager};
+pub(crate) use goose_serve::resolve_goose_binary;
 pub use registry::{AcpRunningSession, AcpSessionRegistry};
 pub use writer::TauriMessageWriter;
 

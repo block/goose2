@@ -30,6 +30,7 @@ tokio = { version = "1.50.0", features = ["full"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 serde_yaml = "0.9"
+etcetera = "0.8"
 futures = "0.3"
 tokio-stream = "0.1"
 tokio-util = { version = "0.7", features = ["compat", "rt"] }
@@ -38,6 +39,15 @@ agent-client-protocol = "0.10.4"
 tokio-tungstenite = "0.21.0"
 acp-client = { git = "https://github.com/block/builderbot", rev = "6cb674a704f3a9e402a76e9aeed734144d6cec11" }
 doctor = { git = "https://github.com/block/builderbot", rev = "bfce29264181236a2e5b4fd903ace6291f6a7594" }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+keyring = { version = "3", features = ["apple-native"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+keyring = { version = "3", features = ["windows-native"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+keyring = { version = "3", features = ["linux-native-sync-persistent", "crypto-rust"] }
 
 [dev-dependencies]
 tempfile = "3"
