@@ -68,7 +68,7 @@ export function ConnectedFieldsPanel({
                 <p className="text-sm">{field.label}</p>
                 {!isEditing && (
                   <p className="truncate text-xs text-muted-foreground">
-                    {getDisplayValue(field, fieldValueMap)}
+                    {getDisplayValue(field, fieldValueMap, t)}
                   </p>
                 )}
               </div>
@@ -97,7 +97,7 @@ export function ConnectedFieldsPanel({
                   placeholder={
                     field.secret &&
                     resolveFieldValue(field, fieldValueMap).isSet
-                      ? getDisplayValue(field, fieldValueMap)
+                      ? getDisplayValue(field, fieldValueMap, t)
                       : field.placeholder
                   }
                   onChange={(event) =>
@@ -223,7 +223,7 @@ export function SetupFieldsPanel({
               value={draftValues[field.key] ?? ""}
               placeholder={
                 field.secret && fieldValue.isSet
-                  ? getDisplayValue(field, fieldValueMap)
+                  ? getDisplayValue(field, fieldValueMap, t)
                   : field.placeholder
               }
               onChange={(event) => onDraftChange(field.key, event.target.value)}
@@ -251,7 +251,7 @@ export function SetupFieldsPanel({
       </div>
       {setupMethod === "host_with_oauth_fallback"
         ? renderInlineCodeMessage(
-            "Leave Access Token blank, save your host URL, then run `goose configure` in your terminal to sign in.",
+            t("providers.models.setup.hostWithOauthFallbackTerminal"),
           )
         : null}
       {setupMethod === "cloud_credentials" && setupMessage

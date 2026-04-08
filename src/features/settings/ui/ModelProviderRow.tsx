@@ -306,12 +306,15 @@ export function ModelProviderRow({
       provider.setupMethod,
       isConnected,
       supportsNativeConnect,
+      t,
     );
     const nativeConnectDescription = getNativeConnectDescription(
       provider.setupMethod,
+      t,
     );
     const fieldSetupDescription = getFieldSetupDescription(
       provider.setupMethod,
+      t,
     );
 
     if (loadingConfig && hasFields) {

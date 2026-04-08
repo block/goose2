@@ -105,6 +105,29 @@
     "disconnect": "Disconnect",
     "models": {
       "description": "AI models that power Goose. Expand a provider to review what it needs. Connect signs in with an existing account, while Set up saves API keys or other provider settings.",
+      "notSet": "Not set",
+      "setup": {
+        "connected": {
+          "cloudCredentials": "Connected through your cloud credentials.",
+          "local": "Running locally.",
+          "oauthBrowser": "Connected through Goose sign-in.",
+          "oauthDeviceCode": "Connected through Goose device-code sign-in."
+        },
+        "fieldDescription": {
+          "cloudCredentials": "Set up saves any provider details Goose needs here. Your actual authentication still comes from your cloud credentials.",
+          "configFields": "Set up saves the provider details Goose needs, such as an API key, endpoint, or model settings.",
+          "hostWithOauthFallback": "Set up saves the host details Goose needs here. You can add a token now, or leave it blank and sign in afterward from Goose.",
+          "singleApiKey": "Set up saves the API key Goose needs for this provider."
+        },
+        "hostWithOauthFallbackTerminal": "Leave Access Token blank, save your host URL, then run `goose configure` in your terminal to sign in.",
+        "nativeConnectDescription": "Sign in with your existing account.",
+        "pending": {
+          "cloudCredentials": "Configure your cloud credentials in your terminal environment before using this provider.",
+          "local": "This provider runs locally and does not need saved settings here.",
+          "oauthGuided": "Goose will guide you through sign-in from here.",
+          "oauthTerminal": "Run `goose configure` in your terminal to finish sign-in."
+        }
+      },
       "title": "Models"
     },
     "restartButton": "Restart now",

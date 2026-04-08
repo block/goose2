@@ -31,10 +31,11 @@ export function resolveFieldValue(
 export function getDisplayValue(
   field: ProviderField,
   fieldValueMap: Map<string, ProviderFieldValue>,
+  t: (key: string) => string,
 ): string {
   const fieldValue = resolveFieldValue(field, fieldValueMap);
-  if (!fieldValue.isSet) return "Not set";
-  return fieldValue.value ?? "Saved";
+  if (!fieldValue.isSet) return t("providers.models.notSet");
+  return fieldValue.value ?? t("providers.saved");
 }
 
 export function createDraftValues(
@@ -57,17 +58,18 @@ export function getSetupMessage(
   setupMethod: ProviderSetupMethod,
   isConnected: boolean,
   supportsNativeConnect: boolean,
+  t: (key: string) => string,
 ): string | null {
   if (isConnected) {
     switch (setupMethod) {
       case "oauth_device_code":
-        return "Connected through Goose device-code sign-in.";
+        return t("providers.models.setup.connected.oauthDeviceCode");
       case "oauth_browser":
-        return "Connected through Goose sign-in.";
+        return t("providers.models.setup.connected.oauthBrowser");
       case "cloud_credentials":
-        return "Connected through your cloud credentials.";
+        return t("providers.models.setup.connected.cloudCredentials");
       case "local":
-        return "Running locally.";
+        return t("providers.models.setup.connected.local");
       default:
         return null;
     }
@@ -77,12 +79,12 @@ export function getSetupMessage(
     case "oauth_browser":
     case "oauth_device_code":
       return supportsNativeConnect
-        ? "Goose will guide you through sign-in from here."
-        : "Run `goose configure` in your terminal to finish sign-in.";
+        ? t("providers.models.setup.pending.oauthGuided")
+        : t("providers.models.setup.pending.oauthTerminal");
     case "cloud_credentials":
-      return "Configure your cloud credentials in your terminal environment before using this provider.";
+      return t("providers.models.setup.pending.cloudCredentials");
     case "local":
-      return "This provider runs locally and does not need saved settings here.";
+      return t("providers.models.setup.pending.local");
     default:
       return null;
   }
@@ -90,11 +92,12 @@ export function getSetupMessage(
 
 export function getNativeConnectDescription(
   setupMethod: ProviderSetupMethod,
+  t: (key: string) => string,
 ): string | null {
   switch (setupMethod) {
     case "oauth_device_code":
     case "oauth_browser":
-      return "Sign in with your existing account.";
+      return t("providers.models.setup.nativeConnectDescription");
     default:
       return null;
   }
@@ -102,16 +105,17 @@ export function getNativeConnectDescription(
 
 export function getFieldSetupDescription(
   setupMethod: ProviderSetupMethod,
+  t: (key: string) => string,
 ): string | null {
   switch (setupMethod) {
     case "single_api_key":
-      return "Set up saves the API key Goose needs for this provider.";
+      return t("providers.models.setup.fieldDescription.singleApiKey");
     case "config_fields":
-      return "Set up saves the provider details Goose needs, such as an API key, endpoint, or model settings.";
+      return t("providers.models.setup.fieldDescription.configFields");
     case "host_with_oauth_fallback":
-      return "Set up saves the host details Goose needs here. You can add a token now, or leave it blank and sign in afterward from Goose.";
+      return t("providers.models.setup.fieldDescription.hostWithOauthFallback");
     case "cloud_credentials":
-      return "Set up saves any provider details Goose needs here. Your actual authentication still comes from your cloud credentials.";
+      return t("providers.models.setup.fieldDescription.cloudCredentials");
     default:
       return null;
   }
