@@ -220,3 +220,60 @@ describe("chatStore draft localStorage persistence", () => {
     expect(stored).toEqual({ s2: "world" });
   });
 });
+
+describe("chatStore session loading state", () => {
+  beforeEach(() => {
+    useChatStore.setState({
+      messagesBySession: {},
+      sessionStateById: {},
+      queuedMessageBySession: {},
+      draftsBySession: {},
+      activeSessionId: null,
+      isConnected: false,
+      loadingSessionIds: new Set<string>(),
+    });
+  });
+
+  it("starts with empty loadingSessionIds", () => {
+    expect(useChatStore.getState().loadingSessionIds.size).toBe(0);
+  });
+
+  it("adds session to loadingSessionIds when setSessionLoading(true)", () => {
+    useChatStore.getState().setSessionLoading("s1", true);
+
+    expect(useChatStore.getState().loadingSessionIds.has("s1")).toBe(true);
+  });
+
+  it("removes session from loadingSessionIds when setSessionLoading(false)", () => {
+    useChatStore.getState().setSessionLoading("s1", true);
+    useChatStore.getState().setSessionLoading("s1", false);
+
+    expect(useChatStore.getState().loadingSessionIds.has("s1")).toBe(false);
+  });
+
+  it("tracks multiple sessions independently", () => {
+    useChatStore.getState().setSessionLoading("s1", true);
+    useChatStore.getState().setSessionLoading("s2", true);
+
+    expect(useChatStore.getState().loadingSessionIds.has("s1")).toBe(true);
+    expect(useChatStore.getState().loadingSessionIds.has("s2")).toBe(true);
+
+    useChatStore.getState().setSessionLoading("s1", false);
+
+    expect(useChatStore.getState().loadingSessionIds.has("s1")).toBe(false);
+    expect(useChatStore.getState().loadingSessionIds.has("s2")).toBe(true);
+  });
+
+  it("is idempotent for adding the same session", () => {
+    useChatStore.getState().setSessionLoading("s1", true);
+    useChatStore.getState().setSessionLoading("s1", true);
+
+    expect(useChatStore.getState().loadingSessionIds.size).toBe(1);
+  });
+
+  it("is idempotent for removing a non-existent session", () => {
+    useChatStore.getState().setSessionLoading("s1", false);
+
+    expect(useChatStore.getState().loadingSessionIds.size).toBe(0);
+  });
+});
