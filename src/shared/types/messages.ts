@@ -39,6 +39,8 @@ export interface ToolRequestContent {
   name: string;
   arguments: Record<string, unknown>;
   status: ToolCallStatus;
+  /** Epoch ms when the tool call started executing (set on event receipt). */
+  startedAt?: number;
 }
 
 export interface ToolResponseContent {

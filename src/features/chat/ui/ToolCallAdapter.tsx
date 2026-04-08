@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { FolderOpen, ChevronRight } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import {
@@ -19,25 +19,25 @@ interface ToolCallAdapterProps {
   status: ToolCallStatus;
   result?: string;
   isError?: boolean;
+  /** Epoch ms when the tool call started executing. */
+  startedAt?: number;
 }
 
-function useElapsedTime(status: ToolCallStatus) {
+function useElapsedTime(status: ToolCallStatus, startedAt?: number) {
   const [elapsed, setElapsed] = useState(0);
-  const startRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (status === "executing") {
-      startRef.current = Date.now();
-      setElapsed(0);
+      const origin = startedAt ?? Date.now();
+      // Compute initial elapsed immediately so the first render is accurate.
+      setElapsed(Math.floor((Date.now() - origin) / 1000));
       const interval = setInterval(() => {
-        if (startRef.current) {
-          setElapsed(Math.floor((Date.now() - startRef.current) / 1000));
-        }
+        setElapsed(Math.floor((Date.now() - origin) / 1000));
       }, 1000);
       return () => clearInterval(interval);
     }
-    startRef.current = null;
-  }, [status]);
+    setElapsed(0);
+  }, [status, startedAt]);
 
   return elapsed;
 }
@@ -212,8 +212,9 @@ export function ToolCallAdapter({
   status,
   result,
   isError,
+  startedAt,
 }: ToolCallAdapterProps) {
-  const elapsed = useElapsedTime(status);
+  const elapsed = useElapsedTime(status, startedAt);
   const state = toolStatusMap[status];
 
   const title =
