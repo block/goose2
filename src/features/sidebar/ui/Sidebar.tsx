@@ -260,12 +260,8 @@ export function Sidebar({
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  const toggleProject = (projectId: string) => {
-    setExpandedProjects((prev) => ({
-      ...prev,
-      [projectId]: !prev[projectId],
-    }));
-  };
+  const toggleProject = (projectId: string) =>
+    setExpandedProjects((prev) => ({ ...prev, [projectId]: !prev[projectId] }));
 
   const navRef = useRef<HTMLElement>(null);
   const homeRef = useRef<HTMLButtonElement>(null);
@@ -279,19 +275,20 @@ export function Sidebar({
     updateActiveRect,
   } = useSidebarHighlight(navRef);
 
-  // When the active session is a draft inside a project, the draft won't
-  // appear in the sidebar list, so highlight the parent project row instead.
-  const activeProjectId = (() => {
-    if (!activeSessionId) return null;
-    const s = sessions.find((s) => s.id === activeSessionId);
-    return s?.draft && s.projectId ? s.projectId : null;
-  })();
+  // Drafts aren't in the sidebar — highlight project row or clear highlight.
+  const activeDraft = activeSessionId
+    ? sessions.find((s) => s.id === activeSessionId && s.draft)
+    : undefined;
+  const activeProjectId = activeDraft?.projectId ?? null;
 
-  // Update active rect when activeView/activeSessionId changes.
-  // When a visible session or draft-in-project is active, the corresponding
-  // ref callback (activeSessionRefCallback / activeProjectRefCallback) handles it.
+  // Position the sliding highlight based on what's active.
+  // Non-draft sessions and draft-in-project are handled by ref callbacks.
   useEffect(() => {
-    if (activeSessionId || activeProjectId) return;
+    if (activeDraft) {
+      if (!activeProjectId) updateActiveRect(null);
+      return;
+    }
+    if (activeSessionId) return;
     if (activeView === "home") {
       updateActiveRect(homeRef.current);
     } else if (activeView && navItemRefs.current[activeView]) {
@@ -299,10 +296,15 @@ export function Sidebar({
     } else {
       updateActiveRect(null);
     }
-  }, [activeSessionId, activeProjectId, activeView, updateActiveRect]);
+  }, [
+    activeSessionId,
+    activeDraft,
+    activeProjectId,
+    activeView,
+    updateActiveRect,
+  ]);
 
-  // Ref callbacks for SidebarProjectsSection to position the highlight on
-  // the active session row, or the parent project row for draft-in-project.
+  // Ref callbacks to position the highlight on active session or project row.
   const activeSessionRefCallback = useCallback(
     (el: HTMLElement | null) => {
       if (activeSessionId && el) updateActiveRect(el);
