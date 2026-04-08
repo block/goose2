@@ -8,6 +8,7 @@ import {
 import type { ChatState, TokenState } from "@/shared/types/chat";
 import { acpSendMessage, acpCancelSession } from "@/shared/api/acp";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
+import { isDefaultChatTitle } from "../lib/sessionTitle";
 import { findLastIndex } from "@/shared/lib/arrays";
 
 function getErrorMessage(error: unknown): string {
@@ -169,7 +170,7 @@ export function useChat(
       // feedback instead of waiting for acp:done or acp:session_info.
       // A better backend-generated title will overwrite this if it arrives
       // via the acp:session_info event.
-      if (session && session.title === "New Chat") {
+      if (session && isDefaultChatTitle(session.title)) {
         sessionStore.updateSession(
           sessionId,
           {

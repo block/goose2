@@ -1,4 +1,6 @@
 import { Mic, ChevronDown, Check, ArrowUp, Square } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { useLocaleFormatting } from "@/shared/i18n";
 import {
   formatProviderLabel,
   getProviderIcon,
@@ -98,6 +100,8 @@ export function ChatInputToolbar({
   onStop,
   isCompact,
 }: ChatInputToolbarProps) {
+  const { t } = useTranslation("chat");
+  const { formatNumber } = useLocaleFormatting();
   const availableProviderItems =
     providers.length > 0
       ? providers
@@ -112,7 +116,7 @@ export function ChatInputToolbar({
   const selectedProject = availableProjects.find(
     (project) => project.id === selectedProjectId,
   );
-  const projectLabel = selectedProject?.name ?? "No project";
+  const projectLabel = selectedProject?.name ?? t("toolbar.noProject");
   const projectTitle = selectedProject?.workingDirs.length
     ? selectedProject.workingDirs.join(", ")
     : undefined;
@@ -135,13 +139,15 @@ export function ChatInputToolbar({
       <div className="flex items-center gap-0.5">
         {(availableProviderItems.length > 0 || providersLoading) && (
           <ChatInputSelector
-            ariaLabel="Choose a provider"
+            ariaLabel={t("toolbar.chooseProvider")}
             value={selectedProvider}
-            triggerLabel={providersLoading ? "Loading..." : providerLabel}
+            triggerLabel={
+              providersLoading ? t("toolbar.loading") : providerLabel
+            }
             icon={getProviderIcon(selectedProvider, "size-3.5")}
             triggerVariant="toolbar"
             triggerSize="sm"
-            menuLabel="Choose a provider"
+            menuLabel={t("toolbar.chooseProvider")}
             disabled={providersLoading}
             sections={[
               {
@@ -165,7 +171,7 @@ export function ChatInputToolbar({
                 size="sm"
                 rightIcon={<ChevronDown className="opacity-50" />}
                 className="gap-1.5 rounded-lg px-2.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
-                aria-label="Select model"
+                aria-label={t("toolbar.selectModel")}
               >
                 {!isCompact && <span>{currentModel}</span>}
                 {isCompact && (
@@ -174,7 +180,7 @@ export function ChatInputToolbar({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56">
-              <DropdownMenuLabel>Model</DropdownMenuLabel>
+              <DropdownMenuLabel>{t("toolbar.model")}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {availableModels.map((model) => (
                 <DropdownMenuItem
@@ -202,22 +208,22 @@ export function ChatInputToolbar({
         )}
 
         <ChatInputSelector
-          ariaLabel="Select project"
+          ariaLabel={t("toolbar.selectProject")}
           value={selectedProjectId ?? NO_PROJECT_VALUE}
           triggerLabel={projectLabel}
           triggerTitle={projectTitle}
           icon={<ProjectDot color={selectedProject?.color} />}
           triggerVariant="toolbar"
           triggerSize="sm"
-          menuLabel="Choose a project"
+          menuLabel={t("toolbar.chooseProject")}
           contentWidth="wide"
           sections={[
             {
               items: [
                 {
                   value: NO_PROJECT_VALUE,
-                  label: "No project",
-                  description: "General chat without project context",
+                  label: t("toolbar.noProject"),
+                  description: t("toolbar.generalChatWithoutProject"),
                   icon: <ProjectDot />,
                 },
                 ...availableProjects.map((project) => ({
@@ -236,7 +242,7 @@ export function ChatInputToolbar({
                   ? [
                       {
                         value: CREATE_PROJECT_VALUE,
-                        label: "Create project",
+                        label: t("toolbar.createProject"),
                         icon: (
                           <IconLibraryPlusFilled className="size-4 text-foreground" />
                         ),
@@ -269,8 +275,11 @@ export function ChatInputToolbar({
               variant="ghost"
               size="icon-sm"
               className="rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
-              aria-label="Context usage"
-              title={`${contextTokens.toLocaleString()} / ${contextLimit.toLocaleString()} tokens`}
+              aria-label={t("toolbar.contextUsage")}
+              title={t("toolbar.contextUsageTitle", {
+                tokens: formatNumber(contextTokens),
+                limit: formatNumber(contextLimit),
+              })}
             >
               <ContextRing tokens={contextTokens} limit={contextLimit} />
             </Button>
@@ -284,13 +293,13 @@ export function ChatInputToolbar({
                   variant="ghost"
                   size="icon-sm"
                   disabled
-                  aria-label="Voice input (coming soon)"
+                  aria-label={t("toolbar.voiceInputSoon")}
                 >
                   <Mic />
                 </Button>
               </span>
             </TooltipTrigger>
-            <TooltipContent>Voice input (coming soon)</TooltipContent>
+            <TooltipContent>{t("toolbar.voiceInputSoon")}</TooltipContent>
           </Tooltip>
         </div>
 
@@ -302,8 +311,8 @@ export function ChatInputToolbar({
               variant="ghost"
               size="icon-sm"
               className="rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive"
-              aria-label="Stop generation"
-              title="Stop generation"
+              aria-label={t("toolbar.stopGeneration")}
+              title={t("toolbar.stopGeneration")}
             >
               <Square className="h-3.5 w-3.5" />
             </Button>
@@ -320,8 +329,8 @@ export function ChatInputToolbar({
                   ? "bg-foreground text-background hover:bg-foreground/90"
                   : "cursor-default bg-foreground/10 text-muted-foreground disabled:opacity-100",
               )}
-              aria-label="Send message"
-              title={canSend ? "Send message" : undefined}
+              aria-label={t("toolbar.sendMessage")}
+              title={canSend ? t("toolbar.sendMessage") : undefined}
             >
               <ArrowUp className="h-4 w-4" />
             </Button>

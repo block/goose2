@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Archive, History } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { getDisplaySessionTitle } from "@/features/chat/lib/sessionTitle";
 import { SearchBar } from "@/shared/ui/SearchBar";
 import { Button } from "@/shared/ui/button";
 import { SessionCard } from "./SessionCard";
@@ -21,6 +23,7 @@ export function SessionHistoryView({
   onRenameChat,
   onArchiveChat,
 }: SessionHistoryViewProps) {
+  const { t, i18n } = useTranslation(["sessions", "common"]);
   const sessions = useChatSessionStore((s) => s.sessions);
   const activeSessions = useMemo(
     () => sessions.filter((session) => !session.draft),
@@ -64,8 +67,16 @@ export function SessionHistoryView({
   );
 
   const resolvers = { getPersonaName, getProjectName };
-  const filtered = filterSessions(displaySessions, search, resolvers);
-  const dateGroups = groupSessionsByDate(filtered);
+  const filtered = filterSessions(displaySessions, search, resolvers, {
+    locale: i18n.resolvedLanguage,
+    getDisplayTitle: (session) =>
+      getDisplaySessionTitle(session.title, t("common:session.defaultTitle")),
+  });
+  const dateGroups = groupSessionsByDate(filtered, {
+    locale: i18n.resolvedLanguage,
+    todayLabel: t("dateGroups.today"),
+    yesterdayLabel: t("dateGroups.yesterday"),
+  });
 
   const handleUnarchive = useCallback(
     async (sessionId: string) => {
@@ -88,10 +99,12 @@ export function SessionHistoryView({
     [onArchiveChat, loadArchived],
   );
 
-  const emptyLabel = showArchived ? "No archived sessions" : "No sessions yet";
+  const emptyLabel = showArchived
+    ? t("history.emptyArchived")
+    : t("history.emptyTitle");
   const emptyHint = showArchived
-    ? "Archived sessions will appear here."
-    : "Start a chat to see it here.";
+    ? t("history.emptyArchivedHint")
+    : t("history.emptyHint");
 
   return (
     <div className="flex flex-1 flex-col h-full min-h-0">
@@ -101,12 +114,12 @@ export function SessionHistoryView({
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h1 className="text-lg font-semibold font-display tracking-tight">
-                {showArchived ? "Archived Sessions" : "Session History"}
+                {showArchived ? t("history.archivedTitle") : t("history.title")}
               </h1>
               <p className="text-xs text-muted-foreground">
                 {showArchived
-                  ? "Sessions you've archived"
-                  : "Browse and search past sessions"}
+                  ? t("history.archivedSubtitle")
+                  : t("history.subtitle")}
               </p>
             </div>
             <Button
@@ -119,7 +132,9 @@ export function SessionHistoryView({
               }}
             >
               <Archive className="size-3.5" />
-              {showArchived ? "Back to active" : "Archived"}
+              {showArchived
+                ? t("history.backToActive")
+                : t("history.toggleArchived")}
             </Button>
           </div>
 
@@ -129,8 +144,8 @@ export function SessionHistoryView({
             onChange={setSearch}
             placeholder={
               showArchived
-                ? "Search archived sessions..."
-                : "Search sessions by title, persona, or project..."
+                ? t("history.searchArchivedPlaceholder")
+                : t("history.searchPlaceholder")
             }
           />
 
@@ -188,12 +203,12 @@ export function SessionHistoryView({
                 <p className="text-sm font-medium">
                   {displaySessions.length === 0
                     ? emptyLabel
-                    : "No matching sessions"}
+                    : t("history.emptyNoMatches")}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {displaySessions.length === 0
                     ? emptyHint
-                    : "Try a different search term."}
+                    : t("history.emptyNoMatchesHint")}
                 </p>
               </div>
             </div>

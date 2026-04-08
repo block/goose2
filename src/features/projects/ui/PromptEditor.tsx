@@ -6,6 +6,7 @@ interface PromptEditorProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  ariaLabel?: string;
 }
 
 function renderLines(text: string): string {
@@ -107,6 +108,7 @@ export function PromptEditor({
   value,
   onChange,
   placeholder,
+  ariaLabel,
 }: PromptEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
   const lastPushedValue = useRef<string | null>(null);
@@ -206,7 +208,7 @@ export function PromptEditor({
       role="textbox"
       tabIndex={0}
       aria-multiline="true"
-      aria-label={placeholder ?? "Instructions"}
+      aria-label={ariaLabel ?? placeholder}
       data-placeholder={placeholder}
       className={cn(
         "w-full overflow-y-auto resize-y rounded-lg border border-input bg-background px-3 py-2 text-xs font-mono leading-relaxed",

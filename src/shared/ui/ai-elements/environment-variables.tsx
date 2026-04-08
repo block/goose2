@@ -4,6 +4,7 @@ import { Switch } from "@/shared/ui/switch";
 import { cn } from "@/shared/lib/cn";
 import { CheckIcon, CopyIcon, EyeIcon, EyeOffIcon } from "lucide-react";
 import type { ComponentProps, HTMLAttributes } from "react";
+import { useTranslation } from "react-i18next";
 import {
   createContext,
   useCallback,
@@ -96,11 +97,15 @@ export const EnvironmentVariablesTitle = ({
   className,
   children,
   ...props
-}: EnvironmentVariablesTitleProps) => (
-  <h3 className={cn("font-medium text-sm", className)} {...props}>
-    {children ?? "Environment Variables"}
-  </h3>
-);
+}: EnvironmentVariablesTitleProps) => {
+  const { t } = useTranslation("common");
+
+  return (
+    <h3 className={cn("font-medium text-sm", className)} {...props}>
+      {children ?? t("components.environmentVariables.title")}
+    </h3>
+  );
+};
 
 export type EnvironmentVariablesToggleProps = ComponentProps<typeof Switch>;
 
@@ -108,6 +113,7 @@ export const EnvironmentVariablesToggle = ({
   className,
   ...props
 }: EnvironmentVariablesToggleProps) => {
+  const { t } = useTranslation("common");
   const { showValues, setShowValues } = useContext(EnvironmentVariablesContext);
 
   return (
@@ -116,7 +122,7 @@ export const EnvironmentVariablesToggle = ({
         {showValues ? <EyeIcon size={14} /> : <EyeOffIcon size={14} />}
       </span>
       <Switch
-        aria-label="Toggle value visibility"
+        aria-label={t("components.environmentVariables.toggleVisibility")}
         checked={showValues}
         onCheckedChange={setShowValues}
         {...props}
@@ -258,6 +264,7 @@ export const EnvironmentVariableCopyButton = ({
   className,
   ...props
 }: EnvironmentVariableCopyButtonProps) => {
+  const { t } = useTranslation("common");
   const [isCopied, setIsCopied] = useState(false);
   const timeoutRef = useRef<number>(0);
   const { name, value } = useContext(EnvironmentVariableContext);
@@ -273,7 +280,7 @@ export const EnvironmentVariableCopyButton = ({
 
   const copyToClipboard = useCallback(async () => {
     if (typeof window === "undefined" || !navigator?.clipboard?.writeText) {
-      onError?.(new Error("Clipboard API not available"));
+      onError?.(new Error(t("errors.clipboardUnavailable")));
       return;
     }
 
@@ -285,7 +292,7 @@ export const EnvironmentVariableCopyButton = ({
     } catch (error) {
       onError?.(error as Error);
     }
-  }, [getTextToCopy, onCopy, onError, timeout]);
+  }, [getTextToCopy, onCopy, onError, t, timeout]);
 
   useEffect(
     () => () => {
@@ -298,9 +305,11 @@ export const EnvironmentVariableCopyButton = ({
 
   return (
     <Button
+      aria-label={t("components.environmentVariables.copyLabel")}
       className={cn("size-6 shrink-0", className)}
       onClick={copyToClipboard}
       size="icon"
+      title={t("components.environmentVariables.copyLabel")}
       variant="ghost"
       {...props}
     >
@@ -315,8 +324,12 @@ export const EnvironmentVariableRequired = ({
   className,
   children,
   ...props
-}: EnvironmentVariableRequiredProps) => (
-  <Badge className={cn("text-xs", className)} variant="secondary" {...props}>
-    {children ?? "Required"}
-  </Badge>
-);
+}: EnvironmentVariableRequiredProps) => {
+  const { t } = useTranslation("common");
+
+  return (
+    <Badge className={cn("text-xs", className)} variant="secondary" {...props}>
+      {children ?? t("labels.required")}
+    </Badge>
+  );
+};

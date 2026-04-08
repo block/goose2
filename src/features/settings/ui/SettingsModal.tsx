@@ -1,5 +1,11 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/lib/cn";
+import {
+  type LocalePreference,
+  useLocale,
+  useLocaleFormatting,
+} from "@/shared/i18n";
 import { Button, buttonVariants } from "@/shared/ui/button";
 import {
   AlertDialog,
@@ -11,6 +17,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
 import {
   Palette,
   Settings2,
@@ -30,16 +43,17 @@ import {
 } from "@/features/projects/api/projects";
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
+import { getDisplaySessionTitle } from "@/features/chat/lib/sessionTitle";
 
 import type { Session } from "@/shared/types/chat";
 
 const NAV_ITEMS = [
-  { id: "appearance", label: "Appearance", icon: Palette },
-  { id: "general", label: "General", icon: Settings2 },
-  { id: "projects", label: "Projects", icon: FolderKanban },
-  { id: "chats", label: "Chats", icon: MessageSquare },
-  { id: "doctor", label: "Doctor", icon: Stethoscope },
-  { id: "about", label: "About", icon: Info },
+  { id: "appearance", labelKey: "nav.appearance", icon: Palette },
+  { id: "general", labelKey: "nav.general", icon: Settings2 },
+  { id: "projects", labelKey: "nav.projects", icon: FolderKanban },
+  { id: "chats", labelKey: "nav.chats", icon: MessageSquare },
+  { id: "doctor", labelKey: "nav.doctor", icon: Stethoscope },
+  { id: "about", labelKey: "nav.about", icon: Info },
 ] as const;
 
 type SectionId = (typeof NAV_ITEMS)[number]["id"];
@@ -49,6 +63,9 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ onClose }: SettingsModalProps) {
+  const { t } = useTranslation(["settings", "common"]);
+  const { preference, setLocalePreference, systemLocaleLabel } = useLocale();
+  const { formatNumber } = useLocaleFormatting();
   const [activeSection, setActiveSection] = useState<SectionId>("appearance");
   const [isLoaded, setIsLoaded] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -116,6 +133,11 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
     return () => clearTimeout(timer);
   }, [activeSection]);
 
+  const navItems = NAV_ITEMS.map((item) => ({
+    ...item,
+    label: t(item.labelKey),
+  }));
+
   return (
     <div
       role="dialog"
@@ -153,10 +175,10 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                 : "opacity-0 -translate-x-2",
             )}
           >
-            <h2 className="text-sm font-semibold">Settings</h2>
+            <h2 className="text-sm font-semibold">{t("title")}</h2>
           </div>
           <nav className="flex flex-col gap-1 px-2">
-            {NAV_ITEMS.map((item, index) => (
+            {navItems.map((item, index) => (
               <Button
                 type="button"
                 variant="ghost"
@@ -190,6 +212,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
             variant="ghost"
             size="icon-xs"
             onClick={onClose}
+            aria-label={t("common:actions.close")}
             className="absolute right-4 top-4 z-10 rounded-md text-muted-foreground hover:text-foreground"
           >
             <X className="size-4" />
@@ -220,11 +243,45 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                 <div className="space-y-6">
                   <div>
                     <h3 className="text-lg font-semibold font-display tracking-tight">
-                      General
+                      {t("general.title")}
                     </h3>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      General settings will appear here.
+                      {t("general.description")}
                     </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <h4 className="text-sm font-semibold">
+                        {t("general.language.label")}
+                      </h4>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {t("general.language.description")}
+                      </p>
+                    </div>
+                    <Select
+                      value={preference}
+                      onValueChange={(value) =>
+                        void setLocalePreference(value as LocalePreference)
+                      }
+                    >
+                      <SelectTrigger className="w-full max-w-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="system">
+                          {t("general.language.system", {
+                            language: systemLocaleLabel,
+                          })}
+                        </SelectItem>
+                        <SelectItem value="en">
+                          {t("general.language.english")}
+                        </SelectItem>
+                        <SelectItem value="es">
+                          {t("general.language.spanish")}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               )}
@@ -232,19 +289,21 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                 <div className="space-y-6">
                   <div>
                     <h3 className="text-lg font-semibold font-display tracking-tight">
-                      Projects
+                      {t("projects.title")}
                     </h3>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Manage your projects.
+                      {t("projects.description")}
                     </p>
                   </div>
 
                   {/* Archived Projects */}
                   <div className="space-y-3">
-                    <h3 className="text-sm font-semibold">Archived Projects</h3>
+                    <h3 className="text-sm font-semibold">
+                      {t("projects.sectionTitle")}
+                    </h3>
                     {!loadingArchived && archivedProjects.length === 0 && (
                       <p className="text-xs text-muted-foreground">
-                        No archived projects.
+                        {t("projects.empty")}
                       </p>
                     )}
                     {archivedProjects.map((project) => (
@@ -268,7 +327,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                             size="xs"
                             onClick={() => handleRestoreProject(project.id)}
                           >
-                            Restore
+                            {t("common:actions.restore")}
                           </Button>
                           <Button
                             type="button"
@@ -277,7 +336,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                             onClick={() => setDeletingProject(project)}
                             className="text-destructive hover:text-destructive hover:bg-destructive/10"
                           >
-                            Delete
+                            {t("common:actions.delete")}
                           </Button>
                         </div>
                       </div>
@@ -289,18 +348,20 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                 <div className="space-y-6">
                   <div>
                     <h3 className="text-lg font-semibold font-display tracking-tight">
-                      Chats
+                      {t("chats.title")}
                     </h3>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Restore archived chats.
+                      {t("chats.description")}
                     </p>
                   </div>
 
                   <div className="space-y-3">
-                    <h3 className="text-sm font-semibold">Archived Chats</h3>
+                    <h3 className="text-sm font-semibold">
+                      {t("chats.sectionTitle")}
+                    </h3>
                     {!loadingArchivedChats && archivedChats.length === 0 && (
                       <p className="text-xs text-muted-foreground">
-                        No archived chats.
+                        {t("chats.empty")}
                       </p>
                     )}
                     {archivedChats.map((session) => (
@@ -310,16 +371,20 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                       >
                         <div className="min-w-0">
                           <div className="truncate text-sm">
-                            {session.title}
+                            {getDisplaySessionTitle(
+                              session.title,
+                              t("common:session.defaultTitle"),
+                            )}
                           </div>
                           <p className="truncate text-xs text-muted-foreground">
                             {session.projectId
-                              ? "Project chat"
-                              : "Standalone chat"}{" "}
+                              ? t("chats.types.project")
+                              : t("chats.types.standalone")}{" "}
                             -{" "}
-                            {session.messageCount === 1
-                              ? "1 message"
-                              : `${session.messageCount} messages`}
+                            {t("chats.messageCount", {
+                              count: session.messageCount,
+                              displayCount: formatNumber(session.messageCount),
+                            })}
                           </p>
                         </div>
                         <Button
@@ -329,7 +394,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                           onClick={() => handleRestoreChat(session.id)}
                           className="flex-shrink-0"
                         >
-                          Restore
+                          {t("common:actions.restore")}
                         </Button>
                       </div>
                     ))}
@@ -339,10 +404,10 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               {activeSection === "about" && (
                 <div>
                   <h3 className="text-lg font-semibold font-display tracking-tight">
-                    About
+                    {t("about.title")}
                   </h3>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    About information will appear here.
+                    {t("about.description")}
                   </p>
                 </div>
               )}
@@ -357,14 +422,15 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
       >
         <AlertDialogContent className="max-w-sm">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete project permanently?</AlertDialogTitle>
+            <AlertDialogTitle>{t("deleteProject.title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to permanently delete &quot;
-              {deletingProject?.name}&quot;? This cannot be undone.
+              {t("deleteProject.description", {
+                name: deletingProject?.name ?? "",
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common:actions.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className={buttonVariants({ variant: "destructive" })}
               onClick={() => {
@@ -374,7 +440,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                 }
               }}
             >
-              Delete
+              {t("common:actions.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

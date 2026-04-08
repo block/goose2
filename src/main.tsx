@@ -3,6 +3,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 
 import { App } from "@/app/App";
+import { I18nProvider } from "@/shared/i18n";
 import { ThemeProvider } from "@/shared/theme/ThemeProvider";
 import "@/shared/styles/globals.css";
 
@@ -21,9 +22,11 @@ if (!root) throw new Error("Root element not found");
 ReactDOM.createRoot(root).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="system">
-        <App />
-      </ThemeProvider>
+      <I18nProvider>
+        <ThemeProvider defaultTheme="system">
+          <App />
+        </ThemeProvider>
+      </I18nProvider>
     </QueryClientProvider>
   </React.StrictMode>,
 );

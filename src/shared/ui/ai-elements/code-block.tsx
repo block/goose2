@@ -19,6 +19,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import type {
   BundledLanguage,
   BundledTheme,
@@ -462,13 +463,14 @@ export const CodeBlockCopyButton = ({
   className,
   ...props
 }: CodeBlockCopyButtonProps) => {
+  const { t } = useTranslation("common");
   const [isCopied, setIsCopied] = useState(false);
   const timeoutRef = useRef<number>(0);
   const { code } = useContext(CodeBlockContext);
 
   const copyToClipboard = useCallback(async () => {
     if (typeof window === "undefined" || !navigator?.clipboard?.writeText) {
-      onError?.(new Error("Clipboard API not available"));
+      onError?.(new Error(t("errors.clipboardUnavailable")));
       return;
     }
 
@@ -485,7 +487,7 @@ export const CodeBlockCopyButton = ({
     } catch (error) {
       onError?.(error as Error);
     }
-  }, [code, onCopy, onError, timeout, isCopied]);
+  }, [code, isCopied, onCopy, onError, t, timeout]);
 
   useEffect(
     () => () => {
@@ -498,9 +500,11 @@ export const CodeBlockCopyButton = ({
 
   return (
     <Button
+      aria-label={t("components.codeBlock.copyLabel")}
       className={cn("shrink-0", className)}
       onClick={copyToClipboard}
       size="icon"
+      title={t("components.codeBlock.copyLabel")}
       variant="ghost"
       {...props}
     >

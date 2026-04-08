@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
@@ -32,6 +33,7 @@ export function AgentConfig({
   onSave,
   onCancel,
 }: AgentConfigProps) {
+  const { t } = useTranslation(["agents", "common"]);
   const [acpProviders, setAcpProviders] = useState<AcpProvider[]>([]);
 
   useEffect(() => {
@@ -87,40 +89,42 @@ export function AgentConfig({
   return (
     <form
       onSubmit={handleSubmit}
-      aria-label="Agent configuration"
+      aria-label={t("config.ariaLabel")}
       className="space-y-4"
     >
       {/* Name */}
       <div className="space-y-1">
         <Label className="text-xs font-medium text-muted-foreground">
-          Name <span className="text-destructive">*</span>
+          {t("config.name")} <span className="text-destructive">*</span>
         </Label>
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
-          placeholder="My Agent"
+          placeholder={t("config.namePlaceholder")}
         />
       </div>
 
       {/* Persona selector */}
       <div className="space-y-1">
         <Label className="text-xs font-medium text-muted-foreground">
-          Persona
+          {t("config.persona")}
         </Label>
         <Select
           value={personaId || "__none__"}
           onValueChange={(v: string) => setPersonaId(v === "__none__" ? "" : v)}
         >
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="None" />
+            <SelectValue placeholder={t("common:labels.none")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__none__">None</SelectItem>
+            <SelectItem value="__none__">{t("common:labels.none")}</SelectItem>
             {personas.map((p) => (
               <SelectItem key={p.id} value={p.id}>
                 {p.displayName}
-                {p.isBuiltin ? " (built-in)" : ""}
+                {p.isBuiltin
+                  ? ` (${t("common:labels.builtIn").toLowerCase()})`
+                  : ""}
               </SelectItem>
             ))}
           </SelectContent>
@@ -130,10 +134,10 @@ export function AgentConfig({
       {/* Provider */}
       <div className="space-y-1">
         <Label className="text-xs font-medium text-muted-foreground">
-          Provider
+          {t("config.provider")}
           {selectedPersona?.provider && (
             <span className="ml-1 text-muted-foreground">
-              (from persona: {selectedPersona.provider})
+              {t("config.fromPersona", { value: selectedPersona.provider })}
             </span>
           )}
         </Label>
@@ -157,17 +161,17 @@ export function AgentConfig({
       {/* Model override */}
       <div className="space-y-1">
         <Label className="text-xs font-medium text-muted-foreground">
-          Model
+          {t("config.model")}
           {selectedPersona?.model && (
             <span className="ml-1 text-muted-foreground">
-              (from persona: {selectedPersona.model})
+              {t("config.fromPersona", { value: selectedPersona.model })}
             </span>
           )}
         </Label>
         <Input
           value={model}
           onChange={(e) => setModel(e.target.value)}
-          placeholder="e.g. claude-sonnet-4-20250514"
+          placeholder={t("config.modelPlaceholder")}
         />
       </div>
 
@@ -178,14 +182,16 @@ export function AgentConfig({
           onClick={() => setPromptExpanded((v) => !v)}
           className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
-          System Prompt Override {promptExpanded ? "[-]" : "[+]"}
+          {promptExpanded
+            ? t("config.systemPromptOverrideExpanded")
+            : t("config.systemPromptOverrideCollapsed")}
         </button>
         {promptExpanded && (
           <Textarea
             value={systemPrompt}
             onChange={(e) => setSystemPrompt(e.target.value)}
             rows={5}
-            placeholder="Override the persona system prompt..."
+            placeholder={t("config.systemPromptPlaceholder")}
             className="leading-relaxed"
           />
         )}
@@ -194,10 +200,10 @@ export function AgentConfig({
       {/* Actions */}
       <div className="flex items-center justify-end gap-2 pt-2">
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-          Cancel
+          {t("common:actions.cancel")}
         </Button>
         <Button type="submit" size="sm" disabled={!isValid}>
-          {agent ? "Update Agent" : "Create Agent"}
+          {agent ? t("config.updateAgent") : t("config.createAgent")}
         </Button>
       </div>
     </form>

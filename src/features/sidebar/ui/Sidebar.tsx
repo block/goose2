@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   IconLayoutSidebar,
   IconLayoutSidebarFilled,
 } from "@tabler/icons-react";
 import { BookOpen, Bot, History, Home, Search } from "lucide-react";
+import { getDisplaySessionTitle } from "@/features/chat/lib/sessionTitle";
 import { GooseIcon } from "@/shared/ui/icons/GooseIcon";
 import { cn } from "@/shared/lib/cn";
 import type { AppView } from "@/app/AppShell";
@@ -36,15 +38,8 @@ interface SidebarProps {
   activeView?: AppView;
   activeSessionId?: string | null;
   className?: string;
-  // Project & session data
   projects: ProjectInfo[];
 }
-
-const NAV_ITEMS: readonly { id: AppView; label: string; icon: typeof Bot }[] = [
-  { id: "agents", label: "Personas", icon: Bot },
-  { id: "skills", label: "Skills", icon: BookOpen },
-  { id: "session-history", label: "Session History", icon: History },
-];
 
 const EXPANDED_PROJECTS_STORAGE_KEY = "goose:sidebar:expanded-projects";
 
@@ -68,6 +63,7 @@ export function Sidebar({
   className,
   projects,
 }: SidebarProps) {
+  const { t, i18n } = useTranslation(["sidebar", "common"]);
   const [expanded, setExpanded] = useState(!collapsed);
   const [sidebarSearch, setSidebarSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -103,6 +99,17 @@ export function Sidebar({
 
   const labelTransition = "transition-[opacity,width] duration-300 ease-out";
   const labelVisible = expanded && !collapsed;
+  const defaultTitle = t("common:session.defaultTitle");
+  const navItems: readonly { id: AppView; label: string; icon: typeof Bot }[] =
+    [
+      { id: "agents", label: t("navigation.agents"), icon: Bot },
+      { id: "skills", label: t("navigation.skills"), icon: BookOpen },
+      {
+        id: "session-history",
+        label: t("navigation.sessionHistory"),
+        icon: History,
+      },
+    ];
 
   const MAX_RECENTS = 20;
 
@@ -137,7 +144,6 @@ export function Sidebar({
         standalone.push(item);
       }
     }
-    // Sort project chats by updatedAt descending (newest first)
     for (const chats of Object.values(byProject)) {
       chats.sort(
         (a, b) =>
@@ -145,7 +151,6 @@ export function Sidebar({
       );
     }
 
-    // Sort standalone by updatedAt descending, limit to MAX_RECENTS
     standalone.sort(
       (a, b) =>
         new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
@@ -184,6 +189,11 @@ export function Sidebar({
         })),
         sidebarSearch,
         sidebarResolvers,
+        {
+          locale: i18n.resolvedLanguage,
+          getDisplayTitle: (session) =>
+            getDisplaySessionTitle(session.title, defaultTitle),
+        },
       ).map((s) => s.id),
     );
 
@@ -210,7 +220,6 @@ export function Sidebar({
     };
   })();
 
-  // Auto-expand the project containing the active session
   useEffect(() => {
     if (!activeSessionId) return;
     const activeSession = sessions.find((s) => s.id === activeSessionId);
@@ -275,14 +284,11 @@ export function Sidebar({
     updateActiveRect,
   } = useSidebarHighlight(navRef);
 
-  // Drafts aren't in the sidebar — highlight project row or clear highlight.
   const activeDraft = activeSessionId
     ? sessions.find((s) => s.id === activeSessionId && s.draft)
     : undefined;
   const activeProjectId = activeDraft?.projectId ?? null;
 
-  // Position the sliding highlight based on what's active.
-  // Non-draft sessions and draft-in-project are handled by ref callbacks.
   useEffect(() => {
     if (activeDraft) {
       if (!activeProjectId) updateActiveRect(null);
@@ -304,7 +310,6 @@ export function Sidebar({
     updateActiveRect,
   ]);
 
-  // Ref callbacks to position the highlight on active session or project row.
   const activeSessionRefCallback = useCallback(
     (el: HTMLElement | null) => {
       if (activeSessionId && el) updateActiveRect(el);
@@ -328,7 +333,6 @@ export function Sidebar({
       style={{ width: collapsed ? 54 : width }}
     >
       <div className="flex flex-col h-full overflow-hidden bg-background border border-border rounded-xl">
-        {/* Goose logo — pinned top */}
         <div
           className={cn(
             "flex-shrink-0 pt-3",
@@ -349,8 +353,8 @@ export function Sidebar({
                 size="icon-sm"
                 onClick={onCollapse}
                 className="text-muted-foreground hover:text-foreground"
-                aria-label="Collapse sidebar"
-                title="Collapse sidebar"
+                aria-label={t("actions.collapse")}
+                title={t("actions.collapse")}
               >
                 <IconLayoutSidebarFilled className="size-4" />
               </Button>
@@ -358,13 +362,11 @@ export function Sidebar({
           </div>
         </div>
 
-        {/* Navigation (scrollable) */}
         <nav
           ref={navRef}
           className="relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-1.5 py-1 pt-1.5 scrollbar-none"
           onMouseLeave={onNavMouseLeave}
         >
-          {/* Sliding highlight — hidden when collapsed */}
           {currentRect && !collapsed && (
             <div
               className="absolute left-1.5 right-1.5 rounded-lg bg-accent/50 pointer-events-none z-0"
@@ -383,16 +385,15 @@ export function Sidebar({
               <button
                 type="button"
                 onClick={onCollapse}
-                title="Expand sidebar"
+                title={t("actions.expand")}
                 className="flex w-full items-center gap-2.5 rounded-md p-3 text-[13px] text-muted-foreground transition-colors duration-200 hover:text-foreground"
-                aria-label="Expand sidebar"
+                aria-label={t("actions.expand")}
               >
                 <IconLayoutSidebar className="size-4 flex-shrink-0" />
-                <span className="sr-only">Expand sidebar</span>
+                <span className="sr-only">{t("actions.expand")}</span>
               </button>
             )}
 
-            {/* Search bar */}
             <div
               className={cn(
                 "flex items-center w-full rounded-md transition-all duration-300 ease-out",
@@ -409,7 +410,7 @@ export function Sidebar({
                     type="search"
                     value={sidebarSearch}
                     onChange={(e) => setSidebarSearch(e.target.value)}
-                    placeholder="Search..."
+                    placeholder={t("search.placeholder")}
                     className={cn(
                       "bg-transparent border-none outline-none text-xs flex-1 min-w-0 placeholder:text-muted-foreground",
                       labelTransition,
@@ -434,13 +435,13 @@ export function Sidebar({
               )}
             </div>
 
-            {/* Home */}
             <button
               ref={homeRef}
               type="button"
               onClick={() => onNavigate?.("home")}
               onMouseEnter={onItemMouseEnter}
-              title={collapsed ? "Home" : undefined}
+              title={collapsed ? t("navigation.home") : undefined}
+              aria-label={t("navigation.home")}
               className={cn(
                 "flex items-center w-full text-[13px] transition-colors duration-200 rounded-md",
                 "gap-2.5 p-3",
@@ -459,11 +460,10 @@ export function Sidebar({
                     : "opacity-0 w-0 overflow-hidden",
                 )}
               >
-                Home
+                {t("navigation.home")}
               </span>
             </button>
 
-            {/* New Chat — hidden for now; project-scoped "+" covers the primary use case */}
             {/* <button
               type="button"
               onClick={onNewChat}
@@ -483,13 +483,12 @@ export function Sidebar({
                     ? "opacity-100 w-auto"
                     : "opacity-0 w-0 overflow-hidden",
                 )}
-              >
+            >
                 New Chat
               </span>
             </button> */}
 
-            {/* Nav items */}
-            {NAV_ITEMS.map((item, index) => {
+            {navItems.map((item, index) => {
               const Icon = item.icon;
               const isActive = activeView === item.id;
               return (
@@ -539,10 +538,8 @@ export function Sidebar({
 
           {!collapsed && (
             <>
-              {/* Divider */}
               <div className="relative z-10 my-2 -mx-1.5 bg-border h-px" />
 
-              {/* Projects + Chats section */}
               <SidebarProjectsSection
                 projects={projects}
                 projectSessions={filteredProjectSessions}

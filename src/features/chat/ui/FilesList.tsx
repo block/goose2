@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   File,
   FileCode,
@@ -102,6 +103,7 @@ function FileRow({
   onOpenFile: (path: string) => void;
   onOpenDirectory: (path: string) => void;
 }) {
+  const { t } = useTranslation("chat");
   return (
     <button
       type="button"
@@ -121,7 +123,7 @@ function FileRow({
             e.stopPropagation();
             onOpenDirectory(artifact.resolvedDirectoryPath);
           }}
-          title={`Open folder: ${artifact.directoryPath}`}
+          title={t("files.openFolder", { path: artifact.directoryPath })}
         >
           {artifact.directoryPath}
         </span>
@@ -131,6 +133,7 @@ function FileRow({
 }
 
 export function FilesList() {
+  const { t } = useTranslation("chat");
   const { getAllSessionArtifacts, openResolvedPath, pathExists } =
     useArtifactPolicyContext();
   const [filter, setFilter] = useState("");
@@ -197,7 +200,7 @@ export function FilesList() {
   if (verifiedArtifacts.length === 0) {
     return (
       <div className="flex h-32 items-center justify-center">
-        <p className="text-sm text-muted-foreground">No files yet</p>
+        <p className="text-sm text-muted-foreground">{t("files.empty")}</p>
       </div>
     );
   }
@@ -205,11 +208,17 @@ export function FilesList() {
   return (
     <div className="min-w-0 overflow-hidden">
       <div className="px-3 pb-2 pt-3">
-        <SearchBar value={filter} onChange={setFilter} placeholder="Search" />
+        <SearchBar
+          value={filter}
+          onChange={setFilter}
+          placeholder={t("files.searchPlaceholder")}
+        />
       </div>
       {filteredArtifacts.length === 0 ? (
         <div className="flex h-20 items-center justify-center">
-          <p className="text-sm text-muted-foreground">No matching files</p>
+          <p className="text-sm text-muted-foreground">
+            {t("files.noMatches")}
+          </p>
         </div>
       ) : (
         <div className="space-y-2 px-3 pb-3">

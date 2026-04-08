@@ -1,6 +1,8 @@
 import { useState, memo } from "react";
+import { useTranslation } from "react-i18next";
 import { Copy, Check, RotateCcw, Pencil, Bot, User } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import { useLocaleFormatting } from "@/shared/i18n";
 import {
   MessageActions,
   MessageAction,
@@ -127,6 +129,10 @@ function groupContentSections(content: MessageContent[]): ContentSection[] {
 function renderContentBlock(
   content: MessageContent,
   index: number,
+  options: {
+    defaultImageAlt: string;
+    redactedThinking: string;
+  },
   isStreamingMsg?: boolean,
   isUserMessage?: boolean,
 ) {
@@ -152,7 +158,13 @@ function renderContentBlock(
         ic.source.type === "base64"
           ? `data:${ic.source.mediaType};base64,${ic.source.data}`
           : ic.source.url;
-      return <ClickableImage key={`image-${index}`} src={src} alt="Attached" />;
+      return (
+        <ClickableImage
+          key={`image-${index}`}
+          src={src}
+          alt={options.defaultImageAlt}
+        />
+      );
     }
     case "toolRequest":
     case "toolResponse":
@@ -190,7 +202,7 @@ function renderContentBlock(
           key={`redacted-${index}`}
           className="text-xs italic text-muted-foreground"
         >
-          (thinking redacted)
+          {options.redactedThinking}
         </div>
       );
     case "systemNotification": {
@@ -216,6 +228,7 @@ function renderContentBlock(
 }
 
 function CopyAction({ text }: { text: string }) {
+  const { t } = useTranslation(["chat", "common"]);
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -225,7 +238,10 @@ function CopyAction({ text }: { text: string }) {
   };
 
   return (
-    <MessageAction tooltip={copied ? "Copied" : "Copy"} onClick={handleCopy}>
+    <MessageAction
+      tooltip={copied ? t("message.copied") : t("common:actions.copy")}
+      onClick={handleCopy}
+    >
       {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
     </MessageAction>
   );
@@ -239,6 +255,8 @@ export const MessageBubble = memo(function MessageBubble({
   onRetryMessage,
   onEditMessage,
 }: MessageBubbleProps) {
+  const { t } = useTranslation(["chat", "common"]);
+  const { formatDate } = useLocaleFormatting();
   const { role, content, created } = message;
   const { handleContentClick, pathNotice } = useArtifactLinkHandler();
 
@@ -251,7 +269,12 @@ export const MessageBubble = memo(function MessageBubble({
     return (
       <div className="flex justify-center px-4 py-2">
         <div className="w-full max-w-md text-center text-xs text-muted-foreground">
-          {content.map((c, i) => renderContentBlock(c, i))}
+          {content.map((c, i) =>
+            renderContentBlock(c, i, {
+              defaultImageAlt: t("message.defaultImageAlt"),
+              redactedThinking: t("message.redactedThinking"),
+            }),
+          )}
         </div>
       </div>
     );
@@ -311,7 +334,16 @@ export const MessageBubble = memo(function MessageBubble({
             const block = section.items[0] as MessageContent;
             return (
               <div key={`${message.id}-${section.key}`}>
-                {renderContentBlock(block, sectionIdx, isStreaming, isUser)}
+                {renderContentBlock(
+                  block,
+                  sectionIdx,
+                  {
+                    defaultImageAlt: t("message.defaultImageAlt"),
+                    redactedThinking: t("message.redactedThinking"),
+                  },
+                  isStreaming,
+                  isUser,
+                )}
               </div>
             );
           })}
@@ -327,7 +359,7 @@ export const MessageBubble = memo(function MessageBubble({
           {textContent && <CopyAction text={textContent} />}
           {!isUser && onRetryMessage && (
             <MessageAction
-              tooltip="Retry"
+              tooltip={t("common:actions.retry")}
               onClick={() => onRetryMessage(message.id)}
             >
               <RotateCcw className="size-3.5" />
@@ -335,14 +367,14 @@ export const MessageBubble = memo(function MessageBubble({
           )}
           {isUser && onEditMessage && (
             <MessageAction
-              tooltip="Edit"
+              tooltip={t("common:actions.edit")}
               onClick={() => onEditMessage(message.id)}
             >
               <Pencil className="size-3.5" />
             </MessageAction>
           )}
           <span className="px-1 text-[10px] text-muted-foreground">
-            {new Date(created).toLocaleTimeString([], {
+            {formatDate(created, {
               hour: "2-digit",
               minute: "2-digit",
             })}

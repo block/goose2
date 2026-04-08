@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Calendar,
   MessageSquare,
@@ -9,6 +10,12 @@ import {
   Trash2,
   ArchiveRestore,
 } from "lucide-react";
+import {
+  getDisplaySessionTitle,
+  getEditableSessionTitle,
+  isSessionTitleUnchanged,
+} from "@/features/chat/lib/sessionTitle";
+import { useLocaleFormatting } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
 import {
@@ -18,26 +25,6 @@ import {
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
 import { Input } from "@/shared/ui/input";
-
-function formatRelativeDate(isoString: string): string {
-  const date = new Date(isoString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60_000);
-  const diffHours = Math.floor(diffMs / 3_600_000);
-  const diffDays = Math.floor(diffMs / 86_400_000);
-
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return `${diffDays}d ago`;
-
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
 
 interface SessionCardProps {
   id: string;
@@ -70,14 +57,24 @@ export function SessionCard({
   onArchive,
   onUnarchive,
 }: SessionCardProps) {
+  const { t } = useTranslation(["sessions", "common"]);
+  const { formatNumber, formatRelativeTimeToNow } = useLocaleFormatting();
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [draftTitle, setDraftTitle] = useState(title);
   const inputRef = useRef<HTMLInputElement>(null);
+  const displayTitle = getDisplaySessionTitle(
+    title,
+    t("common:session.defaultTitle"),
+  );
+  const editableTitle = getEditableSessionTitle(
+    title,
+    t("common:session.defaultTitle"),
+  );
+  const [draftTitle, setDraftTitle] = useState(editableTitle);
 
   useEffect(() => {
-    setDraftTitle(title);
-  }, [title]);
+    setDraftTitle(editableTitle);
+  }, [editableTitle]);
 
   useEffect(() => {
     if (!editing) return;
@@ -86,7 +83,7 @@ export function SessionCard({
   }, [editing]);
 
   const startRename = () => {
-    setDraftTitle(title);
+    setDraftTitle(editableTitle);
     setMenuOpen(false);
     setEditing(true);
   };
@@ -94,12 +91,21 @@ export function SessionCard({
   const commitRename = () => {
     const nextTitle = draftTitle.trim();
     setEditing(false);
-    if (!nextTitle || nextTitle === title) return;
+    if (
+      !nextTitle ||
+      isSessionTitleUnchanged(
+        nextTitle,
+        title,
+        t("common:session.defaultTitle"),
+      )
+    ) {
+      return;
+    }
     onRename?.(id, nextTitle);
   };
 
   const cancelRename = () => {
-    setDraftTitle(title);
+    setDraftTitle(editableTitle);
     setEditing(false);
   };
 
@@ -115,7 +121,7 @@ export function SessionCard({
         type="button"
         onClick={() => onSelect?.(id)}
         className="absolute inset-0 z-0 rounded-lg"
-        aria-label={`Open ${title}`}
+        aria-label={t("card.open", { title: displayTitle })}
       />
 
       {/* Title — editable or static */}
@@ -141,19 +147,24 @@ export function SessionCard({
         />
       ) : (
         <p className="text-sm font-medium line-clamp-2 break-words pr-6">
-          {title}
+          {displayTitle}
         </p>
       )}
 
       <div className="flex flex-col gap-1 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5">
           <Calendar className="size-3 shrink-0" />
-          <span>{formatRelativeDate(updatedAt)}</span>
+          <span>{formatRelativeTimeToNow(updatedAt)}</span>
         </div>
 
         <div className="flex items-center gap-1.5">
           <MessageSquare className="size-3 shrink-0" />
-          <span>{messageCount}</span>
+          <span>
+            {t("messageCount", {
+              count: messageCount,
+              displayCount: formatNumber(messageCount),
+            })}
+          </span>
         </div>
 
         {personaName && (
@@ -190,7 +201,7 @@ export function SessionCard({
             type="button"
             variant="ghost"
             size="icon-xs"
-            aria-label={`Options for ${title}`}
+            aria-label={t("card.optionsFor", { title: displayTitle })}
             onClick={(e) => e.stopPropagation()}
             className={cn(
               "absolute right-2 top-2 z-10 size-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50",
@@ -211,13 +222,13 @@ export function SessionCard({
               }}
             >
               <ArchiveRestore className="size-3.5" />
-              Restore
+              {t("common:actions.restore")}
             </DropdownMenuItem>
           ) : (
             <>
               <DropdownMenuItem onClick={startRename}>
                 <Pencil className="size-3.5" />
-                Rename
+                {t("common:actions.rename")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {
@@ -226,7 +237,7 @@ export function SessionCard({
                 }}
               >
                 <Trash2 className="size-3.5" />
-                Archive
+                {t("common:actions.archive")}
               </DropdownMenuItem>
             </>
           )}

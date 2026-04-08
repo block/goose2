@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { DEFAULT_CHAT_TITLE } from "@/features/chat/lib/sessionTitle";
 import { SidebarChatRow } from "../SidebarChatRow";
 
 describe("SidebarChatRow", () => {
@@ -105,5 +106,28 @@ describe("SidebarChatRow", () => {
     );
 
     expect(screen.getByLabelText(/unread messages/i)).toBeInTheDocument();
+  });
+
+  it("keeps the localized default title in rename mode without persisting it", async () => {
+    const user = userEvent.setup();
+    const onRename = vi.fn();
+
+    render(
+      <SidebarChatRow
+        id="session-1"
+        title={DEFAULT_CHAT_TITLE}
+        isActive={false}
+        onRename={onRename}
+      />,
+    );
+
+    await user.dblClick(screen.getByTitle("Double-click to rename"));
+
+    const input = screen.getByRole("textbox");
+    expect(input).toHaveValue("New Chat");
+
+    await user.tab();
+
+    expect(onRename).not.toHaveBeenCalled();
   });
 });

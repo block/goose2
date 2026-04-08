@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { AcpProvider } from "@/shared/api/acp";
 import type { Persona } from "@/shared/types/agents";
 import { cn } from "@/shared/lib/cn";
@@ -82,6 +83,7 @@ function PastedImageThumb({
   onRemove: (index: number) => void;
 }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const { t } = useTranslation("chat");
 
   return (
     <>
@@ -90,11 +92,11 @@ function PastedImageThumb({
           type="button"
           onClick={() => setLightboxOpen(true)}
           className="block cursor-pointer rounded-lg"
-          aria-label={`View attachment ${index + 1}`}
+          aria-label={t("attachments.view", { index: index + 1 })}
         >
           <img
             src={objectUrl}
-            alt={`Attachment ${index + 1}`}
+            alt={t("attachments.alt", { index: index + 1 })}
             className="h-16 w-16 rounded-lg object-cover border border-border"
           />
         </button>
@@ -102,14 +104,14 @@ function PastedImageThumb({
           type="button"
           onClick={() => onRemove(index)}
           className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-foreground text-background opacity-0 group-hover:opacity-100 transition-opacity duration-150"
-          aria-label="Remove image"
+          aria-label={t("attachments.remove")}
         >
           <X className="h-2.5 w-2.5" />
         </button>
       </div>
       <ImageLightbox
         src={objectUrl}
-        alt={`Attachment ${index + 1}`}
+        alt={t("attachments.alt", { index: index + 1 })}
         open={lightboxOpen}
         onOpenChange={setLightboxOpen}
       />
@@ -149,6 +151,7 @@ export function ChatInput({
   contextTokens = 0,
   contextLimit = 0,
 }: ChatInputProps) {
+  const { t } = useTranslation("chat");
   const [text, setTextRaw] = useState(initialValue);
   const setText = useCallback(
     (value: string) => {
@@ -358,7 +361,9 @@ export function ChatInput({
     providers.find((p) => p.id === selectedProvider)?.label ??
     formatProviderLabel(selectedProvider);
   const agentDisplayName = activePersona?.displayName ?? providerDisplayName;
-  const effectivePlaceholder = `Message ${agentDisplayName}, @ to mention personas`;
+  const effectivePlaceholder = t("input.placeholder", {
+    agent: agentDisplayName,
+  });
 
   const handleClearStickyPersona = useCallback(() => {
     onPersonaChange?.(null);
@@ -385,7 +390,7 @@ export function ChatInput({
                   variant="secondary"
                   className="px-3 py-1 text-sm shadow-sm"
                 >
-                  Drop images to attach
+                  {t("attachments.dropToAttach")}
                 </Badge>
               </div>
             )}
@@ -422,7 +427,7 @@ export function ChatInput({
                     size="icon-xs"
                     className="ml-0.5 size-auto p-0 opacity-60 hover:bg-transparent hover:opacity-100"
                     onClick={handleClearStickyPersona}
-                    aria-label="Clear active assistant"
+                    aria-label={t("persona.clearActive")}
                   >
                     <X className="size-3" />
                   </Button>
@@ -433,13 +438,13 @@ export function ChatInput({
             {queuedMessage && (
               <div className="mb-2 flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-1.5">
                 <span className="flex-1 truncate text-xs text-muted-foreground">
-                  Queued: {queuedMessage.text}
+                  {t("queue.label", { text: queuedMessage.text })}
                 </span>
                 <button
                   type="button"
                   onClick={onDismissQueue}
                   className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground"
-                  aria-label="Dismiss queued message"
+                  aria-label={t("queue.dismiss")}
                 >
                   <X className="size-3.5" />
                 </button>
@@ -456,7 +461,7 @@ export function ChatInput({
               disabled={disabled}
               rows={1}
               className="mb-3 min-h-[36px] max-h-[200px] w-full resize-none bg-transparent px-1 text-[14px] leading-relaxed text-foreground placeholder:font-light placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 disabled:opacity-60"
-              aria-label="Chat message input"
+              aria-label={t("input.ariaLabel")}
             />
 
             <ChatInputToolbar

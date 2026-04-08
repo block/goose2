@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import {
+  getDisplaySessionTitle,
+  getEditableSessionTitle,
+  isSessionTitleUnchanged,
+} from "@/features/chat/lib/sessionTitle";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
 import {
@@ -43,16 +49,25 @@ export function SidebarChatRow({
   onMouseEnter,
   activeRef,
 }: SidebarChatRowProps) {
+  const { t } = useTranslation(["sidebar", "common"]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [dragging, setDragging] = useState(false);
-  const [draftTitle, setDraftTitle] = useState(title);
   const inputRef = useRef<HTMLInputElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
+  const displayTitle = getDisplaySessionTitle(
+    title,
+    t("common:session.defaultTitle"),
+  );
+  const editableTitle = getEditableSessionTitle(
+    title,
+    t("common:session.defaultTitle"),
+  );
+  const [draftTitle, setDraftTitle] = useState(editableTitle);
 
   useEffect(() => {
-    setDraftTitle(title);
-  }, [title]);
+    setDraftTitle(editableTitle);
+  }, [editableTitle]);
 
   useEffect(() => {
     if (!editing) return;
@@ -75,20 +90,29 @@ export function SidebarChatRow({
   }, [activeRef, isActive]);
 
   const startRename = () => {
-    setDraftTitle(title);
+    setDraftTitle(editableTitle);
     setMenuOpen(false);
     setEditing(true);
   };
 
   const cancelRename = () => {
-    setDraftTitle(title);
+    setDraftTitle(editableTitle);
     setEditing(false);
   };
 
   const commitRename = () => {
     const nextTitle = draftTitle.trim();
     setEditing(false);
-    if (!nextTitle || nextTitle === title) return;
+    if (
+      !nextTitle ||
+      isSessionTitleUnchanged(
+        nextTitle,
+        title,
+        t("common:session.defaultTitle"),
+      )
+    ) {
+      return;
+    }
     onRename?.(id, nextTitle);
   };
 
@@ -152,13 +176,15 @@ export function SidebarChatRow({
           event.stopPropagation();
           startRename();
         }}
-        title="Double-click to rename"
+        title={t("actions.renameHint")}
         className={cn(
           "flex-1 min-w-0 justify-start gap-2 rounded-md pl-3 pr-8 py-2 text-[13px] font-light active:cursor-grabbing",
           isActive ? ACTIVE_CHAT_ROW_CLASS : INACTIVE_CHAT_ROW_CLASS,
         )}
       >
-        <span className="flex-1 min-w-0 truncate text-left">{title}</span>
+        <span className="flex-1 min-w-0 truncate text-left">
+          {displayTitle}
+        </span>
         <SessionActivityIndicator isRunning={isRunning} hasUnread={hasUnread} />
       </Button>
 
@@ -168,7 +194,7 @@ export function SidebarChatRow({
             type="button"
             variant="ghost"
             size="icon-xs"
-            aria-label={`Options for ${title}`}
+            aria-label={t("menu.optionsFor", { label: displayTitle })}
             onClick={(e) => e.stopPropagation()}
             className={cn(
               "absolute right-1 size-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50",
@@ -183,7 +209,7 @@ export function SidebarChatRow({
         <DropdownMenuContent align="end" sideOffset={4}>
           <DropdownMenuItem onClick={startRename}>
             <Pencil className="size-3.5" />
-            Rename
+            {t("common:actions.rename")}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => {
@@ -191,7 +217,7 @@ export function SidebarChatRow({
             }}
           >
             <Trash2 className="size-3.5" />
-            Archive
+            {t("common:actions.archive")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

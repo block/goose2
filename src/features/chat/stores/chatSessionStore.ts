@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { Session } from "@/shared/types/chat";
 import { acpListSessions } from "@/shared/api/acp";
+import { DEFAULT_CHAT_TITLE } from "@/features/chat/lib/sessionTitle";
 
 // Extended session metadata used by the frontend session list
 export interface ChatSession {
@@ -143,7 +144,7 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     const now = new Date().toISOString();
     const chatSession: ChatSession = {
       id: crypto.randomUUID(),
-      title: opts?.title ?? "New Chat",
+      title: opts?.title ?? DEFAULT_CHAT_TITLE,
       projectId: opts?.projectId,
       agentId: opts?.agentId,
       providerId: opts?.providerId,

@@ -19,6 +19,7 @@ import { useAcpStream } from "@/features/chat/hooks/useAcpStream";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
 import { findExistingDraft } from "@/features/chat/lib/newChat";
+import { DEFAULT_CHAT_TITLE } from "@/features/chat/lib/sessionTitle";
 import { useAppStartup } from "./hooks/useAppStartup";
 
 export type AppView =
@@ -149,7 +150,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   );
 
   const createNewTab = useCallback(
-    (title = "New Chat", project?: ProjectInfo) => {
+    (title = DEFAULT_CHAT_TITLE, project?: ProjectInfo) => {
       const agentId = agentStore.activeAgentId ?? undefined;
       const providerId = project?.preferredProvider ?? homeSelectedProvider;
       const personaId = homeSelectedPersonaId;
@@ -208,7 +209,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const handleStartChatFromProject = useCallback(
     (project: ProjectInfo) => {
       setHomeSelectedProvider(undefined);
-      createNewTab("New Chat", project);
+      createNewTab(DEFAULT_CHAT_TITLE, project);
     },
     [createNewTab],
   );
@@ -218,7 +219,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       setHomeSelectedProvider(undefined);
       const project = projectStore.projects.find((p) => p.id === projectId);
       if (project) {
-        createNewTab("New Chat", project);
+        createNewTab(DEFAULT_CHAT_TITLE, project);
       }
     },
     [createNewTab, projectStore.projects],
@@ -327,7 +328,10 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           ? projectStore.projects.find((project) => project.id === projectId)
           : undefined;
 
-      createNewTab(initialMessage?.slice(0, 40) || "New Chat", selectedProject);
+      createNewTab(
+        initialMessage?.slice(0, 40) || DEFAULT_CHAT_TITLE,
+        selectedProject,
+      );
     },
     [createNewTab, projectStore.projects],
   );

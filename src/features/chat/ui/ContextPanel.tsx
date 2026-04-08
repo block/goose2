@@ -1,4 +1,5 @@
 import { type ReactNode, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   IconFolder,
   IconGitBranch,
@@ -54,6 +55,7 @@ export function ContextPanel({
   projectColor,
   projectWorkingDirs = [],
 }: ContextPanelProps) {
+  const { t } = useTranslation("chat");
   const [activeTab, setActiveTab] = useState<ContextPanelTab>("details");
   const primaryWorkingDir = projectWorkingDirs[0] ?? null;
   const {
@@ -65,7 +67,7 @@ export function ContextPanel({
   } = useGitState(primaryWorkingDir, activeTab === "details");
 
   const gitErrorMessage =
-    error instanceof Error ? error.message : "Unable to read git status.";
+    error instanceof Error ? error.message : t("contextPanel.errors.gitRead");
 
   return (
     <Tabs
@@ -76,10 +78,10 @@ export function ContextPanel({
       <div className="shrink-0 border-b border-border px-3 pb-2 pt-2.5">
         <TabsList variant="buttons">
           <TabsTrigger value="details" variant="buttons">
-            Details
+            {t("contextPanel.tabs.details")}
           </TabsTrigger>
           <TabsTrigger value="files" variant="buttons">
-            Files
+            {t("contextPanel.tabs.files")}
           </TabsTrigger>
         </TabsList>
       </div>
@@ -87,7 +89,7 @@ export function ContextPanel({
       <TabsContent value="details" className="flex-1 overflow-y-auto">
         <div className="space-y-2.5 px-3 pb-3 pt-2">
           <Widget
-            title="Workspace"
+            title={t("contextPanel.widgets.workspace")}
             icon={<IconFolder className="size-3.5" />}
             action={
               <Button
@@ -97,8 +99,8 @@ export function ContextPanel({
                 onClick={() => void refetch()}
                 disabled={!primaryWorkingDir || isFetching}
                 className="rounded-md"
-                aria-label="Refresh git status"
-                title="Refresh git status"
+                aria-label={t("contextPanel.actions.refreshGitStatus")}
+                title={t("contextPanel.actions.refreshGitStatus")}
               >
                 {isFetching ? (
                   <Spinner className="size-3" />
@@ -124,7 +126,9 @@ export function ContextPanel({
                   </span>
                 </div>
               ) : (
-                <p className="text-foreground-subtle">No project assigned.</p>
+                <p className="text-foreground-subtle">
+                  {t("contextPanel.empty.noProjectAssigned")}
+                </p>
               )}
               {projectWorkingDirs.length > 0 ? (
                 projectWorkingDirs.map((dir) => (
@@ -133,13 +137,15 @@ export function ContextPanel({
                   </p>
                 ))
               ) : (
-                <p className="truncate">Folder not set</p>
+                <p className="truncate">
+                  {t("contextPanel.empty.folderNotSet")}
+                </p>
               )}
 
               {!primaryWorkingDir ? null : isLoading && !gitState ? (
                 <div className="flex items-center gap-2 text-foreground">
                   <Spinner className="size-3.5" />
-                  <span>Loading git status…</span>
+                  <span>{t("contextPanel.states.gitLoading")}</span>
                 </div>
               ) : error ? (
                 <p className="text-destructive">{gitErrorMessage}</p>
@@ -153,39 +159,48 @@ export function ContextPanel({
                       <div className="flex min-w-0 items-center gap-1.5 text-foreground">
                         <IconGitBranch className="size-3.5 shrink-0" />
                         <span className="truncate">
-                          {wt.branch ?? "detached"}
+                          {wt.branch ?? t("contextPanel.states.detached")}
                         </span>
                       </div>
                       {wt.isMain ? (
                         <Badge variant="outline" className="text-[10px]">
-                          Main
+                          {t("contextPanel.badges.main")}
                         </Badge>
                       ) : null}
                     </div>
                   ))}
                 </div>
               ) : (
-                <p>Not a git repository.</p>
+                <p>{t("contextPanel.empty.notGitRepo")}</p>
               )}
             </div>
           </Widget>
 
-          <Widget title="Changes" icon={<IconFileCode className="size-3.5" />}>
-            <p className="text-foreground-subtle">No changes</p>
+          <Widget
+            title={t("contextPanel.widgets.changes")}
+            icon={<IconFileCode className="size-3.5" />}
+          >
+            <p className="text-foreground-subtle">
+              {t("contextPanel.empty.noChanges")}
+            </p>
           </Widget>
 
           <Widget
-            title="MCP Servers"
+            title={t("contextPanel.widgets.mcpServers")}
             icon={<IconServer className="size-3.5" />}
           >
-            <p className="text-foreground-subtle">No servers configured</p>
+            <p className="text-foreground-subtle">
+              {t("contextPanel.empty.noServersConfigured")}
+            </p>
           </Widget>
 
           <Widget
-            title="Processes"
+            title={t("contextPanel.widgets.processes")}
             icon={<IconActivity className="size-3.5" />}
           >
-            <p className="text-foreground-subtle">No active processes</p>
+            <p className="text-foreground-subtle">
+              {t("contextPanel.empty.noActiveProcesses")}
+            </p>
           </Widget>
         </div>
       </TabsContent>

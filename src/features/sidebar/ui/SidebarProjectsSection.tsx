@@ -1,24 +1,19 @@
 import { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   IconChevronDown,
   IconChevronRight,
-  IconDots,
   IconLibraryPlusFilled,
   IconMessage,
   IconPlus,
 } from "@tabler/icons-react";
-import { Pencil, Trash2 } from "lucide-react";
+import { getDisplaySessionTitle } from "@/features/chat/lib/sessionTitle";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/shared/ui/dropdown-menu";
 import type { AppView } from "@/app/AppShell";
 import type { ProjectInfo } from "@/features/projects/api/projects";
 import { SessionActivityIndicator } from "@/shared/ui/SessionActivityIndicator";
+import { SidebarItemMenu } from "./SidebarItemMenu";
 import { SidebarChatRow } from "./SidebarChatRow";
 
 const MAX_VISIBLE_CHATS = 5;
@@ -28,9 +23,7 @@ const PROJECT_ROW_TEXT_CLASS =
 interface TabInfo {
   id: string;
   title: string;
-  sessionId: string;
   projectId?: string;
-  updatedAt?: string;
   isRunning?: boolean;
   hasUnread?: boolean;
 }
@@ -61,53 +54,7 @@ interface SidebarProjectsSectionProps {
   activeSessionRefCallback?: (el: HTMLElement | null) => void;
   activeProjectRefCallback?: (el: HTMLElement | null) => void;
 }
-function ItemMenu({
-  label,
-  onEdit,
-  onArchive,
-}: {
-  label: string;
-  onEdit?: () => void;
-  onArchive?: () => void;
-}) {
-  const [open, setOpen] = useState(false);
 
-  return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          aria-label={`Options for ${label}`}
-          onClick={(e) => e.stopPropagation()}
-          className={cn(
-            "size-6 rounded-md",
-            open
-              ? "visible opacity-100"
-              : "invisible group-hover:visible group-focus-within:visible opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
-          )}
-        >
-          <IconDots className="size-3.5" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" sideOffset={4}>
-        {onEdit && (
-          <DropdownMenuItem onClick={onEdit}>
-            <Pencil className="size-3.5" />
-            Edit
-          </DropdownMenuItem>
-        )}
-        {onArchive && (
-          <DropdownMenuItem onClick={onArchive}>
-            <Trash2 className="size-3.5" />
-            Archive
-          </DropdownMenuItem>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
 function ProjectSection({
   project,
   projectChats,
@@ -145,6 +92,7 @@ function ProjectSection({
   activeSessionRefCallback?: (el: HTMLElement | null) => void;
   activeProjectRefCallback?: (el: HTMLElement | null) => void;
 }) {
+  const { t } = useTranslation(["sidebar", "common"]);
   const [showAll, setShowAll] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
@@ -173,10 +121,10 @@ function ProjectSection({
     },
     [onMoveToProject, project.id],
   );
-  const visibleChats = showAll
-    ? projectChats
-    : projectChats.slice(0, MAX_VISIBLE_CHATS);
-  const hasMore = projectChats.length > MAX_VISIBLE_CHATS;
+  const visibleChats = projectChats.slice(
+    0,
+    showAll ? undefined : MAX_VISIBLE_CHATS,
+  );
 
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: drop target for drag-and-drop
@@ -185,7 +133,6 @@ function ProjectSection({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {/* Project row */}
       <div
         ref={
           activeProjectId === project.id ? activeProjectRefCallback : undefined
@@ -220,7 +167,7 @@ function ProjectSection({
             {project.name}
           </span>
         </Button>
-        <ItemMenu
+        <SidebarItemMenu
           label={project.name}
           onEdit={() => onEditProject?.(project.id)}
           onArchive={() => onArchiveProject?.(project.id)}
@@ -233,19 +180,17 @@ function ProjectSection({
             e.stopPropagation();
             onNewChatInProject?.(project.id);
           }}
-          title="New chat in project"
+          title={t("actions.newChatInProject")}
           className="mr-1 size-6 flex-shrink-0 rounded-md text-muted-foreground hover:text-foreground"
         >
           <IconPlus className="size-3.5" />
         </Button>
 
-        {/* Drop indicator line — absolutely positioned to avoid layout shift */}
         {dragOver && (
           <div className="absolute bottom-0 left-3 right-3 h-px bg-foreground" />
         )}
       </div>
 
-      {/* Nested chats */}
       {isExpanded && (
         <div className="mt-0.5 space-y-0.5">
           {visibleChats.map((session) => {
@@ -267,7 +212,7 @@ function ProjectSection({
               />
             );
           })}
-          {hasMore && (
+          {projectChats.length > MAX_VISIBLE_CHATS && (
             <Button
               type="button"
               variant="ghost"
@@ -288,14 +233,20 @@ function ProjectSection({
               {showAll ? (
                 <>
                   <IconChevronDown className="size-3" />
-                  Show less
+                  {t("showLess")}
                 </>
               ) : (
                 <>
                   <IconChevronRight className="size-3" />
                   {projectChats.length > 8
-                    ? `View all ${projectChats.length} chats`
-                    : `${projectChats.length - MAX_VISIBLE_CHATS} more`}
+                    ? t("viewAllChats", {
+                        count: projectChats.length,
+                        displayCount: projectChats.length,
+                      })
+                    : t("moreChats", {
+                        count: projectChats.length - MAX_VISIBLE_CHATS,
+                        displayCount: projectChats.length - MAX_VISIBLE_CHATS,
+                      })}
                 </>
               )}
             </Button>
@@ -330,6 +281,7 @@ export function SidebarProjectsSection({
   activeSessionRefCallback,
   activeProjectRefCallback,
 }: SidebarProjectsSectionProps) {
+  const { t } = useTranslation(["sidebar", "common"]);
   const [recentsDragOver, setRecentsDragOver] = useState(false);
 
   const handleRecentsDragOver = useCallback((e: React.DragEvent) => {
@@ -370,8 +322,6 @@ export function SidebarProjectsSection({
             : "opacity-0 max-h-0 overflow-hidden",
       )}
     >
-      {/* --- PROJECTS (always visible) --- */}
-      {/* Section header with [+] button */}
       <div
         className={cn(
           "group flex items-center transition-all duration-300",
@@ -387,7 +337,7 @@ export function SidebarProjectsSection({
               : "opacity-0 w-0 overflow-hidden",
           )}
         >
-          Projects
+          {t("sections.projects")}
         </span>
         {!collapsed && (
           <Button
@@ -395,7 +345,7 @@ export function SidebarProjectsSection({
             variant="ghost"
             size="icon-xs"
             onClick={onCreateProject}
-            title="New project"
+            title={t("actions.newProject")}
             className={cn(
               "mr-1 size-6 flex-shrink-0 rounded-md text-muted-foreground hover:text-foreground",
               "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
@@ -465,7 +415,6 @@ export function SidebarProjectsSection({
             collapsed ? "w-5 mx-auto h-px" : "h-px",
           )}
         />
-        {/* Section header (expanded only) */}
         <div
           className={cn(
             "relative group flex items-center transition-all duration-300",
@@ -481,7 +430,7 @@ export function SidebarProjectsSection({
                 : "opacity-0 w-0 overflow-hidden",
             )}
           >
-            Recents
+            {t("sections.recents")}
           </span>
           {!collapsed && onNewChat && (
             <Button
@@ -489,15 +438,14 @@ export function SidebarProjectsSection({
               variant="ghost"
               size="icon-xs"
               onClick={onNewChat}
-              aria-label="New chat"
-              title="New chat"
+              aria-label={t("actions.newChat")}
+              title={t("actions.newChat")}
               className="mr-1 size-6 flex-shrink-0 rounded-md text-muted-foreground hover:text-foreground"
             >
               <IconPlus className="size-3.5" />
             </Button>
           )}
 
-          {/* Drop indicator line */}
           {recentsDragOver && (
             <div className="absolute bottom-0 left-3 right-3 h-px bg-foreground" />
           )}
@@ -512,7 +460,10 @@ export function SidebarProjectsSection({
                   variant="ghost"
                   size="icon-xs"
                   key={session.id}
-                  title={session.title}
+                  title={getDisplaySessionTitle(
+                    session.title,
+                    t("common:session.defaultTitle"),
+                  )}
                   onClick={() => onSelectSession?.(session.id)}
                   className={cn(
                     "relative rounded-lg",

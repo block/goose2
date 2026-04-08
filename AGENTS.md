@@ -84,6 +84,14 @@ Not every feature needs every subdirectory. Use only what the feature requires:
 - All `<button>` elements must have `type="button"` to prevent form submission.
 - Use semantic HTML (`<aside>`, `<nav>`, `<header>`, `<main>`).
 
+## Localization
+
+- UI copy should go through `react-i18next`, not hardcoded English strings, for app areas that are already on i18n.
+- Shared localization lives in `src/shared/i18n/`; use `useTranslation()` for text and the helpers in `src/shared/i18n/format.ts` for dates, times, numbers, currency, and relative time.
+- Keep translations in feature-scoped JSON namespaces under `src/shared/i18n/locales/<locale>/` instead of one large file, and use stable keys rather than English sentences as keys.
+- Do not translate user-authored content, agent/model output, or backend-only strings unless they are rendered directly as Goose UI.
+- `pnpm check` includes `check:i18n`, which flags obvious new raw UI strings in migrated surfaces. Use a narrow `i18n-check-ignore` comment only when the string should stay literal.
+
 ## Theming System
 
 ThemeProvider manages three axes:

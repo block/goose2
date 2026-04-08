@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Bot, Copy, Check } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
+import { useLocaleFormatting } from "@/shared/i18n";
 
 interface StatusBarProps {
   modelName?: string;
@@ -14,6 +16,8 @@ export function StatusBar({
   sessionId,
   tokenCount = 0,
 }: StatusBarProps) {
+  const { t } = useTranslation("status");
+  const { formatNumber } = useLocaleFormatting();
   const [copied, setCopied] = useState(false);
 
   const handleCopySessionId = () => {
@@ -34,7 +38,7 @@ export function StatusBar({
         <div className="flex items-center gap-1 min-w-0">
           <Bot className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
           <span className="truncate text-muted-foreground">
-            {modelName ?? "No model"}
+            {modelName ?? t("noModel")}
           </span>
         </div>
       </div>
@@ -47,7 +51,7 @@ export function StatusBar({
             size="xs"
             onClick={handleCopySessionId}
             className="h-auto gap-1 rounded px-1 py-0.5 text-muted-foreground hover:text-muted-foreground"
-            title={`Session: ${sessionId}`}
+            title={t("sessionTitle", { id: sessionId })}
           >
             <span className="font-mono">{sessionId.slice(0, 8)}</span>
             {copied ? (
@@ -59,7 +63,10 @@ export function StatusBar({
         )}
         {tokenCount > 0 && (
           <span className="text-muted-foreground">
-            {tokenCount.toLocaleString()} tokens
+            {t("tokens", {
+              count: tokenCount,
+              displayCount: formatNumber(tokenCount),
+            })}
           </span>
         )}
       </div>

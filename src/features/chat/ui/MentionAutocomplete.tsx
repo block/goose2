@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Sparkles, User } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { useAvatarSrc } from "@/shared/hooks/useAvatarSrc";
@@ -24,6 +25,7 @@ export function MentionAutocomplete({
   anchorRect,
   selectedIndex: controlledIndex,
 }: MentionAutocompleteProps) {
+  const { t } = useTranslation("chat");
   const [internalIndex, setInternalIndex] = useState(0);
   const selectedIndex = controlledIndex ?? internalIndex;
   const listRef = useRef<HTMLDivElement>(null);
@@ -58,10 +60,10 @@ export function MentionAutocomplete({
         left: anchorRect ? 16 : undefined,
       }}
       role="listbox"
-      aria-label="Mention suggestions"
+      aria-label={t("mention.ariaLabel")}
     >
       <div className="px-2 py-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-        Mention a persona
+        {t("mention.title")}
       </div>
       <div className="max-h-48 overflow-y-auto px-1 pb-1">
         {filtered.map((persona, index) => (

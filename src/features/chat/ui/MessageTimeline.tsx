@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/lib/cn";
+import { useLocaleFormatting } from "@/shared/i18n";
 import { MessageBubble } from "./MessageBubble";
 import type { Message } from "@/shared/types/messages";
 
@@ -23,16 +25,23 @@ function isSameDay(a: number, b: number): boolean {
   );
 }
 
-function formatDateSeparator(timestamp: number): string {
-  const date = new Date(timestamp);
+function formatDateSeparator(
+  timestamp: number,
+  todayLabel: string,
+  yesterdayLabel: string,
+  formatDate: (
+    value: Date | string | number,
+    options?: Intl.DateTimeFormatOptions,
+  ) => string,
+): string {
   const now = new Date();
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
 
-  if (isSameDay(timestamp, now.getTime())) return "Today";
-  if (isSameDay(timestamp, yesterday.getTime())) return "Yesterday";
+  if (isSameDay(timestamp, now.getTime())) return todayLabel;
+  if (isSameDay(timestamp, yesterday.getTime())) return yesterdayLabel;
 
-  return date.toLocaleDateString(undefined, {
+  return formatDate(timestamp, {
     weekday: "long",
     month: "short",
     day: "numeric",
@@ -48,6 +57,8 @@ export function MessageTimeline({
   onEditMessage,
   className,
 }: MessageTimelineProps) {
+  const { t } = useTranslation("chat");
+  const { formatDate } = useLocaleFormatting();
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
@@ -79,10 +90,10 @@ export function MessageTimeline({
       <div className={cn("flex flex-1 items-center justify-center", className)}>
         <div className="text-center">
           <p className="text-lg font-medium font-display tracking-tight text-muted-foreground">
-            Start a conversation
+            {t("timeline.emptyTitle")}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Send a message to get started
+            {t("timeline.emptyDescription")}
           </p>
         </div>
       </div>
@@ -95,7 +106,7 @@ export function MessageTimeline({
       onScroll={handleScroll}
       className={cn("flex-1 overflow-y-auto", className)}
       role="log"
-      aria-label="Chat messages"
+      aria-label={t("timeline.ariaLabel")}
       aria-live="polite"
     >
       <div className="mx-auto max-w-3xl py-4">
@@ -110,7 +121,12 @@ export function MessageTimeline({
                 <div className="my-4 flex items-center gap-3 px-4">
                   <div className="h-px flex-1 bg-border" />
                   <span className="text-[11px] font-medium text-muted-foreground">
-                    {formatDateSeparator(message.created)}
+                    {formatDateSeparator(
+                      message.created,
+                      t("timeline.today"),
+                      t("timeline.yesterday"),
+                      formatDate,
+                    )}
                   </span>
                   <div className="h-px flex-1 bg-border" />
                 </div>

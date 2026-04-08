@@ -1,32 +1,48 @@
 import type { ChatSession } from "@/features/chat/stores/chatSessionStore";
+import { formatDate } from "@/shared/i18n";
 
 export interface SessionDateGroup {
   label: string;
   sessions: ChatSession[];
 }
 
+interface GroupSessionsOptions {
+  locale?: string;
+  todayLabel?: string;
+  yesterdayLabel?: string;
+}
+
 function startOfDayUTC(date: Date): number {
   return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
 }
 
-function formatDateLabel(date: Date, today: Date): string {
+function formatDateLabel(
+  date: Date,
+  today: Date,
+  options: GroupSessionsOptions,
+): string {
   const todayStart = startOfDayUTC(today);
   const dateStart = startOfDayUTC(date);
   const diff = todayStart - dateStart;
 
-  if (diff === 0) return "Today";
-  if (diff === 86_400_000) return "Yesterday";
+  if (diff === 0) return options.todayLabel ?? "Today";
+  if (diff === 86_400_000) return options.yesterdayLabel ?? "Yesterday";
 
-  return date.toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+  return formatDate(
+    date,
+    {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC",
+    },
+    options.locale,
+  );
 }
 
 export function groupSessionsByDate(
   sessions: ChatSession[],
+  options: GroupSessionsOptions = {},
 ): SessionDateGroup[] {
   if (sessions.length === 0) return [];
 
@@ -40,7 +56,7 @@ export function groupSessionsByDate(
 
   for (const session of sorted) {
     const date = new Date(session.updatedAt);
-    const label = formatDateLabel(date, now);
+    const label = formatDateLabel(date, now, options);
 
     let bucket = buckets.get(label);
     if (!bucket) {

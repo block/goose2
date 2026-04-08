@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { AtSign, ChevronDown, Check, Plus, Sparkles, User } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { useAvatarSrc } from "@/shared/hooks/useAvatarSrc";
@@ -32,6 +33,7 @@ export function PersonaPicker({
   className,
   triggerVariant = "default",
 }: PersonaPickerProps) {
+  const { t } = useTranslation(["chat", "common"]);
   const selected = useMemo(
     () =>
       selectedPersonaId
@@ -49,7 +51,7 @@ export function PersonaPicker({
     [personas],
   );
 
-  const label = selected?.displayName ?? "Goose";
+  const label = selected?.displayName ?? t("common:labels.goose");
 
   return (
     <DropdownMenu>
@@ -60,8 +62,8 @@ export function PersonaPicker({
             variant="ghost"
             size="icon-sm"
             className={className}
-            aria-label="Choose assistant"
-            title="Choose assistant"
+            aria-label={t("persona.chooseAssistant")}
+            title={t("persona.chooseAssistant")}
           >
             <AtSign />
           </Button>
@@ -74,7 +76,7 @@ export function PersonaPicker({
               "gap-1.5 rounded-lg px-2.5 font-medium text-foreground hover:bg-accent",
               className,
             )}
-            aria-label="Select persona"
+            aria-label={t("persona.chooseAssistant")}
           >
             <PersonaAvatar persona={selected} size="sm" />
             {!compact && <span>{label}</span>}
@@ -94,9 +96,11 @@ export function PersonaPicker({
             <Sparkles className="h-3.5 w-3.5" />
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="text-sm font-medium">Goose</span>
+            <span className="text-sm font-medium">
+              {t("common:labels.goose")}
+            </span>
             <span className="text-[11px] leading-snug text-muted-foreground">
-              No persona — chat directly with the agent
+              {t("persona.defaultDescription")}
             </span>
           </div>
           {selectedPersonaId === null && (
@@ -107,7 +111,7 @@ export function PersonaPicker({
         {builtinPersonas.length > 0 && (
           <>
             <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground">
-              Built-in
+              {t("common:labels.builtIn")}
             </DropdownMenuLabel>
             {builtinPersonas.map((persona) => (
               <PersonaMenuItem
@@ -123,7 +127,7 @@ export function PersonaPicker({
           <>
             <DropdownMenuSeparator />
             <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground">
-              Custom
+              {t("common:labels.custom")}
             </DropdownMenuLabel>
             {customPersonas.map((persona) => (
               <PersonaMenuItem
@@ -140,7 +144,7 @@ export function PersonaPicker({
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={onCreatePersona}>
               <Plus className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-sm">Create persona...</span>
+              <span className="text-sm">{t("persona.create")}</span>
             </DropdownMenuItem>
           </>
         )}

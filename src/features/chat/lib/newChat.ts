@@ -1,5 +1,6 @@
 import type { Message } from "@/shared/types/messages";
 import type { ChatSession } from "../stores/chatSessionStore";
+import { DEFAULT_CHAT_TITLE } from "./sessionTitle";
 
 interface NewChatRequest {
   title: string;
@@ -48,7 +49,7 @@ export function findExistingDraft({
   messagesBySession,
   request,
 }: FindExistingDraftArgs): ChatSession | undefined {
-  if (request.title !== "New Chat") {
+  if (request.title !== DEFAULT_CHAT_TITLE) {
     return undefined;
   }
 

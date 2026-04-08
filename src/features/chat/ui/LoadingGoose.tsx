@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { AnimatedIcons } from "./AnimatedIcons";
 import { FlyingBird } from "./FlyingBird";
 
@@ -13,14 +14,6 @@ interface LoadingGooseProps {
   chatState?: LoadingChatState;
 }
 
-const STATE_MESSAGES: Record<LoadingChatState, string> = {
-  idle: "",
-  thinking: "is thinking…",
-  streaming: "is working on it…",
-  waiting: "is waiting…",
-  compacting: "is compacting the conversation…",
-};
-
 const STATE_ICONS: Record<LoadingChatState, React.ReactNode> = {
   idle: null,
   thinking: <AnimatedIcons className="shrink-0" cycleInterval={600} />,
@@ -32,27 +25,30 @@ const STATE_ICONS: Record<LoadingChatState, React.ReactNode> = {
 };
 
 export function LoadingGoose({
-  agentName = "Goose",
+  agentName,
   chatState = "idle",
 }: LoadingGooseProps) {
+  const { t } = useTranslation(["chat", "common"]);
   if (chatState === "idle") {
     return null;
   }
 
-  const message = STATE_MESSAGES[chatState];
+  const resolvedAgentName = agentName ?? t("common:labels.goose");
+  const message = t(`loading.${chatState}`);
   const icon = STATE_ICONS[chatState];
 
   return (
     <div
       className="px-4 animate-in fade-in duration-300 motion-reduce:animate-none"
       role="status"
-      aria-label={`${agentName} ${message}`}
+      // i18n-check-ignore translated template expression
+      aria-label={`${resolvedAgentName} ${message}`}
     >
       <div className="max-w-3xl mx-auto w-full">
         <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
           {icon}
           <span>
-            {agentName} {message}
+            {resolvedAgentName} {message}
           </span>
         </div>
       </div>

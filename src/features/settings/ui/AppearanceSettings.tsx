@@ -3,28 +3,29 @@ import { Separator } from "@/shared/ui/separator";
 import { ToggleGroup, ToggleGroupItem } from "@/shared/ui/toggle-group";
 import { useTheme } from "@/shared/theme/ThemeProvider";
 import { Sun, Moon, Monitor, Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const THEME_OPTIONS = [
-  { value: "light", icon: Sun, label: "Light" },
-  { value: "dark", icon: Moon, label: "Dark" },
-  { value: "system", icon: Monitor, label: "System" },
+  { value: "light", icon: Sun },
+  { value: "dark", icon: Moon },
+  { value: "system", icon: Monitor },
 ] as const;
 
 const ACCENT_COLORS = [
-  { name: "Blue", value: "#3b82f6" },
-  { name: "Cyan", value: "#06b6d4" },
-  { name: "Green", value: "#22c55e" },
-  { name: "Orange", value: "#f97316" },
-  { name: "Red", value: "#ef4444" },
-  { name: "Pink", value: "#ec4899" },
-  { name: "Purple", value: "#a855f7" },
-  { name: "Indigo", value: "#6366f1" },
+  { name: "blue", value: "#3b82f6" },
+  { name: "cyan", value: "#06b6d4" },
+  { name: "green", value: "#22c55e" },
+  { name: "orange", value: "#f97316" },
+  { name: "red", value: "#ef4444" },
+  { name: "pink", value: "#ec4899" },
+  { name: "purple", value: "#a855f7" },
+  { name: "indigo", value: "#6366f1" },
 ];
 
 const DENSITY_OPTIONS = [
-  { value: "compact", label: "Compact" },
-  { value: "comfortable", label: "Comfortable" },
-  { value: "spacious", label: "Spacious" },
+  { value: "compact" },
+  { value: "comfortable" },
+  { value: "spacious" },
 ] as const;
 
 function SettingRow({
@@ -50,23 +51,24 @@ function SettingRow({
 }
 
 export function AppearanceSettings() {
+  const { t } = useTranslation("settings");
   const { theme, setTheme, accentColor, setAccentColor, density, setDensity } =
     useTheme();
 
   return (
     <div>
       <h3 className="text-lg font-semibold font-display tracking-tight">
-        Appearance
+        {t("appearance.title")}
       </h3>
       <p className="mt-1 text-sm text-muted-foreground">
-        Customize the look and feel of Goose
+        {t("appearance.description")}
       </p>
 
       <Separator className="my-4" />
 
       <SettingRow
-        label="Theme"
-        description="Choose your preferred color scheme"
+        label={t("appearance.theme.label")}
+        description={t("appearance.theme.description")}
       >
         <ToggleGroup
           type="single"
@@ -81,7 +83,7 @@ export function AppearanceSettings() {
               className="gap-1.5 rounded-md px-3 py-1.5 text-sm data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:shadow-sm"
             >
               <option.icon className="h-3.5 w-3.5" />
-              {option.label}
+              {t(`appearance.theme.options.${option.value}`)}
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
@@ -89,13 +91,16 @@ export function AppearanceSettings() {
 
       <Separator className="my-4" />
 
-      <SettingRow label="Accent Color" description="Choose your accent color">
+      <SettingRow
+        label={t("appearance.accent.label")}
+        description={t("appearance.accent.description")}
+      >
         <div className="grid grid-cols-4 gap-2">
           {ACCENT_COLORS.map((color) => (
             <button
               type="button"
               key={color.value}
-              title={color.name}
+              title={t(`appearance.accent.colors.${color.name}`)}
               onClick={() => setAccentColor(color.value)}
               className={cn(
                 "flex h-7 w-7 items-center justify-center rounded-full transition-transform hover:scale-110",
@@ -115,8 +120,8 @@ export function AppearanceSettings() {
       <Separator className="my-4" />
 
       <SettingRow
-        label="Interface Density"
-        description="Adjust the spacing of UI elements"
+        label={t("appearance.density.label")}
+        description={t("appearance.density.description")}
       >
         <ToggleGroup
           type="single"
@@ -130,7 +135,7 @@ export function AppearanceSettings() {
               value={option.value}
               className="rounded-md px-3 py-1.5 text-sm data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:shadow-sm"
             >
-              {option.label}
+              {t(`appearance.density.options.${option.value}`)}
             </ToggleGroupItem>
           ))}
         </ToggleGroup>

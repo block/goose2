@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/shared/ui/alert-dialog";
 import { runDoctorFix, type DoctorCheck } from "@/shared/api/doctor";
+import { useTranslation } from "react-i18next";
 
 interface DoctorCheckRowProps {
   check: DoctorCheck;
@@ -39,6 +40,7 @@ const STATUS_COLOR = {
 } as const;
 
 export function DoctorCheckRow({ check, onFixed }: DoctorCheckRowProps) {
+  const { t } = useTranslation(["settings", "common"]);
   const [showFixDialog, setShowFixDialog] = useState(false);
   const [fixing, setFixing] = useState(false);
   const [fixError, setFixError] = useState<string | null>(null);
@@ -95,7 +97,7 @@ export function DoctorCheckRow({ check, onFixed }: DoctorCheckRowProps) {
             className="flex flex-shrink-0 items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <Wrench className="h-3.5 w-3.5" />
-            Fix
+            {t("common:actions.fix")}
           </button>
         )}
 
@@ -105,7 +107,7 @@ export function DoctorCheckRow({ check, onFixed }: DoctorCheckRowProps) {
             onClick={() => {
               if (check.fixUrl) void openUrl(check.fixUrl);
             }}
-            aria-label="Open fix URL"
+            aria-label={t("common:buttons.openFixUrl")}
             className="flex flex-shrink-0 items-center justify-center rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <ExternalLink className="h-3.5 w-3.5" />
@@ -121,14 +123,16 @@ export function DoctorCheckRow({ check, onFixed }: DoctorCheckRowProps) {
       >
         <AlertDialogContent className="max-w-sm">
           <AlertDialogHeader>
-            <AlertDialogTitle>Run fix command?</AlertDialogTitle>
+            <AlertDialogTitle>{t("settings:doctor.runFix")}</AlertDialogTitle>
             <AlertDialogDescription className="break-all font-mono">
               {check.fixCommand}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {fixError && <p className="text-xs text-destructive">{fixError}</p>}
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={fixing}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={fixing}>
+              {t("common:actions.cancel")}
+            </AlertDialogCancel>
             <Button
               variant="outline"
               size="sm"
@@ -136,7 +140,11 @@ export function DoctorCheckRow({ check, onFixed }: DoctorCheckRowProps) {
               onClick={confirmFix}
             >
               {fixing && <Loader2 className="h-3 w-3 animate-spin" />}
-              {fixing ? "Running" : fixError ? "Retry" : "Run"}
+              {fixing
+                ? t("common:actions.running")
+                : fixError
+                  ? t("common:actions.retry")
+                  : t("common:actions.run")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

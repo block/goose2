@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useChatStore } from "../stores/chatStore";
 import { useChatSessionStore } from "../stores/chatSessionStore";
+import { isDefaultChatTitle } from "../lib/sessionTitle";
 import type {
   Message,
   MessageCompletionStatus,
@@ -269,7 +270,7 @@ export function useAcpStream(enabled: boolean): void {
         // has the default "New Chat" title (i.e. no ACP title was received).
         const sessionStore = useChatSessionStore.getState();
         const session = sessionStore.getSession(event.payload.sessionId);
-        if (session && session.title === "New Chat") {
+        if (session && isDefaultChatTitle(session.title)) {
           const messages = store.messagesBySession[event.payload.sessionId];
           const firstUserMsg = messages?.find((m) => m.role === "user");
           if (firstUserMsg) {
