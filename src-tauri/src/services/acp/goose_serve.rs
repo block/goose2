@@ -158,7 +158,7 @@ fn default_serve_working_dir() -> PathBuf {
 // Binary resolution
 // ---------------------------------------------------------------------------
 
-fn resolve_goose_binary() -> Result<PathBuf, String> {
+pub(crate) fn resolve_goose_binary() -> Result<PathBuf, String> {
     let binary_path = if let Ok(override_path) = std::env::var("GOOSE_BIN") {
         let path = PathBuf::from(&override_path);
         if !path.exists() {
