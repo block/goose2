@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { ChatInput } from "../ChatInput";
@@ -73,6 +73,23 @@ describe("ChatInput", () => {
     await user.keyboard("{Shift>}{Enter}{/Shift}");
 
     expect(onSend).not.toHaveBeenCalled();
+  });
+
+  it("does not call onSend on Alt+Enter (newline)", async () => {
+    const onSend = vi.fn();
+    const user = userEvent.setup();
+    render(<ChatInput onSend={onSend} />);
+
+    const input = screen.getByRole("textbox");
+    await user.type(input, "hello");
+    const wasNotPrevented = fireEvent.keyDown(input, {
+      altKey: true,
+      key: "Enter",
+    });
+
+    expect(wasNotPrevented).toBe(true);
+    expect(onSend).not.toHaveBeenCalled();
+    expect(input).toHaveValue("hello");
   });
 
   it("shows current model name in model picker", () => {
