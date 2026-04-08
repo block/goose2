@@ -3,7 +3,7 @@ use serde::Serialize;
 /// Payload for the `acp:message_created` event.
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(super) struct MessageCreatedPayload {
+pub(crate) struct MessageCreatedPayload {
     pub session_id: String,
     pub message_id: String,
     pub persona_id: Option<String>,
@@ -13,7 +13,7 @@ pub(super) struct MessageCreatedPayload {
 /// Payload for the `acp:text` event.
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(super) struct TextPayload {
+pub(crate) struct TextPayload {
     pub session_id: String,
     pub message_id: String,
     pub text: String,
@@ -22,7 +22,7 @@ pub(super) struct TextPayload {
 /// Payload for the `acp:done` event.
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(super) struct DonePayload {
+pub(crate) struct DonePayload {
     pub session_id: String,
     pub message_id: String,
 }
@@ -30,7 +30,7 @@ pub(super) struct DonePayload {
 /// Payload for the `acp:tool_call` event.
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(super) struct ToolCallPayload {
+pub(crate) struct ToolCallPayload {
     pub session_id: String,
     pub message_id: String,
     pub tool_call_id: String,
@@ -40,7 +40,7 @@ pub(super) struct ToolCallPayload {
 /// Payload for the `acp:tool_title` event.
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(super) struct ToolTitlePayload {
+pub(crate) struct ToolTitlePayload {
     pub session_id: String,
     pub message_id: String,
     pub tool_call_id: String,
@@ -50,7 +50,7 @@ pub(super) struct ToolTitlePayload {
 /// Payload for the `acp:tool_result` event.
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(super) struct ToolResultPayload {
+pub(crate) struct ToolResultPayload {
     pub session_id: String,
     pub message_id: String,
     pub content: String,
@@ -58,14 +58,14 @@ pub(super) struct ToolResultPayload {
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(super) struct SessionInfoPayload {
+pub(crate) struct SessionInfoPayload {
     pub session_id: String,
     pub title: Option<String>,
 }
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(super) struct ModelStatePayload {
+pub(crate) struct ModelStatePayload {
     pub session_id: String,
     pub current_model_id: String,
     pub current_model_name: Option<String>,

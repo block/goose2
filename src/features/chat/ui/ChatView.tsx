@@ -8,10 +8,10 @@ import { MessageTimeline } from "./MessageTimeline";
 import { ChatInput } from "./ChatInput";
 import type { PastedImage } from "@/shared/types/messages";
 import { LoadingGoose } from "./LoadingGoose";
+import { ChatLoadingSkeleton } from "./ChatLoadingSkeleton";
 import { ContextPanel } from "./ContextPanel";
 import { useChat } from "../hooks/useChat";
 import { useMessageQueue } from "../hooks/useMessageQueue";
-import { useSessionAutoTitle } from "@/features/sessions/hooks/useSessionAutoTitle";
 import { useChatStore } from "../stores/chatStore";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { useProviderSelection } from "@/features/agents/hooks/useProviderSelection";
@@ -30,7 +30,7 @@ import { Button } from "@/shared/ui/button";
 import { ArtifactPolicyProvider } from "../hooks/ArtifactPolicyContext";
 
 interface ChatViewProps {
-  sessionId?: string;
+  sessionId: string;
   agentName?: string;
   agentAvatarUrl?: string;
   initialProvider?: string;
@@ -61,7 +61,7 @@ export function ChatView({
   onInitialMessageConsumed,
   onCreateProject,
 }: ChatViewProps) {
-  const [activeSessionId] = useState(() => sessionId ?? crypto.randomUUID());
+  const activeSessionId = sessionId;
   const isContextPanelOpen = useChatSessionStore(
     (s) => s.contextPanelOpenBySession[activeSessionId] ?? false,
   );
@@ -76,7 +76,6 @@ export function ChatView({
     selectedProvider: globalSelectedProvider,
     setSelectedProvider: setGlobalSelectedProvider,
   } = useProviderSelection();
-
   const personas = useAgentStore((s) => s.personas);
   const [selectedPersonaId, setSelectedPersonaId] = useState<string | null>(
     initialPersonaId ?? null,
@@ -143,7 +142,6 @@ export function ChatView({
 
   useEffect(() => {
     let cancelled = false;
-
     if (!session?.projectId || storedProject) {
       setFallbackProject(null);
       return;
@@ -187,7 +185,6 @@ export function ChatView({
       if (providerId === selectedProvider) {
         return;
       }
-
       setGlobalSelectedProvider(providerId);
       useChatSessionStore
         .getState()
@@ -259,7 +256,6 @@ export function ChatView({
 
   useEffect(() => {
     let cancelled = false;
-
     acpPrepareSession(activeSessionId, selectedProvider, {
       workingDir: effectiveWorkingDir,
       personaId: selectedPersonaId ?? undefined,
@@ -289,8 +285,11 @@ export function ChatView({
     personaInfo,
     effectiveWorkingDir,
   );
-
-  useSessionAutoTitle(activeSessionId);
+  const isLoadingHistory = useChatStore(
+    (s) =>
+      s.loadingSessionIds.has(activeSessionId) &&
+      (s.messagesBySession[activeSessionId]?.length ?? 0) === 0,
+  );
 
   const deferredSend = useRef<{ text: string; images?: PastedImage[] } | null>(
     null,
@@ -385,14 +384,18 @@ export function ChatView({
     >
       <div className="relative flex h-full min-w-0">
         <div className="flex min-w-0 flex-1 flex-col pr-1">
-          <MessageTimeline
-            messages={messages}
-            streamingMessageId={streamingMessageId}
-            agentName={displayAgentName}
-            agentAvatarUrl={personaAvatarSrc ?? agentAvatarUrl}
-          />
+          {isLoadingHistory ? (
+            <ChatLoadingSkeleton />
+          ) : (
+            <MessageTimeline
+              messages={messages}
+              streamingMessageId={streamingMessageId}
+              agentName={displayAgentName}
+              agentAvatarUrl={personaAvatarSrc ?? agentAvatarUrl}
+            />
+          )}
 
-          {showIndicator && (
+          {showIndicator && !isLoadingHistory && (
             <LoadingGoose
               agentName={displayAgentName}
               chatState={

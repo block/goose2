@@ -79,17 +79,21 @@ dev:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    LOCAL_GOOSE_BIN="$(./scripts/ensure-local-goose.sh --check-bin)" || {
-        rc=$?
-        if [[ $rc -eq 2 ]]; then
-            echo "❌ Local goose binary is not ready. Run 'just setup' first." >&2
-            exit 1
+    if [[ -n "${GOOSE_BIN:-}" ]]; then
+        echo "Using explicitly set GOOSE_BIN: ${GOOSE_BIN}"
+    else
+        LOCAL_GOOSE_BIN="$(./scripts/ensure-local-goose.sh --check-bin)" || {
+            rc=$?
+            if [[ $rc -eq 2 ]]; then
+                echo "❌ Local goose binary is not ready. Run 'just setup' first." >&2
+                exit 1
+            fi
+            exit $rc
+        }
+        if [[ -n "${LOCAL_GOOSE_BIN}" ]]; then
+            export GOOSE_BIN="${LOCAL_GOOSE_BIN}"
+            echo "Using local goose binary: ${GOOSE_BIN}"
         fi
-        exit $rc
-    }
-    if [[ -n "${LOCAL_GOOSE_BIN}" ]]; then
-        export GOOSE_BIN="${LOCAL_GOOSE_BIN}"
-        echo "Using local goose binary: ${GOOSE_BIN}"
     fi
 
     # Derive a stable port from the working directory so the same worktree
@@ -125,17 +129,21 @@ dev-debug:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    LOCAL_GOOSE_BIN="$(./scripts/ensure-local-goose.sh --check-bin)" || {
-        rc=$?
-        if [[ $rc -eq 2 ]]; then
-            echo "❌ Local goose binary is not ready. Run 'just setup' first." >&2
-            exit 1
+    if [[ -n "${GOOSE_BIN:-}" ]]; then
+        echo "Using explicitly set GOOSE_BIN: ${GOOSE_BIN}"
+    else
+        LOCAL_GOOSE_BIN="$(./scripts/ensure-local-goose.sh --check-bin)" || {
+            rc=$?
+            if [[ $rc -eq 2 ]]; then
+                echo "❌ Local goose binary is not ready. Run 'just setup' first." >&2
+                exit 1
+            fi
+            exit $rc
+        }
+        if [[ -n "${LOCAL_GOOSE_BIN}" ]]; then
+            export GOOSE_BIN="${LOCAL_GOOSE_BIN}"
+            echo "Using local goose binary: ${GOOSE_BIN}"
         fi
-        exit $rc
-    }
-    if [[ -n "${LOCAL_GOOSE_BIN}" ]]; then
-        export GOOSE_BIN="${LOCAL_GOOSE_BIN}"
-        echo "Using local goose binary: ${GOOSE_BIN}"
     fi
 
     VITE_PORT=$(python3 -c "import hashlib,os; h=int(hashlib.sha256(os.getcwd().encode()).hexdigest(),16); print(10000 + h % 55000)")

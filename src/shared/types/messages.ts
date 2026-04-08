@@ -168,7 +168,11 @@ export function createUserMessage(
     role: "user",
     created: Date.now(),
     content: [{ type: "text", text }],
-    metadata: attachments ? { attachments } : undefined,
+    metadata: {
+      userVisible: true,
+      agentVisible: true,
+      ...(attachments ? { attachments } : {}),
+    },
   };
 }
 

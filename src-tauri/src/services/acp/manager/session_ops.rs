@@ -2,15 +2,24 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use acp_client::{MessageWriter, Store};
+use acp_client::MessageWriter;
 use agent_client_protocol::{
     Agent, CancelNotification, ClientSideConnection, ContentBlock as AcpContentBlock, ImageContent,
-    LoadSessionRequest, NewSessionRequest, PromptRequest, SessionConfigKind, SessionConfigOption,
-    SessionConfigSelectOptions, SetSessionConfigOptionRequest, TextContent,
+    ListSessionsRequest, LoadSessionRequest, NewSessionRequest, PromptRequest, SessionConfigKind,
+    SessionConfigOption, SessionConfigSelectOptions, SetSessionConfigOptionRequest, TextContent,
 };
 use tokio::sync::Mutex;
 
 use super::dispatcher::SessionEventDispatcher;
+
+/// Lightweight session metadata returned by `list_sessions`.
+#[derive(Clone, Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpSessionInfo {
+    pub session_id: String,
+    pub title: Option<String>,
+    pub updated_at: Option<String>,
+}
 
 #[derive(Clone)]
 pub(super) struct PreparedSession {
@@ -79,7 +88,6 @@ pub(super) struct PrepareSessionInput {
     pub(super) provider_id: String,
     pub(super) working_dir: PathBuf,
     pub(super) existing_agent_session_id: Option<String>,
-    pub(super) store: Arc<dyn Store>,
 }
 
 pub(super) async fn prepare_session_inner(
@@ -94,7 +102,6 @@ pub(super) async fn prepare_session_inner(
         provider_id,
         working_dir,
         existing_agent_session_id,
-        store,
     } = input;
 
     let session_lock = {
@@ -220,9 +227,6 @@ pub(super) async fn prepare_session_inner(
                 .map_err(|error| format!("Failed to create Goose session: {error:?}"))?;
 
             let new_id = response.session_id.to_string();
-            store
-                .set_agent_session_id(&local_session_id, &new_id)
-                .map_err(|error| format!("Failed to save Goose session ID: {error}"))?;
 
             dispatcher.bind_session(&new_id, &local_session_id).await;
 
@@ -282,7 +286,6 @@ pub(super) async fn send_prompt_inner(
     provider_id: String,
     working_dir: PathBuf,
     existing_agent_session_id: Option<String>,
-    store: Arc<dyn Store>,
     writer: Arc<dyn MessageWriter>,
     prompt: String,
     images: Vec<(String, String)>,
@@ -297,7 +300,6 @@ pub(super) async fn send_prompt_inner(
             provider_id,
             working_dir,
             existing_agent_session_id,
-            store,
         },
     )
     .await
@@ -347,6 +349,76 @@ pub(super) async fn send_prompt_inner(
     }
 
     result
+}
+
+/// List all sessions known to the goose binary.
+pub(super) async fn list_sessions_inner(
+    connection: &Arc<ClientSideConnection>,
+) -> Result<Vec<AcpSessionInfo>, String> {
+    let response = connection
+        .list_sessions(ListSessionsRequest::default())
+        .await
+        .map_err(|error| format!("Failed to list sessions via Goose ACP: {error:?}"))?;
+
+    Ok(response
+        .sessions
+        .into_iter()
+        .map(|info| AcpSessionInfo {
+            session_id: info.session_id.to_string(),
+            title: info.title,
+            updated_at: info.updated_at,
+        })
+        .collect())
+}
+
+/// Load an existing session from the goose binary.
+///
+/// This binds the goose session ID to the local session ID in the dispatcher
+/// so that replayed `SessionNotification` events are routed to the correct
+/// frontend session. It also registers the session in the manager state so
+/// that subsequent `send_prompt` calls can reuse the goose session.
+pub(super) async fn load_session_inner(
+    connection: &Arc<ClientSideConnection>,
+    dispatcher: &Arc<SessionEventDispatcher>,
+    state: &Arc<Mutex<ManagerState>>,
+    local_session_id: &str,
+    goose_session_id: &str,
+    working_dir: PathBuf,
+) -> Result<(), String> {
+    dispatcher
+        .bind_session(goose_session_id, local_session_id)
+        .await;
+
+    let response = connection
+        .load_session(LoadSessionRequest::new(
+            goose_session_id.to_string(),
+            working_dir.clone(),
+        ))
+        .await
+        .map_err(|error| format!("Failed to load Goose session: {error:?}"))?;
+
+    // Finalize any in-progress replay assistant message
+    dispatcher.finalize_replay(goose_session_id).await;
+
+    if let Some(models) = &response.models {
+        dispatcher.emit_model_state(local_session_id, models);
+    }
+    if let Some(options) = &response.config_options {
+        dispatcher.emit_model_state_from_options(local_session_id, options);
+    }
+
+    // Register the session so future prompts reuse this goose session
+    let mut guard = state.lock().await;
+    guard.sessions.insert(
+        local_session_id.to_string(),
+        PreparedSession {
+            goose_session_id: goose_session_id.to_string(),
+            provider_id: "goose".to_string(), // will be updated on next prepare
+            working_dir,
+        },
+    );
+
+    Ok(())
 }
 
 pub(super) async fn cancel_session_inner(

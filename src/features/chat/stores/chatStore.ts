@@ -71,6 +71,9 @@ interface ChatStoreState {
 
   // Connection
   isConnected: boolean;
+
+  // Sessions currently being loaded from history (replay in progress)
+  loadingSessionIds: Set<string>;
 }
 
 interface ChatStoreActions {
@@ -119,6 +122,9 @@ interface ChatStoreActions {
   setDraft: (sessionId: string, text: string) => void;
   clearDraft: (sessionId: string) => void;
 
+  // Session loading (replay)
+  setSessionLoading: (sessionId: string, loading: boolean) => void;
+
   // Cleanup
   cleanupSession: (sessionId: string) => void;
 }
@@ -133,6 +139,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   draftsBySession: loadCachedDrafts(),
   activeSessionId: null,
   isConnected: false,
+  loadingSessionIds: new Set<string>(),
 
   // Session management
   setActiveSession: (sessionId) =>
@@ -420,6 +427,18 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     });
     persistDrafts(get().draftsBySession);
   },
+
+  // Session loading (replay)
+  setSessionLoading: (sessionId, loading) =>
+    set((state) => {
+      const next = new Set(state.loadingSessionIds);
+      if (loading) {
+        next.add(sessionId);
+      } else {
+        next.delete(sessionId);
+      }
+      return { loadingSessionIds: next };
+    }),
 
   // Cleanup
   cleanupSession: (sessionId) => {

@@ -4,11 +4,8 @@ use std::sync::Arc;
 use tauri::{AppHandle, State};
 
 use crate::services::acp::{
-    make_composite_key, AcpRunningSession, AcpService, AcpSessionRegistry, GooseAcpManager,
-};
-use crate::services::sessions::SessionStore;
-use crate::types::messages::{
-    MessageCompletionStatus, MessageContent, MessageMetadata, ToolCallStatus,
+    make_composite_key, AcpRunningSession, AcpService, AcpSessionInfo, AcpSessionRegistry,
+    GooseAcpManager,
 };
 
 const DEPRECATED_PROVIDER_IDS: &[&str] = &["claude-code", "codex", "gemini-cli"];
@@ -109,7 +106,6 @@ pub async fn discover_acp_providers(
 pub async fn acp_send_message(
     app_handle: AppHandle,
     registry: State<'_, Arc<AcpSessionRegistry>>,
-    session_store: State<'_, Arc<SessionStore>>,
     session_id: String,
     provider_id: String,
     prompt: String,
@@ -126,7 +122,6 @@ pub async fn acp_send_message(
     AcpService::send_prompt(
         app_handle,
         Arc::clone(&registry),
-        Arc::clone(&session_store),
         session_id,
         provider_id,
         prompt,
@@ -142,7 +137,6 @@ pub async fn acp_send_message(
 #[tauri::command]
 pub async fn acp_prepare_session(
     app_handle: AppHandle,
-    session_store: State<'_, Arc<SessionStore>>,
     session_id: String,
     provider_id: String,
     working_dir: Option<String>,
@@ -152,15 +146,36 @@ pub async fn acp_prepare_session(
         .map_err(|error| format!("Failed to determine current working directory: {error}"))?;
     let working_dir = resolve_working_dir(working_dir, &current_dir)?;
 
-    AcpService::prepare_session(
-        app_handle,
-        session_id,
-        provider_id,
-        working_dir,
-        persona_id,
-        Arc::clone(&session_store),
-    )
-    .await
+    AcpService::prepare_session(app_handle, session_id, provider_id, working_dir, persona_id).await
+}
+
+/// List all sessions known to the goose binary.
+#[tauri::command]
+pub async fn acp_list_sessions(app_handle: AppHandle) -> Result<Vec<AcpSessionInfo>, String> {
+    let manager = GooseAcpManager::start(app_handle).await?;
+    manager.list_sessions().await
+}
+
+/// Load an existing session, replaying its messages as Tauri events.
+///
+/// The goose binary sends `SessionNotification` events for each message in
+/// the session history. The frontend's `useAcpStream` hook picks these up
+/// the same way it handles live streaming.
+#[tauri::command]
+pub async fn acp_load_session(
+    app_handle: AppHandle,
+    session_id: String,
+    goose_session_id: String,
+    working_dir: Option<String>,
+) -> Result<(), String> {
+    let current_dir = std::env::current_dir()
+        .map_err(|error| format!("Failed to determine current working directory: {error}"))?;
+    let working_dir = resolve_working_dir(working_dir, &current_dir)?;
+
+    let manager = GooseAcpManager::start(app_handle).await?;
+    manager
+        .load_session(session_id, goose_session_id, working_dir)
+        .await
 }
 
 #[cfg(test)]
@@ -228,29 +243,13 @@ mod tests {
 pub async fn acp_cancel_session(
     app_handle: AppHandle,
     registry: State<'_, Arc<AcpSessionRegistry>>,
-    session_store: State<'_, Arc<SessionStore>>,
     session_id: String,
     persona_id: Option<String>,
 ) -> Result<bool, String> {
     let key = make_composite_key(&session_id, persona_id.as_deref());
-    let assistant_message_id = registry.cancel(&key);
+    let _assistant_message_id = registry.cancel(&key);
     let manager = GooseAcpManager::start(app_handle).await?;
     let was_cancelled = manager.cancel_session(key).await?;
-
-    if let Some(message_id) = assistant_message_id.as_deref() {
-        let _ = session_store.update_message(&session_id, message_id, |message| {
-            for block in &mut message.content {
-                if let MessageContent::ToolRequest { status, .. } = block {
-                    *status = ToolCallStatus::Stopped;
-                }
-            }
-
-            let metadata = message
-                .metadata
-                .get_or_insert_with(MessageMetadata::default);
-            metadata.completion_status = Some(MessageCompletionStatus::Stopped);
-        });
-    }
 
     Ok(was_cancelled)
 }
