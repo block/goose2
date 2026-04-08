@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
 import { Spinner } from "@/shared/ui/spinner";
@@ -27,6 +28,7 @@ interface AgentProviderCardProps {
 }
 
 export function AgentProviderCard({ provider }: AgentProviderCardProps) {
+  const { t } = useTranslation(["settings", "common"]);
   const [setupPhase, setSetupPhase] = useState<SetupPhase>("idle");
   const [setupOutput, setSetupOutput] = useState<OutputLine[]>([]);
   const [setupError, setSetupError] = useState<string | null>(null);
@@ -255,9 +257,11 @@ export function AgentProviderCard({ provider }: AgentProviderCardProps) {
           size="xs"
           onClick={() => void handleConnect()}
           className="flex-shrink-0 text-muted-foreground"
-          aria-label={`Sign in to ${provider.displayName}`}
+          aria-label={t("providers.agents.signInLabel", {
+            name: provider.displayName,
+          })}
         >
-          Sign in
+          {t("providers.agents.signIn")}
         </Button>
       );
     }
@@ -271,7 +275,9 @@ export function AgentProviderCard({ provider }: AgentProviderCardProps) {
           onClick={() => void handleConnect()}
           disabled={isInstalled === null && hasBinary}
           className="flex-shrink-0 text-muted-foreground"
-          aria-label={`Install ${provider.displayName}`}
+          aria-label={t("providers.agents.installLabel", {
+            name: provider.displayName,
+          })}
         >
           <IconPlus className="size-4" />
         </Button>
@@ -300,7 +306,7 @@ export function AgentProviderCard({ provider }: AgentProviderCardProps) {
     if (setupError) {
       return (
         <Button type="button" variant="outline" size="xs" onClick={handleRetry}>
-          Retry
+          {t("common:actions.retry")}
         </Button>
       );
     }

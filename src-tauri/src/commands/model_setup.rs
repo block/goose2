@@ -21,11 +21,16 @@ pub async fn authenticate_model_provider(
     }
 
     let goose_binary = resolve_goose_binary()?;
-    let command = format!(
-        "printf '\\n%s\\n' {} | script -q /dev/null {} configure",
-        shell_quote(&provider_label),
-        shell_quote(&goose_binary.to_string_lossy()),
-    );
+    let quoted_label = shell_quote(&provider_label);
+    let quoted_binary = shell_quote(&goose_binary.to_string_lossy());
+
+    let command = if cfg!(target_os = "linux") {
+        format!(
+            "printf '\\n%s\\n' {quoted_label} | script -qf /dev/null -c '{quoted_binary} configure'",
+        )
+    } else {
+        format!("printf '\\n%s\\n' {quoted_label} | script -q /dev/null {quoted_binary} configure",)
+    };
 
     run_shell_command(&app_handle, &provider_id, &command).await
 }
@@ -71,7 +76,7 @@ fn normalize_output_line(line: &str) -> Option<String> {
     let cleaned = strip_ansi(line);
     let trimmed = cleaned
         .trim()
-        .trim_start_matches(|ch: char| matches!(ch, '│' | '┌' | '└' | '◆' | '◇' | '●' | '○'))
+        .trim_start_matches(['│', '┌', '└', '◆', '◇', '●', '○'])
         .trim();
 
     if trimmed.is_empty()

@@ -13,13 +13,9 @@ fn build_extended_path() -> String {
     let mut paths: Vec<PathBuf> = Vec::new();
 
     if let Ok(system_path) = std::env::var("PATH") {
-        paths.extend(
-            std::env::split_paths(&system_path)
-                .filter(|p| {
-                    !p.to_string_lossy().contains(".hermit")
-                        && !p.join("activate-hermit").exists()
-                }),
-        );
+        paths.extend(std::env::split_paths(&system_path).filter(|p| {
+            !p.to_string_lossy().contains(".hermit") && !p.join("activate-hermit").exists()
+        }));
     }
 
     if let Some(home) = dirs::home_dir() {
@@ -49,7 +45,7 @@ fn build_extended_path() -> String {
                     .filter_map(|e| e.ok())
                     .filter(|e| e.file_type().map(|t| t.is_dir()).unwrap_or(false))
                     .collect();
-                versions.sort_by(|a, b| b.file_name().cmp(&a.file_name()));
+                versions.sort_by_key(|b| std::cmp::Reverse(b.file_name()));
                 if let Some(latest) = versions.first() {
                     paths.push(latest.path().join("bin"));
                 }
@@ -63,7 +59,7 @@ fn build_extended_path() -> String {
                     .filter_map(|e| e.ok())
                     .filter(|e| e.file_type().map(|t| t.is_dir()).unwrap_or(false))
                     .collect();
-                versions.sort_by(|a, b| b.file_name().cmp(&a.file_name()));
+                versions.sort_by_key(|b| std::cmp::Reverse(b.file_name()));
                 if let Some(latest) = versions.first() {
                     paths.push(latest.path().join("installation/bin"));
                 }

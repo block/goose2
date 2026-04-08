@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/shared/ui/button";
 import { Separator } from "@/shared/ui/separator";
 import { Skeleton } from "@/shared/ui/skeleton";
@@ -37,6 +38,7 @@ function toDisplayInfo(
 }
 
 export function ProvidersSettings() {
+  const { t } = useTranslation(["settings", "common"]);
   const [showAllModels, setShowAllModels] = useState(false);
   const [modelOrder, setModelOrder] = useState<string[] | null>(null);
 
@@ -130,18 +132,18 @@ export function ProvidersSettings() {
   return (
     <div>
       <h3 className="text-lg font-semibold font-display tracking-tight">
-        Providers
+        {t("providers.title")}
       </h3>
       <p className="mt-1 text-sm text-muted-foreground">
-        Connect agents and AI models to use with Goose
+        {t("providers.description")}
       </p>
 
       {needsRestart && (
         <div className="mt-3 flex items-center gap-3 rounded-lg border border-accent bg-background-accent/30 px-3 py-2.5">
-          <p className="flex-1 text-sm">Restart to apply credential changes.</p>
+          <p className="flex-1 text-sm">{t("providers.restartMessage")}</p>
           <Button type="button" size="sm" onClick={() => void restart()}>
             <IconRefresh className="size-3.5" />
-            Restart now
+            {t("providers.restartButton")}
           </Button>
         </div>
       )}
@@ -150,9 +152,11 @@ export function ProvidersSettings() {
 
       <section>
         <div className="mb-3">
-          <h4 className="text-sm font-semibold">Agents</h4>
+          <h4 className="text-sm font-semibold">
+            {t("providers.agents.title")}
+          </h4>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Agents handle your requests using their own tools and models
+            {t("providers.agents.description")}
           </p>
         </div>
 
@@ -167,11 +171,11 @@ export function ProvidersSettings() {
 
       <section>
         <div className="mb-3">
-          <h4 className="text-sm font-semibold">Models</h4>
+          <h4 className="text-sm font-semibold">
+            {t("providers.models.title")}
+          </h4>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            AI models that power Goose. Expand a provider to review what it
-            needs. Connect signs in with an existing account, while Set up saves
-            API keys or other provider settings.
+            {t("providers.models.description")}
           </p>
         </div>
 
@@ -197,7 +201,7 @@ export function ProvidersSettings() {
             onClick={() => setShowAllModels(true)}
             className="mt-2 w-full text-muted-foreground"
           >
-            Show {advancedModels.length} more providers
+            {t("providers.showMore", { count: advancedModels.length })}
             <IconChevronDown className="size-3" />
           </Button>
         )}
@@ -210,7 +214,7 @@ export function ProvidersSettings() {
             onClick={() => setShowAllModels(false)}
             className="mt-2 w-full text-muted-foreground"
           >
-            Show fewer
+            {t("providers.showFewer")}
           </Button>
         )}
       </section>

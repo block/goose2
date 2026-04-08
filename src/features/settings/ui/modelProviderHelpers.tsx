@@ -21,6 +21,22 @@ export function getDefaultFieldValue(field: ProviderField): ProviderFieldValue {
   };
 }
 
+export function resolveFieldValue(
+  field: ProviderField,
+  fieldValueMap: Map<string, ProviderFieldValue>,
+): ProviderFieldValue {
+  return fieldValueMap.get(field.key) ?? getDefaultFieldValue(field);
+}
+
+export function getDisplayValue(
+  field: ProviderField,
+  fieldValueMap: Map<string, ProviderFieldValue>,
+): string {
+  const fieldValue = resolveFieldValue(field, fieldValueMap);
+  if (!fieldValue.isSet) return "Not set";
+  return fieldValue.value ?? "Saved";
+}
+
 export function createDraftValues(
   fields: ProviderField[],
   values: ProviderFieldValue[],

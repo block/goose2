@@ -6,6 +6,8 @@ use etcetera::{choose_app_strategy, AppStrategy, AppStrategyArgs};
 use serde::Serialize;
 use serde_json::Value;
 
+use super::provider_defs::{find_provider_def, PROVIDER_CONFIG_DEFS};
+
 const KEYRING_SERVICE: &str = "goose";
 const KEYRING_USERNAME: &str = "secrets";
 const CONFIG_YAML_NAME: &str = "config.yaml";
@@ -13,139 +15,6 @@ const SECRETS_YAML_NAME: &str = "secrets.yaml";
 const SECRET_MASK_PREFIX_LEN: usize = 4;
 const SECRET_MASK_SUFFIX_LEN: usize = 3;
 const SECRET_MASK_FALLBACK: &str = "***";
-
-struct ConfigKey {
-    name: &'static str,
-    is_secret: bool,
-    required: bool,
-}
-
-struct ProviderConfigDef {
-    id: &'static str,
-    keys: &'static [ConfigKey],
-    oauth_cache_path: Option<&'static str>,
-}
-
-const fn key(name: &'static str, is_secret: bool, required: bool) -> ConfigKey {
-    ConfigKey {
-        name,
-        is_secret,
-        required,
-    }
-}
-
-static PROVIDER_CONFIG_DEFS: &[ProviderConfigDef] = &[
-    ProviderConfigDef {
-        id: "anthropic",
-        keys: &[key("ANTHROPIC_API_KEY", true, true)],
-        oauth_cache_path: None,
-    },
-    ProviderConfigDef {
-        id: "openai",
-        keys: &[key("OPENAI_API_KEY", true, true)],
-        oauth_cache_path: None,
-    },
-    ProviderConfigDef {
-        id: "google",
-        keys: &[key("GOOGLE_API_KEY", true, true)],
-        oauth_cache_path: None,
-    },
-    ProviderConfigDef {
-        id: "openrouter",
-        keys: &[key("OPENROUTER_API_KEY", true, true)],
-        oauth_cache_path: None,
-    },
-    ProviderConfigDef {
-        id: "xai",
-        keys: &[key("XAI_API_KEY", true, true)],
-        oauth_cache_path: None,
-    },
-    ProviderConfigDef {
-        id: "nanogpt",
-        keys: &[key("NANOGPT_API_KEY", true, true)],
-        oauth_cache_path: None,
-    },
-    ProviderConfigDef {
-        id: "venice",
-        keys: &[key("VENICE_API_KEY", true, true)],
-        oauth_cache_path: None,
-    },
-    ProviderConfigDef {
-        id: "tetrate",
-        keys: &[key("TETRATE_API_KEY", true, true)],
-        oauth_cache_path: None,
-    },
-    ProviderConfigDef {
-        id: "databricks",
-        keys: &[
-            key("DATABRICKS_HOST", false, true),
-            key("DATABRICKS_TOKEN", true, false),
-        ],
-        oauth_cache_path: Some("databricks/oauth"),
-    },
-    ProviderConfigDef {
-        id: "snowflake",
-        keys: &[
-            key("SNOWFLAKE_HOST", false, true),
-            key("SNOWFLAKE_TOKEN", true, true),
-        ],
-        oauth_cache_path: None,
-    },
-    ProviderConfigDef {
-        id: "litellm",
-        keys: &[
-            key("LITELLM_HOST", false, true),
-            key("LITELLM_API_KEY", true, false),
-        ],
-        oauth_cache_path: None,
-    },
-    ProviderConfigDef {
-        id: "azure",
-        keys: &[
-            key("AZURE_OPENAI_ENDPOINT", false, true),
-            key("AZURE_OPENAI_DEPLOYMENT_NAME", false, true),
-            key("AZURE_OPENAI_API_KEY", true, false),
-        ],
-        oauth_cache_path: None,
-    },
-    ProviderConfigDef {
-        id: "bedrock",
-        keys: &[key("AWS_REGION", false, false)],
-        oauth_cache_path: None,
-    },
-    ProviderConfigDef {
-        id: "gcp_vertex_ai",
-        keys: &[
-            key("GCP_PROJECT_ID", false, true),
-            key("GCP_LOCATION", false, true),
-        ],
-        oauth_cache_path: None,
-    },
-    ProviderConfigDef {
-        id: "chatgpt_codex",
-        keys: &[key("CHATGPT_CODEX_TOKEN", true, true)],
-        oauth_cache_path: None,
-    },
-    ProviderConfigDef {
-        id: "github_copilot",
-        keys: &[],
-        oauth_cache_path: Some("githubcopilot/info.json"),
-    },
-    ProviderConfigDef {
-        id: "ollama",
-        keys: &[],
-        oauth_cache_path: None,
-    },
-    ProviderConfigDef {
-        id: "local_inference",
-        keys: &[],
-        oauth_cache_path: None,
-    },
-];
-
-fn find_provider_def(provider_id: &str) -> Option<&'static ProviderConfigDef> {
-    PROVIDER_CONFIG_DEFS.iter().find(|d| d.id == provider_id)
-}
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -534,6 +403,27 @@ impl GooseConfig {
         let yaml = serde_yaml::to_string(&yaml_map)
             .map_err(|e| format!("Failed to serialize secrets: {e}"))?;
 
-        std::fs::write(&path, yaml).map_err(|e| format!("Failed to write secrets file: {e}"))
+        #[cfg(unix)]
+        {
+            use std::fs::OpenOptions;
+            use std::io::Write;
+            use std::os::unix::fs::OpenOptionsExt;
+
+            let mut file = OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .mode(0o600)
+                .open(&path)
+                .map_err(|e| format!("Failed to open secrets file: {e}"))?;
+
+            file.write_all(yaml.as_bytes())
+                .map_err(|e| format!("Failed to write secrets file: {e}"))
+        }
+
+        #[cfg(not(unix))]
+        {
+            std::fs::write(&path, yaml).map_err(|e| format!("Failed to write secrets file: {e}"))
+        }
     }
 }
