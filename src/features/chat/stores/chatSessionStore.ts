@@ -216,7 +216,7 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     set((state) => ({
       sessions: state.sessions.map((s) =>
         s.id === id
-          ? { ...s, ...patch, updatedAt: new Date().toISOString() }
+          ? { ...s, ...patch, updatedAt: patch.updatedAt ?? s.updatedAt }
           : s,
       ),
     }));
