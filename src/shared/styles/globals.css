@@ -418,11 +418,13 @@
   --color-surface-dark-muted: var(--surface-dark-muted);
   --color-surface-dark-border: var(--surface-dark-border);
 
-  /* fonts — HK Grotesk (Ghost open-source typeface) */
-  --font-sans: "HK Grotesk", sans-serif;
+  /* fonts — no bundled fonts; consumers bring their own (upstream Ghost PRs #23/#24) */
+  --font-sans:
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "Geist Mono", monospace;
   --font-serif: serif;
-  --font-display: "HK Grotesk", sans-serif;
+  --font-display:
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
   /* shape — pill-first radius system */
   --radius-pill: 999px;
@@ -648,56 +650,7 @@
   }
 }
 
-/* Font Faces — HK Grotesk (Ghost open-source typeface) */
-@font-face {
-  font-family: "HK Grotesk";
-  src: url("../../assets/fonts/HKGrotesk-Light.woff2") format("woff2");
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "HK Grotesk";
-  src: url("../../assets/fonts/HKGrotesk-Regular.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "HK Grotesk";
-  src: url("../../assets/fonts/HKGrotesk-Medium.woff2") format("woff2");
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "HK Grotesk";
-  src: url("../../assets/fonts/HKGrotesk-SemiBold.woff2") format("woff2");
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "HK Grotesk";
-  src: url("../../assets/fonts/HKGrotesk-Bold.woff2") format("woff2");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "HK Grotesk";
-  src: url("../../assets/fonts/HKGrotesk-ExtraBold.woff2") format("woff2");
-  font-weight: 800;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "HK Grotesk";
-  src: url("../../assets/fonts/HKGrotesk-Black.woff2") format("woff2");
-  font-weight: 900;
-  font-style: normal;
-  font-display: swap;
-}
+/* Design system ships with no bundled fonts — consumers bring their own. */
 
 /* App shell lock — outside @layer so nothing can override */
 html,
