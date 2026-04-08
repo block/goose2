@@ -11,9 +11,9 @@ const EXCEPTIONS = {
       "Temporary allowance while project creation, home/chat handoff, session-history routing, and drag-drop wiring remain in the shell.",
   },
   "src/features/sidebar/ui/SidebarProjectsSection.tsx": {
-    limit: 545,
+    limit: 560,
     justification:
-      "Added drag-and-drop handlers for moving chats between projects.",
+      "Drag-and-drop handlers plus activeProjectId highlight for draft-in-project sessions.",
   },
   "src/features/chat/ui/ChatView.tsx": {
     limit: 505,
@@ -21,8 +21,9 @@ const EXCEPTIONS = {
       "Added useSessionAutoTitle hook call for smart session naming.",
   },
   "src/features/sidebar/ui/Sidebar.tsx": {
-    limit: 575,
-    justification: "Added search-as-you-type filtering for sidebar sessions.",
+    limit: 580,
+    justification:
+      "Search-as-you-type filtering plus draft-aware sidebar highlight logic.",
   },
   "src-tauri/src/services/acp/manager.rs": {
     limit: 520,

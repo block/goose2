@@ -260,12 +260,8 @@ export function Sidebar({
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  const toggleProject = (projectId: string) => {
-    setExpandedProjects((prev) => ({
-      ...prev,
-      [projectId]: !prev[projectId],
-    }));
-  };
+  const toggleProject = (projectId: string) =>
+    setExpandedProjects((prev) => ({ ...prev, [projectId]: !prev[projectId] }));
 
   const navRef = useRef<HTMLElement>(null);
   const homeRef = useRef<HTMLButtonElement>(null);
@@ -279,12 +275,20 @@ export function Sidebar({
     updateActiveRect,
   } = useSidebarHighlight(navRef);
 
-  // Update active rect when activeView/activeSessionId changes
+  // Drafts aren't in the sidebar — highlight project row or clear highlight.
+  const activeDraft = activeSessionId
+    ? sessions.find((s) => s.id === activeSessionId && s.draft)
+    : undefined;
+  const activeProjectId = activeDraft?.projectId ?? null;
+
+  // Position the sliding highlight based on what's active.
+  // Non-draft sessions and draft-in-project are handled by ref callbacks.
   useEffect(() => {
-    if (activeSessionId) {
+    if (activeDraft) {
+      if (!activeProjectId) updateActiveRect(null);
       return;
     }
-
+    if (activeSessionId) return;
     if (activeView === "home") {
       updateActiveRect(homeRef.current);
     } else if (activeView && navItemRefs.current[activeView]) {
@@ -292,16 +296,26 @@ export function Sidebar({
     } else {
       updateActiveRect(null);
     }
-  }, [activeSessionId, activeView, updateActiveRect]);
+  }, [
+    activeSessionId,
+    activeDraft,
+    activeProjectId,
+    activeView,
+    updateActiveRect,
+  ]);
 
-  // Callback for SidebarProjectsSection to register active session refs
+  // Ref callbacks to position the highlight on active session or project row.
   const activeSessionRefCallback = useCallback(
     (el: HTMLElement | null) => {
-      if (activeSessionId && el) {
-        updateActiveRect(el);
-      }
+      if (activeSessionId && el) updateActiveRect(el);
     },
     [activeSessionId, updateActiveRect],
+  );
+  const activeProjectRefCallback = useCallback(
+    (el: HTMLElement | null) => {
+      if (activeProjectId && el) updateActiveRect(el);
+    },
+    [activeProjectId, updateActiveRect],
   );
 
   return (
@@ -538,6 +552,7 @@ export function Sidebar({
                 labelTransition={labelTransition}
                 labelVisible={labelVisible}
                 activeSessionId={activeSessionId}
+                activeProjectId={activeProjectId}
                 onNavigate={onNavigate}
                 onSelectSession={onSelectSession}
                 onNewChatInProject={onNewChatInProject}
@@ -550,6 +565,7 @@ export function Sidebar({
                 onMoveToProject={onMoveToProject}
                 onItemMouseEnter={onItemMouseEnter}
                 activeSessionRefCallback={activeSessionRefCallback}
+                activeProjectRefCallback={activeProjectRefCallback}
               />
             </>
           )}

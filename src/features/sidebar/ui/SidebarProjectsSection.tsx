@@ -46,6 +46,7 @@ interface SidebarProjectsSectionProps {
   labelTransition: string;
   labelVisible: boolean;
   activeSessionId?: string | null;
+  activeProjectId?: string | null;
   onNavigate?: (view: AppView) => void;
   onSelectSession?: (sessionId: string) => void;
   onNewChatInProject?: (projectId: string) => void;
@@ -58,6 +59,7 @@ interface SidebarProjectsSectionProps {
   onMoveToProject?: (sessionId: string, projectId: string | null) => void;
   onItemMouseEnter?: (e: React.MouseEvent<HTMLElement>) => void;
   activeSessionRefCallback?: (el: HTMLElement | null) => void;
+  activeProjectRefCallback?: (el: HTMLElement | null) => void;
 }
 function ItemMenu({
   label,
@@ -112,6 +114,7 @@ function ProjectSection({
   isExpanded,
   toggleProject,
   activeSessionId,
+  activeProjectId,
   onSelectSession,
   onNewChatInProject,
   onNavigate,
@@ -122,12 +125,14 @@ function ProjectSection({
   onMoveToProject,
   onItemMouseEnter,
   activeSessionRefCallback,
+  activeProjectRefCallback,
 }: {
   project: ProjectInfo;
   projectChats: TabInfo[];
   isExpanded: boolean;
   toggleProject: (projectId: string) => void;
   activeSessionId?: string | null;
+  activeProjectId?: string | null;
   onSelectSession?: (sessionId: string) => void;
   onNewChatInProject?: (projectId: string) => void;
   onNavigate?: (view: AppView) => void;
@@ -138,6 +143,7 @@ function ProjectSection({
   onMoveToProject?: (sessionId: string, projectId: string | null) => void;
   onItemMouseEnter?: (e: React.MouseEvent<HTMLElement>) => void;
   activeSessionRefCallback?: (el: HTMLElement | null) => void;
+  activeProjectRefCallback?: (el: HTMLElement | null) => void;
 }) {
   const [showAll, setShowAll] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -180,7 +186,12 @@ function ProjectSection({
       onDrop={handleDrop}
     >
       {/* Project row */}
-      <div className="relative flex items-center group rounded-md transition-colors duration-200">
+      <div
+        ref={
+          activeProjectId === project.id ? activeProjectRefCallback : undefined
+        }
+        className="relative flex items-center group rounded-md transition-colors duration-200"
+      >
         <Button
           type="button"
           variant="ghost"
@@ -189,7 +200,9 @@ function ProjectSection({
           onMouseEnter={onItemMouseEnter}
           className={cn(
             "flex-1 min-w-0 justify-start gap-2 rounded-md px-3 py-2 text-[13px] font-light",
-            PROJECT_ROW_TEXT_CLASS,
+            activeProjectId === project.id
+              ? "text-foreground hover:bg-transparent hover:text-foreground group-hover:text-foreground"
+              : PROJECT_ROW_TEXT_CLASS,
           )}
         >
           <span className="relative flex h-3 w-3 flex-shrink-0 items-center justify-center">
@@ -302,6 +315,7 @@ export function SidebarProjectsSection({
   labelTransition,
   labelVisible,
   activeSessionId,
+  activeProjectId,
   onNavigate,
   onSelectSession,
   onNewChatInProject,
@@ -314,6 +328,7 @@ export function SidebarProjectsSection({
   onMoveToProject,
   onItemMouseEnter,
   activeSessionRefCallback,
+  activeProjectRefCallback,
 }: SidebarProjectsSectionProps) {
   const [recentsDragOver, setRecentsDragOver] = useState(false);
 
@@ -420,6 +435,7 @@ export function SidebarProjectsSection({
               isExpanded={expandedProjects[project.id] ?? false}
               toggleProject={toggleProject}
               activeSessionId={activeSessionId}
+              activeProjectId={activeProjectId}
               onSelectSession={onSelectSession}
               onNewChatInProject={onNewChatInProject}
               onNavigate={onNavigate}
@@ -430,6 +446,7 @@ export function SidebarProjectsSection({
               onMoveToProject={onMoveToProject}
               onItemMouseEnter={onItemMouseEnter}
               activeSessionRefCallback={activeSessionRefCallback}
+              activeProjectRefCallback={activeProjectRefCallback}
             />
           ))}
         </div>
