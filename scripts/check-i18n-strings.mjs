@@ -5,6 +5,7 @@ import ts from "typescript";
 const CHECKED_PATHS = [
   "src/app/ui",
   "src/features/home",
+  "src/features/chat/ui/ChatInput.tsx",
   "src/features/settings",
   "src/features/sidebar",
   "src/features/status",

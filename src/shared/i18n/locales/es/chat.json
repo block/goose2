@@ -1,0 +1,19 @@
+{
+  "attachments": {
+    "alt": "Adjunto {{index}}",
+    "dropToAttach": "Suelta imágenes para adjuntarlas",
+    "remove": "Eliminar imagen",
+    "view": "Ver adjunto {{index}}"
+  },
+  "input": {
+    "ariaLabel": "Entrada de mensaje del chat",
+    "placeholder": "Enviar mensaje a {{agent}}, usa @ para mencionar personas"
+  },
+  "persona": {
+    "clearActive": "Quitar asistente activo"
+  },
+  "queue": {
+    "dismiss": "Descartar mensaje en cola",
+    "label": "En cola: {{text}}"
+  }
+}

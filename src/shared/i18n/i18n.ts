@@ -29,6 +29,7 @@ function normalizeSupportedLocale(locale?: string | null): AppLocale | null {
 const localeResourceLoaders = {
   en: {
     common: () => import("./locales/en/common.json"),
+    chat: () => import("./locales/en/chat.json"),
     home: () => import("./locales/en/home.json"),
     settings: () => import("./locales/en/settings.json"),
     sidebar: () => import("./locales/en/sidebar.json"),
@@ -37,6 +38,7 @@ const localeResourceLoaders = {
   },
   es: {
     common: () => import("./locales/es/common.json"),
+    chat: () => import("./locales/es/chat.json"),
     home: () => import("./locales/es/home.json"),
     settings: () => import("./locales/es/settings.json"),
     sidebar: () => import("./locales/es/sidebar.json"),
