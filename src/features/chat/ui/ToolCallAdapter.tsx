@@ -217,8 +217,8 @@ export function ToolCallAdapter({
   const elapsed = useElapsedTime(status, startedAt);
   const state = toolStatusMap[status];
 
-  const title =
-    status === "executing" && elapsed >= 3 ? `${name} (${elapsed}s)` : name;
+  const elapsedSeconds =
+    status === "executing" && elapsed >= 3 ? elapsed : undefined;
 
   return (
     <div>
@@ -226,9 +226,10 @@ export function ToolCallAdapter({
         <ToolHeader
           type="dynamic-tool"
           toolName={name}
-          title={title}
+          title={name}
           state={state}
           showIcon={false}
+          elapsedSeconds={elapsedSeconds}
         />
         <ToolContent>
           {Object.keys(args).length > 0 && <ToolInput input={args} />}

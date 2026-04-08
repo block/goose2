@@ -30,6 +30,7 @@ export type ToolHeaderProps = {
   title?: string;
   className?: string;
   showIcon?: boolean;
+  elapsedSeconds?: number;
 } & (
   | { type: ToolUIPart["type"]; state: ToolUIPart["state"]; toolName?: never }
   | {
@@ -76,6 +77,7 @@ export const ToolHeader = ({
   state,
   toolName,
   showIcon = true,
+  elapsedSeconds,
   ...props
 }: ToolHeaderProps) => {
   const derivedName =
@@ -89,6 +91,11 @@ export const ToolHeader = ({
       {showIcon && <WrenchIcon className="size-4 text-muted-foreground" />}
       <span className="font-medium text-sm">{title ?? derivedName}</span>
       {getStatusBadge(state)}
+      {elapsedSeconds != null && (
+        <span className="tabular-nums text-xs text-muted-foreground">
+          {elapsedSeconds}s
+        </span>
+      )}
       <ChevronDownIcon className="size-3.5 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
     </CollapsibleTrigger>
   );
