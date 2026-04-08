@@ -144,6 +144,7 @@ function ToolChainCards({ toolItems }: { toolItems: ToolChainItem[] }) {
         status={status}
         result={response?.result}
         isError={response?.isError}
+        startedAt={request?.startedAt}
       />
     );
   };

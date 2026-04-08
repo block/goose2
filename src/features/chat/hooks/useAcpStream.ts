@@ -309,6 +309,7 @@ export function useAcpStream(enabled: boolean): void {
           name: event.payload.title,
           arguments: {},
           status: "executing",
+          startedAt: Date.now(),
         };
         store.setStreamingMessageId(
           event.payload.sessionId,
