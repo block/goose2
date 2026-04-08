@@ -23,7 +23,7 @@ const EXCEPTIONS = {
   "src/features/sidebar/ui/Sidebar.tsx": {
     limit: 580,
     justification:
-      "Search-as-you-type filtering plus draft-aware sidebar highlight logic.",
+      "Search-as-you-type filtering and draft-aware sidebar highlight logic.",
   },
   "src-tauri/src/services/acp/manager.rs": {
     limit: 520,
