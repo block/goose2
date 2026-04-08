@@ -85,7 +85,10 @@ function AsyncButton({
     if (targetState === "pending") {
       if (pendingVisual === "spinner") {
         return isActive ? (
-          <Spinner className={spinnerClass} aria-hidden="true" />
+          <>
+            <Spinner className={spinnerClass} aria-hidden="true" />
+            <span className="sr-only">{labels.pending}</span>
+          </>
         ) : (
           <span className={cn("inline-block shrink-0", spinnerClass)} />
         );

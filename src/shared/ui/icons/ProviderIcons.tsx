@@ -449,6 +449,21 @@ const PROVIDER_ICON_MAP: Record<string, (className: string) => ReactNode> = {
   xai: (className) => <XAIIcon className={className} />,
 };
 
+function normalizeProviderId(providerId: string) {
+  return providerId
+    .toLowerCase()
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .join("_");
+}
+
+const NORMALIZED_PROVIDER_ICON_MAP = Object.fromEntries(
+  Object.entries(PROVIDER_ICON_MAP).map(([key, render]) => [
+    normalizeProviderId(key),
+    render,
+  ]),
+) as Record<string, (className: string) => ReactNode>;
+
 export function formatProviderLabel(providerId: string) {
   return providerId
     .split(/[-_\s]+/)
@@ -461,13 +476,13 @@ export function getProviderIcon(
   providerId: string,
   className = "size-4",
 ): ReactNode | null {
-  const normalizedId = providerId.toLowerCase();
+  const normalizedId = normalizeProviderId(providerId);
 
-  if (PROVIDER_ICON_MAP[normalizedId]) {
-    return PROVIDER_ICON_MAP[normalizedId](className);
+  if (NORMALIZED_PROVIDER_ICON_MAP[normalizedId]) {
+    return NORMALIZED_PROVIDER_ICON_MAP[normalizedId](className);
   }
 
-  for (const [key, render] of Object.entries(PROVIDER_ICON_MAP)) {
+  for (const [key, render] of Object.entries(NORMALIZED_PROVIDER_ICON_MAP)) {
     if (normalizedId.includes(key)) {
       return render(className);
     }
