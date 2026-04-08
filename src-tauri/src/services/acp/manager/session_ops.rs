@@ -23,7 +23,7 @@ pub struct AcpSessionInfo {
 
 #[derive(Clone)]
 pub(super) struct PreparedSession {
-    goose_session_id: String,
+    pub(super) goose_session_id: String,
     provider_id: String,
     working_dir: PathBuf,
 }

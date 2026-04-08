@@ -259,23 +259,6 @@ export function ChatView({
     ? { id: selectedPersona.id, name: selectedPersona.displayName }
     : undefined;
 
-  useEffect(() => {
-    let cancelled = false;
-    acpPrepareSession(activeSessionId, selectedProvider, {
-      workingDir: effectiveWorkingDir,
-      personaId: selectedPersonaId ?? undefined,
-    }).catch((error) => {
-      if (!cancelled) console.error("Failed to prepare ACP session:", error);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    activeSessionId,
-    effectiveWorkingDir,
-    selectedPersonaId,
-    selectedProvider,
-  ]);
   const {
     messages,
     chatState,
@@ -290,6 +273,33 @@ export function ChatView({
     personaInfo,
     effectiveWorkingDir,
   );
+  useEffect(() => {
+    if (
+      session?.draft ||
+      chatState === "thinking" ||
+      chatState === "streaming"
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    acpPrepareSession(activeSessionId, selectedProvider, {
+      workingDir: effectiveWorkingDir,
+      personaId: selectedPersonaId ?? undefined,
+    }).catch((error) => {
+      if (!cancelled) console.error("Failed to prepare ACP session:", error);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeSessionId,
+    chatState,
+    effectiveWorkingDir,
+    session?.draft,
+    selectedPersonaId,
+    selectedProvider,
+  ]);
   const isLoadingHistory = useChatStore(
     (s) =>
       s.loadingSessionIds.has(activeSessionId) &&

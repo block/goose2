@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Archive, History } from "lucide-react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { History, Upload } from "lucide-react";
+import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { getDisplaySessionTitle } from "@/features/chat/lib/sessionTitle";
 import { SearchBar } from "@/shared/ui/SearchBar";
@@ -7,10 +8,17 @@ import { Button } from "@/shared/ui/button";
 import { SessionCard } from "./SessionCard";
 import { groupSessionsByDate } from "../lib/groupSessionsByDate";
 import { filterSessions } from "../lib/filterSessions";
-import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
+import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
-import type { ChatSession } from "@/features/chat/stores/chatSessionStore";
+import {
+  acpDuplicateSession,
+  acpExportSession,
+  acpImportSession,
+} from "@/shared/api/acp";
+import { writeTextFile } from "@/shared/api/system";
+import { defaultExportFilename, downloadJson } from "../lib/exportSession";
+import { parseImportedSession } from "../lib/importSession";
 
 interface SessionHistoryViewProps {
   onSelectSession?: (sessionId: string) => void;
@@ -25,23 +33,13 @@ export function SessionHistoryView({
 }: SessionHistoryViewProps) {
   const { t, i18n } = useTranslation(["sessions", "common"]);
   const sessions = useChatSessionStore((s) => s.sessions);
+  const loadSessions = useChatSessionStore((s) => s.loadSessions);
   const activeSessions = useMemo(
-    () => sessions.filter((session) => !session.draft),
+    () => sessions.filter((session) => !session.draft && !session.archivedAt),
     [sessions],
   );
-  const [archivedSessions, setArchivedSessions] = useState<ChatSession[]>([]);
-  const [showArchived, setShowArchived] = useState(false);
   const [search, setSearch] = useState("");
-
-  const loadArchived = useCallback(() => {
-    // TODO: Wire to ACP when archived sessions are supported
-    // For now, archived sessions aren't persisted to the backend
-    setArchivedSessions([]);
-  }, []);
-
-  useEffect(loadArchived, [loadArchived]);
-
-  const displaySessions = showArchived ? archivedSessions : activeSessions;
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const getPersonaName = useCallback(
     (personaId: string) =>
@@ -67,7 +65,7 @@ export function SessionHistoryView({
   );
 
   const resolvers = { getPersonaName, getProjectName };
-  const filtered = filterSessions(displaySessions, search, resolvers, {
+  const filtered = filterSessions(activeSessions, search, resolvers, {
     locale: i18n.resolvedLanguage,
     getDisplayTitle: (session) =>
       getDisplaySessionTitle(session.title, t("common:session.defaultTitle")),
@@ -78,85 +76,134 @@ export function SessionHistoryView({
     yesterdayLabel: t("dateGroups.yesterday"),
   });
 
-  const handleUnarchive = useCallback(
+  const handleArchive = useCallback(
     async (sessionId: string) => {
+      if (onArchiveChat) {
+        await onArchiveChat(sessionId);
+        return;
+      }
+
       try {
-        await useChatSessionStore.getState().unarchiveSession(sessionId);
-        loadArchived();
+        await useChatSessionStore.getState().archiveSession(sessionId);
       } catch {
         // best-effort
       }
     },
-    [loadArchived],
+    [onArchiveChat],
   );
 
-  const handleArchive = useCallback(
+  const handleExport = useCallback(
     async (sessionId: string) => {
-      onArchiveChat?.(sessionId);
-      // Refresh archived list after a short delay so the backend has time to persist
-      setTimeout(loadArchived, 300);
+      try {
+        const json = await acpExportSession(sessionId);
+        const session = activeSessions.find((s) => s.id === sessionId);
+        const filename = defaultExportFilename(session?.title ?? "session");
+
+        if (window.__TAURI_INTERNALS__) {
+          const { save } = await import("@tauri-apps/plugin-dialog");
+          const selectedPath = await save({
+            title: "Export Session",
+            defaultPath: filename,
+            filters: [{ name: "JSON", extensions: ["json"] }],
+          });
+
+          if (!selectedPath) {
+            return;
+          }
+
+          await writeTextFile(selectedPath, json);
+          toast.success(`Exported session to ${filename}`);
+          return;
+        }
+
+        downloadJson(json, filename);
+        toast.success(`Exported session to ${filename}`);
+      } catch (error) {
+        console.error("Export failed:", error);
+        const message = error instanceof Error ? error.message : String(error);
+        if (message.includes("not found in sessions or threads")) {
+          await loadSessions();
+        }
+        toast.error("Failed to export session");
+      }
     },
-    [onArchiveChat, loadArchived],
+    [activeSessions, loadSessions],
   );
 
-  const emptyLabel = showArchived
-    ? t("history.emptyArchived")
-    : t("history.emptyTitle");
-  const emptyHint = showArchived
-    ? t("history.emptyArchivedHint")
-    : t("history.emptyHint");
+  const handleDuplicate = useCallback(
+    async (sessionId: string) => {
+      try {
+        await acpDuplicateSession(sessionId);
+        await loadSessions();
+      } catch (error) {
+        console.error("Duplicate failed:", error);
+        const message = error instanceof Error ? error.message : String(error);
+        if (message.includes("not found in sessions or threads")) {
+          await loadSessions();
+        }
+      }
+    },
+    [loadSessions],
+  );
+
+  const handleImportSession = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        parseImportedSession(text); // validate before sending
+        await acpImportSession(text);
+        await loadSessions();
+      } catch (error) {
+        console.error("Import failed:", error);
+      } finally {
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      }
+    },
+    [loadSessions],
+  );
 
   return (
-    <div className="flex flex-1 flex-col h-full min-h-0">
-      <div className="flex-1 overflow-y-auto min-h-0">
-        <div className="max-w-5xl mx-auto w-full px-6 py-8 space-y-5 page-transition">
-          {/* Header */}
+    <div className="flex h-full min-h-0 flex-1 flex-col">
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="page-transition mx-auto flex w-full max-w-5xl flex-col gap-5 px-6 py-8">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h1 className="text-lg font-semibold font-display tracking-tight">
-                {showArchived ? t("history.archivedTitle") : t("history.title")}
+              <h1 className="font-display text-lg font-semibold tracking-tight">
+                {t("history.title")}
               </h1>
               <p className="text-xs text-muted-foreground">
-                {showArchived
-                  ? t("history.archivedSubtitle")
-                  : t("history.subtitle")}
+                {t("history.subtitle")}
               </p>
             </div>
             <Button
               type="button"
               variant="ghost-light"
               size="xs"
-              onClick={() => {
-                setShowArchived((prev) => !prev);
-                setSearch("");
-              }}
+              onClick={() => fileInputRef.current?.click()}
             >
-              <Archive className="size-3.5" />
-              {showArchived
-                ? t("history.backToActive")
-                : t("history.toggleArchived")}
+              <Upload className="size-3.5" />
+              {t("common:actions.import")}
             </Button>
           </div>
 
-          {/* Search */}
           <SearchBar
             value={search}
             onChange={setSearch}
-            placeholder={
-              showArchived
-                ? t("history.searchArchivedPlaceholder")
-                : t("history.searchPlaceholder")
-            }
+            placeholder={t("history.searchPlaceholder")}
           />
 
-          {/* Session cards grouped by date */}
           {dateGroups.length > 0 &&
             dateGroups.map((group) => (
               <div key={group.label} className="space-y-2">
-                <h2 className="text-sm font-medium text-muted-foreground sticky top-0 bg-background py-1 z-10">
+                <h2 className="sticky top-0 z-10 bg-background py-1 text-sm font-medium text-muted-foreground">
                   {group.label}
                 </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {group.sessions.map((session) => (
                     <SessionCard
                       key={session.id}
@@ -188,26 +235,26 @@ export function SessionHistoryView({
                       onSelect={onSelectSession}
                       onRename={onRenameChat}
                       onArchive={handleArchive}
-                      onUnarchive={handleUnarchive}
+                      onExport={handleExport}
+                      onDuplicate={handleDuplicate}
                     />
                   ))}
                 </div>
               </div>
             ))}
 
-          {/* Empty state */}
           {dateGroups.length === 0 && (
             <div className="flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground">
               <History className="h-10 w-10 opacity-30" />
               <div className="text-center">
                 <p className="text-sm font-medium">
-                  {displaySessions.length === 0
-                    ? emptyLabel
+                  {activeSessions.length === 0
+                    ? t("history.emptyTitle")
                     : t("history.emptyNoMatches")}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {displaySessions.length === 0
-                    ? emptyHint
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {activeSessions.length === 0
+                    ? t("history.emptyHint")
                     : t("history.emptyNoMatchesHint")}
                 </p>
               </div>
@@ -215,6 +262,14 @@ export function SessionHistoryView({
           )}
         </div>
       </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        onChange={handleImportSession}
+        className="hidden"
+      />
     </div>
   );
 }

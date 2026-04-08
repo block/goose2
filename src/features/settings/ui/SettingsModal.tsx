@@ -1,11 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/lib/cn";
-import {
-  type LocalePreference,
-  useLocale,
-  useLocaleFormatting,
-} from "@/shared/i18n";
+import { type LocalePreference, useLocale } from "@/shared/i18n";
 import { Button, buttonVariants } from "@/shared/ui/button";
 import {
   AlertDialog,
@@ -68,7 +64,6 @@ interface SettingsModalProps {
 export function SettingsModal({ onClose }: SettingsModalProps) {
   const { t } = useTranslation(["settings", "common"]);
   const { preference, setLocalePreference, systemLocaleLabel } = useLocale();
-  const { formatNumber } = useLocaleFormatting();
   const [activeSection, setActiveSection] = useState<SectionId>("appearance");
   const [isLoaded, setIsLoaded] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -94,9 +89,10 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
       .finally(() => setLoadingArchived(false));
   }, []);
 
-  // TODO: wire to ACP for archived session listing
+  // Load archived chats from the session store (persisted in localStorage)
   useEffect(() => {
-    setArchivedChats([]);
+    const archived = useChatSessionStore.getState().getArchivedSessions();
+    setArchivedChats(archived as unknown as Session[]);
     setLoadingArchivedChats(false);
   }, []);
 
@@ -111,12 +107,8 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   };
 
   const handleRestoreChat = async (id: string) => {
-    try {
-      await useChatSessionStore.getState().unarchiveSession(id);
-      setArchivedChats((prev) => prev.filter((session) => session.id !== id));
-    } catch {
-      // best-effort
-    }
+    await useChatSessionStore.getState().unarchiveSession(id);
+    setArchivedChats((prev) => prev.filter((session) => session.id !== id));
   };
 
   const handleDelete = async (id: string) => {
@@ -383,12 +375,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                           <p className="truncate text-xs text-muted-foreground">
                             {session.projectId
                               ? t("chats.types.project")
-                              : t("chats.types.standalone")}{" "}
-                            -{" "}
-                            {t("chats.messageCount", {
-                              count: session.messageCount,
-                              displayCount: formatNumber(session.messageCount),
-                            })}
+                              : t("chats.types.standalone")}
                           </p>
                         </div>
                         <Button

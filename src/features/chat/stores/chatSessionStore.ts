@@ -47,6 +47,7 @@ interface ChatSessionStoreActions {
     patch: Partial<ChatSession>,
     opts?: { localOnly?: boolean },
   ) => void;
+  addSession: (session: ChatSession) => void;
   archiveSession: (id: string) => Promise<void>;
   unarchiveSession: (id: string) => Promise<void>;
 
@@ -57,6 +58,7 @@ interface ChatSessionStoreActions {
   // Helpers
   getSession: (id: string) => ChatSession | undefined;
   getActiveSession: () => ChatSession | null;
+  getArchivedSessions: () => ChatSession[];
 }
 
 export type ChatSessionStore = ChatSessionStoreState & ChatSessionStoreActions;
@@ -199,9 +201,23 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
         (a, b) =>
           new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
       );
-      // Preserve local drafts
+      // Preserve local drafts and archived sessions (archived are local-only).
+      // Deduplicate: archived sessions still exist in ACP, so filter them out
+      // of the ACP results to avoid showing both archived and active copies.
+      const cached = loadCachedSessions();
       const drafts = get().sessions.filter((s) => s.draft);
-      set({ sessions: [...sessions, ...drafts] });
+      const archived = cached.filter((s) => s.archivedAt);
+      const archivedIds = new Set(archived.map((s) => s.id));
+      const nonArchivedAcp = sessions.filter((s) => !archivedIds.has(s.id));
+      const merged = [...nonArchivedAcp, ...drafts, ...archived];
+      const activeSessionId = get().activeSessionId;
+      const activeSessionStillExists =
+        activeSessionId == null || merged.some((s) => s.id === activeSessionId);
+      set({
+        sessions: merged,
+        activeSessionId: activeSessionStillExists ? activeSessionId : null,
+      });
+      persistSessions(merged);
     } catch (err) {
       console.error("Failed to load sessions from ACP:", err);
       // On error, at least load cached drafts
@@ -228,16 +244,37 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     // TODO: wire non-draft updates to ACP when supported
   },
 
+  addSession: (session) => {
+    set((state) => {
+      const existing = state.sessions.findIndex((s) => s.id === session.id);
+      if (existing >= 0) {
+        const updated = [...state.sessions];
+        updated[existing] = { ...updated[existing], ...session };
+        return { sessions: updated };
+      }
+      return { sessions: [session, ...state.sessions] };
+    });
+    persistSessions(get().sessions);
+  },
+
   archiveSession: async (id) => {
     set((state) => ({
-      sessions: state.sessions.filter((s) => s.id !== id),
+      sessions: state.sessions.map((s) =>
+        s.id === id ? { ...s, archivedAt: new Date().toISOString() } : s,
+      ),
       activeSessionId:
         state.activeSessionId === id ? null : state.activeSessionId,
     }));
+    persistSessions(get().sessions);
   },
 
-  unarchiveSession: async (_id) => {
-    // No-op — no archive persistence yet
+  unarchiveSession: async (id) => {
+    set((state) => ({
+      sessions: state.sessions.map((s) =>
+        s.id === id ? { ...s, archivedAt: undefined } : s,
+      ),
+    }));
+    persistSessions(get().sessions);
   },
 
   setActiveSession: (sessionId) => {
@@ -262,4 +299,6 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     if (!activeSessionId) return null;
     return sessions.find((s) => s.id === activeSessionId) ?? null;
   },
+
+  getArchivedSessions: () => get().sessions.filter((s) => !!s.archivedAt),
 }));

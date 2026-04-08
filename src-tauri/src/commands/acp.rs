@@ -7,6 +7,7 @@ use crate::services::acp::{
     make_composite_key, AcpRunningSession, AcpService, AcpSessionInfo, AcpSessionRegistry,
     GooseAcpManager,
 };
+use crate::services::session_db;
 
 const DEPRECATED_PROVIDER_IDS: &[&str] = &["claude-code", "codex", "gemini-cli"];
 
@@ -78,6 +79,22 @@ fn resolve_working_dir(
             working_dir.display()
         )
     })
+}
+
+async fn resolve_exportable_session_id(
+    app_handle: &AppHandle,
+    session_id: &str,
+) -> Result<String, String> {
+    let db_path = session_db::session_db_path()?;
+    if session_db::read_session(&db_path, session_id).is_ok() {
+        return Ok(session_id.to_string());
+    }
+
+    let manager = GooseAcpManager::start(app_handle.clone()).await?;
+    manager
+        .resolve_session_id(session_id.to_string())
+        .await?
+        .ok_or_else(|| format!("Session '{session_id}' not found in sessions or threads"))
 }
 
 /// Return the list of providers available through goose serve.
@@ -171,6 +188,8 @@ pub async fn acp_load_session(
     let current_dir = std::env::current_dir()
         .map_err(|error| format!("Failed to determine current working directory: {error}"))?;
     let working_dir = resolve_working_dir(working_dir, &current_dir)?;
+    let db_path = session_db::session_db_path()?;
+    session_db::backfill_thread_messages_if_missing(&db_path, &goose_session_id)?;
 
     let manager = GooseAcpManager::start(app_handle).await?;
     manager
@@ -267,4 +286,100 @@ pub async fn acp_list_running(
 pub async fn acp_cancel_all(registry: State<'_, Arc<AcpSessionRegistry>>) -> Result<(), String> {
     registry.cancel_all();
     Ok(())
+}
+
+/// Export a session as JSON from the goose session database.
+///
+/// Returns an OG-goose-compatible JSON string with a `conversation` field
+/// containing all messages.
+#[tauri::command]
+pub async fn acp_export_session(
+    app_handle: AppHandle,
+    session_id: String,
+) -> Result<String, String> {
+    let db_path = session_db::session_db_path()?;
+    let resolved_session_id = resolve_exportable_session_id(&app_handle, &session_id).await?;
+    let (row, messages) = session_db::read_session(&db_path, &resolved_session_id)?;
+    let exported = session_db::to_exported_session(&row, &messages);
+    serde_json::to_string_pretty(&exported).map_err(|e| format!("Failed to serialize session: {e}"))
+}
+
+/// Import a session from JSON into the goose session database.
+///
+/// Hybrid approach: creates the session via ACP (so the goose binary
+/// registers it in memory), then populates messages via direct SQLite.
+#[tauri::command]
+pub async fn acp_import_session(
+    app_handle: AppHandle,
+    json: String,
+) -> Result<AcpSessionInfo, String> {
+    let db_path = session_db::session_db_path()?;
+    let exported = session_db::parse_import_json(&json)?;
+    let title = exported
+        .name
+        .clone()
+        .unwrap_or_else(|| "Imported Session".to_string());
+
+    // 1. Create session via ACP so the binary knows about it
+    let working_dir = resolve_working_dir(
+        Some(exported.working_dir.clone().unwrap_or_default()),
+        &std::env::current_dir().unwrap_or_default(),
+    )?;
+    let manager = GooseAcpManager::start(app_handle).await?;
+    let goose_session_id = manager.create_session(working_dir).await?;
+
+    // 2. Find the DB id for this new session (binary wrote it to SQLite)
+    let db_id = session_db::db_id_for_thread(&db_path, &goose_session_id)?;
+
+    // 3. Insert messages via SQLite
+    session_db::insert_messages(&db_path, &db_id, &goose_session_id, &exported.conversation)?;
+
+    // 4. Update session name
+    session_db::update_session_name(&db_path, &db_id, &title)?;
+
+    let now = chrono::Utc::now().to_rfc3339();
+    Ok(AcpSessionInfo {
+        session_id: goose_session_id,
+        title: Some(title),
+        updated_at: Some(now),
+    })
+}
+
+/// Duplicate a session in the goose session database.
+///
+/// Hybrid approach: reads source session, creates new session via ACP,
+/// then copies messages via direct SQLite.
+#[tauri::command]
+pub async fn acp_duplicate_session(
+    app_handle: AppHandle,
+    session_id: String,
+) -> Result<AcpSessionInfo, String> {
+    let db_path = session_db::session_db_path()?;
+    let resolved_session_id = resolve_exportable_session_id(&app_handle, &session_id).await?;
+
+    // 1. Read the source session's messages
+    let (source_row, source_messages) = session_db::read_session(&db_path, &resolved_session_id)?;
+    let exported = session_db::to_exported_session(&source_row, &source_messages);
+    let source_name = source_row.name.unwrap_or_else(|| "Session".to_string());
+    let copy_name = format!("Copy of {}", source_name);
+
+    // 2. Create new session via ACP
+    let working_dir = resolve_working_dir(
+        Some(exported.working_dir.clone().unwrap_or_default()),
+        &std::env::current_dir().unwrap_or_default(),
+    )?;
+    let manager = GooseAcpManager::start(app_handle).await?;
+    let goose_session_id = manager.create_session(working_dir).await?;
+
+    // 3. Find the DB id and populate messages
+    let db_id = session_db::db_id_for_thread(&db_path, &goose_session_id)?;
+    session_db::insert_messages(&db_path, &db_id, &goose_session_id, &exported.conversation)?;
+    session_db::update_session_name(&db_path, &db_id, &copy_name)?;
+
+    let now = chrono::Utc::now().to_rfc3339();
+    Ok(AcpSessionInfo {
+        session_id: goose_session_id,
+        title: Some(copy_name),
+        updated_at: Some(now),
+    })
 }

@@ -7,7 +7,8 @@ use std::sync::Arc;
 
 use acp_client::MessageWriter;
 use agent_client_protocol::{
-    Agent, ClientSideConnection, ExtRequest, Implementation, InitializeRequest, ProtocolVersion,
+    Agent, ClientSideConnection, ExtRequest, Implementation, InitializeRequest, NewSessionRequest,
+    ProtocolVersion,
 };
 use futures::{SinkExt, StreamExt};
 use serde::Deserialize;
@@ -61,6 +62,16 @@ enum ManagerCommand {
     CancelSession {
         composite_key: String,
         response: oneshot::Sender<Result<bool, String>>,
+    },
+    ResolveSession {
+        local_session_id: String,
+        response: oneshot::Sender<Option<String>>,
+    },
+    /// Create a new empty session in the goose binary.
+    /// Returns the goose session ID (thread_id UUID).
+    CreateSession {
+        working_dir: PathBuf,
+        response: oneshot::Sender<Result<String, String>>,
     },
 }
 
@@ -216,6 +227,41 @@ impl GooseAcpManager {
         response_rx
             .await
             .map_err(|_| "Goose ACP manager dropped cancel request".to_string())?
+    }
+
+    pub async fn resolve_session_id(
+        &self,
+        local_session_id: String,
+    ) -> Result<Option<String>, String> {
+        let (response_tx, response_rx) = oneshot::channel();
+        self.command_tx
+            .send(ManagerCommand::ResolveSession {
+                local_session_id,
+                response: response_tx,
+            })
+            .map_err(|_| "Goose ACP manager is unavailable".to_string())?;
+        response_rx
+            .await
+            .map_err(|_| "Goose ACP manager dropped resolve session request".to_string())
+    }
+
+    /// Create a new empty session in the goose binary.
+    ///
+    /// Returns the goose session ID (the UUID that the ACP protocol uses
+    /// as the session identifier). This is used by import/duplicate to
+    /// register the session with the binary before populating messages
+    /// via direct SQLite writes.
+    pub async fn create_session(&self, working_dir: PathBuf) -> Result<String, String> {
+        let (response_tx, response_rx) = oneshot::channel();
+        self.command_tx
+            .send(ManagerCommand::CreateSession {
+                working_dir,
+                response: response_tx,
+            })
+            .map_err(|_| "Goose ACP manager is unavailable".to_string())?;
+        response_rx
+            .await
+            .map_err(|_| "Goose ACP manager dropped create session request".to_string())?
     }
 }
 
@@ -498,6 +544,44 @@ fn run_manager_thread(
                         let result =
                             cancel_session_inner(&connection, &dispatcher, &state, &composite_key)
                                 .await;
+                        let _ = response.send(result);
+                    });
+                }
+                ManagerCommand::ResolveSession {
+                    local_session_id,
+                    response,
+                } => {
+                    let state = Arc::clone(&state);
+                    tokio::task::spawn_local(async move {
+                        let resolved = {
+                            let guard = state.lock().await;
+                            guard
+                                .sessions
+                                .iter()
+                                .find(|(key, _)| {
+                                    key.as_str() == local_session_id
+                                        || key.starts_with(&format!("{local_session_id}__"))
+                                })
+                                .map(|(_, session)| session.goose_session_id.clone())
+                        };
+                        let _ = response.send(resolved);
+                    });
+                }
+                ManagerCommand::CreateSession {
+                    working_dir,
+                    response,
+                } => {
+                    let connection = Arc::clone(&connection);
+                    tokio::task::spawn_local(async move {
+                        let result = async {
+                            let request = NewSessionRequest::new(working_dir);
+                            let resp = connection
+                                .new_session(request)
+                                .await
+                                .map_err(|e| format!("Failed to create session: {e:?}"))?;
+                            Ok::<_, String>(resp.session_id.to_string())
+                        }
+                        .await;
                         let _ = response.send(result);
                     });
                 }

@@ -9,6 +9,8 @@ import {
   Pencil,
   Trash2,
   ArchiveRestore,
+  Copy,
+  Download,
 } from "lucide-react";
 import {
   getDisplaySessionTitle,
@@ -40,6 +42,8 @@ interface SessionCardProps {
   onRename?: (id: string, nextTitle: string) => void;
   onArchive?: (id: string) => void;
   onUnarchive?: (id: string) => void;
+  onExport?: (id: string) => void;
+  onDuplicate?: (id: string) => void;
 }
 
 export function SessionCard({
@@ -56,6 +60,8 @@ export function SessionCard({
   onRename,
   onArchive,
   onUnarchive,
+  onExport,
+  onDuplicate,
 }: SessionCardProps) {
   const { t } = useTranslation(["sessions", "common"]);
   const { formatNumber, formatRelativeTimeToNow } = useLocaleFormatting();
@@ -215,20 +221,49 @@ export function SessionCard({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" sideOffset={4}>
           {archivedAt ? (
-            <DropdownMenuItem
-              onClick={() => {
-                setMenuOpen(false);
-                onUnarchive?.(id);
-              }}
-            >
-              <ArchiveRestore className="size-3.5" />
-              {t("common:actions.restore")}
-            </DropdownMenuItem>
+            <>
+              <DropdownMenuItem
+                onClick={() => {
+                  setMenuOpen(false);
+                  onExport?.(id);
+                }}
+              >
+                <Download className="size-3.5" />
+                {t("common:actions.export")}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  setMenuOpen(false);
+                  onUnarchive?.(id);
+                }}
+              >
+                <ArchiveRestore className="size-3.5" />
+                {t("common:actions.restore")}
+              </DropdownMenuItem>
+            </>
           ) : (
             <>
               <DropdownMenuItem onClick={startRename}>
                 <Pencil className="size-3.5" />
                 {t("common:actions.rename")}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  setMenuOpen(false);
+                  onExport?.(id);
+                }}
+              >
+                <Download className="size-3.5" />
+                {t("common:actions.export")}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  setMenuOpen(false);
+                  onDuplicate?.(id);
+                }}
+              >
+                <Copy className="size-3.5" />
+                {t("common:actions.duplicate")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {

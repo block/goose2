@@ -1,4 +1,4 @@
-mod goose_serve;
+pub(crate) mod goose_serve;
 mod manager;
 mod payloads;
 mod registry;

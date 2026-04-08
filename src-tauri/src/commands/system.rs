@@ -5,6 +5,11 @@ pub fn get_home_dir() -> Result<String, String> {
 }
 
 #[tauri::command]
+pub fn write_text_file(path: String, contents: String) -> Result<(), String> {
+    std::fs::write(&path, contents).map_err(|e| format!("Failed to write file '{}': {}", path, e))
+}
+
+#[tauri::command]
 #[allow(dead_code)]
 pub fn path_exists(path: String) -> bool {
     std::path::Path::new(&path).exists()
