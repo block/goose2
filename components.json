@@ -16,6 +16,6 @@
     "ui": "@/shared/ui",
     "lib": "@/shared/lib"
   },
-  "registryUrl": "https://raw.githubusercontent.com/block/ghost/main/packages/ghost-ui/registry.json",
+  "registryUrl": "https://block.github.io/ghost/r/registry.json",
   "iconLibrary": "lucide"
 }
