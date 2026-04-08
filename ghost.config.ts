@@ -4,7 +4,7 @@ export default defineConfig({
   designSystems: [
     {
       name: "goose2",
-      registry: "https://block.github.io/ghost/registry.json",
+      registry: "https://raw.githubusercontent.com/block/ghost/main/packages/ghost-ui/registry.json",
       componentDir: "src/shared/ui",
       styleEntry: "src/shared/styles/globals.css",
     },
