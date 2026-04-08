@@ -224,11 +224,10 @@ describe("chatSessionStore", () => {
       expect(updated?.projectId).toBe("new-project");
     });
 
-    it("updates the updatedAt timestamp", () => {
+    it("preserves updatedAt when not explicitly provided in patch", () => {
       const session = useChatSessionStore.getState().createDraftSession();
       const originalUpdatedAt = session.updatedAt;
 
-      // Small delay to ensure timestamp changes
       vi.useFakeTimers();
       vi.advanceTimersByTime(1000);
 
@@ -241,7 +240,29 @@ describe("chatSessionStore", () => {
       const updated = useChatSessionStore
         .getState()
         .sessions.find((s) => s.id === session.id);
+      expect(updated?.updatedAt).toBe(originalUpdatedAt);
+    });
+
+    it("updates updatedAt when explicitly provided in patch", () => {
+      const session = useChatSessionStore.getState().createDraftSession();
+      const originalUpdatedAt = session.updatedAt;
+
+      vi.useFakeTimers();
+      vi.advanceTimersByTime(1000);
+
+      const newTimestamp = new Date().toISOString();
+      useChatSessionStore.getState().updateSession(session.id, {
+        title: "New Title",
+        updatedAt: newTimestamp,
+      });
+
+      vi.useRealTimers();
+
+      const updated = useChatSessionStore
+        .getState()
+        .sessions.find((s) => s.id === session.id);
       expect(updated?.updatedAt).not.toBe(originalUpdatedAt);
+      expect(updated?.updatedAt).toBe(newTimestamp);
     });
   });
 
