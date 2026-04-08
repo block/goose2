@@ -160,6 +160,8 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
   promoteDraft: (id) => {
     const session = get().sessions.find((s) => s.id === id);
     if (!session?.draft) return;
+    // Clear draft flag — the backend session is created automatically by
+    // ensure_session when the first message is sent via ACP.
     set((state) => ({
       sessions: state.sessions.map((s) =>
         s.id === id ? { ...s, draft: undefined } : s,
