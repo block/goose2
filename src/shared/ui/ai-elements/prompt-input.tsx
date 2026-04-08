@@ -972,7 +972,7 @@ export const PromptInputTextarea = ({
         if (isComposing || e.nativeEvent.isComposing) {
           return;
         }
-        if (e.shiftKey) {
+        if (e.shiftKey || e.altKey) {
           return;
         }
         e.preventDefault();
