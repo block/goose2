@@ -12,9 +12,7 @@ export async function checkAgentInstalled(
   return invoke("check_agent_installed", { providerId });
 }
 
-export async function checkAgentAuth(
-  providerId: string,
-): Promise<boolean> {
+export async function checkAgentAuth(providerId: string): Promise<boolean> {
   return invoke("check_agent_auth", { providerId });
 }
 
