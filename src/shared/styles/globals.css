@@ -14,7 +14,7 @@
   --color-white: #ffffff;
   --color-black: #000000;
 
-  /* gray — pure monochromatic scale (from dsgn-playground) */
+  /* gray — pure monochromatic scale */
   --color-gray-50: #f5f5f5;
   --color-gray-100: #f0f0f0;
   --color-gray-200: #e8e8e8;
@@ -418,7 +418,7 @@
   --color-surface-dark-muted: var(--surface-dark-muted);
   --color-surface-dark-border: var(--surface-dark-border);
 
-  /* fonts — no bundled fonts; consumers bring their own (upstream Ghost PRs #23/#24) */
+  /* fonts — no bundled fonts; consumers bring their own */
   --font-sans:
     system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "Geist Mono", monospace;
@@ -650,7 +650,7 @@
   }
 }
 
-/* Design system ships with no bundled fonts — consumers bring their own. */
+/* @font-face — add your own here */
 
 /* App shell lock — outside @layer so nothing can override */
 html,
