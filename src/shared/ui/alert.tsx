@@ -1,5 +1,5 @@
-import { cva, type VariantProps } from "class-variance-authority";
 import type * as React from "react";
+import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/shared/lib/cn";
 
@@ -63,4 +63,4 @@ function AlertDescription({
   );
 }
 
-export { Alert, AlertDescription, AlertTitle };
+export { Alert, AlertTitle, AlertDescription };

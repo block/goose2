@@ -1,5 +1,5 @@
-import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import type * as React from "react";
+import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 
 import { cn } from "@/shared/lib/cn";
 
@@ -56,4 +56,4 @@ function TooltipContent({
   );
 }
 
-export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger };
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider };
