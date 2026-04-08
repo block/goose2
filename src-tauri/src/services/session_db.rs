@@ -7,6 +7,7 @@
 
 use chrono::Utc;
 use rusqlite::{params, Connection, OpenFlags, OptionalExtension};
+use std::collections::HashMap;
 use std::path::PathBuf;
 use uuid::Uuid;
 
@@ -113,6 +114,49 @@ pub fn db_id_for_thread(db_path: &PathBuf, thread_id: &str) -> Result<String, St
         |row| row.get(0),
     )
     .map_err(|e| format!("Session with thread_id '{thread_id}' not found: {e}"))
+}
+
+/// Return message counts keyed by ACP thread ID.
+///
+/// We prefer `thread_messages` because ACP replay uses that table. For older
+/// hybrid-imported sessions that only populated `messages`, we fall back to the
+/// `messages` count joined through `sessions.thread_id`.
+pub fn thread_message_counts(db_path: &PathBuf) -> Result<HashMap<String, usize>, String> {
+    let conn = open_readonly(db_path)?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT s.thread_id,
+                    CASE
+                        WHEN COALESCE(tm.thread_count, 0) > 0 THEN tm.thread_count
+                        ELSE COALESCE(m.message_count, 0)
+                    END AS message_count
+             FROM sessions s
+             LEFT JOIN (
+                 SELECT thread_id, COUNT(*) AS thread_count
+                 FROM thread_messages
+                 GROUP BY thread_id
+             ) tm ON tm.thread_id = s.thread_id
+             LEFT JOIN (
+                 SELECT s2.thread_id AS thread_id, COUNT(m2.id) AS message_count
+                 FROM sessions s2
+                 LEFT JOIN messages m2 ON m2.session_id = s2.id
+                 GROUP BY s2.thread_id
+             ) m ON m.thread_id = s.thread_id
+             WHERE s.thread_id IS NOT NULL",
+        )
+        .map_err(|e| format!("Failed to prepare thread count query: {e}"))?;
+
+    let counts = stmt
+        .query_map([], |row| {
+            let thread_id: String = row.get(0)?;
+            let count: i64 = row.get(1)?;
+            Ok((thread_id, usize::try_from(count).unwrap_or(0)))
+        })
+        .map_err(|e| format!("Failed to query thread message counts: {e}"))?
+        .collect::<Result<HashMap<_, _>, _>>()
+        .map_err(|e| format!("Failed to read thread message counts: {e}"))?;
+
+    Ok(counts)
 }
 
 /// Insert messages into an existing session (identified by DB `id`).

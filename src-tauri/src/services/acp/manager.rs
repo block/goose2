@@ -64,7 +64,7 @@ enum ManagerCommand {
         response: oneshot::Sender<Result<bool, String>>,
     },
     ResolveSession {
-        local_session_id: String,
+        session_lookup_key: String,
         response: oneshot::Sender<Option<String>>,
     },
     /// Create a new empty session in the goose binary.
@@ -231,12 +231,12 @@ impl GooseAcpManager {
 
     pub async fn resolve_session_id(
         &self,
-        local_session_id: String,
+        session_lookup_key: String,
     ) -> Result<Option<String>, String> {
         let (response_tx, response_rx) = oneshot::channel();
         self.command_tx
             .send(ManagerCommand::ResolveSession {
-                local_session_id,
+                session_lookup_key,
                 response: response_tx,
             })
             .map_err(|_| "Goose ACP manager is unavailable".to_string())?;
@@ -548,7 +548,7 @@ fn run_manager_thread(
                     });
                 }
                 ManagerCommand::ResolveSession {
-                    local_session_id,
+                    session_lookup_key,
                     response,
                 } => {
                     let state = Arc::clone(&state);
@@ -557,12 +557,8 @@ fn run_manager_thread(
                             let guard = state.lock().await;
                             guard
                                 .sessions
-                                .iter()
-                                .find(|(key, _)| {
-                                    key.as_str() == local_session_id
-                                        || key.starts_with(&format!("{local_session_id}__"))
-                                })
-                                .map(|(_, session)| session.goose_session_id.clone())
+                                .get(&session_lookup_key)
+                                .map(|session| session.goose_session_id.clone())
                         };
                         let _ = response.send(resolved);
                     });

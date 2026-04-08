@@ -95,8 +95,8 @@ export function SessionHistoryView({
   const handleExport = useCallback(
     async (sessionId: string) => {
       try {
-        const json = await acpExportSession(sessionId);
         const session = activeSessions.find((s) => s.id === sessionId);
+        const json = await acpExportSession(sessionId, session?.personaId);
         const filename = defaultExportFilename(session?.title ?? "session");
 
         if (window.__TAURI_INTERNALS__) {
@@ -133,7 +133,8 @@ export function SessionHistoryView({
   const handleDuplicate = useCallback(
     async (sessionId: string) => {
       try {
-        await acpDuplicateSession(sessionId);
+        const session = activeSessions.find((s) => s.id === sessionId);
+        await acpDuplicateSession(sessionId, session?.personaId);
         await loadSessions();
       } catch (error) {
         console.error("Duplicate failed:", error);
@@ -143,7 +144,7 @@ export function SessionHistoryView({
         }
       }
     },
-    [loadSessions],
+    [activeSessions, loadSessions],
   );
 
   const handleImportSession = useCallback(

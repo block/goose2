@@ -19,6 +19,7 @@ pub struct AcpSessionInfo {
     pub session_id: String,
     pub title: Option<String>,
     pub updated_at: Option<String>,
+    pub message_count: usize,
 }
 
 #[derive(Clone)]
@@ -367,6 +368,7 @@ pub(super) async fn list_sessions_inner(
             session_id: info.session_id.to_string(),
             title: info.title,
             updated_at: info.updated_at,
+            message_count: 0,
         })
         .collect())
 }

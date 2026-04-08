@@ -134,8 +134,18 @@ describe("chatSessionStore", () => {
   describe("loadSessions", () => {
     it("loads sessions from ACP and maps them correctly", async () => {
       mockedAcpListSessions.mockResolvedValue([
-        { sessionId: "acp-1", title: "ACP Session 1", updatedAt: "2026-04-01" },
-        { sessionId: "acp-2", title: null, updatedAt: "2026-04-02" },
+        {
+          sessionId: "acp-1",
+          title: "ACP Session 1",
+          updatedAt: "2026-04-01",
+          messageCount: 4,
+        },
+        {
+          sessionId: "acp-2",
+          title: null,
+          updatedAt: "2026-04-02",
+          messageCount: 7,
+        },
       ]);
 
       await useChatSessionStore.getState().loadSessions();
@@ -144,8 +154,10 @@ describe("chatSessionStore", () => {
       expect(sessions).toHaveLength(2);
       expect(sessions[0].id).toBe("acp-2"); // Most recent first
       expect(sessions[0].title).toBe("Untitled"); // null title becomes "Untitled"
+      expect(sessions[0].messageCount).toBe(7);
       expect(sessions[1].id).toBe("acp-1");
       expect(sessions[1].title).toBe("ACP Session 1");
+      expect(sessions[1].messageCount).toBe(4);
     });
 
     it("preserves local drafts alongside ACP sessions", async () => {
@@ -154,7 +166,12 @@ describe("chatSessionStore", () => {
       });
 
       mockedAcpListSessions.mockResolvedValue([
-        { sessionId: "acp-1", title: "ACP Session", updatedAt: "2026-04-01" },
+        {
+          sessionId: "acp-1",
+          title: "ACP Session",
+          updatedAt: "2026-04-01",
+          messageCount: 3,
+        },
       ]);
 
       await useChatSessionStore.getState().loadSessions();
@@ -180,7 +197,12 @@ describe("chatSessionStore", () => {
       });
 
       mockedAcpListSessions.mockResolvedValue([
-        { sessionId: "acp-1", title: "ACP Session", updatedAt: "2026-04-02" },
+        {
+          sessionId: "acp-1",
+          title: "ACP Session",
+          updatedAt: "2026-04-02",
+          messageCount: 1,
+        },
       ]);
 
       await useChatSessionStore.getState().loadSessions();

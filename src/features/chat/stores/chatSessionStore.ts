@@ -194,7 +194,7 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
         title: s.title ?? "Untitled",
         createdAt: s.updatedAt ?? new Date().toISOString(),
         updatedAt: s.updatedAt ?? new Date().toISOString(),
-        messageCount: 0,
+        messageCount: s.messageCount,
       }));
       // Sort by updatedAt descending (most recent first)
       sessions.sort(

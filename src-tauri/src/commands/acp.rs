@@ -84,6 +84,7 @@ fn resolve_working_dir(
 async fn resolve_exportable_session_id(
     app_handle: &AppHandle,
     session_id: &str,
+    persona_id: Option<&str>,
 ) -> Result<String, String> {
     let db_path = session_db::session_db_path()?;
     if session_db::read_session(&db_path, session_id).is_ok() {
@@ -91,8 +92,9 @@ async fn resolve_exportable_session_id(
     }
 
     let manager = GooseAcpManager::start(app_handle.clone()).await?;
+    let session_lookup_key = make_composite_key(session_id, persona_id);
     manager
-        .resolve_session_id(session_id.to_string())
+        .resolve_session_id(session_lookup_key)
         .await?
         .ok_or_else(|| format!("Session '{session_id}' not found in sessions or threads"))
 }
@@ -170,7 +172,17 @@ pub async fn acp_prepare_session(
 #[tauri::command]
 pub async fn acp_list_sessions(app_handle: AppHandle) -> Result<Vec<AcpSessionInfo>, String> {
     let manager = GooseAcpManager::start(app_handle).await?;
-    manager.list_sessions().await
+    let db_path = session_db::session_db_path()?;
+    let counts = session_db::thread_message_counts(&db_path)?;
+    let sessions = manager.list_sessions().await?;
+
+    Ok(sessions
+        .into_iter()
+        .map(|mut session| {
+            session.message_count = counts.get(&session.session_id).copied().unwrap_or(0);
+            session
+        })
+        .collect())
 }
 
 /// Load an existing session, replaying its messages as Tauri events.
@@ -296,9 +308,11 @@ pub async fn acp_cancel_all(registry: State<'_, Arc<AcpSessionRegistry>>) -> Res
 pub async fn acp_export_session(
     app_handle: AppHandle,
     session_id: String,
+    persona_id: Option<String>,
 ) -> Result<String, String> {
     let db_path = session_db::session_db_path()?;
-    let resolved_session_id = resolve_exportable_session_id(&app_handle, &session_id).await?;
+    let resolved_session_id =
+        resolve_exportable_session_id(&app_handle, &session_id, persona_id.as_deref()).await?;
     let (row, messages) = session_db::read_session(&db_path, &resolved_session_id)?;
     let exported = session_db::to_exported_session(&row, &messages);
     serde_json::to_string_pretty(&exported).map_err(|e| format!("Failed to serialize session: {e}"))
@@ -342,6 +356,7 @@ pub async fn acp_import_session(
         session_id: goose_session_id,
         title: Some(title),
         updated_at: Some(now),
+        message_count: exported.conversation.len(),
     })
 }
 
@@ -353,9 +368,11 @@ pub async fn acp_import_session(
 pub async fn acp_duplicate_session(
     app_handle: AppHandle,
     session_id: String,
+    persona_id: Option<String>,
 ) -> Result<AcpSessionInfo, String> {
     let db_path = session_db::session_db_path()?;
-    let resolved_session_id = resolve_exportable_session_id(&app_handle, &session_id).await?;
+    let resolved_session_id =
+        resolve_exportable_session_id(&app_handle, &session_id, persona_id.as_deref()).await?;
 
     // 1. Read the source session's messages
     let (source_row, source_messages) = session_db::read_session(&db_path, &resolved_session_id)?;
@@ -381,5 +398,6 @@ pub async fn acp_duplicate_session(
         session_id: goose_session_id,
         title: Some(copy_name),
         updated_at: Some(now),
+        message_count: exported.conversation.len(),
     })
 }

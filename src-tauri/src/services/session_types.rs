@@ -5,10 +5,6 @@
 
 use serde::{Deserialize, Serialize};
 
-// ---------------------------------------------------------------------------
-// Internal row types (mirror the DB schema, not serialized to wire)
-// ---------------------------------------------------------------------------
-
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub(crate) struct SessionRow {
@@ -50,10 +46,6 @@ pub(crate) struct MessageRow {
     pub tokens: Option<i64>,
     pub metadata_json: Option<String>,
 }
-
-// ---------------------------------------------------------------------------
-// Wire types (OG-goose-compatible export format)
-// ---------------------------------------------------------------------------
 
 /// The exported session format, compatible with OG goose.
 /// The `conversation` field (not `messages`) holds the list of messages.
@@ -106,10 +98,6 @@ pub(crate) struct ExportedMessage {
     pub metadata: Option<serde_json::Value>,
 }
 
-// ---------------------------------------------------------------------------
-// Conversion helpers
-// ---------------------------------------------------------------------------
-
 /// Parse a JSON string, returning `None` on error or if the input is `None`.
 pub(crate) fn parse_json_opt(raw: &Option<String>) -> Option<serde_json::Value> {
     raw.as_ref().and_then(|s| serde_json::from_str(s).ok())
@@ -154,10 +142,6 @@ pub fn to_exported_session(row: &SessionRow, messages: &[MessageRow]) -> Exporte
         conversation,
     }
 }
-
-// ---------------------------------------------------------------------------
-// Parse imported JSON (multi-format detection)
-// ---------------------------------------------------------------------------
 
 /// Parse an import JSON string, detecting the format:
 /// - OG goose: has `conversation` or `name` field at top level
@@ -215,10 +199,10 @@ fn parse_v1_format(
                 .or_else(|| m.get("metadata").cloned());
 
             ExportedMessage {
-                message_id: str_field(m, "message_id"),
+                message_id: str_field(m, "message_id").or_else(|| str_field(m, "id")),
                 role: str_field(m, "role"),
                 content,
-                created_timestamp: m.get("created_timestamp").and_then(|v| v.as_i64()),
+                created_timestamp: int_field(m, &["created_timestamp", "created"]),
                 tokens: m.get("tokens").and_then(|v| v.as_i64()),
                 metadata,
             }
@@ -234,11 +218,11 @@ fn parse_v1_format(
 
     Ok(ExportedSession {
         id: str_field_or(session, "id", "unknown"),
-        name: str_field_map(session, "name"),
+        name: str_field_map_any(session, &["name", "title"]),
         description: str_field_map(session, "description"),
-        working_dir: str_field_map(session, "working_dir"),
-        created_at: str_field_map(session, "created_at"),
-        updated_at: str_field_map(session, "updated_at"),
+        working_dir: str_field_map_any(session, &["working_dir", "workingDir"]),
+        created_at: str_field_map_any(session, &["created_at", "createdAt"]),
+        updated_at: str_field_map_any(session, &["updated_at", "updatedAt"]),
         extension_data,
         total_tokens: session.get("total_tokens").and_then(|v| v.as_i64()),
         input_tokens: session.get("input_tokens").and_then(|v| v.as_i64()),
@@ -279,6 +263,13 @@ fn str_field_map(obj: &serde_json::Map<String, serde_json::Value>, key: &str) ->
     obj.get(key).and_then(|v| v.as_str()).map(String::from)
 }
 
+fn str_field_map_any(
+    obj: &serde_json::Map<String, serde_json::Value>,
+    keys: &[&str],
+) -> Option<String> {
+    keys.iter().find_map(|key| str_field_map(obj, key))
+}
+
 fn str_field_or(
     obj: &serde_json::Map<String, serde_json::Value>,
     key: &str,
@@ -287,9 +278,10 @@ fn str_field_or(
     str_field_map(obj, key).unwrap_or_else(|| default.to_string())
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
+fn int_field(v: &serde_json::Value, keys: &[&str]) -> Option<i64> {
+    keys.iter()
+        .find_map(|key| v.get(key).and_then(|value| value.as_i64()))
+}
 
 #[cfg(test)]
 mod tests {
@@ -369,6 +361,49 @@ mod tests {
     }
 
     #[test]
+    fn parse_import_json_v1_frontend_export_shape() {
+        let json = r#"{
+            "version": 1,
+            "session": {
+                "title": "Frontend Export",
+                "createdAt": "2026-04-07T10:00:00Z",
+                "updatedAt": "2026-04-07T11:00:00Z"
+            },
+            "messages": [
+                {
+                    "id": "frontend-msg-1",
+                    "role": "user",
+                    "content": [{"type":"text","text":"Hello from frontend"}],
+                    "created": 1700001234,
+                    "metadata": {"source":"frontend"}
+                }
+            ]
+        }"#;
+
+        let result = parse_import_json(json);
+        assert!(
+            result.is_ok(),
+            "Should parse frontend v1 format: {:?}",
+            result.err()
+        );
+
+        let session = result.unwrap();
+        assert_eq!(session.name.as_deref(), Some("Frontend Export"));
+        assert_eq!(session.created_at.as_deref(), Some("2026-04-07T10:00:00Z"));
+        assert_eq!(session.updated_at.as_deref(), Some("2026-04-07T11:00:00Z"));
+        assert_eq!(session.conversation.len(), 1);
+        assert_eq!(
+            session.conversation[0].message_id.as_deref(),
+            Some("frontend-msg-1")
+        );
+        assert_eq!(session.conversation[0].created_timestamp, Some(1700001234));
+        assert_eq!(
+            session.conversation[0].metadata.as_ref().unwrap()["source"],
+            "frontend"
+        );
+    }
+
+    #[test]
     fn parse_import_json_invalid_format() {
         let json = r#"{"foo": "bar", "baz": 123}"#;
         let result = parse_import_json(json);
@@ -423,7 +458,6 @@ mod tests {
 
         let exported = to_exported_session(&row, &messages);
 
-        // Verify wire format uses "conversation", not "messages"
         let json_str = serde_json::to_string(&exported).unwrap();
         assert!(
             json_str.contains("\"conversation\""),
