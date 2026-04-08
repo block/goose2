@@ -1,13 +1,5 @@
-import { useState } from "react";
-import {
-  Copy,
-  Check,
-  RotateCcw,
-  Pencil,
-  Bot,
-  User,
-  ChevronRight,
-} from "lucide-react";
+import { useState, memo } from "react";
+import { Copy, Check, RotateCcw, Pencil, Bot, User } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import {
   MessageActions,
@@ -19,7 +11,7 @@ import {
   ReasoningTrigger,
   ReasoningContent,
 } from "@/shared/ui/ai-elements/reasoning";
-import { ToolCallAdapter } from "./ToolCallAdapter";
+import { ToolChainCards, type ToolChainItem } from "./ToolChainCards";
 import { ClickableImage } from "./ClickableImage";
 import { useArtifactLinkHandler } from "@/features/chat/hooks/useArtifactLinkHandler";
 import type {
@@ -27,7 +19,6 @@ import type {
   MessageContent,
   TextContent,
   ImageContent,
-  ToolRequestContent,
   ToolResponseContent,
   ThinkingContent,
   ReasoningContent as ReasoningContentType,
@@ -40,142 +31,14 @@ interface MessageBubbleProps {
   agentAvatarUrl?: string;
   isStreaming?: boolean;
   onCopy?: () => void;
-  onRetry?: () => void;
-  onEdit?: () => void;
+  onRetryMessage?: (messageId: string) => void;
+  onEditMessage?: (messageId: string) => void;
 }
 
 interface ContentSection {
   key: string;
   type: "single" | "toolChain";
   items: MessageContent[] | ToolChainItem[];
-}
-
-interface ToolChainItem {
-  key: string;
-  request?: ToolRequestContent;
-  response?: ToolResponseContent;
-}
-
-const INTERNAL_TOOL_PREFIXES = new Set(
-  "awk bash cat chmod cp echo find grep head ls mv open pip pip3 python python3 rm sed sh tail wc which zsh".split(
-    " ",
-  ),
-);
-
-function getToolItemName(item: ToolChainItem): string {
-  return item.request?.name || item.response?.name || "Tool result";
-}
-
-function getToolItemStatus(item: ToolChainItem) {
-  if (item.response) {
-    return item.response.isError ? "error" : "completed";
-  }
-  return item.request?.status ?? "completed";
-}
-
-function isLowSignalToolStep(item: ToolChainItem): boolean {
-  if (getToolItemStatus(item) !== "completed") {
-    return false;
-  }
-  if (item.response?.isError) {
-    return false;
-  }
-
-  const name = getToolItemName(item).trim();
-  if (!name) return false;
-
-  const lower = name.toLowerCase();
-  const firstToken = lower.split(/\s+/)[0];
-  if (INTERNAL_TOOL_PREFIXES.has(firstToken)) {
-    return true;
-  }
-  if (name.length > 88) {
-    return true;
-  }
-  return (
-    lower.includes("&&") ||
-    lower.includes("||") ||
-    lower.includes("2>&1") ||
-    lower.includes("|")
-  );
-}
-
-function partitionToolSteps(toolItems: ToolChainItem[]) {
-  if (toolItems.length <= 3) {
-    return { primaryItems: toolItems, hiddenItems: [] as ToolChainItem[] };
-  }
-
-  const primaryItems: ToolChainItem[] = [];
-  const hiddenItems: ToolChainItem[] = [];
-
-  for (const item of toolItems) {
-    if (isLowSignalToolStep(item)) {
-      hiddenItems.push(item);
-      continue;
-    }
-    primaryItems.push(item);
-  }
-
-  if (primaryItems.length === 0) {
-    return { primaryItems: toolItems, hiddenItems: [] as ToolChainItem[] };
-  }
-
-  if (hiddenItems.length < 2) {
-    return { primaryItems: toolItems, hiddenItems: [] as ToolChainItem[] };
-  }
-
-  return { primaryItems, hiddenItems };
-}
-
-function ToolChainCards({ toolItems }: { toolItems: ToolChainItem[] }) {
-  const [showInternalSteps, setShowInternalSteps] = useState(false);
-  const { primaryItems, hiddenItems } = partitionToolSteps(toolItems);
-
-  const renderToolItem = (item: ToolChainItem) => {
-    const name = getToolItemName(item);
-    const status = getToolItemStatus(item);
-    const { request, response } = item;
-
-    return (
-      <ToolCallAdapter
-        key={item.key}
-        name={name}
-        arguments={request?.arguments ?? {}}
-        status={status}
-        result={response?.result}
-        isError={response?.isError}
-        startedAt={request?.startedAt}
-      />
-    );
-  };
-
-  return (
-    <div className="my-1 flex flex-col items-start gap-3">
-      {primaryItems.map((item) => renderToolItem(item))}
-
-      {hiddenItems.length > 0 && (
-        <div className="ml-1 flex flex-col items-start gap-1.5">
-          <button
-            type="button"
-            onClick={() => setShowInternalSteps((prev) => !prev)}
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-muted-foreground"
-          >
-            <ChevronRight
-              className={cn(
-                "h-3 w-3 transition-transform",
-                showInternalSteps && "rotate-90",
-              )}
-            />
-            {showInternalSteps
-              ? `Hide internal steps (${hiddenItems.length})`
-              : `Show internal steps (${hiddenItems.length})`}
-          </button>
-
-          {showInternalSteps && hiddenItems.map((item) => renderToolItem(item))}
-        </div>
-      )}
-    </div>
-  );
 }
 
 function findMatchingToolChainIndex(
@@ -368,13 +231,13 @@ function CopyAction({ text }: { text: string }) {
   );
 }
 
-export function MessageBubble({
+export const MessageBubble = memo(function MessageBubble({
   message,
   agentName,
   agentAvatarUrl,
   isStreaming,
-  onRetry,
-  onEdit,
+  onRetryMessage,
+  onEditMessage,
 }: MessageBubbleProps) {
   const { role, content, created } = message;
   const { handleContentClick, pathNotice } = useArtifactLinkHandler();
@@ -462,13 +325,19 @@ export function MessageBubble({
         {/* Hover actions + timestamp */}
         <MessageActions className="opacity-0 transition-opacity duration-150 group-hover:opacity-100">
           {textContent && <CopyAction text={textContent} />}
-          {!isUser && onRetry && (
-            <MessageAction tooltip="Retry" onClick={onRetry}>
+          {!isUser && onRetryMessage && (
+            <MessageAction
+              tooltip="Retry"
+              onClick={() => onRetryMessage(message.id)}
+            >
               <RotateCcw className="size-3.5" />
             </MessageAction>
           )}
-          {isUser && onEdit && (
-            <MessageAction tooltip="Edit" onClick={onEdit}>
+          {isUser && onEditMessage && (
+            <MessageAction
+              tooltip="Edit"
+              onClick={() => onEditMessage(message.id)}
+            >
               <Pencil className="size-3.5" />
             </MessageAction>
           )}
@@ -482,4 +351,4 @@ export function MessageBubble({
       </div>
     </div>
   );
-}
+});

@@ -21,6 +21,8 @@ interface ToolCallAdapterProps {
   isError?: boolean;
   /** Epoch ms when the tool call started executing. */
   startedAt?: number;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 function useElapsedTime(status: ToolCallStatus, startedAt?: number) {
@@ -213,6 +215,8 @@ export function ToolCallAdapter({
   result,
   isError,
   startedAt,
+  open,
+  onOpenChange,
 }: ToolCallAdapterProps) {
   const elapsed = useElapsedTime(status, startedAt);
   const state = toolStatusMap[status];
@@ -222,7 +226,7 @@ export function ToolCallAdapter({
 
   return (
     <div>
-      <Tool>
+      <Tool open={open} onOpenChange={onOpenChange}>
         <ToolHeader
           type="dynamic-tool"
           toolName={name}

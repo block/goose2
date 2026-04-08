@@ -122,15 +122,11 @@ export function MessageTimeline({
                   message.role === "assistant" ? agentAvatarUrl : undefined
                 }
                 isStreaming={message.id === streamingMessageId}
-                onRetry={
-                  message.role === "assistant" && onRetryMessage
-                    ? () => onRetryMessage(message.id)
-                    : undefined
+                onRetryMessage={
+                  message.role === "assistant" ? onRetryMessage : undefined
                 }
-                onEdit={
-                  message.role === "user" && onEditMessage
-                    ? () => onEditMessage(message.id)
-                    : undefined
+                onEditMessage={
+                  message.role === "user" ? onEditMessage : undefined
                 }
               />
             </div>
