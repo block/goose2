@@ -76,7 +76,12 @@ impl MessageWriter for TauriMessageWriter {
         );
     }
 
-    async fn record_tool_call(&self, tool_call_id: &str, title: &str) {
+    async fn record_tool_call(
+        &self,
+        tool_call_id: &str,
+        title: &str,
+        _raw_input: Option<&serde_json::Value>,
+    ) {
         let _ = self.app_handle.emit(
             "acp:tool_call",
             ToolCallPayload {
@@ -88,16 +93,23 @@ impl MessageWriter for TauriMessageWriter {
         );
     }
 
-    async fn update_tool_call_title(&self, tool_call_id: &str, title: &str) {
-        let _ = self.app_handle.emit(
-            "acp:tool_title",
-            ToolTitlePayload {
-                session_id: self.session_id.clone(),
-                message_id: self.assistant_message_id.clone(),
-                tool_call_id: tool_call_id.to_string(),
-                title: title.to_string(),
-            },
-        );
+    async fn update_tool_call_title(
+        &self,
+        tool_call_id: &str,
+        title: Option<&str>,
+        _raw_input: Option<&serde_json::Value>,
+    ) {
+        if let Some(title) = title {
+            let _ = self.app_handle.emit(
+                "acp:tool_title",
+                ToolTitlePayload {
+                    session_id: self.session_id.clone(),
+                    message_id: self.assistant_message_id.clone(),
+                    tool_call_id: tool_call_id.to_string(),
+                    title: title.to_string(),
+                },
+            );
+        }
     }
 
     async fn record_tool_result(&self, content: &str) {

@@ -268,13 +268,21 @@ impl Client for SessionEventDispatcher {
                 }
                 SessionUpdate::ToolCall(tool_call) => {
                     writer
-                        .record_tool_call(&tool_call.tool_call_id.0, &tool_call.title)
+                        .record_tool_call(
+                            &tool_call.tool_call_id.0,
+                            &tool_call.title,
+                            tool_call.raw_input.as_ref(),
+                        )
                         .await;
                 }
                 SessionUpdate::ToolCallUpdate(update) => {
-                    if let Some(title) = &update.fields.title {
+                    if update.fields.title.is_some() || update.fields.raw_input.is_some() {
                         writer
-                            .update_tool_call_title(&update.tool_call_id.0, title)
+                            .update_tool_call_title(
+                                &update.tool_call_id.0,
+                                update.fields.title.as_deref(),
+                                update.fields.raw_input.as_ref(),
+                            )
                             .await;
                     }
                     if let Some(content) = &update.fields.content {
