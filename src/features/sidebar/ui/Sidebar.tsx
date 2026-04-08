@@ -279,12 +279,19 @@ export function Sidebar({
     updateActiveRect,
   } = useSidebarHighlight(navRef);
 
-  // Update active rect when activeView/activeSessionId changes
-  useEffect(() => {
-    if (activeSessionId) {
-      return;
-    }
+  // When the active session is a draft inside a project, the draft won't
+  // appear in the sidebar list, so highlight the parent project row instead.
+  const activeProjectId = (() => {
+    if (!activeSessionId) return null;
+    const s = sessions.find((s) => s.id === activeSessionId);
+    return s?.draft && s.projectId ? s.projectId : null;
+  })();
 
+  // Update active rect when activeView/activeSessionId changes.
+  // When a visible session or draft-in-project is active, the corresponding
+  // ref callback (activeSessionRefCallback / activeProjectRefCallback) handles it.
+  useEffect(() => {
+    if (activeSessionId || activeProjectId) return;
     if (activeView === "home") {
       updateActiveRect(homeRef.current);
     } else if (activeView && navItemRefs.current[activeView]) {
@@ -292,16 +299,21 @@ export function Sidebar({
     } else {
       updateActiveRect(null);
     }
-  }, [activeSessionId, activeView, updateActiveRect]);
+  }, [activeSessionId, activeProjectId, activeView, updateActiveRect]);
 
-  // Callback for SidebarProjectsSection to register active session refs
+  // Ref callbacks for SidebarProjectsSection to position the highlight on
+  // the active session row, or the parent project row for draft-in-project.
   const activeSessionRefCallback = useCallback(
     (el: HTMLElement | null) => {
-      if (activeSessionId && el) {
-        updateActiveRect(el);
-      }
+      if (activeSessionId && el) updateActiveRect(el);
     },
     [activeSessionId, updateActiveRect],
+  );
+  const activeProjectRefCallback = useCallback(
+    (el: HTMLElement | null) => {
+      if (activeProjectId && el) updateActiveRect(el);
+    },
+    [activeProjectId, updateActiveRect],
   );
 
   return (
@@ -538,6 +550,7 @@ export function Sidebar({
                 labelTransition={labelTransition}
                 labelVisible={labelVisible}
                 activeSessionId={activeSessionId}
+                activeProjectId={activeProjectId}
                 onNavigate={onNavigate}
                 onSelectSession={onSelectSession}
                 onNewChatInProject={onNewChatInProject}
@@ -550,6 +563,7 @@ export function Sidebar({
                 onMoveToProject={onMoveToProject}
                 onItemMouseEnter={onItemMouseEnter}
                 activeSessionRefCallback={activeSessionRefCallback}
+                activeProjectRefCallback={activeProjectRefCallback}
               />
             </>
           )}
