@@ -33,8 +33,10 @@ import {
   Stethoscope,
   X,
 } from "lucide-react";
+import { IconPlug } from "@tabler/icons-react";
 import { AppearanceSettings } from "./AppearanceSettings";
 import { DoctorSettings } from "./DoctorSettings";
+import { ProvidersSettings } from "./ProvidersSettings";
 import {
   listArchivedProjects,
   restoreProject,
@@ -49,6 +51,7 @@ import type { Session } from "@/shared/types/chat";
 
 const NAV_ITEMS = [
   { id: "appearance", labelKey: "nav.appearance", icon: Palette },
+  { id: "providers", labelKey: "nav.providers", icon: IconPlug },
   { id: "general", labelKey: "nav.general", icon: Settings2 },
   { id: "projects", labelKey: "nav.projects", icon: FolderKanban },
   { id: "chats", labelKey: "nav.chats", icon: MessageSquare },
@@ -238,6 +241,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               }}
             >
               {activeSection === "appearance" && <AppearanceSettings />}
+              {activeSection === "providers" && <ProvidersSettings />}
               {activeSection === "doctor" && <DoctorSettings />}
               {activeSection === "general" && (
                 <div className="space-y-6">
