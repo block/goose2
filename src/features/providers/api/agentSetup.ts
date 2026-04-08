@@ -7,29 +7,23 @@ interface AgentSetupOutput {
 }
 
 export async function checkAgentInstalled(
-  binaryName: string,
+  providerId: string,
 ): Promise<boolean> {
-  return invoke("check_agent_installed", { binaryName });
+  return invoke("check_agent_installed", { providerId });
 }
 
 export async function checkAgentAuth(
-  authStatusCommand: string,
+  providerId: string,
 ): Promise<boolean> {
-  return invoke("check_agent_auth", { authStatusCommand });
+  return invoke("check_agent_auth", { providerId });
 }
 
-export async function installAgent(
-  providerId: string,
-  installCommand: string,
-): Promise<void> {
-  return invoke("install_agent", { providerId, installCommand });
+export async function installAgent(providerId: string): Promise<void> {
+  return invoke("install_agent", { providerId });
 }
 
-export async function authenticateAgent(
-  providerId: string,
-  authCommand: string,
-): Promise<void> {
-  return invoke("authenticate_agent", { providerId, authCommand });
+export async function authenticateAgent(providerId: string): Promise<void> {
+  return invoke("authenticate_agent", { providerId });
 }
 
 export function onAgentSetupOutput(

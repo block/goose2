@@ -1,6 +1,7 @@
 use tauri::State;
 
 use crate::services::goose_config::{FieldValue, GooseConfig, ProviderStatus};
+use crate::services::provider_defs::find_config_key;
 
 #[tauri::command]
 pub fn get_provider_config(
@@ -15,14 +16,15 @@ pub fn save_provider_field(
     config: State<'_, GooseConfig>,
     key: String,
     value: String,
-    is_secret: bool,
 ) -> Result<(), String> {
+    let config_key =
+        find_config_key(&key).ok_or_else(|| format!("Unknown provider config key '{key}'"))?;
     let trimmed_value = value.trim();
     if trimmed_value.is_empty() {
         return Err("Field value cannot be empty".to_string());
     }
 
-    if is_secret {
+    if config_key.is_secret {
         config.set_secret(&key, trimmed_value)
     } else {
         config.set_param(&key, trimmed_value)

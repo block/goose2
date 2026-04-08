@@ -127,6 +127,13 @@ pub(crate) static PROVIDER_CONFIG_DEFS: &[ProviderConfigDef] = &[
     },
 ];
 
+pub(crate) fn find_config_key(key_name: &str) -> Option<&'static ConfigKey> {
+    PROVIDER_CONFIG_DEFS
+        .iter()
+        .flat_map(|def| def.keys.iter())
+        .find(|key| key.name == key_name)
+}
+
 pub(crate) fn find_provider_def(provider_id: &str) -> Option<&'static ProviderConfigDef> {
     PROVIDER_CONFIG_DEFS.iter().find(|d| d.id == provider_id)
 }

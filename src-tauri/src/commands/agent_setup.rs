@@ -2,11 +2,75 @@ use std::path::PathBuf;
 use tauri::{AppHandle, Emitter};
 use tokio::io::{AsyncBufReadExt, BufReader};
 
+struct AgentCommandDef {
+    id: &'static str,
+    binary_name: &'static str,
+    install_command: Option<&'static str>,
+    auth_command: Option<&'static str>,
+    auth_status_command: Option<&'static str>,
+}
+
+const AGENT_COMMAND_DEFS: &[AgentCommandDef] = &[
+    AgentCommandDef {
+        id: "claude-acp",
+        binary_name: "claude-agent-acp",
+        install_command: Some(
+            "npm install -g @anthropic-ai/claude-code @zed-industries/claude-agent-acp",
+        ),
+        auth_command: Some("claude auth login"),
+        auth_status_command: Some("claude auth status"),
+    },
+    AgentCommandDef {
+        id: "codex-acp",
+        binary_name: "codex-acp",
+        install_command: Some("npm install -g @openai/codex @zed-industries/codex-acp"),
+        auth_command: Some("codex login"),
+        auth_status_command: Some("codex login status"),
+    },
+    AgentCommandDef {
+        id: "copilot-acp",
+        binary_name: "copilot",
+        install_command: Some("npm install -g @github/copilot"),
+        auth_command: Some("copilot login"),
+        auth_status_command: None,
+    },
+    AgentCommandDef {
+        id: "amp-acp",
+        binary_name: "amp-acp",
+        install_command: Some("npm install -g @sourcegraph/amp@latest amp-acp"),
+        auth_command: Some("amp login"),
+        auth_status_command: Some("amp usage"),
+    },
+    AgentCommandDef {
+        id: "cursor-agent",
+        binary_name: "cursor-agent",
+        install_command: Some("curl -fsSL https://cursor.com/install | bash"),
+        auth_command: Some("cursor-agent login"),
+        auth_status_command: Some("cursor-agent status"),
+    },
+    AgentCommandDef {
+        id: "pi-acp",
+        binary_name: "pi-acp",
+        install_command: None,
+        auth_command: None,
+        auth_status_command: None,
+    },
+];
+
 #[derive(serde::Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 struct AgentSetupOutput {
     provider_id: String,
     line: String,
+}
+
+fn find_agent_command_def(provider_id: &str) -> Option<&'static AgentCommandDef> {
+    AGENT_COMMAND_DEFS.iter().find(|def| def.id == provider_id)
+}
+
+fn get_agent_command_def(provider_id: &str) -> Result<&'static AgentCommandDef, String> {
+    find_agent_command_def(provider_id)
+        .ok_or_else(|| format!("Unknown agent provider '{provider_id}'"))
 }
 
 fn build_extended_path() -> String {
@@ -77,7 +141,8 @@ fn build_extended_path() -> String {
 }
 
 #[tauri::command]
-pub async fn check_agent_installed(binary_name: String) -> bool {
+pub async fn check_agent_installed(provider_id: String) -> Result<bool, String> {
+    let def = get_agent_command_def(&provider_id)?;
     let extended_path = build_extended_path();
 
     let (cmd, flag) = if cfg!(target_os = "windows") {
@@ -90,17 +155,22 @@ pub async fn check_agent_installed(binary_name: String) -> bool {
     if !flag.is_empty() {
         command.arg(flag);
     }
-    command.arg(&binary_name);
+    command.arg(def.binary_name);
     command.env("PATH", &extended_path);
 
-    command
+    Ok(command
         .output()
         .map(|output| output.status.success())
-        .unwrap_or(false)
+        .unwrap_or(false))
 }
 
 #[tauri::command]
-pub async fn check_agent_auth(auth_status_command: String) -> bool {
+pub async fn check_agent_auth(provider_id: String) -> Result<bool, String> {
+    let def = get_agent_command_def(&provider_id)?;
+    let Some(auth_status_command) = def.auth_status_command else {
+        return Ok(false);
+    };
+
     let extended_path = build_extended_path();
 
     let shell = if cfg!(target_os = "windows") {
@@ -116,31 +186,31 @@ pub async fn check_agent_auth(auth_status_command: String) -> bool {
 
     std::process::Command::new(shell)
         .arg(flag)
-        .arg(&auth_status_command)
+        .arg(auth_status_command)
         .env("PATH", &extended_path)
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .output()
         .map(|output| output.status.success())
-        .unwrap_or(false)
+        .map_err(|e| format!("Failed to check auth status: {e}"))
 }
 
 #[tauri::command]
-pub async fn install_agent(
-    app_handle: AppHandle,
-    provider_id: String,
-    install_command: String,
-) -> Result<(), String> {
-    run_shell_command(&app_handle, &provider_id, &install_command).await
+pub async fn install_agent(app_handle: AppHandle, provider_id: String) -> Result<(), String> {
+    let def = get_agent_command_def(&provider_id)?;
+    let install_command = def
+        .install_command
+        .ok_or_else(|| format!("Agent provider '{provider_id}' does not support install"))?;
+    run_shell_command(&app_handle, &provider_id, install_command).await
 }
 
 #[tauri::command]
-pub async fn authenticate_agent(
-    app_handle: AppHandle,
-    provider_id: String,
-    auth_command: String,
-) -> Result<(), String> {
-    run_shell_command(&app_handle, &provider_id, &auth_command).await
+pub async fn authenticate_agent(app_handle: AppHandle, provider_id: String) -> Result<(), String> {
+    let def = get_agent_command_def(&provider_id)?;
+    let auth_command = def
+        .auth_command
+        .ok_or_else(|| format!("Agent provider '{provider_id}' does not support auth"))?;
+    run_shell_command(&app_handle, &provider_id, auth_command).await
 }
 
 fn strip_npm_config_env(cmd: &mut tokio::process::Command) {

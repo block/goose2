@@ -205,6 +205,25 @@ impl GooseConfig {
         }
     }
 
+    fn delete_oauth_cache(&self, cache_path: &str) -> Result<bool, String> {
+        let _guard = self.guard.lock().unwrap();
+        let full_path = self.config_dir.join(cache_path);
+
+        if full_path.is_dir() {
+            std::fs::remove_dir_all(&full_path)
+                .map_err(|e| format!("Failed to remove OAuth cache directory: {e}"))?;
+            return Ok(true);
+        }
+
+        if full_path.exists() {
+            std::fs::remove_file(&full_path)
+                .map_err(|e| format!("Failed to remove OAuth cache file: {e}"))?;
+            return Ok(true);
+        }
+
+        Ok(false)
+    }
+
     pub fn check_provider_status(&self, provider_id: &str) -> ProviderStatus {
         if provider_id == "databricks" {
             let has_host = self.has_param("DATABRICKS_HOST");
@@ -312,6 +331,10 @@ impl GooseConfig {
             } else {
                 self.delete_param(config_key.name)?;
             }
+        }
+
+        if let Some(oauth_cache_path) = def.oauth_cache_path {
+            self.delete_oauth_cache(oauth_cache_path)?;
         }
 
         Ok(())

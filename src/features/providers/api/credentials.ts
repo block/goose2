@@ -15,9 +15,8 @@ export async function getProviderConfig(
 export async function saveProviderField(
   key: string,
   value: string,
-  isSecret: boolean,
 ): Promise<void> {
-  return invoke("save_provider_field", { key, value, isSecret });
+  return invoke("save_provider_field", { key, value });
 }
 
 export async function deleteProviderConfig(providerId: string): Promise<void> {

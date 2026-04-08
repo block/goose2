@@ -15,7 +15,7 @@ interface UseCredentialsReturn {
   saving: boolean;
   needsRestart: boolean;
   getConfig: (providerId: string) => Promise<ProviderFieldValue[]>;
-  save: (key: string, value: string, isSecret: boolean) => Promise<void>;
+  save: (key: string, value: string) => Promise<void>;
   remove: (providerId: string) => Promise<void>;
   restart: () => Promise<void>;
   completeNativeSetup: () => Promise<void>;
@@ -50,10 +50,10 @@ export function useCredentials(): UseCredentialsReturn {
   }, []);
 
   const save = useCallback(
-    async (key: string, value: string, isSecret: boolean) => {
+    async (key: string, value: string) => {
       setSaving(true);
       try {
-        await saveProviderField(key, value, isSecret);
+        await saveProviderField(key, value);
         await refreshStatuses();
         setNeedsRestart(true);
       } finally {
