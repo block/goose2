@@ -35,15 +35,22 @@ export function useSidebarHighlight(
     const nav = navRef.current;
     if (!nav) return;
 
+    let rafId = 0;
     const observer = new MutationObserver(() => {
-      const el = activeElRef.current;
-      if (!el) return;
-      const rect = measureElement(el);
-      if (rect) setActiveRect(rect);
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const el = activeElRef.current;
+        if (!el) return;
+        const rect = measureElement(el);
+        if (rect) setActiveRect(rect);
+      });
     });
 
     observer.observe(nav, { childList: true, subtree: true });
-    return () => observer.disconnect();
+    return () => {
+      cancelAnimationFrame(rafId);
+      observer.disconnect();
+    };
   }, [navRef, measureElement]);
 
   const onItemMouseEnter = useCallback(
