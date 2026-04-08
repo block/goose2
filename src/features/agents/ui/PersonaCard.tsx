@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { MoreVertical, Copy, Pencil, Trash2, Download } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { Avatar, AvatarImage, AvatarFallback } from "@/shared/ui/avatar";
@@ -26,6 +27,7 @@ export function PersonaCard({
   onExport,
   isActive = false,
 }: PersonaCardProps) {
+  const { t } = useTranslation(["agents", "common"]);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -45,7 +47,7 @@ export function PersonaCard({
 
   return (
     <section
-      aria-label={`Persona: ${persona.displayName}`}
+      aria-label={t("card.ariaLabel", { name: persona.displayName })}
       onClick={() => onSelect?.(persona)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -68,7 +70,7 @@ export function PersonaCard({
           type="button"
           variant="ghost"
           size="icon-xs"
-          aria-label="Persona options"
+          aria-label={t("card.options")}
           aria-haspopup="true"
           aria-expanded={menuOpen}
           onClick={(e) => {
@@ -101,7 +103,7 @@ export function PersonaCard({
               className="w-full justify-start"
             >
               <Pencil className="size-3.5" />
-              Edit
+              {t("common:actions.edit")}
             </Button>
             <Button
               type="button"
@@ -116,7 +118,7 @@ export function PersonaCard({
               className="w-full justify-start"
             >
               <Copy className="size-3.5" />
-              Duplicate
+              {t("common:actions.duplicate")}
             </Button>
             <Button
               type="button"
@@ -131,7 +133,7 @@ export function PersonaCard({
               className="w-full justify-start"
             >
               <Download className="size-3.5" />
-              Export
+              {t("common:actions.export")}
             </Button>
             {!persona.isBuiltin && !persona.isFromDisk && (
               <Button
@@ -147,7 +149,7 @@ export function PersonaCard({
                 className="w-full justify-start text-destructive hover:text-destructive"
               >
                 <Trash2 className="size-3.5" />
-                Delete
+                {t("common:actions.delete")}
               </Button>
             )}
           </div>
@@ -170,7 +172,7 @@ export function PersonaCard({
       {/* Built-in badge */}
       {persona.isBuiltin && (
         <Badge variant="secondary" className="text-[10px]">
-          Built-in
+          {t("common:labels.builtIn")}
         </Badge>
       )}
 

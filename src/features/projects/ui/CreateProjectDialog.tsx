@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { FolderOpen } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { getHomeDir } from "@/shared/api/system";
@@ -88,6 +89,7 @@ export function CreateProjectDialog({
   initialWorkingDir,
   editingProject,
 }: CreateProjectDialogProps) {
+  const { t } = useTranslation(["projects", "common"]);
   const [name, setName] = useState("");
   const [prompt, setPrompt] = useState("");
   const icon = "\u{1F4C1}";
@@ -115,7 +117,7 @@ export function CreateProjectDialog({
       const selected = await open({
         directory: true,
         multiple: false,
-        title: "Select Directory",
+        title: t("dialog.addDirectoryDialogTitle"),
       });
       if (selected && typeof selected === "string") {
         const homeDir = await getHomeDir().catch(() => null);
@@ -231,7 +233,7 @@ export function CreateProjectDialog({
       <DialogContent className="max-w-lg max-h-[85vh] flex flex-col gap-0 p-0">
         <DialogHeader className="shrink-0 px-5 py-4">
           <DialogTitle className="text-sm">
-            {isEditing ? "Edit Project" : "New Project"}
+            {isEditing ? t("dialog.editTitle") : t("dialog.newTitle")}
           </DialogTitle>
         </DialogHeader>
 
@@ -243,7 +245,7 @@ export function CreateProjectDialog({
           {/* Name */}
           <div className="space-y-1">
             <Label className="text-xs font-medium text-muted-foreground">
-              Name <span className="text-destructive">*</span>
+              {t("dialog.name")} <span className="text-destructive">*</span>
             </Label>
             <Input
               value={name}
@@ -251,19 +253,20 @@ export function CreateProjectDialog({
                 setName(e.target.value);
                 setError(null);
               }}
-              placeholder="My Project"
+              placeholder={t("dialog.namePlaceholder")}
             />
           </div>
 
           {/* Instructions */}
           <div className="space-y-1">
             <Label className="text-xs font-medium text-muted-foreground">
-              Instructions
+              {t("dialog.instructions")}
             </Label>
             <PromptEditor
               value={prompt}
               onChange={setPrompt}
-              placeholder="System prompt or context for agents working in this project..."
+              ariaLabel={t("dialog.instructions")}
+              placeholder={t("dialog.instructionsPlaceholder")}
             />
             <Button
               type="button"
@@ -273,14 +276,14 @@ export function CreateProjectDialog({
               className="mt-1.5"
             >
               <FolderOpen className="size-3.5" />
-              Add directory
+              {t("dialog.addDirectory")}
             </Button>
           </div>
 
           {/* Color */}
           <div className="space-y-1">
             <Label className="text-xs font-medium text-muted-foreground">
-              Color
+              {t("dialog.color")}
             </Label>
             <div className="flex flex-wrap gap-1.5 pt-1">
               {COLOR_OPTIONS.map((c) => (
@@ -295,7 +298,7 @@ export function CreateProjectDialog({
                       : "border-transparent hover:scale-105",
                   )}
                   style={{ backgroundColor: c }}
-                  aria-label={`Color ${c}`}
+                  aria-label={t("dialog.colorAria", { color: c })}
                 />
               ))}
             </div>
@@ -304,7 +307,7 @@ export function CreateProjectDialog({
           {/* Provider */}
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-muted-foreground">
-              Provider
+              {t("dialog.provider")}
             </Label>
             <Select
               value={preferredProvider ?? "__none__"}
@@ -313,10 +316,12 @@ export function CreateProjectDialog({
               }
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="None (use default)" />
+                <SelectValue placeholder={t("dialog.noneUseDefault")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">None (use default)</SelectItem>
+                <SelectItem value="__none__">
+                  {t("dialog.noneUseDefault")}
+                </SelectItem>
                 {acpProviders.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.label}
@@ -337,7 +342,7 @@ export function CreateProjectDialog({
               htmlFor="use-worktrees"
               className="text-xs font-medium text-muted-foreground cursor-pointer"
             >
-              Use git worktrees for branch isolation
+              {t("dialog.useWorktrees")}
             </Label>
           </div>
 
@@ -353,7 +358,7 @@ export function CreateProjectDialog({
             onClick={handleClose}
             disabled={saving}
           >
-            Cancel
+            {t("common:actions.cancel")}
           </Button>
           <Button
             type="submit"
@@ -363,11 +368,11 @@ export function CreateProjectDialog({
           >
             {saving
               ? isEditing
-                ? "Saving..."
-                : "Creating..."
+                ? t("dialog.saving")
+                : t("dialog.creating")
               : isEditing
-                ? "Save Changes"
-                : "Create Project"}
+                ? t("common:actions.saveChanges")
+                : t("dialog.createProject")}
           </Button>
         </DialogFooter>
       </DialogContent>

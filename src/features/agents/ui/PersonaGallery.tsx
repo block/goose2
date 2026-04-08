@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
@@ -46,6 +47,7 @@ export function PersonaGallery({
   onImportFile,
   isLoading = false,
 }: PersonaGalleryProps) {
+  const { t } = useTranslation("agents");
   const { fileInputRef, isDragOver, dropHandlers, handleFileChange } =
     useFileImportZone({
       onImportFile: onImportFile ?? (() => {}),
@@ -64,7 +66,7 @@ export function PersonaGallery({
     return (
       <div
         role="status"
-        aria-label="Loading personas"
+        aria-label={t("gallery.loading")}
         className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4"
       >
         <SkeletonCard />
@@ -95,7 +97,7 @@ export function PersonaGallery({
         type="button"
         variant="ghost"
         onClick={onCreatePersona}
-        aria-label="Create new persona"
+        aria-label={t("gallery.createAria")}
         {...dropHandlers}
         className={cn(
           "flex h-auto flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-5",
@@ -107,10 +109,10 @@ export function PersonaGallery({
         )}
       >
         <Plus className="size-8" />
-        <span className="text-sm font-medium">New Persona</span>
+        <span className="text-sm font-medium">{t("gallery.new")}</span>
         {onImportFile && (
           <span className="text-[11px] text-muted-foreground">
-            or drop a file
+            {t("gallery.dropFile")}
           </span>
         )}
       </Button>

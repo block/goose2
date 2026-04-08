@@ -3,6 +3,7 @@ import { cn } from "@/shared/lib/cn";
 import Ansi from "ansi-to-react";
 import { CheckIcon, CopyIcon, TerminalIcon, Trash2Icon } from "lucide-react";
 import type { ComponentProps, HTMLAttributes } from "react";
+import { useTranslation } from "react-i18next";
 import {
   createContext,
   useCallback,
@@ -50,15 +51,19 @@ export const TerminalTitle = ({
   className,
   children,
   ...props
-}: TerminalTitleProps) => (
-  <div
-    className={cn("flex items-center gap-2 text-sm text-zinc-400", className)}
-    {...props}
-  >
-    <TerminalIcon className="size-4" />
-    {children ?? "Terminal"}
-  </div>
-);
+}: TerminalTitleProps) => {
+  const { t } = useTranslation("common");
+
+  return (
+    <div
+      className={cn("flex items-center gap-2 text-sm text-zinc-400", className)}
+      {...props}
+    >
+      <TerminalIcon className="size-4" />
+      {children ?? t("components.terminal.title")}
+    </div>
+  );
+};
 
 export type TerminalStatusProps = HTMLAttributes<HTMLDivElement>;
 
@@ -109,13 +114,14 @@ export const TerminalCopyButton = ({
   className,
   ...props
 }: TerminalCopyButtonProps) => {
+  const { t } = useTranslation("common");
   const [isCopied, setIsCopied] = useState(false);
   const timeoutRef = useRef<number>(0);
   const { output } = useContext(TerminalContext);
 
   const copyToClipboard = useCallback(async () => {
     if (typeof window === "undefined" || !navigator?.clipboard?.writeText) {
-      onError?.(new Error("Clipboard API not available"));
+      onError?.(new Error(t("errors.clipboardUnavailable")));
       return;
     }
 
@@ -127,7 +133,7 @@ export const TerminalCopyButton = ({
     } catch (error) {
       onError?.(error as Error);
     }
-  }, [output, onCopy, onError, timeout]);
+  }, [onCopy, onError, output, t, timeout]);
 
   useEffect(
     () => () => {
@@ -140,12 +146,14 @@ export const TerminalCopyButton = ({
 
   return (
     <Button
+      aria-label={t("components.terminal.copyLabel")}
       className={cn(
         "size-7 shrink-0 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100",
         className,
       )}
       onClick={copyToClipboard}
       size="icon"
+      title={t("components.terminal.copyLabel")}
       variant="ghost"
       {...props}
     >
@@ -161,6 +169,7 @@ export const TerminalClearButton = ({
   className,
   ...props
 }: TerminalClearButtonProps) => {
+  const { t } = useTranslation("common");
   const { onClear } = useContext(TerminalContext);
 
   if (!onClear) {
@@ -169,12 +178,14 @@ export const TerminalClearButton = ({
 
   return (
     <Button
+      aria-label={t("components.terminal.clearLabel")}
       className={cn(
         "size-7 shrink-0 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100",
         className,
       )}
       onClick={onClear}
       size="icon"
+      title={t("components.terminal.clearLabel")}
       variant="ghost"
       {...props}
     >

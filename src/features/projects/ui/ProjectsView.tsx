@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   MessageSquare,
   Plus,
@@ -34,6 +35,7 @@ function ProjectCardMenu({
   onEdit: (project: ProjectInfo) => void;
   onDelete: (project: ProjectInfo) => void;
 }) {
+  const { t } = useTranslation(["projects", "common"]);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -54,7 +56,7 @@ function ProjectCardMenu({
         type="button"
         variant="ghost"
         size="icon-xs"
-        aria-label={`Options for ${project.name}`}
+        aria-label={t("view.optionsAria", { name: project.name })}
         aria-haspopup="true"
         aria-expanded={menuOpen}
         onClick={() => setMenuOpen((prev) => !prev)}
@@ -81,7 +83,7 @@ function ProjectCardMenu({
               className="w-full justify-start"
             >
               <MessageSquare className="size-3.5" />
-              Start Chat
+              {t("view.startChat")}
             </Button>
           )}
           <Button
@@ -96,7 +98,7 @@ function ProjectCardMenu({
             className="w-full justify-start"
           >
             <Pencil className="size-3.5" />
-            Edit
+            {t("common:actions.edit")}
           </Button>
           <Button
             type="button"
@@ -110,7 +112,7 @@ function ProjectCardMenu({
             className="w-full justify-start text-destructive hover:text-destructive"
           >
             <Trash2 className="size-3.5" />
-            Delete
+            {t("common:actions.delete")}
           </Button>
         </div>
       )}
@@ -123,6 +125,7 @@ interface ProjectsViewProps {
 }
 
 export function ProjectsView({ onStartChat }: ProjectsViewProps) {
+  const { t } = useTranslation(["projects", "common"]);
   const fetchProjects = useProjectStore((s) => s.fetchProjects);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -218,10 +221,10 @@ export function ProjectsView({ onStartChat }: ProjectsViewProps) {
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h1 className="text-lg font-semibold font-display tracking-tight">
-                Projects
+                {t("view.title")}
               </h1>
               <p className="text-xs text-muted-foreground">
-                Organize your work into focused project contexts
+                {t("view.description")}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -232,7 +235,7 @@ export function ProjectsView({ onStartChat }: ProjectsViewProps) {
                 onClick={handleNewProject}
               >
                 <Plus className="size-3.5" />
-                New Project
+                {t("view.newProject")}
               </Button>
             </div>
           </div>
@@ -241,7 +244,7 @@ export function ProjectsView({ onStartChat }: ProjectsViewProps) {
           <SearchBar
             value={search}
             onChange={setSearch}
-            placeholder="Search projects by name or description..."
+            placeholder={t("view.searchPlaceholder")}
           />
 
           {/* Projects list */}
@@ -285,7 +288,7 @@ export function ProjectsView({ onStartChat }: ProjectsViewProps) {
                 className="h-auto w-full rounded-lg border border-dashed border-border px-4 py-3 text-muted-foreground hover:border-border hover:bg-accent/50"
               >
                 <Plus className="size-4" />
-                <span className="text-sm">New Project</span>
+                <span className="text-sm">{t("view.newProject")}</span>
               </Button>
             </div>
           )}
@@ -297,13 +300,13 @@ export function ProjectsView({ onStartChat }: ProjectsViewProps) {
               <div className="text-center">
                 <p className="text-sm font-medium">
                   {projects.length === 0
-                    ? "No projects yet"
-                    : "No matching projects"}
+                    ? t("view.emptyTitle")
+                    : t("view.noMatchesTitle")}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {projects.length === 0
-                    ? "Create a project to organize your work."
-                    : "Try a different search term."}
+                    ? t("view.emptyDescription")
+                    : t("view.noMatchesDescription")}
                 </p>
               </div>
               {projects.length === 0 && (
@@ -315,7 +318,7 @@ export function ProjectsView({ onStartChat }: ProjectsViewProps) {
                   className="mt-2"
                 >
                   <Plus className="size-3.5" />
-                  New Project
+                  {t("view.newProject")}
                 </Button>
               )}
             </div>
@@ -338,19 +341,20 @@ export function ProjectsView({ onStartChat }: ProjectsViewProps) {
       >
         <AlertDialogContent className="max-w-sm">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete project?</AlertDialogTitle>
+            <AlertDialogTitle>{t("view.deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{deletingProject?.name}
-              &quot;? This cannot be undone.
+              {t("view.deleteDescription", {
+                name: deletingProject?.name ?? "",
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common:actions.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className={buttonVariants({ variant: "destructive" })}
               onClick={handleConfirmDeleteProject}
             >
-              Delete
+              {t("common:actions.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

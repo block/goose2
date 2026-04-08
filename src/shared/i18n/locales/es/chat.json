@@ -5,15 +5,115 @@
     "remove": "Eliminar imagen",
     "view": "Ver adjunto {{index}}"
   },
+  "context": {
+    "closePanel": "Cerrar panel de contexto",
+    "openPanel": "Abrir panel de contexto",
+    "ringAria": "Contexto: {{percent}}% usado"
+  },
+  "contextPanel": {
+    "actions": {
+      "refreshGitStatus": "Actualizar estado de git"
+    },
+    "badges": {
+      "main": "Principal"
+    },
+    "empty": {
+      "folderNotSet": "Carpeta no configurada",
+      "noActiveProcesses": "No hay procesos activos",
+      "noChanges": "No hay cambios",
+      "noProjectAssigned": "No hay proyecto asignado.",
+      "noServersConfigured": "No hay servidores configurados",
+      "notGitRepo": "No es un repositorio git."
+    },
+    "errors": {
+      "gitRead": "No se pudo leer el estado de git."
+    },
+    "states": {
+      "detached": "detached",
+      "gitLoading": "Cargando estado de git..."
+    },
+    "tabs": {
+      "details": "Detalles",
+      "files": "Archivos"
+    },
+    "widgets": {
+      "changes": "Cambios",
+      "mcpServers": "Servidores MCP",
+      "processes": "Procesos",
+      "workspace": "Espacio de trabajo"
+    }
+  },
+  "files": {
+    "empty": "Aún no hay archivos",
+    "noMatches": "No hay archivos que coincidan",
+    "openFolder": "Abrir carpeta: {{path}}",
+    "searchPlaceholder": "Buscar"
+  },
+  "image": {
+    "view": "Ver {{label}}"
+  },
   "input": {
     "ariaLabel": "Entrada de mensaje del chat",
     "placeholder": "Enviar mensaje a {{agent}}, usa @ para mencionar personas"
   },
+  "loading": {
+    "compacting": "está compactando la conversación...",
+    "streaming": "está trabajando en ello...",
+    "thinking": "está pensando...",
+    "waiting": "está esperando..."
+  },
+  "mention": {
+    "ariaLabel": "Sugerencias de menciones",
+    "title": "Menciona una persona"
+  },
+  "message": {
+    "copied": "Copiado",
+    "defaultImageAlt": "Adjunto",
+    "redactedThinking": "(pensamiento redactado)"
+  },
   "persona": {
-    "clearActive": "Quitar asistente activo"
+    "chooseAssistant": "Elegir asistente",
+    "create": "Crear persona...",
+    "clearActive": "Quitar asistente activo",
+    "defaultDescription": "Sin persona - chatea directamente con el agente"
   },
   "queue": {
     "dismiss": "Descartar mensaje en cola",
     "label": "En cola: {{text}}"
+  },
+  "skeleton": {
+    "loadingConversation": "Cargando conversación"
+  },
+  "timeline": {
+    "ariaLabel": "Mensajes del chat",
+    "emptyDescription": "Envía un mensaje para comenzar",
+    "emptyTitle": "Inicia una conversación",
+    "today": "Hoy",
+    "yesterday": "Ayer"
+  },
+  "toolbar": {
+    "chooseProject": "Elegir un proyecto",
+    "chooseProvider": "Elegir un proveedor",
+    "contextUsage": "Uso del contexto",
+    "contextUsageTitle": "{{tokens}} / {{limit}} tokens",
+    "createProject": "Crear proyecto",
+    "generalChatWithoutProject": "Chat general sin contexto de proyecto",
+    "loading": "Cargando...",
+    "model": "Modelo",
+    "noProject": "Sin proyecto",
+    "selectModel": "Seleccionar modelo",
+    "selectProject": "Seleccionar proyecto",
+    "sendMessage": "Enviar mensaje",
+    "stopGeneration": "Detener generación",
+    "voiceInputSoon": "Entrada de voz (pronto)"
+  },
+  "tools": {
+    "detected": "detectado",
+    "fileNotFound": "Archivo no encontrado: {{path}}",
+    "moreOutputs": "Más salidas ({{count}})",
+    "openFile": "Abrir archivo",
+    "openFolder": "Abrir carpeta",
+    "openPath": "Abrir ruta",
+    "pathOutsideRoots": "La ruta está fuera de las raíces permitidas de proyecto/artefactos."
   }
 }

@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { Bot, Plus, Circle, Upload } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { SearchBar } from "@/shared/ui/SearchBar";
@@ -26,14 +27,15 @@ import type {
   UpdatePersonaRequest,
 } from "@/shared/types/agents";
 
-const STATUS_STYLES: Record<AgentStatus, { dot: string; label: string }> = {
-  online: { dot: "text-green-500", label: "Online" },
-  offline: { dot: "text-muted-foreground", label: "Offline" },
-  starting: { dot: "text-yellow-500", label: "Starting" },
-  error: { dot: "text-red-500", label: "Error" },
+const STATUS_STYLES: Record<AgentStatus, { dot: string; labelKey: string }> = {
+  online: { dot: "text-green-500", labelKey: "statuses.online" },
+  offline: { dot: "text-muted-foreground", labelKey: "statuses.offline" },
+  starting: { dot: "text-yellow-500", labelKey: "statuses.starting" },
+  error: { dot: "text-red-500", labelKey: "statuses.error" },
 };
 
 function AgentRow({ agent }: { agent: Agent }) {
+  const { t } = useTranslation("agents");
   const status = STATUS_STYLES[agent.status];
   return (
     <li className="flex items-center justify-between rounded-lg border border-border px-4 py-3 transition-colors hover:bg-accent/50">
@@ -53,13 +55,16 @@ function AgentRow({ agent }: { agent: Agent }) {
           className={cn("h-2.5 w-2.5 fill-current", status.dot)}
           aria-hidden="true"
         />
-        <span className="text-xs text-muted-foreground">{status.label}</span>
+        <span className="text-xs text-muted-foreground">
+          {t(status.labelKey)}
+        </span>
       </div>
     </li>
   );
 }
 
 export function AgentsView() {
+  const { t } = useTranslation(["agents", "common"]);
   const [search, setSearch] = useState("");
   const [deletingPersona, setDeletingPersona] = useState<Persona | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
@@ -122,14 +127,14 @@ export function AgentsView() {
       const duplicate: Persona = {
         ...persona,
         id: crypto.randomUUID(),
-        displayName: `${persona.displayName} (Copy)`,
+        displayName: t("view.copyName", { name: persona.displayName }),
         isBuiltin: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
       addPersona(duplicate);
     },
-    [addPersona],
+    [addPersona, t],
   );
 
   const handleDeletePersona = useCallback((persona: Persona) => {
@@ -147,25 +152,30 @@ export function AgentsView() {
     setDeletingPersona(null);
   }, [deletingPersona, deletePersona]);
 
-  const handleExportPersona = useCallback(async (persona: Persona) => {
-    try {
-      const result = await exportPersona(persona.id);
-      // Trigger a browser download with the JSON content
-      const blob = new Blob([result.json], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = result.suggestedFilename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      setNotification(`Exported to ${result.suggestedFilename}`);
-      setTimeout(() => setNotification(null), 3000);
-    } catch (err) {
-      console.error("Failed to export persona:", err);
-    }
-  }, []);
+  const handleExportPersona = useCallback(
+    async (persona: Persona) => {
+      try {
+        const result = await exportPersona(persona.id);
+        // Trigger a browser download with the JSON content
+        const blob = new Blob([result.json], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = result.suggestedFilename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setNotification(
+          t("view.exportedTo", { filename: result.suggestedFilename }),
+        );
+        setTimeout(() => setNotification(null), 3000);
+      } catch (err) {
+        console.error("Failed to export persona:", err);
+      }
+    },
+    [t],
+  );
 
   const importInputRef = useRef<HTMLInputElement>(null);
 
@@ -211,10 +221,10 @@ export function AgentsView() {
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h1 className="text-lg font-semibold font-display tracking-tight">
-                Personas
+                {t("view.title")}
               </h1>
               <p className="text-xs text-muted-foreground">
-                Custom persona configurations for specific workflows
+                {t("view.description")}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -232,7 +242,7 @@ export function AgentsView() {
                 onClick={() => importInputRef.current?.click()}
               >
                 <Upload className="w-3.5 h-3.5" />
-                Import
+                {t("common:actions.import")}
               </Button>
               <Button
                 type="button"
@@ -241,7 +251,7 @@ export function AgentsView() {
                 onClick={() => openPersonaEditor()}
               >
                 <Plus className="w-3.5 h-3.5" />
-                New Persona
+                {t("view.newPersona")}
               </Button>
             </div>
           </div>
@@ -250,7 +260,7 @@ export function AgentsView() {
           <SearchBar
             value={search}
             onChange={setSearch}
-            placeholder="Search personas..."
+            placeholder={t("view.searchPlaceholder")}
           />
 
           {/* Personas section */}
@@ -274,20 +284,22 @@ export function AgentsView() {
               id="agents-heading"
               className="text-lg font-semibold font-display tracking-tight mb-3"
             >
-              Active Agents
+              {t("view.activeAgents")}
             </h2>
             {filteredAgents.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground">
                 <Bot className="h-10 w-10 opacity-30" />
                 <div className="text-center">
-                  <p className="text-sm font-medium">No active agents</p>
+                  <p className="text-sm font-medium">
+                    {t("view.emptyAgentsTitle")}
+                  </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Create an agent from a persona to get started.
+                    {t("view.emptyAgentsDescription")}
                   </p>
                 </div>
               </div>
             ) : (
-              <ul className="space-y-2" aria-label="Active agents">
+              <ul className="space-y-2" aria-label={t("view.activeAgentsAria")}>
                 {filteredAgents.map((agent) => (
                   <AgentRow key={agent.id} agent={agent} />
                 ))}
@@ -313,19 +325,20 @@ export function AgentsView() {
       >
         <AlertDialogContent className="max-w-sm">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete persona?</AlertDialogTitle>
+            <AlertDialogTitle>{t("view.deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;
-              {deletingPersona?.displayName}&quot;? This cannot be undone.
+              {t("view.deleteDescription", {
+                name: deletingPersona?.displayName ?? "",
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common:actions.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className={buttonVariants({ variant: "destructive" })}
               onClick={handleConfirmDeletePersona}
             >
-              Delete
+              {t("common:actions.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

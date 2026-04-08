@@ -2,10 +2,13 @@ export const DEFAULT_LOCALE = "en";
 export const SUPPORTED_LOCALES = ["en", "es"] as const;
 export const DEFAULT_NAMESPACE = "common";
 export const TRANSLATION_NAMESPACES = [
+  "agents",
   "common",
   "chat",
   "home",
+  "projects",
   "settings",
+  "skills",
   "sidebar",
   "status",
   "sessions",

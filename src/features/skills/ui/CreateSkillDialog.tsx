@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
@@ -28,6 +29,7 @@ export function CreateSkillDialog({
   onCreated,
   editingSkill,
 }: CreateSkillDialogProps) {
+  const { t } = useTranslation(["skills", "common"]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [instructions, setInstructions] = useState("");
@@ -101,7 +103,7 @@ export function CreateSkillDialog({
       <DialogContent className="max-w-lg max-h-[85vh] flex flex-col gap-0 p-0">
         <DialogHeader className="shrink-0 px-5 py-4">
           <DialogTitle className="text-sm">
-            {isEditing ? "Edit Skill" : "New Skill"}
+            {isEditing ? t("dialog.editTitle") : t("dialog.newTitle")}
           </DialogTitle>
         </DialogHeader>
 
@@ -113,18 +115,18 @@ export function CreateSkillDialog({
           {/* Name */}
           <div className="space-y-1">
             <Label className="text-xs font-medium text-muted-foreground">
-              Name <span className="text-destructive">*</span>
+              {t("dialog.name")} <span className="text-destructive">*</span>
             </Label>
             <Input
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
-              placeholder="my-skill-name"
+              placeholder={t("dialog.namePlaceholder")}
               readOnly={isEditing}
               className={cn(isEditing && "opacity-60 cursor-not-allowed")}
             />
             {name.length > 0 && !nameValid && (
               <p className="text-xs text-destructive">
-                Must be kebab-case (e.g. code-review)
+                {t("dialog.nameValidation")}
               </p>
             )}
           </div>
@@ -132,7 +134,8 @@ export function CreateSkillDialog({
           {/* Description */}
           <div className="space-y-1">
             <Label className="text-xs font-medium text-muted-foreground">
-              Description <span className="text-destructive">*</span>
+              {t("dialog.description")}{" "}
+              <span className="text-destructive">*</span>
             </Label>
             <Input
               value={description}
@@ -140,20 +143,20 @@ export function CreateSkillDialog({
                 setDescription(e.target.value);
                 setError(null);
               }}
-              placeholder="What it does and when to use it..."
+              placeholder={t("dialog.descriptionPlaceholder")}
             />
           </div>
 
           {/* Instructions */}
           <div className="space-y-1">
             <Label className="text-xs font-medium text-muted-foreground">
-              Instructions
+              {t("dialog.instructions")}
             </Label>
             <Textarea
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
               rows={10}
-              placeholder="Markdown instructions the agent will follow..."
+              placeholder={t("dialog.instructionsPlaceholder")}
               className="text-xs font-mono leading-relaxed"
             />
           </div>
@@ -170,16 +173,16 @@ export function CreateSkillDialog({
             onClick={handleClose}
             disabled={saving}
           >
-            Cancel
+            {t("common:actions.cancel")}
           </Button>
           <Button type="submit" form="skill-form" size="sm" disabled={!canSave}>
             {saving
               ? isEditing
-                ? "Saving..."
-                : "Creating..."
+                ? t("dialog.saving")
+                : t("dialog.creating")
               : isEditing
-                ? "Save Changes"
-                : "Create Skill"}
+                ? t("common:actions.saveChanges")
+                : t("dialog.createSkill")}
           </Button>
         </DialogFooter>
       </DialogContent>

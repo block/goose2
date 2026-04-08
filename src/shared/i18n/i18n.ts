@@ -28,19 +28,25 @@ function normalizeSupportedLocale(locale?: string | null): AppLocale | null {
 
 const localeResourceLoaders = {
   en: {
+    agents: () => import("./locales/en/agents.json"),
     common: () => import("./locales/en/common.json"),
     chat: () => import("./locales/en/chat.json"),
     home: () => import("./locales/en/home.json"),
+    projects: () => import("./locales/en/projects.json"),
     settings: () => import("./locales/en/settings.json"),
+    skills: () => import("./locales/en/skills.json"),
     sidebar: () => import("./locales/en/sidebar.json"),
     status: () => import("./locales/en/status.json"),
     sessions: () => import("./locales/en/sessions.json"),
   },
   es: {
+    agents: () => import("./locales/es/agents.json"),
     common: () => import("./locales/es/common.json"),
     chat: () => import("./locales/es/chat.json"),
     home: () => import("./locales/es/home.json"),
+    projects: () => import("./locales/es/projects.json"),
     settings: () => import("./locales/es/settings.json"),
+    skills: () => import("./locales/es/skills.json"),
     sidebar: () => import("./locales/es/sidebar.json"),
     status: () => import("./locales/es/status.json"),
     sessions: () => import("./locales/es/sessions.json"),

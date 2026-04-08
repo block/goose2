@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ImageLightbox } from "@/shared/ui/ImageLightbox";
 
 export function ClickableImage({ src, alt }: { src: string; alt: string }) {
+  const { t } = useTranslation("chat");
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -9,7 +11,7 @@ export function ClickableImage({ src, alt }: { src: string; alt: string }) {
         type="button"
         onClick={() => setOpen(true)}
         className="cursor-pointer rounded-lg"
-        aria-label={`View ${alt}`}
+        aria-label={t("image.view", { label: alt })}
       >
         <img
           src={src}

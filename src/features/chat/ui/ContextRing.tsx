@@ -1,3 +1,6 @@
+import { useTranslation } from "react-i18next";
+import { useLocaleFormatting } from "@/shared/i18n";
+
 // ---------------------------------------------------------------------------
 // ContextRing — SVG circular indicator for context token usage
 // ---------------------------------------------------------------------------
@@ -11,10 +14,13 @@ export function ContextRing({
   limit: number;
   size?: number;
 }) {
+  const { t } = useTranslation("chat");
+  const { formatNumber } = useLocaleFormatting();
   const radius = (size - 3) / 2;
   const circumference = 2 * Math.PI * radius;
   const progress = limit > 0 ? Math.min(tokens / limit, 1) : 0;
   const offset = circumference - progress * circumference;
+  const percent = formatNumber(Math.round(progress * 100));
 
   // Color based on usage
   const strokeColor =
@@ -30,7 +36,7 @@ export function ContextRing({
       height={size}
       viewBox={`0 0 ${size} ${size}`}
       className="shrink-0"
-      aria-label={`Context: ${Math.round(progress * 100)}% used`}
+      aria-label={t("context.ringAria", { percent })}
     >
       {/* Background track */}
       <circle

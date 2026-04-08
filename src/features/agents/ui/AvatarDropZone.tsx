@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { Camera, X } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
@@ -22,6 +23,7 @@ export function AvatarDropZone({
   onChange,
   disabled = false,
 }: AvatarDropZoneProps) {
+  const { t } = useTranslation("agents");
   const [isDragOver, setIsDragOver] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +38,7 @@ export function AvatarDropZone({
 
       const ext = file.name.split(".").pop()?.toLowerCase();
       if (!ext || !IMAGE_EXTENSIONS.includes(ext)) {
-        setError("Unsupported image type");
+        setError(t("avatar.unsupportedType"));
         return;
       }
 
@@ -49,12 +51,12 @@ export function AvatarDropZone({
         onChange({ type: "local", value: filename });
       } catch (err) {
         console.error("Failed to save avatar:", err);
-        setError("Failed to save avatar");
+        setError(t("avatar.saveFailed"));
       } finally {
         setIsUploading(false);
       }
     },
-    [personaId, onChange],
+    [personaId, onChange, t],
   );
 
   /** Save a file selected via the native file picker (has a path). */
@@ -64,7 +66,7 @@ export function AvatarDropZone({
 
       const ext = filePath.split(".").pop()?.toLowerCase();
       if (!ext || !IMAGE_EXTENSIONS.includes(ext)) {
-        setError("Unsupported image type");
+        setError(t("avatar.unsupportedType"));
         return;
       }
 
@@ -75,12 +77,12 @@ export function AvatarDropZone({
         onChange({ type: "local", value: filename });
       } catch (err) {
         console.error("Failed to save avatar:", err);
-        setError("Failed to save avatar");
+        setError(t("avatar.saveFailed"));
       } finally {
         setIsUploading(false);
       }
     },
-    [personaId, onChange],
+    [personaId, onChange, t],
   );
 
   // Standard HTML5 drag-and-drop (works when dragDropEnabled is false)
@@ -149,10 +151,10 @@ export function AvatarDropZone({
     if (disabled || isUploading) return;
 
     const selected = await open({
-      title: "Choose avatar image",
+      title: t("avatar.chooseDialogTitle"),
       filters: [
         {
-          name: "Image",
+          name: t("avatar.dialogFilterName"),
           extensions: IMAGE_EXTENSIONS,
         },
       ],
@@ -162,7 +164,7 @@ export function AvatarDropZone({
     if (selected) {
       processPath(selected);
     }
-  }, [disabled, isUploading, processPath]);
+  }, [disabled, isUploading, processPath, t]);
 
   const handleClear = useCallback(
     (e: React.MouseEvent) => {
@@ -181,7 +183,7 @@ export function AvatarDropZone({
           variant="ghost"
           size="icon-lg"
           tabIndex={disabled ? -1 : 0}
-          aria-label="Drop an image or click to upload avatar"
+          aria-label={t("avatar.uploadAria")}
           onDragEnter={handleDragEnter}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -199,9 +201,9 @@ export function AvatarDropZone({
           {avatarSrc ? (
             <img
               src={avatarSrc}
-              alt="Avatar preview"
+              alt={t("avatar.previewAlt")}
               className="h-full w-full rounded-full object-cover"
-              onError={() => setError("Failed to load image")}
+              onError={() => setError(t("avatar.loadFailed"))}
             />
           ) : (
             <div className="flex flex-col items-center justify-center text-muted-foreground">
@@ -216,7 +218,7 @@ export function AvatarDropZone({
             type="button"
             variant="outline"
             size="icon-xs"
-            aria-label="Remove avatar"
+            aria-label={t("avatar.removeAria")}
             onClick={handleClear}
             className="absolute -top-0.5 -right-0.5 z-10 size-5 bg-background text-muted-foreground shadow-sm hover:text-foreground"
           >

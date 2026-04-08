@@ -13,6 +13,7 @@ import {
   CopyIcon,
 } from "lucide-react";
 import type { ComponentProps } from "react";
+import { useTranslation } from "react-i18next";
 import {
   createContext,
   memo,
@@ -315,13 +316,14 @@ export const StackTraceCopyButton = memo(
     children,
     ...props
   }: StackTraceCopyButtonProps) => {
+    const { t } = useTranslation("common");
     const [isCopied, setIsCopied] = useState(false);
     const timeoutRef = useRef<number>(0);
     const { raw } = useStackTrace();
 
     const copyToClipboard = useCallback(async () => {
       if (typeof window === "undefined" || !navigator?.clipboard?.writeText) {
-        onError?.(new Error("Clipboard API not available"));
+        onError?.(new Error(t("errors.clipboardUnavailable")));
         return;
       }
 
@@ -336,7 +338,7 @@ export const StackTraceCopyButton = memo(
       } catch (error) {
         onError?.(error as Error);
       }
-    }, [raw, onCopy, onError, timeout]);
+    }, [onCopy, onError, raw, t, timeout]);
 
     useEffect(
       () => () => {
@@ -349,9 +351,11 @@ export const StackTraceCopyButton = memo(
 
     return (
       <Button
+        aria-label={t("components.stackTrace.copyLabel")}
         className={cn("size-7", className)}
         onClick={copyToClipboard}
         size="icon"
+        title={t("components.stackTrace.copyLabel")}
         variant="ghost"
         {...props}
       >
@@ -467,6 +471,7 @@ export const StackTraceFrames = memo(
     showInternalFrames = true,
     ...props
   }: StackTraceFramesProps) => {
+    const { t } = useTranslation("common");
     const { trace, onFilePathClick } = useStackTrace();
 
     const framesToShow = showInternalFrames
@@ -485,6 +490,7 @@ export const StackTraceFrames = memo(
             )}
             key={frame.raw}
           >
+            {/* i18n-check-ignore technical stack trace token */}
             <span className="text-muted-foreground">at </span>
             {frame.functionName && (
               <span className={frame.isInternal ? "" : "text-foreground"}>
@@ -507,7 +513,9 @@ export const StackTraceFrames = memo(
           </div>
         ))}
         {framesToShow.length === 0 && (
-          <div className="text-muted-foreground text-xs">No stack frames</div>
+          <div className="text-muted-foreground text-xs">
+            {t("components.stackTrace.empty")}
+          </div>
         )}
       </div>
     );

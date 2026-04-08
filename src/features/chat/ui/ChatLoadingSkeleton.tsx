@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Skeleton } from "@/shared/ui/skeleton";
 
 /**
@@ -6,11 +7,12 @@ import { Skeleton } from "@/shared/ui/skeleton";
  * with alternating user/assistant message shapes.
  */
 export function ChatLoadingSkeleton() {
+  const { t } = useTranslation("chat");
   return (
     <div
       className="flex flex-1 items-start overflow-hidden"
       role="status"
-      aria-label="Loading conversation"
+      aria-label={t("skeleton.loadingConversation")}
     >
       <div className="mx-auto w-full max-w-3xl py-4 space-y-6 px-4">
         {/* Date separator skeleton */}

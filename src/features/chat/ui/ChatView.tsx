@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   IconLayoutSidebarRight,
   IconLayoutSidebarRightFilled,
@@ -61,6 +62,7 @@ export function ChatView({
   onInitialMessageConsumed,
   onCreateProject,
 }: ChatViewProps) {
+  const { t } = useTranslation("chat");
   const activeSessionId = sessionId;
   const isContextPanelOpen = useChatSessionStore(
     (s) => s.contextPanelOpenBySession[activeSessionId] ?? false,
@@ -96,6 +98,9 @@ export function ChatView({
     null,
   );
   const project = storedProject ?? fallbackProject;
+  const contextPanelLabel = isContextPanelOpen
+    ? t("context.closePanel")
+    : t("context.openPanel");
   const availableProjects = useMemo(
     () =>
       [...projects]
@@ -483,12 +488,8 @@ export function ChatView({
             onClick={() =>
               setContextPanelOpen(activeSessionId, !isContextPanelOpen)
             }
-            aria-label={
-              isContextPanelOpen ? "Close context panel" : "Open context panel"
-            }
-            title={
-              isContextPanelOpen ? "Close context panel" : "Open context panel"
-            }
+            aria-label={contextPanelLabel}
+            title={contextPanelLabel}
           >
             {isContextPanelOpen ? (
               <IconLayoutSidebarRightFilled className="size-4" />

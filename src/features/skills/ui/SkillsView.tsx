@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   AtSign,
   Plus,
@@ -46,6 +47,7 @@ function SkillCardMenu({
   onExport: (skill: SkillInfo) => void;
   onDelete: (skill: SkillInfo) => void;
 }) {
+  const { t } = useTranslation(["skills", "common"]);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -66,7 +68,7 @@ function SkillCardMenu({
         type="button"
         variant="ghost"
         size="icon-xs"
-        aria-label={`Options for ${skill.name}`}
+        aria-label={t("view.optionsAria", { name: skill.name })}
         aria-haspopup="true"
         aria-expanded={menuOpen}
         onClick={() => setMenuOpen((prev) => !prev)}
@@ -92,7 +94,7 @@ function SkillCardMenu({
             className="w-full justify-start"
           >
             <Pencil className="size-3.5" />
-            Edit
+            {t("common:actions.edit")}
           </Button>
           <Button
             type="button"
@@ -106,7 +108,7 @@ function SkillCardMenu({
             className="w-full justify-start"
           >
             <Copy className="size-3.5" />
-            Duplicate
+            {t("common:actions.duplicate")}
           </Button>
           <Button
             type="button"
@@ -120,7 +122,7 @@ function SkillCardMenu({
             className="w-full justify-start"
           >
             <Download className="size-3.5" />
-            Export
+            {t("common:actions.export")}
           </Button>
           <Button
             type="button"
@@ -134,7 +136,7 @@ function SkillCardMenu({
             className="w-full justify-start text-destructive hover:text-destructive"
           >
             <Trash2 className="size-3.5" />
-            Delete
+            {t("common:actions.delete")}
           </Button>
         </div>
       )}
@@ -143,6 +145,7 @@ function SkillCardMenu({
 }
 
 export function SkillsView() {
+  const { t } = useTranslation(["skills", "common"]);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSkill, setEditingSkill] = useState<
@@ -222,7 +225,7 @@ export function SkillsView() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      setNotification(`Exported to ${result.filename}`);
+      setNotification(t("view.exportedTo", { filename: result.filename }));
       setTimeout(() => setNotification(null), 3000);
     } catch (err) {
       console.error("Failed to export skill:", err);
@@ -294,10 +297,10 @@ export function SkillsView() {
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h1 className="text-lg font-semibold font-display tracking-tight">
-                Skills
+                {t("view.title")}
               </h1>
               <p className="text-xs text-muted-foreground">
-                Reusable instructions for your AI personas
+                {t("view.description")}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -315,7 +318,7 @@ export function SkillsView() {
                 onClick={() => importInputRef.current?.click()}
               >
                 <Upload className="size-3.5" />
-                Import
+                {t("common:actions.import")}
               </Button>
               <Button
                 type="button"
@@ -324,7 +327,7 @@ export function SkillsView() {
                 onClick={handleNewSkill}
               >
                 <Plus className="size-3.5" />
-                New Skill
+                {t("view.newSkill")}
               </Button>
             </div>
           </div>
@@ -333,7 +336,7 @@ export function SkillsView() {
           <SearchBar
             value={search}
             onChange={setSearch}
-            placeholder="Search skills by name or description..."
+            placeholder={t("view.searchPlaceholder")}
           />
 
           {/* Skills list */}
@@ -376,8 +379,8 @@ export function SkillsView() {
                 )}
               >
                 <Plus className="size-4" />
-                <span className="text-sm">New Skill</span>
-                <span className="ml-1 text-xs">or drop a file</span>
+                <span className="text-sm">{t("view.newSkill")}</span>
+                <span className="ml-1 text-xs">{t("view.dropFile")}</span>
               </Button>
             </div>
           )}
@@ -394,12 +397,14 @@ export function SkillsView() {
               <AtSign className="h-10 w-10 opacity-30" />
               <div className="text-center">
                 <p className="text-sm font-medium">
-                  {skills.length === 0 ? "No skills yet" : "No matching skills"}
+                  {skills.length === 0
+                    ? t("view.emptyTitle")
+                    : t("view.noMatchesTitle")}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {skills.length === 0
-                    ? "Create a skill or drop a .skill.json file here."
-                    : "Try a different search term."}
+                    ? t("view.emptyDescription")
+                    : t("view.noMatchesDescription")}
                 </p>
               </div>
               {skills.length === 0 && (
@@ -411,7 +416,7 @@ export function SkillsView() {
                   className="mt-2"
                 >
                   <Plus className="size-3.5" />
-                  New Skill
+                  {t("view.newSkill")}
                 </Button>
               )}
             </div>
@@ -443,19 +448,20 @@ export function SkillsView() {
       >
         <AlertDialogContent className="max-w-sm">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete skill?</AlertDialogTitle>
+            <AlertDialogTitle>{t("view.deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{deletingSkill?.name}&quot;?
-              This cannot be undone.
+              {t("view.deleteDescription", {
+                name: deletingSkill?.name ?? "",
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common:actions.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className={buttonVariants({ variant: "destructive" })}
               onClick={handleConfirmDeleteSkill}
             >
-              Delete
+              {t("common:actions.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { FolderOpen, ChevronRight } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import {
@@ -53,6 +54,7 @@ function ArtifactActions({
   name: string;
   result?: string;
 }) {
+  const { t } = useTranslation(["chat", "common"]);
   const [moreOutputsOpen, setMoreOutputsOpen] = useState(false);
   const [openError, setOpenError] = useState<string | null>(null);
   const { resolveToolCardDisplay, pathExists, openResolvedPath } =
@@ -88,22 +90,18 @@ function ArtifactActions({
       for (const c of candidates) {
         const exists = await pathExists(c.resolvedPath);
         if (exists && !c.allowed) {
-          setOpenError(
-            c.blockedReason ||
-              "Path is outside allowed project/artifacts roots.",
-          );
+          setOpenError(c.blockedReason || t("tools.pathOutsideRoots"));
           return;
         }
       }
       const firstAllowed = candidates.find((c) => c.allowed);
       if (firstAllowed) {
-        setOpenError(`File not found: ${firstAllowed.resolvedPath}`);
+        setOpenError(
+          t("tools.fileNotFound", { path: firstAllowed.resolvedPath }),
+        );
         return;
       }
-      setOpenError(
-        candidate.blockedReason ||
-          "Path is outside allowed project/artifacts roots.",
-      );
+      setOpenError(candidate.blockedReason || t("tools.pathOutsideRoots"));
     } catch (error) {
       setOpenError(error instanceof Error ? error.message : String(error));
     }
@@ -111,9 +109,9 @@ function ArtifactActions({
 
   const primary = display.primaryCandidate;
   const kindLabel: Record<string, string> = {
-    file: "Open file",
-    folder: "Open folder",
-    path: "Open path",
+    file: t("tools.openFile"),
+    folder: t("tools.openFolder"),
+    path: t("tools.openPath"),
   };
 
   return (
@@ -131,13 +129,15 @@ function ArtifactActions({
         title={primary.resolvedPath}
       >
         <FolderOpen className="h-3.5 w-3.5 shrink-0" />
-        <span className="truncate">{kindLabel[primary.kind] ?? "Open"}</span>
+        <span className="truncate">
+          {kindLabel[primary.kind] ?? t("common:actions.open")}
+        </span>
         <span className="truncate text-[10px] text-muted-foreground">
           {primary.rawPath || primary.resolvedPath}
         </span>
         {primary.confidence === "low" && (
           <span className="text-[10px] text-muted-foreground/70 italic">
-            detected
+            {t("tools.detected")}
           </span>
         )}
       </button>
@@ -160,7 +160,9 @@ function ArtifactActions({
                 moreOutputsOpen && "rotate-90",
               )}
             />
-            More outputs ({display.secondaryCandidates.length})
+            {t("tools.moreOutputs", {
+              count: display.secondaryCandidates.length,
+            })}
           </button>
           {moreOutputsOpen && (
             <div className="space-y-1.5 pl-4">
@@ -180,14 +182,14 @@ function ArtifactActions({
                   >
                     <FolderOpen className="h-3 w-3 shrink-0" />
                     <span className="truncate">
-                      {kindLabel[candidate.kind] ?? "Open"}
+                      {kindLabel[candidate.kind] ?? t("common:actions.open")}
                     </span>
                     <span className="truncate text-[10px] text-muted-foreground">
                       {candidate.rawPath || candidate.resolvedPath}
                     </span>
                     {candidate.confidence === "low" && (
                       <span className="text-[10px] text-muted-foreground/70 italic">
-                        detected
+                        {t("tools.detected")}
                       </span>
                     )}
                   </button>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { Copy } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import {
@@ -51,6 +52,7 @@ export function PersonaEditor({
   onDuplicate,
   isPending = false,
 }: PersonaEditorProps) {
+  const { t } = useTranslation(["agents", "common"]);
   const isEditing = !!persona;
   const isReadOnly = persona?.isBuiltin ?? false;
 
@@ -128,8 +130,8 @@ export function PersonaEditor({
             {isReadOnly
               ? persona?.displayName
               : isEditing
-                ? "Edit Persona"
-                : "New Persona"}
+                ? t("editor.editTitle")
+                : t("editor.newTitle")}
           </DialogTitle>
         </DialogHeader>
 
@@ -144,7 +146,7 @@ export function PersonaEditor({
               <AvatarRoot className="h-16 w-16 border border-border">
                 <AvatarImage
                   src={avatar?.type === "url" ? avatar.value : undefined}
-                  alt="Avatar preview"
+                  alt={t("avatar.previewAlt")}
                 />
                 <AvatarFallback className="text-lg font-semibold">
                   {initials}
@@ -163,14 +165,15 @@ export function PersonaEditor({
           {/* Display Name */}
           <div className="space-y-1">
             <Label className="text-xs font-medium text-muted-foreground">
-              Display Name <span className="text-destructive">*</span>
+              {t("editor.displayName")}{" "}
+              <span className="text-destructive">*</span>
             </Label>
             <Input
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               readOnly={isReadOnly}
               required
-              placeholder="e.g. Code Reviewer"
+              placeholder={t("editor.displayNamePlaceholder")}
               className={cn(isReadOnly && "opacity-70 cursor-not-allowed")}
             />
           </div>
@@ -179,10 +182,13 @@ export function PersonaEditor({
           <div className="space-y-1">
             <div className="flex items-center justify-between">
               <Label className="text-xs font-medium text-muted-foreground">
-                System Prompt <span className="text-destructive">*</span>
+                {t("editor.systemPrompt")}{" "}
+                <span className="text-destructive">*</span>
               </Label>
               <span className="text-[10px] text-muted-foreground">
-                {systemPrompt.length} chars
+                {t("common:labels.characterCount", {
+                  count: systemPrompt.length,
+                })}
               </span>
             </div>
             <Textarea
@@ -191,7 +197,7 @@ export function PersonaEditor({
               readOnly={isReadOnly}
               required
               rows={6}
-              placeholder="You are a helpful assistant that..."
+              placeholder={t("editor.systemPromptPlaceholder")}
               className={cn(
                 "leading-relaxed",
                 isReadOnly && "opacity-70 cursor-not-allowed",
@@ -202,7 +208,7 @@ export function PersonaEditor({
           {/* Provider */}
           <div className="space-y-1">
             <Label className="text-xs font-medium text-muted-foreground">
-              Provider
+              {t("editor.provider")}
             </Label>
             <Select
               value={provider || "__none__"}
@@ -221,10 +227,12 @@ export function PersonaEditor({
                   isReadOnly && "opacity-70 cursor-not-allowed",
                 )}
               >
-                <SelectValue placeholder="None" />
+                <SelectValue placeholder={t("common:labels.none")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">None</SelectItem>
+                <SelectItem value="__none__">
+                  {t("common:labels.none")}
+                </SelectItem>
                 {acpProviders.map((providerOption) => (
                   <SelectItem key={providerOption.id} value={providerOption.id}>
                     {providerOption.label}
@@ -237,13 +245,13 @@ export function PersonaEditor({
           {/* Model */}
           <div className="space-y-1">
             <Label className="text-xs font-medium text-muted-foreground">
-              Model
+              {t("editor.model")}
             </Label>
             <Input
               value={model}
               onChange={(e) => setModel(e.target.value)}
               readOnly={isReadOnly}
-              placeholder="e.g. claude-sonnet-4-20250514"
+              placeholder={t("editor.modelPlaceholder")}
               className={cn(isReadOnly && "opacity-70 cursor-not-allowed")}
             />
           </div>
@@ -258,12 +266,12 @@ export function PersonaEditor({
               onClick={() => onDuplicate(persona)}
             >
               <Copy className="h-3.5 w-3.5" />
-              Duplicate
+              {t("editor.duplicate")}
             </Button>
           ) : (
             <>
               <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-                Cancel
+                {t("common:actions.cancel")}
               </Button>
               <Button
                 type="submit"
@@ -272,10 +280,10 @@ export function PersonaEditor({
                 disabled={!isValid || isPending}
               >
                 {isPending
-                  ? "Saving..."
+                  ? t("editor.saving")
                   : isEditing
-                    ? "Save Changes"
-                    : "Create"}
+                    ? t("common:actions.saveChanges")
+                    : t("editor.create")}
               </Button>
             </>
           )}
