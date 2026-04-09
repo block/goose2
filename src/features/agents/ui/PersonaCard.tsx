@@ -77,22 +77,22 @@ export function PersonaCard({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" sideOffset={4}>
-            <DropdownMenuItem onClick={() => onEdit?.(persona)}>
+            <DropdownMenuItem onSelect={() => onEdit?.(persona)}>
               <Pencil className="size-3.5" />
               {t("common:actions.edit")}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onDuplicate?.(persona)}>
+            <DropdownMenuItem onSelect={() => onDuplicate?.(persona)}>
               <Copy className="size-3.5" />
               {t("common:actions.duplicate")}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onExport?.(persona)}>
+            <DropdownMenuItem onSelect={() => onExport?.(persona)}>
               <Download className="size-3.5" />
               {t("common:actions.export")}
             </DropdownMenuItem>
             {!persona.isBuiltin && !persona.isFromDisk && (
               <DropdownMenuItem
                 variant="destructive"
-                onClick={() => onDelete?.(persona)}
+                onSelect={() => onDelete?.(persona)}
               >
                 <Trash2 className="size-3.5" />
                 {t("common:actions.delete")}

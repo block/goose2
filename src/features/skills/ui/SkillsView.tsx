@@ -69,19 +69,22 @@ function SkillCardMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={4}>
-        <DropdownMenuItem onClick={() => onEdit(skill)}>
+        <DropdownMenuItem onSelect={() => onEdit(skill)}>
           <Pencil className="size-3.5" />
           {t("common:actions.edit")}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onDuplicate(skill)}>
+        <DropdownMenuItem onSelect={() => onDuplicate(skill)}>
           <Copy className="size-3.5" />
           {t("common:actions.duplicate")}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onExport(skill)}>
+        <DropdownMenuItem onSelect={() => onExport(skill)}>
           <Download className="size-3.5" />
           {t("common:actions.export")}
         </DropdownMenuItem>
-        <DropdownMenuItem variant="destructive" onClick={() => onDelete(skill)}>
+        <DropdownMenuItem
+          variant="destructive"
+          onSelect={() => onDelete(skill)}
+        >
           <Trash2 className="size-3.5" />
           {t("common:actions.delete")}
         </DropdownMenuItem>

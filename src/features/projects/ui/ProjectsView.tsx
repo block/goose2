@@ -58,18 +58,18 @@ function ProjectCardMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={4}>
         {onStartChat && (
-          <DropdownMenuItem onClick={() => onStartChat(project)}>
+          <DropdownMenuItem onSelect={() => onStartChat(project)}>
             <MessageSquare className="size-3.5" />
             {t("view.startChat")}
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem onClick={() => onEdit(project)}>
+        <DropdownMenuItem onSelect={() => onEdit(project)}>
           <Pencil className="size-3.5" />
           {t("common:actions.edit")}
         </DropdownMenuItem>
         <DropdownMenuItem
           variant="destructive"
-          onClick={() => onDelete(project)}
+          onSelect={() => onDelete(project)}
         >
           <Trash2 className="size-3.5" />
           {t("common:actions.delete")}
