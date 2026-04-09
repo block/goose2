@@ -24,6 +24,7 @@ import { getHomeDir } from "@/shared/api/system";
 import { ArtifactPolicyProvider } from "../hooks/ArtifactPolicyContext";
 import type { ModelOption } from "../types";
 import { ChatContextPanel } from "./ChatContextPanel";
+import { ContextWarningBanner } from "./ContextWarningBanner";
 
 const EMPTY_MODELS: ModelOption[] = [];
 
@@ -448,6 +449,11 @@ export function ChatView({
               }
             />
           )}
+
+          <ContextWarningBanner
+            tokens={tokenState.accumulatedTotal}
+            limit={tokenState.contextLimit}
+          />
 
           <ChatInput
             onSend={handleSend}

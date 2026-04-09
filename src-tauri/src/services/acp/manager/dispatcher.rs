@@ -16,6 +16,7 @@ use tokio::sync::Mutex;
 use crate::services::acp::payloads::{
     model_options_from_state, DonePayload, MessageCreatedPayload, ModelOption, ModelStatePayload,
     SessionInfoPayload, TextPayload, ToolCallPayload, ToolResultPayload, ToolTitlePayload,
+    UsageUpdatePayload,
 };
 
 fn model_options_from_select_options(options: &SessionConfigSelectOptions) -> Vec<ModelOption> {
@@ -302,6 +303,17 @@ impl Client for SessionEventDispatcher {
                     &route.local_session_id,
                     route.provider_id.as_deref(),
                     &update.config_options,
+                );
+                return Ok(());
+            }
+            SessionUpdate::UsageUpdate(usage) => {
+                let _ = self.app_handle.emit(
+                    "acp:usage_update",
+                    UsageUpdatePayload {
+                        session_id: route.local_session_id.clone(),
+                        used: usage.used,
+                        size: usage.size,
+                    },
                 );
                 return Ok(());
             }
