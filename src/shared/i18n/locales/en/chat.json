@@ -110,7 +110,6 @@
     "voiceInputSoon": "Voice input (coming soon)"
   },
   "tools": {
-    "detected": "detected",
     "fileNotFound": "File not found: {{path}}",
     "moreOutputs": "More outputs ({{count}})",
     "openFile": "Open file",

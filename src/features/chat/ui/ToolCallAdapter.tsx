@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { FolderOpen, ChevronRight } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import { Button } from "@/shared/ui/button";
 import {
   Tool,
   ToolHeader,
@@ -116,13 +117,14 @@ function ArtifactActions({
 
   return (
     <div className="mt-1.5 ml-1 space-y-1.5">
-      <button
+      <Button
         type="button"
+        variant="outline-flat"
         onClick={() => void openCandidate(primary, true)}
         className={cn(
-          "inline-flex max-w-full items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs transition-colors",
+          "h-auto max-w-full justify-start rounded-md px-2.5 py-1 text-xs",
           primary.allowed
-            ? "border-accent/45 bg-accent/20 text-accent-foreground shadow-sm hover:bg-accent/30"
+            ? "border-accent/45 bg-background text-accent-foreground hover:bg-accent/55"
             : "cursor-not-allowed border-red-500/30 bg-red-500/[0.04] text-red-500/70",
         )}
         disabled={!primary.allowed}
@@ -135,12 +137,7 @@ function ArtifactActions({
         <span className="truncate text-[10px] text-muted-foreground">
           {primary.rawPath || primary.resolvedPath}
         </span>
-        {primary.confidence === "low" && (
-          <span className="text-[10px] text-muted-foreground/70 italic">
-            {t("tools.detected")}
-          </span>
-        )}
-      </button>
+      </Button>
       {!primary.allowed && primary.blockedReason && (
         <p className="text-[11px] text-destructive ml-1">
           {primary.blockedReason}
@@ -168,13 +165,14 @@ function ArtifactActions({
             <div className="space-y-1.5 pl-4">
               {display.secondaryCandidates.map((candidate) => (
                 <div key={candidate.id} className="space-y-0.5">
-                  <button
+                  <Button
                     type="button"
+                    variant="outline-flat"
                     onClick={() => void openCandidate(candidate, false)}
                     className={cn(
-                      "inline-flex max-w-full items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] transition-colors",
+                      "h-auto max-w-full justify-start rounded-md px-2 py-1 text-[11px]",
                       candidate.allowed
-                        ? "border-border bg-accent text-muted-foreground hover:bg-accent/80 hover:text-foreground"
+                        ? "border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
                         : "cursor-not-allowed border-red-500/20 bg-red-500/[0.03] text-red-500/70",
                     )}
                     disabled={!candidate.allowed}
@@ -187,12 +185,7 @@ function ArtifactActions({
                     <span className="truncate text-[10px] text-muted-foreground">
                       {candidate.rawPath || candidate.resolvedPath}
                     </span>
-                    {candidate.confidence === "low" && (
-                      <span className="text-[10px] text-muted-foreground/70 italic">
-                        {t("tools.detected")}
-                      </span>
-                    )}
-                  </button>
+                  </Button>
                   {!candidate.allowed && candidate.blockedReason && (
                     <p className="text-[11px] text-destructive">
                       {candidate.blockedReason}
