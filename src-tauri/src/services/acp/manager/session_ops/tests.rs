@@ -49,8 +49,8 @@ fn prepared_session_lookup_falls_back_to_local_session_id() {
         },
     );
 
-    let prepared =
-        prepared_session_for_key(&sessions, "session-1__persona-1", "session-1").expect("prepared session");
+    let prepared = prepared_session_for_key(&sessions, "session-1__persona-1", "session-1")
+        .expect("prepared session");
 
     assert_eq!(prepared.goose_session_id, "goose-1");
     assert_eq!(prepared.provider_id, "goose");

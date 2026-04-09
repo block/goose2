@@ -135,7 +135,11 @@ struct StoredProjectInfo {
     pub color: String,
     pub preferred_provider: Option<String>,
     pub preferred_model: Option<String>,
-    #[serde(default, alias = "workingDir", deserialize_with = "deserialize_working_dirs")]
+    #[serde(
+        default,
+        alias = "workingDir",
+        deserialize_with = "deserialize_working_dirs"
+    )]
     pub working_dirs: Vec<String>,
     pub use_worktrees: bool,
     #[serde(default)]

@@ -174,7 +174,11 @@ async fn try_load_existing_session(
             ))
             .await
             .map_err(|error| format!("Failed to update provider via Goose ACP: {error:?}"))?;
-        dispatcher.emit_model_state_from_options(local_session_id, Some(provider_id), &response.config_options);
+        dispatcher.emit_model_state_from_options(
+            local_session_id,
+            Some(provider_id),
+            &response.config_options,
+        );
     }
 
     Ok(Some(candidate_session_id.to_string()))
@@ -271,7 +275,9 @@ pub(super) async fn prepare_session_inner(
                     provider_id: provider_id.clone(),
                     working_dir: updated_working_dir,
                 };
-                guard.sessions.insert(composite_key.clone(), updated.clone());
+                guard
+                    .sessions
+                    .insert(composite_key.clone(), updated.clone());
                 guard.sessions.insert(local_session_id.clone(), updated);
             }
 
