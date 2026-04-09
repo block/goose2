@@ -18,7 +18,6 @@ import {
 } from "@/shared/api/acp";
 import { saveExportedSessionFile } from "@/shared/api/system";
 import { defaultExportFilename, downloadJson } from "../lib/exportSession";
-import { parseImportedSession } from "../lib/importSession";
 
 interface SessionHistoryViewProps {
   onSelectSession?: (sessionId: string) => void;
@@ -96,7 +95,7 @@ export function SessionHistoryView({
     async (sessionId: string) => {
       try {
         const session = activeSessions.find((s) => s.id === sessionId);
-        const json = await acpExportSession(sessionId, session?.personaId);
+        const json = await acpExportSession(sessionId);
         const filename = defaultExportFilename(session?.title ?? "session");
 
         if (window.__TAURI_INTERNALS__) {
@@ -125,8 +124,7 @@ export function SessionHistoryView({
   const handleDuplicate = useCallback(
     async (sessionId: string) => {
       try {
-        const session = activeSessions.find((s) => s.id === sessionId);
-        await acpDuplicateSession(sessionId, session?.personaId);
+        await acpDuplicateSession(sessionId);
         await loadSessions();
       } catch (error) {
         console.error("Duplicate failed:", error);
@@ -136,7 +134,7 @@ export function SessionHistoryView({
         }
       }
     },
-    [activeSessions, loadSessions],
+    [loadSessions],
   );
 
   const handleImportSession = useCallback(
@@ -146,7 +144,6 @@ export function SessionHistoryView({
 
       try {
         const text = await file.text();
-        parseImportedSession(text); // validate before sending
         await acpImportSession(text);
         await loadSessions();
       } catch (error) {

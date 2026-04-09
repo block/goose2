@@ -90,31 +90,21 @@ export async function acpLoadSession(
   });
 }
 
-/** Export a session as JSON from the goose binary. */
-export async function acpExportSession(
-  sessionId: string,
-  personaId?: string,
-): Promise<string> {
-  return invoke("acp_export_session", {
-    sessionId,
-    personaId: personaId ?? null,
-  });
+/** Export a session as JSON via the goose binary. */
+export async function acpExportSession(sessionId: string): Promise<string> {
+  return invoke("acp_export_session", { sessionId });
 }
 
-/** Import a session from JSON into the goose session database. Returns new session metadata. */
+/** Import a session from JSON via the goose binary. Returns new session metadata. */
 export async function acpImportSession(json: string): Promise<AcpSessionInfo> {
   return invoke("acp_import_session", { json });
 }
 
-/** Duplicate a session in the goose session database. Returns new session metadata. */
+/** Duplicate (fork) a session via the goose binary. Returns new session metadata. */
 export async function acpDuplicateSession(
   sessionId: string,
-  personaId?: string,
 ): Promise<AcpSessionInfo> {
-  return invoke("acp_duplicate_session", {
-    sessionId,
-    personaId: personaId ?? null,
-  });
+  return invoke("acp_duplicate_session", { sessionId });
 }
 
 /** Cancel an in-progress ACP session so the backend stops streaming. */

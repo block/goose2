@@ -8,16 +8,20 @@ pub fn get_home_dir() -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn save_exported_session_file(
+pub async fn save_exported_session_file(
     window: Window,
     default_filename: String,
     contents: String,
 ) -> Result<Option<String>, String> {
+    let desktop =
+        dirs::desktop_dir().unwrap_or_else(|| dirs::home_dir().unwrap_or_default().join("Desktop"));
+
     let mut dialog = window
         .dialog()
         .file()
         .set_title("Export Session")
         .set_file_name(default_filename)
+        .set_directory(desktop)
         .add_filter("JSON", &["json"]);
 
     #[cfg(desktop)]
