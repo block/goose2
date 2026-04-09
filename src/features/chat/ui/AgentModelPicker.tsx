@@ -202,15 +202,15 @@ export function AgentModelPicker({
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="w-auto max-h-[min(24rem,50vh)] p-0"
+        className="w-96 max-h-[min(24rem,50vh)] p-1"
       >
-        <div className="flex max-h-[inherit]">
-          <div className="flex shrink-0 flex-col p-1">
+        <div className="grid grid-cols-2 gap-1 max-h-[inherit]">
+          <div className="flex min-h-0 flex-col p-1">
             <div className="shrink-0 px-2 py-1.5 text-sm font-semibold">
               {t("toolbar.agent")}
             </div>
             <ScrollArea className="min-h-0 flex-1">
-              <div className="pt-0.5">
+              <div className="p-1 space-y-0.5">
                 {agents.map((agent) => {
                   const isSelected = agent.id === selectedAgentId;
 
@@ -235,14 +235,13 @@ export function AgentModelPicker({
               </div>
             </ScrollArea>
           </div>
-          <Separator orientation="vertical" className="self-stretch" />
-          <div className="flex shrink-0 flex-col p-1">
+          <div className="flex min-h-0 flex-col p-1">
             <div className="shrink-0 px-2 py-1.5 text-sm font-semibold">
               {t("toolbar.model")}
             </div>
             {groupedModels.length > 0 ? (
               <ScrollArea className="min-h-0 flex-1">
-                <div className="pr-3">
+                <div className="p-1 space-y-0.5">
                   {groupedModels.map((group) => {
                     const expanded = isGroupExpanded(group);
 
