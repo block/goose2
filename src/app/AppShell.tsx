@@ -1,17 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Sidebar } from "@/features/sidebar/ui/Sidebar";
 import { StatusBar } from "@/features/status/ui/StatusBar";
-import { HomeScreen } from "@/features/home/ui/HomeScreen";
-import { ChatView } from "@/features/chat/ui/ChatView";
 import type { PastedImage } from "@/shared/types/messages";
-import { SkillsView } from "@/features/skills/ui/SkillsView";
-import { AgentsView } from "@/features/agents/ui/AgentsView";
-import { ProjectsView } from "@/features/projects/ui/ProjectsView";
-import { SessionHistoryView } from "@/features/sessions/ui/SessionHistoryView";
 import { CreateProjectDialog } from "@/features/projects/ui/CreateProjectDialog";
 import { archiveProject } from "@/features/projects/api/projects";
 import type { ProjectInfo } from "@/features/projects/api/projects";
 import { SettingsModal } from "@/features/settings/ui/SettingsModal";
+import type { SectionId } from "@/features/settings/ui/SettingsModal";
 import { TopBar } from "./ui/TopBar";
 import { useChatStore } from "@/features/chat/stores/chatStore";
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
@@ -21,6 +16,7 @@ import { useProjectStore } from "@/features/projects/stores/projectStore";
 import { findExistingDraft } from "@/features/chat/lib/newChat";
 import { DEFAULT_CHAT_TITLE } from "@/features/chat/lib/sessionTitle";
 import { useAppStartup } from "./hooks/useAppStartup";
+import { AppShellContent } from "./ui/AppShellContent";
 
 export type AppView =
   | "home"
@@ -41,6 +37,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsInitialSection, setSettingsInitialSection] =
+    useState<SectionId>("appearance");
   const [createProjectOpen, setCreateProjectOpen] = useState(false);
   const [createProjectInitialWorkingDir, setCreateProjectInitialWorkingDir] =
     useState<string | null>(null);
@@ -246,6 +244,10 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     },
     [chatStore, sessionStore, cleanupEmptyDraft],
   );
+  const openSettings = useCallback((section: SectionId = "appearance") => {
+    setSettingsInitialSection(section);
+    setSettingsOpen(true);
+  }, []);
 
   const handleArchiveChat = useCallback(
     async (sessionId: string) => {
@@ -436,49 +438,12 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   }, [clearActiveSession]);
 
   const activeSessionPersonaId = activeSession?.personaId;
-
-  const renderContent = () => {
-    switch (activeView) {
-      case "skills":
-        return <SkillsView />;
-      case "agents":
-        return <AgentsView />;
-      case "projects":
-        return <ProjectsView onStartChat={handleStartChatFromProject} />;
-      case "session-history":
-        return (
-          <SessionHistoryView
-            onSelectSession={handleSelectSession}
-            onRenameChat={handleRenameChat}
-            onArchiveChat={handleArchiveChat}
-          />
-        );
-      case "chat":
-      case "home":
-        return activeSession ? (
-          <ChatView
-            key={activeSession.id}
-            sessionId={activeSession.id}
-            initialProvider={homeSelectedProvider}
-            initialPersonaId={activeSessionPersonaId ?? homeSelectedPersonaId}
-            initialMessage={pendingInitialMessage}
-            initialImages={pendingInitialImages}
-            onCreateProject={openCreateProjectDialog}
-            onInitialMessageConsumed={() => {
-              setPendingInitialMessage(undefined);
-              setPendingInitialImages(undefined);
-              setHomeSelectedProvider(undefined);
-              setHomeSelectedPersonaId(undefined);
-            }}
-          />
-        ) : (
-          <HomeScreen
-            onStartChat={handleHomeStartChat}
-            onCreateProject={openCreateProjectDialog}
-          />
-        );
-    }
-  };
+  const handleInitialMessageConsumed = useCallback(() => {
+    setPendingInitialMessage(undefined);
+    setPendingInitialImages(undefined);
+    setHomeSelectedProvider(undefined);
+    setHomeSelectedPersonaId(undefined);
+  }, []);
 
   const editingProjectProp = useMemo(
     () =>
@@ -501,7 +466,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
-      <TopBar onSettingsClick={() => setSettingsOpen(true)} />
+      <TopBar onSettingsClick={() => openSettings()} />
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <div
@@ -546,7 +511,24 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         </div>
 
         <main className="min-h-0 min-w-0 flex-1">
-          {children ?? renderContent()}
+          {children ?? (
+            <AppShellContent
+              activeView={activeView}
+              activeSession={activeSession}
+              activeSessionPersonaId={activeSessionPersonaId}
+              homeSelectedProvider={homeSelectedProvider}
+              homeSelectedPersonaId={homeSelectedPersonaId}
+              pendingInitialMessage={pendingInitialMessage}
+              pendingInitialImages={pendingInitialImages}
+              onArchiveChat={handleArchiveChat}
+              onCreateProject={openCreateProjectDialog}
+              onHomeStartChat={handleHomeStartChat}
+              onInitialMessageConsumed={handleInitialMessageConsumed}
+              onRenameChat={handleRenameChat}
+              onSelectSession={handleSelectSession}
+              onStartChatFromProject={handleStartChatFromProject}
+            />
+          )}
         </main>
       </div>
 
@@ -562,7 +544,12 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         />
       </div>
 
-      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
+      {settingsOpen && (
+        <SettingsModal
+          initialSection={settingsInitialSection}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
 
       <CreateProjectDialog
         isOpen={createProjectOpen}

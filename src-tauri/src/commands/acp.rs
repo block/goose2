@@ -149,6 +149,16 @@ pub async fn acp_prepare_session(
     AcpService::prepare_session(app_handle, session_id, provider_id, working_dir, persona_id).await
 }
 
+#[tauri::command]
+pub async fn acp_set_model(
+    app_handle: AppHandle,
+    session_id: String,
+    model_id: String,
+) -> Result<(), String> {
+    let manager = GooseAcpManager::start(app_handle).await?;
+    manager.set_model(session_id, model_id).await
+}
+
 /// List all sessions known to the goose binary.
 #[tauri::command]
 pub async fn acp_list_sessions(app_handle: AppHandle) -> Result<Vec<AcpSessionInfo>, String> {

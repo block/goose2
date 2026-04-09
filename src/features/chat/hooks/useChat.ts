@@ -6,7 +6,12 @@ import {
   createUserMessage,
 } from "@/shared/types/messages";
 import type { ChatState, TokenState } from "@/shared/types/chat";
-import { acpSendMessage, acpCancelSession } from "@/shared/api/acp";
+import {
+  acpSendMessage,
+  acpCancelSession,
+  acpPrepareSession,
+  acpSetModel,
+} from "@/shared/api/acp";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { isDefaultChatTitle } from "../lib/sessionTitle";
 import { findLastIndex } from "@/shared/lib/arrays";
@@ -160,6 +165,7 @@ export function useChat(
       const sessionStore = useChatSessionStore.getState();
       const session = sessionStore.getSession(sessionId);
       const wasDraft = !!session?.draft;
+      const draftModelId = session?.modelId;
 
       if (wasDraft) {
         sessionStore.promoteDraft(sessionId);
@@ -196,6 +202,14 @@ export function useChat(
         const providerId = providerOverride ?? agent?.provider ?? "goose";
         const systemPrompt =
           systemPromptOverride ?? agent?.systemPrompt ?? undefined;
+
+        if (wasDraft && draftModelId) {
+          await acpPrepareSession(sessionId, providerId, {
+            workingDir: workingDirOverride,
+            personaId: effectivePersonaInfo?.id,
+          });
+          await acpSetModel(sessionId, draftModelId);
+        }
 
         // Send via ACP — response streams back through Tauri events
         // which are handled by the global useAcpStream listener in AppShell.

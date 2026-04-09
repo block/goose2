@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useChatStore } from "../stores/chatStore";
 import { useChatSessionStore } from "../stores/chatSessionStore";
+import type { ModelOption } from "../types";
 import { isDefaultChatTitle } from "../lib/sessionTitle";
 import type {
   Message,
@@ -63,8 +64,10 @@ interface AcpSessionInfoPayload {
 
 interface AcpModelStatePayload {
   sessionId: string;
+  providerId?: string | null;
   currentModelId: string;
   currentModelName?: string;
+  availableModels: ModelOption[];
 }
 
 interface AcpUsageUpdatePayload {
@@ -120,16 +123,6 @@ function shouldTrackStreamingEvent(
   return runtime.chatState === "thinking" || runtime.chatState === "streaming";
 }
 
-/**
- * Hook that listens to Tauri events for ACP streaming responses.
- *
- * Subscribes to `acp:text`, `acp:done`, `acp:tool_call`, `acp:tool_title`,
- * and `acp:tool_result` events, updating whichever session the event targets.
- *
- * During session history replay, events are buffered in a module-level map
- * (see `replayBuffer.ts`) and flushed as a single `setMessages()` call when
- * loading completes, avoiding O(N²) re-renders.
- */
 export function useAcpStream(enabled: boolean): void {
   useEffect(() => {
     if (!enabled) return;
@@ -137,14 +130,6 @@ export function useAcpStream(enabled: boolean): void {
     let active = true;
     const unlisteners: Promise<UnlistenFn>[] = [];
 
-    // Flush replay buffers when a session transitions from loading → loaded.
-    //
-    // Re-entrancy note: setMessages() below triggers another Zustand state
-    // update, which re-invokes this subscriber synchronously. On the second
-    // invocation the `sid` has already been removed from both prev and current
-    // loadingSessionIds, so the for-of loop won't re-match it. Additionally,
-    // getAndDeleteReplayBuffer already deleted the buffer on the first pass,
-    // providing a second guard against double-flush.
     const unsubscribeFlush = useChatStore.subscribe((state, prevState) => {
       if (!active) return;
       for (const sid of prevState.loadingSessionIds) {
@@ -461,11 +446,31 @@ export function useAcpStream(enabled: boolean): void {
     unlisteners.push(
       listen<AcpModelStatePayload>("acp:model_state", (event) => {
         if (!active) return;
-        const modelName =
-          event.payload.currentModelName ?? event.payload.currentModelId;
-        useChatSessionStore
-          .getState()
-          .updateSession(event.payload.sessionId, { modelName });
+        const {
+          sessionId,
+          providerId,
+          currentModelId,
+          currentModelName,
+          availableModels,
+        } = event.payload;
+        const sessionStore = useChatSessionStore.getState();
+        if (providerId) {
+          sessionStore.cacheModelsForProvider(providerId, availableModels);
+        }
+        const session = sessionStore.getSession(sessionId);
+        const sessionProvider = session?.providerId;
+        if (providerId && sessionProvider && providerId !== sessionProvider) {
+          console.debug(
+            `[acp:model_state] Ignoring event: provider mismatch (event: ${providerId}, session: ${sessionProvider})`,
+          );
+          return;
+        }
+        const modelName = currentModelName ?? currentModelId;
+        sessionStore.setSessionModels(sessionId, availableModels);
+        sessionStore.updateSession(sessionId, {
+          modelId: currentModelId,
+          modelName,
+        });
       }),
     );
 

@@ -1,16 +1,10 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  IconLayoutSidebarRight,
-  IconLayoutSidebarRightFilled,
-} from "@tabler/icons-react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { MessageTimeline } from "./MessageTimeline";
 import { ChatInput } from "./ChatInput";
 import type { PastedImage } from "@/shared/types/messages";
 import { LoadingGoose } from "./LoadingGoose";
 import { ChatLoadingSkeleton } from "./ChatLoadingSkeleton";
-import { ContextPanel } from "./ContextPanel";
 import { useChat } from "../hooks/useChat";
 import { useMessageQueue } from "../hooks/useMessageQueue";
 import { useChatStore } from "../stores/chatStore";
@@ -19,7 +13,7 @@ import { useProviderSelection } from "@/features/agents/hooks/useProviderSelecti
 import { useChatSessionStore } from "../stores/chatSessionStore";
 import { getProject, type ProjectInfo } from "@/features/projects/api/projects";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
-import { acpPrepareSession } from "@/shared/api/acp";
+import { acpPrepareSession, acpSetModel } from "@/shared/api/acp";
 import {
   buildProjectSystemPrompt,
   composeSystemPrompt,
@@ -27,8 +21,11 @@ import {
 } from "@/features/projects/lib/chatProjectContext";
 import { useAvatarSrc } from "@/shared/hooks/useAvatarSrc";
 import { getHomeDir } from "@/shared/api/system";
-import { Button } from "@/shared/ui/button";
 import { ArtifactPolicyProvider } from "../hooks/ArtifactPolicyContext";
+import type { ModelOption } from "../types";
+import { ChatContextPanel } from "./ChatContextPanel";
+
+const EMPTY_MODELS: ModelOption[] = [];
 
 interface ChatViewProps {
   sessionId: string;
@@ -43,13 +40,6 @@ interface ChatViewProps {
     onCreated?: (projectId: string) => void;
   }) => void;
 }
-
-const CP_PAD = 12;
-const CP_TOTAL_W = 340 + CP_PAD * 2;
-const CP_TOGGLE_RIGHT = CP_PAD + 12;
-const CP_TOGGLE_TOP = CP_PAD + 10;
-const CP_FADE_S = 0.15;
-const CP_REFLOW_MS = 200;
 
 export function ChatView({
   sessionId,
@@ -68,9 +58,6 @@ export function ChatView({
     (s) => s.contextPanelOpenBySession[activeSessionId] ?? false,
   );
   const setContextPanelOpen = useChatSessionStore((s) => s.setContextPanelOpen);
-  const shouldReduceMotion = useReducedMotion();
-  const fadeTransition = { duration: shouldReduceMotion ? 0 : CP_FADE_S };
-  const reflowDuration = shouldReduceMotion ? 0 : CP_REFLOW_MS;
 
   const {
     providers,
@@ -84,6 +71,9 @@ export function ChatView({
   );
   const session = useChatSessionStore((s) =>
     s.sessions.find((candidate) => candidate.id === activeSessionId),
+  );
+  const availableModels = useChatSessionStore(
+    (s) => s.modelsBySession[activeSessionId] ?? EMPTY_MODELS,
   );
   const projects = useProjectStore((s) => s.projects);
   const storedProject = useProjectStore((s) =>
@@ -190,10 +180,10 @@ export function ChatView({
       if (providerId === selectedProvider) {
         return;
       }
+      const sessionStore = useChatSessionStore.getState();
+      const cached = sessionStore.getCachedModels(providerId);
+      sessionStore.switchSessionProvider(activeSessionId, providerId, cached);
       setGlobalSelectedProvider(providerId);
-      useChatSessionStore
-        .getState()
-        .updateSession(activeSessionId, { providerId });
     },
     [activeSessionId, selectedProvider, setGlobalSelectedProvider],
   );
@@ -205,6 +195,40 @@ export function ChatView({
         .updateSession(activeSessionId, { projectId });
     },
     [activeSessionId],
+  );
+  const handleModelChange = useCallback(
+    (modelId: string) => {
+      if (!activeSessionId || modelId === session?.modelId) {
+        return;
+      }
+
+      const previousModelId = session?.modelId;
+      const previousModelName = session?.modelName;
+      const models = useChatSessionStore
+        .getState()
+        .getSessionModels(activeSessionId);
+      const selected = models.find((m) => m.id === modelId);
+
+      // Optimistic update
+      useChatSessionStore.getState().updateSession(activeSessionId, {
+        modelId,
+        modelName: selected?.displayName ?? selected?.name ?? modelId,
+      });
+
+      if (session?.draft) {
+        return;
+      }
+
+      acpSetModel(activeSessionId, modelId).catch((error) => {
+        console.error("Failed to set model:", error);
+        // Rollback to previous model on failure
+        useChatSessionStore.getState().updateSession(activeSessionId, {
+          modelId: previousModelId,
+          modelName: previousModelName,
+        });
+      });
+    },
+    [activeSessionId, session?.draft, session?.modelId, session?.modelName],
   );
 
   // When persona changes, update the provider to match persona's default
@@ -258,7 +282,6 @@ export function ChatView({
   const personaInfo = selectedPersona
     ? { id: selectedPersona.id, name: selectedPersona.displayName }
     : undefined;
-
   const {
     messages,
     chatState,
@@ -283,6 +306,13 @@ export function ChatView({
     }
 
     let cancelled = false;
+    const sessionStore = useChatSessionStore.getState();
+    const currentSession = sessionStore.getSession(activeSessionId);
+    if (currentSession && currentSession.providerId !== selectedProvider) {
+      sessionStore.updateSession(activeSessionId, {
+        providerId: selectedProvider,
+      });
+    }
     acpPrepareSession(activeSessionId, selectedProvider, {
       workingDir: effectiveWorkingDir,
       personaId: selectedPersonaId ?? undefined,
@@ -435,6 +465,10 @@ export function ChatView({
             providersLoading={providersLoading}
             selectedProvider={selectedProvider}
             onProviderChange={handleProviderChange}
+            currentModelId={session?.modelId ?? null}
+            currentModel={session?.modelName}
+            availableModels={availableModels}
+            onModelChange={handleModelChange}
             selectedProjectId={session?.projectId ?? null}
             availableProjects={availableProjects}
             onProjectChange={handleProjectChange}
@@ -451,63 +485,13 @@ export function ChatView({
           />
         </div>
 
-        <div
-          className="shrink-0 overflow-hidden"
-          style={{
-            width: isContextPanelOpen ? CP_TOTAL_W : 0,
-            transition: `width ${reflowDuration}ms ease`,
-          }}
-        >
-          <AnimatePresence initial={false}>
-            {isContextPanelOpen ? (
-              <motion.div
-                key="context-panel"
-                className="flex h-full"
-                style={{
-                  width: CP_TOTAL_W,
-                  padding: CP_PAD,
-                }}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={fadeTransition}
-              >
-                <aside className="flex min-w-0 flex-1 overflow-hidden rounded-xl border border-border bg-background">
-                  <ContextPanel
-                    projectName={project?.name}
-                    projectColor={project?.color}
-                    projectWorkingDirs={project?.workingDirs ?? []}
-                  />
-                </aside>
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
-        </div>
-
-        <div
-          className="absolute z-20"
-          style={{
-            right: CP_TOGGLE_RIGHT,
-            top: CP_TOGGLE_TOP,
-          }}
-        >
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            onClick={() =>
-              setContextPanelOpen(activeSessionId, !isContextPanelOpen)
-            }
-            aria-label={contextPanelLabel}
-            title={contextPanelLabel}
-          >
-            {isContextPanelOpen ? (
-              <IconLayoutSidebarRightFilled className="size-4" />
-            ) : (
-              <IconLayoutSidebarRight className="size-4" />
-            )}
-          </Button>
-        </div>
+        <ChatContextPanel
+          activeSessionId={activeSessionId}
+          isOpen={isContextPanelOpen}
+          label={contextPanelLabel}
+          project={project}
+          setOpen={setContextPanelOpen}
+        />
       </div>
     </ArtifactPolicyProvider>
   );

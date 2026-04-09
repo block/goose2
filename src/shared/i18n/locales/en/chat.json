@@ -92,6 +92,8 @@
     "yesterday": "Yesterday"
   },
   "toolbar": {
+    "agent": "Agent",
+    "chooseAgentModel": "Choose agent and model",
     "chooseProject": "Choose a project",
     "chooseProvider": "Choose a provider",
     "contextUsage": "Context usage",

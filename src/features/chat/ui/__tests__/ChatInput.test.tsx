@@ -5,6 +5,14 @@ import { useState } from "react";
 import { ChatInput } from "../ChatInput";
 import type { Persona } from "@/shared/types/agents";
 
+vi.mock("@/features/providers/hooks/useAgentProviderStatus", () => ({
+  useAgentProviderStatus: () => ({
+    readyAgentIds: new Set(["goose", "claude-acp", "codex-acp"]),
+    loading: false,
+    refresh: vi.fn(),
+  }),
+}));
+
 const TEST_PERSONAS: Persona[] = [
   {
     id: "builtin-solo",
@@ -96,11 +104,15 @@ describe("ChatInput", () => {
     render(
       <ChatInput
         onSend={vi.fn()}
+        currentModelId="gpt-4o"
         currentModel="GPT-4o"
         availableModels={[{ id: "gpt-4o", name: "GPT-4o" }]}
+        providers={[{ id: "goose", label: "Goose" }]}
       />,
     );
-    expect(screen.getByText("GPT-4o")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /choose agent and model/i }),
+    ).toHaveTextContent("GPT-4o");
   });
 
   it("shows default model name in model picker", () => {
@@ -108,9 +120,12 @@ describe("ChatInput", () => {
       <ChatInput
         onSend={vi.fn()}
         availableModels={[{ id: "claude-sonnet-4", name: "Claude Sonnet 4" }]}
+        providers={[{ id: "goose", label: "Goose" }]}
       />,
     );
-    expect(screen.getByText("Claude Sonnet 4")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /choose agent and model/i }),
+    ).toHaveTextContent("Claude Sonnet 4");
   });
 
   it("shows default provider label", () => {
@@ -122,12 +137,12 @@ describe("ChatInput", () => {
       />,
     );
     const providerButton = screen.getByRole("button", {
-      name: /choose a provider/i,
+      name: /choose agent and model/i,
     });
     expect(providerButton).toHaveTextContent("Goose");
   });
 
-  it("opens the provider selector menu", async () => {
+  it("opens the agent and model picker", async () => {
     const user = userEvent.setup();
 
     render(
@@ -135,18 +150,19 @@ describe("ChatInput", () => {
         onSend={vi.fn()}
         providers={[
           { id: "goose", label: "Goose" },
-          { id: "openai", label: "OpenAI" },
+          { id: "claude-acp", label: "Claude Code" },
         ]}
         selectedProvider="goose"
       />,
     );
 
     await user.click(
-      screen.getByRole("button", { name: /choose a provider/i }),
+      screen.getByRole("button", { name: /choose agent and model/i }),
     );
 
-    expect(screen.getByText("Choose a provider")).toBeInTheDocument();
-    expect(screen.getByText("OpenAI")).toBeInTheDocument();
+    expect(screen.getByText("Agent")).toBeInTheDocument();
+    expect(screen.getByText("Model")).toBeInTheDocument();
+    expect(screen.getByText("Claude Code")).toBeInTheDocument();
   });
 
   it("opens the project selector menu", async () => {

@@ -9,15 +9,23 @@ const setSelectedProviderWithoutPersist = vi.fn();
 vi.mock("@/shared/api/acp", () => ({
   discoverAcpProviders: vi.fn().mockResolvedValue([
     { id: "goose", label: "Goose" },
-    { id: "openai", label: "OpenAI" },
+    { id: "claude-acp", label: "Claude Code" },
   ]),
+}));
+
+vi.mock("@/features/providers/hooks/useAgentProviderStatus", () => ({
+  useAgentProviderStatus: () => ({
+    readyAgentIds: new Set(["goose", "claude-acp", "codex-acp"]),
+    loading: false,
+    refresh: vi.fn(),
+  }),
 }));
 
 vi.mock("@/features/agents/hooks/useProviderSelection", () => ({
   useProviderSelection: () => ({
     providers: [
       { id: "goose", label: "Goose" },
-      { id: "openai", label: "OpenAI" },
+      { id: "claude-acp", label: "Claude Code" },
     ],
     providersLoading: false,
     selectedProvider: "goose",
@@ -117,7 +125,7 @@ describe("HomeScreen", () => {
   it("renders the provider and project controls on the home screen", () => {
     render(<HomeScreen />);
     expect(
-      screen.getByRole("button", { name: /choose a provider/i }),
+      screen.getByRole("button", { name: /choose agent and model/i }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /select project/i }),

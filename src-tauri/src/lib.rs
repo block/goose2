@@ -46,6 +46,7 @@ pub fn run() {
             commands::agents::get_avatars_dir,
             commands::acp::discover_acp_providers,
             commands::acp::acp_prepare_session,
+            commands::acp::acp_set_model,
             commands::acp::acp_send_message,
             commands::acp::acp_cancel_session,
             commands::acp::acp_list_sessions,

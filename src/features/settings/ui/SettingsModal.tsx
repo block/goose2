@@ -55,16 +55,20 @@ const NAV_ITEMS = [
   { id: "about", labelKey: "nav.about", icon: Info },
 ] as const;
 
-type SectionId = (typeof NAV_ITEMS)[number]["id"];
+export type SectionId = (typeof NAV_ITEMS)[number]["id"];
 
 interface SettingsModalProps {
   onClose: () => void;
+  initialSection?: SectionId;
 }
 
-export function SettingsModal({ onClose }: SettingsModalProps) {
+export function SettingsModal({
+  onClose,
+  initialSection = "appearance",
+}: SettingsModalProps) {
   const { t } = useTranslation(["settings", "common"]);
   const { preference, setLocalePreference, systemLocaleLabel } = useLocale();
-  const [activeSection, setActiveSection] = useState<SectionId>("appearance");
+  const [activeSection, setActiveSection] = useState<SectionId>(initialSection);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [archivedProjects, setArchivedProjects] = useState<ProjectInfo[]>([]);

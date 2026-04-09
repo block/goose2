@@ -82,6 +82,7 @@ impl AcpService {
         let writer_impl = Arc::new(TauriMessageWriter::new(
             app_handle.clone(),
             session_id.clone(),
+            Some(provider_id.clone()),
             persona_id.clone(),
             persona_name.clone(),
         ));

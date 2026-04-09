@@ -59,6 +59,16 @@ export async function acpPrepareSession(
   });
 }
 
+export async function acpSetModel(
+  sessionId: string,
+  modelId: string,
+): Promise<void> {
+  return invoke("acp_set_model", {
+    sessionId,
+    modelId,
+  });
+}
+
 /** Session info returned by the goose binary's list_sessions. */
 export interface AcpSessionInfo {
   sessionId: string;

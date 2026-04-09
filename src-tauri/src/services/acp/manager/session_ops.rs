@@ -1,16 +1,21 @@
+mod prompt_ops;
+#[cfg(test)]
+mod tests;
+
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use acp_client::MessageWriter;
 use agent_client_protocol::{
-    Agent, CancelNotification, ClientSideConnection, ContentBlock as AcpContentBlock, ImageContent,
-    ListSessionsRequest, LoadSessionRequest, NewSessionRequest, PromptRequest, SessionConfigKind,
-    SessionConfigOption, SessionConfigSelectOptions, SetSessionConfigOptionRequest, TextContent,
+    Agent, CancelNotification, ClientSideConnection, ListSessionsRequest, LoadSessionRequest,
+    NewSessionRequest, SessionConfigKind, SessionConfigOption, SessionConfigSelectOptions,
+    SetSessionConfigOptionRequest,
 };
 use tokio::sync::Mutex;
 
 use super::dispatcher::SessionEventDispatcher;
+use crate::services::acp::split_composite_key;
+pub(super) use prompt_ops::send_prompt_inner;
 
 /// Lightweight session metadata returned by `list_sessions`.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -124,7 +129,11 @@ pub(super) async fn prepare_session_inner(
 
         if let Some(prepared) = existing_prepared {
             dispatcher
-                .bind_session(&prepared.goose_session_id, &local_session_id)
+                .bind_session(
+                    &prepared.goose_session_id,
+                    &local_session_id,
+                    Some(&provider_id),
+                )
                 .await;
 
             if prepared.working_dir != working_dir {
@@ -136,10 +145,14 @@ pub(super) async fn prepare_session_inner(
                     .await
                     .map_err(|error| format!("Failed to load Goose session: {error:?}"))?;
                 if let Some(models) = &response.models {
-                    dispatcher.emit_model_state(&local_session_id, models);
+                    dispatcher.emit_model_state(&local_session_id, Some(&provider_id), models);
                 }
                 if let Some(options) = &response.config_options {
-                    dispatcher.emit_model_state_from_options(&local_session_id, options);
+                    dispatcher.emit_model_state_from_options(
+                        &local_session_id,
+                        Some(&provider_id),
+                        options,
+                    );
                 }
 
                 let mut guard = state.lock().await;
@@ -159,8 +172,11 @@ pub(super) async fn prepare_session_inner(
                     .map_err(|error| {
                         format!("Failed to update provider via Goose ACP: {error:?}")
                     })?;
-                dispatcher
-                    .emit_model_state_from_options(&local_session_id, &response.config_options);
+                dispatcher.emit_model_state_from_options(
+                    &local_session_id,
+                    Some(&provider_id),
+                    &response.config_options,
+                );
 
                 let mut guard = state.lock().await;
                 if let Some(session) = guard.sessions.get_mut(&composite_key) {
@@ -173,7 +189,7 @@ pub(super) async fn prepare_session_inner(
 
         let goose_session_id = if let Some(existing_id) = existing_agent_session_id {
             dispatcher
-                .bind_session(&existing_id, &local_session_id)
+                .bind_session(&existing_id, &local_session_id, Some(&provider_id))
                 .await;
 
             let response = connection
@@ -185,10 +201,14 @@ pub(super) async fn prepare_session_inner(
                 .map_err(|error| format!("Failed to load Goose session: {error:?}"))?;
 
             if let Some(models) = &response.models {
-                dispatcher.emit_model_state(&local_session_id, models);
+                dispatcher.emit_model_state(&local_session_id, Some(&provider_id), models);
             }
             if let Some(options) = &response.config_options {
-                dispatcher.emit_model_state_from_options(&local_session_id, options);
+                dispatcher.emit_model_state_from_options(
+                    &local_session_id,
+                    Some(&provider_id),
+                    options,
+                );
             }
 
             let loaded_provider_id = response
@@ -206,8 +226,11 @@ pub(super) async fn prepare_session_inner(
                     .map_err(|error| {
                         format!("Failed to update provider via Goose ACP: {error:?}")
                     })?;
-                dispatcher
-                    .emit_model_state_from_options(&local_session_id, &response.config_options);
+                dispatcher.emit_model_state_from_options(
+                    &local_session_id,
+                    Some(&provider_id),
+                    &response.config_options,
+                );
             }
 
             existing_id
@@ -229,13 +252,19 @@ pub(super) async fn prepare_session_inner(
 
             let new_id = response.session_id.to_string();
 
-            dispatcher.bind_session(&new_id, &local_session_id).await;
+            dispatcher
+                .bind_session(&new_id, &local_session_id, Some(&provider_id))
+                .await;
 
             if let Some(models) = &response.models {
-                dispatcher.emit_model_state(&local_session_id, models);
+                dispatcher.emit_model_state(&local_session_id, Some(&provider_id), models);
             }
             if let Some(options) = &response.config_options {
-                dispatcher.emit_model_state_from_options(&local_session_id, options);
+                dispatcher.emit_model_state_from_options(
+                    &local_session_id,
+                    Some(&provider_id),
+                    options,
+                );
             }
 
             new_id
@@ -265,91 +294,6 @@ pub(super) async fn prepare_session_inner(
     }
 
     Ok(goose_session_id)
-}
-
-async fn take_cancel_requested(state: &Arc<Mutex<ManagerState>>, composite_key: &str) -> bool {
-    let mut guard = state.lock().await;
-    guard.take_cancel_requested(composite_key)
-}
-
-async fn clear_cancel_requested(state: &Arc<Mutex<ManagerState>>, composite_key: &str) {
-    let mut guard = state.lock().await;
-    guard.pending_cancels.remove(composite_key);
-}
-
-#[allow(clippy::too_many_arguments)]
-pub(super) async fn send_prompt_inner(
-    connection: &Arc<ClientSideConnection>,
-    dispatcher: &Arc<SessionEventDispatcher>,
-    state: &Arc<Mutex<ManagerState>>,
-    composite_key: String,
-    local_session_id: String,
-    provider_id: String,
-    working_dir: PathBuf,
-    existing_agent_session_id: Option<String>,
-    writer: Arc<dyn MessageWriter>,
-    prompt: String,
-    images: Vec<(String, String)>,
-) -> Result<(), String> {
-    let goose_session_id = match prepare_session_inner(
-        connection,
-        dispatcher,
-        state,
-        PrepareSessionInput {
-            composite_key: composite_key.clone(),
-            local_session_id: local_session_id.clone(),
-            provider_id,
-            working_dir,
-            existing_agent_session_id,
-        },
-    )
-    .await
-    {
-        Ok(goose_session_id) => goose_session_id,
-        Err(error) => {
-            clear_cancel_requested(state, &composite_key).await;
-            return Err(error);
-        }
-    };
-
-    if take_cancel_requested(state, &composite_key).await {
-        return Ok(());
-    }
-
-    dispatcher
-        .attach_writer(&goose_session_id, &local_session_id, writer.clone())
-        .await;
-
-    if dispatcher.is_canceled(&goose_session_id).await
-        || take_cancel_requested(state, &composite_key).await
-    {
-        dispatcher.clear_writer(&goose_session_id).await;
-        return Ok(());
-    }
-
-    let mut content_blocks = vec![AcpContentBlock::Text(TextContent::new(prompt))];
-    for (data, mime_type) in &images {
-        content_blocks.push(AcpContentBlock::Image(ImageContent::new(
-            data.as_str(),
-            mime_type.as_str(),
-        )));
-    }
-
-    let result = connection
-        .prompt(PromptRequest::new(goose_session_id.clone(), content_blocks))
-        .await
-        .map(|_| ())
-        .map_err(|error| format!("Prompt failed via Goose ACP: {error:?}"));
-
-    let canceled = dispatcher.is_canceled(&goose_session_id).await;
-    dispatcher.clear_writer(&goose_session_id).await;
-    clear_cancel_requested(state, &composite_key).await;
-
-    if result.is_ok() && !canceled {
-        writer.finalize().await;
-    }
-
-    result
 }
 
 /// List all sessions known to the goose binary.
@@ -396,7 +340,7 @@ pub(super) async fn load_session_inner(
     working_dir: PathBuf,
 ) -> Result<(), String> {
     dispatcher
-        .bind_session(goose_session_id, local_session_id)
+        .bind_session(goose_session_id, local_session_id, None)
         .await;
 
     let response = connection
@@ -411,10 +355,10 @@ pub(super) async fn load_session_inner(
     dispatcher.finalize_replay(goose_session_id).await;
 
     if let Some(models) = &response.models {
-        dispatcher.emit_model_state(local_session_id, models);
+        dispatcher.emit_model_state(local_session_id, None, models);
     }
     if let Some(options) = &response.config_options {
-        dispatcher.emit_model_state_from_options(local_session_id, options);
+        dispatcher.emit_model_state_from_options(local_session_id, None, options);
     }
 
     // Register the session so future prompts reuse this goose session
@@ -467,32 +411,61 @@ pub(super) async fn cancel_session_inner(
     Ok(true)
 }
 
-#[cfg(test)]
-mod tests {
-    use std::collections::{HashMap, HashSet};
+pub(super) async fn set_model_inner(
+    connection: &Arc<ClientSideConnection>,
+    dispatcher: &Arc<SessionEventDispatcher>,
+    state: &Arc<Mutex<ManagerState>>,
+    local_session_id: &str,
+    model_id: &str,
+) -> Result<(), String> {
+    let prepared_sessions = {
+        let guard = state.lock().await;
+        guard
+            .sessions
+            .iter()
+            .filter_map(|(composite_key, session)| {
+                let (session_id, _) = split_composite_key(composite_key);
+                (session_id == local_session_id).then_some((
+                    composite_key.clone(),
+                    session.goose_session_id.clone(),
+                    session.provider_id.clone(),
+                ))
+            })
+            .collect::<Vec<_>>()
+    };
 
-    use super::{needs_provider_update, ManagerState};
-
-    #[test]
-    fn provider_update_detects_switch_back_to_goose() {
-        assert!(needs_provider_update(Some("openai"), "goose"));
-        assert!(needs_provider_update(Some("claude-acp"), "goose"));
-        assert!(!needs_provider_update(Some("goose"), "goose"));
-        assert!(needs_provider_update(None, "goose"));
+    if prepared_sessions.is_empty() {
+        return Err(format!(
+            "Failed to update model for session '{local_session_id}': no prepared ACP session"
+        ));
     }
 
-    #[test]
-    fn pending_cancel_is_consumed_once() {
-        let mut state = ManagerState {
-            sessions: HashMap::new(),
-            op_locks: HashMap::new(),
-            pending_cancels: HashSet::new(),
-            preparing_sessions: HashSet::new(),
+    let mut updated_goose_sessions = HashSet::new();
+    for (composite_key, goose_session_id, provider_id) in prepared_sessions {
+        if !updated_goose_sessions.insert(goose_session_id.clone()) {
+            continue;
+        }
+
+        let session_lock = {
+            let mut guard = state.lock().await;
+            guard.session_lock(&composite_key)
         };
+        let _lock_guard = session_lock.lock().await;
 
-        state.mark_cancel_requested("session-1");
-
-        assert!(state.take_cancel_requested("session-1"));
-        assert!(!state.take_cancel_requested("session-1"));
+        let response = connection
+            .set_session_config_option(SetSessionConfigOptionRequest::new(
+                goose_session_id,
+                "model",
+                model_id,
+            ))
+            .await
+            .map_err(|error| format!("Failed to update model via Goose ACP: {error:?}"))?;
+        dispatcher.emit_model_state_from_options(
+            local_session_id,
+            Some(&provider_id),
+            &response.config_options,
+        );
     }
+
+    Ok(())
 }

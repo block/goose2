@@ -4,8 +4,8 @@ use tauri::Emitter;
 use acp_client::{MessageWriter, SessionInfoUpdate, SessionModelState};
 
 use super::payloads::{
-    DonePayload, MessageCreatedPayload, ModelStatePayload, SessionInfoPayload, TextPayload,
-    ToolCallPayload, ToolResultPayload, ToolTitlePayload,
+    model_options_from_state, DonePayload, MessageCreatedPayload, ModelStatePayload,
+    SessionInfoPayload, TextPayload, ToolCallPayload, ToolResultPayload, ToolTitlePayload,
 };
 
 /// A [`MessageWriter`] implementation that streams ACP output to the frontend
@@ -14,14 +14,15 @@ use super::payloads::{
 pub struct TauriMessageWriter {
     app_handle: tauri::AppHandle,
     session_id: String,
+    provider_id: Option<String>,
     assistant_message_id: String,
 }
 
 impl TauriMessageWriter {
-    /// Create a new writer that emits events for the given session.
     pub fn new(
         app_handle: tauri::AppHandle,
         session_id: String,
+        provider_id: Option<String>,
         persona_id: Option<String>,
         persona_name: Option<String>,
     ) -> Self {
@@ -40,6 +41,7 @@ impl TauriMessageWriter {
         Self {
             app_handle,
             session_id,
+            provider_id,
             assistant_message_id,
         }
     }
@@ -139,12 +141,15 @@ impl MessageWriter for TauriMessageWriter {
             .iter()
             .find(|m| m.model_id == state.current_model_id)
             .map(|m| m.name.clone());
+        let available_models = model_options_from_state(state);
         let _ = self.app_handle.emit(
             "acp:model_state",
             ModelStatePayload {
                 session_id: self.session_id.clone(),
+                provider_id: self.provider_id.clone(),
                 current_model_id: state.current_model_id.to_string(),
                 current_model_name,
+                available_models,
             },
         );
     }
