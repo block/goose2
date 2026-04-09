@@ -119,6 +119,7 @@ export function useChat(
       text: string,
       overridePersona?: { id: string; name?: string },
       images?: { base64: string; mimeType: string }[],
+      files?: string[],
     ) => {
       if (
         (!text.trim() && (!images || images.length === 0)) ||
@@ -225,6 +226,7 @@ export function useChat(
           images: images?.map(
             (img) => [img.base64, img.mimeType] as [string, string],
           ),
+          files,
         });
 
         if (wasDraft) {

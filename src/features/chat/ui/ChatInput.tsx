@@ -8,11 +8,11 @@ import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { MentionAutocomplete } from "./MentionAutocomplete";
 import { useMentionHandlers } from "../hooks/useMentionHandlers";
+import { PastedImageThumb, FileAttachmentChips } from "./ChatInputAttachments";
 import { ChatInputToolbar } from "./ChatInputToolbar";
 import { formatProviderLabel } from "@/shared/ui/icons/ProviderIcons";
 import { TooltipProvider } from "@/shared/ui/tooltip";
 import { PersonaAvatar } from "./PersonaPicker";
-import { ImageLightbox } from "@/shared/ui/ImageLightbox";
 import type { PastedImage } from "@/shared/types/messages";
 import { resizeImage } from "../lib/resizeImage";
 import { useImageDropTarget } from "../hooks/useImageDropTarget";
@@ -26,7 +26,12 @@ export interface ProjectOption {
 }
 
 interface ChatInputProps {
-  onSend: (text: string, personaId?: string, images?: PastedImage[]) => void;
+  onSend: (
+    text: string,
+    personaId?: string,
+    images?: PastedImage[],
+    files?: string[],
+  ) => void;
   onStop?: () => void;
   isStreaming?: boolean;
   disabled?: boolean;
@@ -60,56 +65,6 @@ interface ChatInputProps {
   // Context
   contextTokens?: number;
   contextLimit?: number;
-}
-
-// ---------------------------------------------------------------------------
-// PastedImageThumb
-// ---------------------------------------------------------------------------
-
-function PastedImageThumb({
-  objectUrl,
-  index,
-  onRemove,
-}: {
-  objectUrl: string;
-  index: number;
-  onRemove: (index: number) => void;
-}) {
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const { t } = useTranslation("chat");
-
-  return (
-    <>
-      <div className="group relative inline-block">
-        <button
-          type="button"
-          onClick={() => setLightboxOpen(true)}
-          className="block cursor-pointer rounded-lg"
-          aria-label={t("attachments.view", { index: index + 1 })}
-        >
-          <img
-            src={objectUrl}
-            alt={t("attachments.alt", { index: index + 1 })}
-            className="h-16 w-16 rounded-lg object-cover border border-border"
-          />
-        </button>
-        <button
-          type="button"
-          onClick={() => onRemove(index)}
-          className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-foreground text-background opacity-0 group-hover:opacity-100 transition-opacity duration-150"
-          aria-label={t("attachments.remove")}
-        >
-          <X className="h-2.5 w-2.5" />
-        </button>
-      </div>
-      <ImageLightbox
-        src={objectUrl}
-        alt={t("attachments.alt", { index: index + 1 })}
-        open={lightboxOpen}
-        onOpenChange={setLightboxOpen}
-      />
-    </>
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -155,6 +110,7 @@ export function ChatInput({
     [onDraftChange],
   );
   const [images, setImages] = useState<PastedImage[]>([]);
+  const [fileAttachments, setFileAttachments] = useState<string[]>([]);
   const [isCompact, setIsCompact] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -167,7 +123,9 @@ export function ChatInput({
 
   const hasQueuedMessage = queuedMessage !== null;
   const canSend =
-    (text.trim().length > 0 || images.length > 0) &&
+    (text.trim().length > 0 ||
+      images.length > 0 ||
+      fileAttachments.length > 0) &&
     !hasQueuedMessage &&
     !disabled;
 
@@ -225,16 +183,26 @@ export function ChatInput({
       text.trim(),
       selectedPersonaId ?? undefined,
       images.length > 0 ? images : undefined,
+      fileAttachments.length > 0 ? fileAttachments : undefined,
     );
     setText("");
     setImages((prev) => {
       for (const img of prev) URL.revokeObjectURL(img.objectUrl);
       return [];
     });
+    setFileAttachments([]);
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
-  }, [canSend, text, images, onSend, selectedPersonaId, setText]);
+  }, [
+    canSend,
+    text,
+    images,
+    fileAttachments,
+    onSend,
+    selectedPersonaId,
+    setText,
+  ]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (mentionOpen) {
@@ -322,7 +290,12 @@ export function ChatInput({
   } = useImageDropTarget({
     disabled,
     isStreaming,
-    onDropFile: addImageFile,
+    onDropImage: addImageFile,
+    onDropFile: useCallback((path: string) => {
+      setFileAttachments((prev) =>
+        prev.includes(path) ? prev : [...prev, path],
+      );
+    }, []),
   });
 
   const removeImage = useCallback((index: number) => {
@@ -330,6 +303,10 @@ export function ChatInput({
       URL.revokeObjectURL(prev[index].objectUrl);
       return prev.filter((_, i) => i !== index);
     });
+  }, []);
+
+  const removeFileAttachment = useCallback((index: number) => {
+    setFileAttachments((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
   const providerDisplayName =
@@ -393,6 +370,13 @@ export function ChatInput({
                   />
                 ))}
               </div>
+            )}
+
+            {fileAttachments.length > 0 && (
+              <FileAttachmentChips
+                files={fileAttachments}
+                onRemove={removeFileAttachment}
+              />
             )}
 
             {stickyPersona && (

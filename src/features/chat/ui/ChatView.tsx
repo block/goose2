@@ -343,7 +343,12 @@ export function ChatView({
   const queue = useMessageQueue(activeSessionId, chatState, sendMessage);
   const chatStore = useChatStore();
   const handleSend = useCallback(
-    (text: string, personaId?: string, images?: PastedImage[]) => {
+    (
+      text: string,
+      personaId?: string,
+      images?: PastedImage[],
+      files?: string[],
+    ) => {
       if (personaId && personaId !== selectedPersonaId) {
         const newPersona = personas.find((p) => p.id === personaId);
         if (newPersona) {
@@ -373,7 +378,7 @@ export function ChatView({
         return;
       }
 
-      sendMessage(text, undefined, images);
+      sendMessage(text, undefined, images, files);
     },
     [
       sendMessage,

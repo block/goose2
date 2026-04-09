@@ -68,7 +68,12 @@ describe("ChatInput", () => {
     await user.type(input, "hello");
     await user.keyboard("{Enter}");
 
-    expect(onSend).toHaveBeenCalledWith("hello", undefined, undefined);
+    expect(onSend).toHaveBeenCalledWith(
+      "hello",
+      undefined,
+      undefined,
+      undefined,
+    );
   });
 
   it("does not call onSend on Shift+Enter (newline)", async () => {
@@ -286,7 +291,12 @@ describe("ChatInput", () => {
     await user.type(screen.getByRole("textbox"), "follow up");
     await user.keyboard("{Enter}");
 
-    expect(onSend).toHaveBeenCalledWith("follow up", undefined, undefined);
+    expect(onSend).toHaveBeenCalledWith(
+      "follow up",
+      undefined,
+      undefined,
+      undefined,
+    );
   });
 
   it("shows disabled send button (not stop) when queue is full", () => {
@@ -336,7 +346,12 @@ describe("ChatInput", () => {
     await user.type(input, "hello");
     await user.keyboard("{Enter}");
 
-    expect(onSend).toHaveBeenCalledWith("hello", "reviewer", undefined);
+    expect(onSend).toHaveBeenCalledWith(
+      "hello",
+      "reviewer",
+      undefined,
+      undefined,
+    );
     expect(screen.getByText("@Reviewer")).toBeInTheDocument();
   });
 });

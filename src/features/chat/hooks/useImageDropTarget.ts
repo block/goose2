@@ -3,7 +3,9 @@ import { useCallback, useRef, useState, type DragEvent } from "react";
 interface UseImageDropTargetOptions {
   disabled: boolean;
   isStreaming: boolean;
-  onDropFile: (file: File) => void;
+  onDropImage: (file: File) => void;
+  /** Called for non-image files with their absolute path (Tauri file drop). */
+  onDropFile?: (path: string) => void;
 }
 
 function hasDraggedFiles(dataTransfer: DataTransfer) {
@@ -17,6 +19,7 @@ function hasDraggedFiles(dataTransfer: DataTransfer) {
 export function useImageDropTarget({
   disabled,
   isStreaming,
+  onDropImage,
   onDropFile,
 }: UseImageDropTargetOptions) {
   const [isImageDragOver, setIsImageDragOver] = useState(false);
@@ -73,19 +76,26 @@ export function useImageDropTarget({
         return;
       }
 
-      const files = Array.from(e.dataTransfer.files).filter((file) =>
-        file.type.startsWith("image/"),
-      );
-      if (files.length === 0) {
-        return;
-      }
+      const allFiles = Array.from(e.dataTransfer.files);
+      if (allFiles.length === 0) return;
 
       e.preventDefault();
-      for (const file of files) {
-        onDropFile(file);
+
+      for (const file of allFiles) {
+        if (file.type.startsWith("image/")) {
+          onDropImage(file);
+        } else if (onDropFile) {
+          // For non-image files, use the file path if available (Tauri provides it).
+          // The webkitRelativePath or name is the best we can get in a browser context.
+          // In Tauri, the full path is available via the File object.
+          const path = (file as File & { path?: string }).path ?? file.name;
+          if (path) {
+            onDropFile(path);
+          }
+        }
       }
     },
-    [disabled, isStreaming, onDropFile],
+    [disabled, isStreaming, onDropImage, onDropFile],
   );
 
   return {
