@@ -1050,7 +1050,7 @@ dependencies = [
 [[package]]
 name = "doctor"
 version = "0.1.0"
-source = "git+https://github.com/block/builderbot?rev=bfce29264181236a2e5b4fd903ace6291f6a7594#bfce29264181236a2e5b4fd903ace6291f6a7594"
+source = "git+https://github.com/block/builderbot?rev=8e1c3ec145edc0df5f04b4427cfd758378036862#8e1c3ec145edc0df5f04b4427cfd758378036862"
 dependencies = [
  "serde",
  "tokio",
