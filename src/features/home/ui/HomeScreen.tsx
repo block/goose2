@@ -33,7 +33,9 @@ function HomeClock() {
         {hour}:{minute}
       </span>
       {dayPeriod ? (
-        <span className="text-lg font-normal text-muted-foreground">{dayPeriod}</span>
+        <span className="text-lg font-normal text-muted-foreground">
+          {dayPeriod}
+        </span>
       ) : null}
     </div>
   );
