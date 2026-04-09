@@ -30,7 +30,7 @@ interface SessionCardProps {
   id: string;
   title: string;
   updatedAt: string;
-  messageCount: number;
+  messageCount?: number;
   personaName?: string;
   projectName?: string;
   projectColor?: string;
@@ -157,15 +157,17 @@ export function SessionCard({
           <span>{formatRelativeTimeToNow(updatedAt)}</span>
         </div>
 
-        <div className="flex items-center gap-1.5">
-          <MessageSquare className="size-3 shrink-0" />
-          <span>
-            {t("messageCount", {
-              count: messageCount,
-              displayCount: formatNumber(messageCount),
-            })}
-          </span>
-        </div>
+        {messageCount != null && (
+          <div className="flex items-center gap-1.5">
+            <MessageSquare className="size-3 shrink-0" />
+            <span>
+              {t("messageCount", {
+                count: messageCount,
+                displayCount: formatNumber(messageCount),
+              })}
+            </span>
+          </div>
+        )}
 
         {personaName && (
           <div className="flex items-center gap-1.5">
