@@ -1,4 +1,9 @@
 import type { ProviderCatalogEntry } from "@/shared/types/providers";
+import {
+  AGENT_PROVIDER_ALIAS_MAP,
+  AGENT_PROVIDER_FUZZY_MATCHERS,
+  normalizeProviderKey,
+} from "./providerCatalogAliases";
 
 export const PROVIDER_CATALOG: ProviderCatalogEntry[] = [
   // ── Agent providers ──────────────────────────────────────────────
@@ -431,42 +436,6 @@ export function getAgentProviders(): ProviderCatalogEntry[] {
 export function getModelProviders(): ProviderCatalogEntry[] {
   return PROVIDER_CATALOG.filter((p) => p.category === "model");
 }
-
-function normalizeProviderKey(value: string): string {
-  return value
-    .toLowerCase()
-    .split(/[-_\s]+/)
-    .filter(Boolean)
-    .join("_");
-}
-
-const AGENT_PROVIDER_ALIAS_MAP: Record<string, string> = {
-  goose: "goose",
-  claude_acp: "claude-acp",
-  claude_code: "claude-acp",
-  claude: "claude-acp",
-  codex_acp: "codex-acp",
-  codex_cli: "codex-acp",
-  codex: "codex-acp",
-  copilot_acp: "copilot-acp",
-  github_copilot: "copilot-acp",
-  github_copilot_cli: "copilot-acp",
-  cursor_agent: "cursor-agent",
-  cursor: "cursor-agent",
-  amp_acp: "amp-acp",
-  amp: "amp-acp",
-  pi_acp: "pi-acp",
-  pi: "pi-acp",
-};
-
-const AGENT_PROVIDER_FUZZY_MATCHERS: Array<[string, string]> = [
-  ["goose", "goose"],
-  ["claude", "claude-acp"],
-  ["codex", "codex-acp"],
-  ["cursor", "cursor-agent"],
-  ["copilot", "copilot-acp"],
-  ["amp", "amp-acp"],
-];
 
 export function resolveAgentProviderCatalogIdStrict(
   providerId: string,

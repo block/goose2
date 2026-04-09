@@ -53,7 +53,8 @@ async function checkAgentProviderReady(providerId: string): Promise<boolean> {
 const INITIAL_READY_AGENTS = new Set<string>(["goose"]);
 
 export function useAgentProviderStatus(): UseAgentProviderStatusReturn {
-  const [readyAgentIds, setReadyAgentIds] = useState<Set<string>>(INITIAL_READY_AGENTS);
+  const [readyAgentIds, setReadyAgentIds] =
+    useState<Set<string>>(INITIAL_READY_AGENTS);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

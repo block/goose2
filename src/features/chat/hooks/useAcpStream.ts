@@ -479,6 +479,9 @@ export function useAcpStream(enabled: boolean): void {
         const sessionProvider = session?.providerId;
         if (sessionProvider) {
           if (!providerId || providerId !== sessionProvider) {
+            console.debug(
+              `[acp:model_state] Ignoring event: provider mismatch (event: ${providerId ?? "none"}, session: ${sessionProvider})`,
+            );
             return;
           }
         }

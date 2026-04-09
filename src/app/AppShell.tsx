@@ -1,13 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Sidebar } from "@/features/sidebar/ui/Sidebar";
 import { StatusBar } from "@/features/status/ui/StatusBar";
-import { HomeScreen } from "@/features/home/ui/HomeScreen";
-import { ChatView } from "@/features/chat/ui/ChatView";
 import type { PastedImage } from "@/shared/types/messages";
-import { SkillsView } from "@/features/skills/ui/SkillsView";
-import { AgentsView } from "@/features/agents/ui/AgentsView";
-import { ProjectsView } from "@/features/projects/ui/ProjectsView";
-import { SessionHistoryView } from "@/features/sessions/ui/SessionHistoryView";
 import { CreateProjectDialog } from "@/features/projects/ui/CreateProjectDialog";
 import { archiveProject } from "@/features/projects/api/projects";
 import type { ProjectInfo } from "@/features/projects/api/projects";
@@ -22,6 +16,7 @@ import { useProjectStore } from "@/features/projects/stores/projectStore";
 import { findExistingDraft } from "@/features/chat/lib/newChat";
 import { DEFAULT_CHAT_TITLE } from "@/features/chat/lib/sessionTitle";
 import { useAppStartup } from "./hooks/useAppStartup";
+import { AppShellContent } from "./ui/AppShellContent";
 
 export type AppView =
   | "home"
@@ -443,49 +438,12 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   }, [clearActiveSession]);
 
   const activeSessionPersonaId = activeSession?.personaId;
-
-  const renderContent = () => {
-    switch (activeView) {
-      case "skills":
-        return <SkillsView />;
-      case "agents":
-        return <AgentsView />;
-      case "projects":
-        return <ProjectsView onStartChat={handleStartChatFromProject} />;
-      case "session-history":
-        return (
-          <SessionHistoryView
-            onSelectSession={handleSelectSession}
-            onRenameChat={handleRenameChat}
-            onArchiveChat={handleArchiveChat}
-          />
-        );
-      case "chat":
-      case "home":
-        return activeSession ? (
-          <ChatView
-            key={activeSession.id}
-            sessionId={activeSession.id}
-            initialProvider={homeSelectedProvider}
-            initialPersonaId={activeSessionPersonaId ?? homeSelectedPersonaId}
-            initialMessage={pendingInitialMessage}
-            initialImages={pendingInitialImages}
-            onCreateProject={openCreateProjectDialog}
-            onInitialMessageConsumed={() => {
-              setPendingInitialMessage(undefined);
-              setPendingInitialImages(undefined);
-              setHomeSelectedProvider(undefined);
-              setHomeSelectedPersonaId(undefined);
-            }}
-          />
-        ) : (
-          <HomeScreen
-            onStartChat={handleHomeStartChat}
-            onCreateProject={openCreateProjectDialog}
-          />
-        );
-    }
-  };
+  const handleInitialMessageConsumed = useCallback(() => {
+    setPendingInitialMessage(undefined);
+    setPendingInitialImages(undefined);
+    setHomeSelectedProvider(undefined);
+    setHomeSelectedPersonaId(undefined);
+  }, []);
 
   const editingProjectProp = useMemo(
     () =>
@@ -553,7 +511,24 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         </div>
 
         <main className="min-h-0 min-w-0 flex-1">
-          {children ?? renderContent()}
+          {children ?? (
+            <AppShellContent
+              activeView={activeView}
+              activeSession={activeSession}
+              activeSessionPersonaId={activeSessionPersonaId}
+              homeSelectedProvider={homeSelectedProvider}
+              homeSelectedPersonaId={homeSelectedPersonaId}
+              pendingInitialMessage={pendingInitialMessage}
+              pendingInitialImages={pendingInitialImages}
+              onArchiveChat={handleArchiveChat}
+              onCreateProject={openCreateProjectDialog}
+              onHomeStartChat={handleHomeStartChat}
+              onInitialMessageConsumed={handleInitialMessageConsumed}
+              onRenameChat={handleRenameChat}
+              onSelectSession={handleSelectSession}
+              onStartChatFromProject={handleStartChatFromProject}
+            />
+          )}
         </main>
       </div>
 
