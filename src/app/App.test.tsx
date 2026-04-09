@@ -2,6 +2,7 @@ import { render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "./App";
+import { ThemeProvider } from "@/shared/theme/ThemeProvider";
 
 vi.mock("@/app/AppShell", () => ({
   AppShell: () => <div data-testid="app-shell" />,
@@ -19,7 +20,11 @@ describe("App", () => {
       window.DragEvent ?? class DragEvent extends Event {},
     );
 
-    render(<App />);
+    render(
+      <ThemeProvider>
+        <App />
+      </ThemeProvider>,
+    );
 
     const dragOverEvent = new DragEvent("dragover", {
       bubbles: true,
