@@ -237,7 +237,7 @@ export function AgentsView() {
               />
               <Button
                 type="button"
-                variant="outline"
+                variant="outline-flat"
                 size="sm"
                 onClick={() => importInputRef.current?.click()}
               >
@@ -246,7 +246,7 @@ export function AgentsView() {
               </Button>
               <Button
                 type="button"
-                variant="outline"
+                variant="outline-flat"
                 size="sm"
                 onClick={() => openPersonaEditor()}
               >
