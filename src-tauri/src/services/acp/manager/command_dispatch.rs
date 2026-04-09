@@ -116,6 +116,7 @@ pub(super) async fn dispatch_commands(
                 writer,
                 prompt,
                 images,
+                files,
                 response,
             } => {
                 let connection = Arc::clone(&connection);
@@ -134,6 +135,7 @@ pub(super) async fn dispatch_commands(
                         writer,
                         prompt,
                         images,
+                        files,
                     )
                     .await;
                     let _ = response.send(result);

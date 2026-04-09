@@ -4,7 +4,7 @@ use std::sync::Arc;
 use acp_client::MessageWriter;
 use agent_client_protocol::{
     Agent, ClientSideConnection, ContentBlock as AcpContentBlock, ImageContent, PromptRequest,
-    TextContent,
+    ResourceLink, TextContent,
 };
 use tokio::sync::Mutex;
 
@@ -34,6 +34,7 @@ pub(in super::super) async fn send_prompt_inner(
     writer: Arc<dyn MessageWriter>,
     prompt: String,
     images: Vec<(String, String)>,
+    files: Vec<String>,
 ) -> Result<(), String> {
     let provider_id_for_writer = provider_id.clone();
     let goose_session_id = match prepare_session_inner(
@@ -83,6 +84,15 @@ pub(in super::super) async fn send_prompt_inner(
             data.as_str(),
             mime_type.as_str(),
         )));
+    }
+    for file_path in &files {
+        let path = std::path::Path::new(file_path);
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| file_path.clone());
+        let uri = format!("file://{file_path}");
+        content_blocks.push(AcpContentBlock::ResourceLink(ResourceLink::new(name, uri)));
     }
 
     let result = connection

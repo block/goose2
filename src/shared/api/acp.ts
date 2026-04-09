@@ -12,6 +12,8 @@ export interface AcpSendMessageOptions {
   personaName?: string;
   /** Image attachments as [base64Data, mimeType] pairs. */
   images?: [string, string][];
+  /** Non-image file attachments as absolute paths. */
+  files?: string[];
 }
 
 export interface AcpPrepareSessionOptions {
@@ -31,7 +33,8 @@ export async function acpSendMessage(
   prompt: string,
   options: AcpSendMessageOptions = {},
 ): Promise<void> {
-  const { systemPrompt, workingDir, personaId, personaName, images } = options;
+  const { systemPrompt, workingDir, personaId, personaName, images, files } =
+    options;
   return invoke("acp_send_message", {
     sessionId,
     providerId,
@@ -41,6 +44,7 @@ export async function acpSendMessage(
     personaId: personaId ?? null,
     personaName: personaName ?? null,
     images: images ?? [],
+    files: files ?? [],
   });
 }
 

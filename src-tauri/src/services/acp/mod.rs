@@ -75,6 +75,7 @@ impl AcpService {
         persona_id: Option<String>,
         persona_name: Option<String>,
         images: Vec<(String, String)>,
+        files: Vec<String>,
     ) -> Result<(), String> {
         let registry_key = make_composite_key(&session_id, persona_id.as_deref());
         let cancel_token = registry.register(&registry_key, &provider_id);
@@ -122,6 +123,7 @@ impl AcpService {
                 writer,
                 effective_prompt,
                 images,
+                files,
             )
             .await;
 

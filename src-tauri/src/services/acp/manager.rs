@@ -44,6 +44,7 @@ enum ManagerCommand {
         writer: Arc<dyn MessageWriter>,
         prompt: String,
         images: Vec<(String, String)>,
+        files: Vec<String>,
         response: oneshot::Sender<Result<(), String>>,
     },
     CancelSession {
@@ -190,6 +191,7 @@ impl GooseAcpManager {
         writer: Arc<dyn MessageWriter>,
         prompt: String,
         images: Vec<(String, String)>,
+        files: Vec<String>,
     ) -> Result<(), String> {
         let (response_tx, response_rx) = oneshot::channel();
         self.command_tx
@@ -202,6 +204,7 @@ impl GooseAcpManager {
                 writer,
                 prompt,
                 images,
+                files,
                 response: response_tx,
             })
             .map_err(|_| "Goose ACP manager is unavailable".to_string())?;
