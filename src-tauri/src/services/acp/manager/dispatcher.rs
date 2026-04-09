@@ -14,20 +14,9 @@ use tauri::Emitter;
 use tokio::sync::Mutex;
 
 use crate::services::acp::payloads::{
-    DonePayload, MessageCreatedPayload, ModelOption, ModelStatePayload, SessionInfoPayload,
-    TextPayload, ToolCallPayload, ToolResultPayload, ToolTitlePayload,
+    model_options_from_state, DonePayload, MessageCreatedPayload, ModelOption, ModelStatePayload,
+    SessionInfoPayload, TextPayload, ToolCallPayload, ToolResultPayload, ToolTitlePayload,
 };
-
-fn model_options_from_state(state: &SessionModelState) -> Vec<ModelOption> {
-    state
-        .available_models
-        .iter()
-        .map(|model| ModelOption {
-            id: model.model_id.to_string(),
-            name: model.name.clone(),
-        })
-        .collect()
-}
 
 fn model_options_from_select_options(options: &SessionConfigSelectOptions) -> Vec<ModelOption> {
     match options {

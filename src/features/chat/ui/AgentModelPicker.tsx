@@ -1,5 +1,9 @@
-import { useMemo, useState, type ReactNode } from "react";
-import { Check, ChevronDown, ChevronRight } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  IconCheck,
+  IconChevronDown,
+  IconChevronRight,
+} from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import type { AcpProvider } from "@/shared/api/acp";
 import { cn } from "@/shared/lib/cn";
@@ -140,6 +144,15 @@ export function AgentModelPicker({
     ? (currentModelName ?? t("toolbar.loading"))
     : null;
 
+  useEffect(() => {
+    if (open) {
+      const selected = groupedModels.find((g) => g.hasSelectedModel);
+      if (selected) {
+        setExpandedGroups(new Set([selected.provider]));
+      }
+    }
+  }, [open, groupedModels]);
+
   const toggleGroup = (provider: string) => {
     setExpandedGroups((prev) => {
       const next = new Set(prev);
@@ -153,7 +166,7 @@ export function AgentModelPicker({
   };
 
   const isGroupExpanded = (group: ModelGroup) => {
-    return expandedGroups.has(group.provider) || group.hasSelectedModel;
+    return expandedGroups.has(group.provider);
   };
 
   const handleAgentSelect = (agentId: string) => {
@@ -177,17 +190,22 @@ export function AgentModelPicker({
           aria-label={t("toolbar.chooseAgentModel")}
           disabled={loading}
           leftIcon={getProviderIcon(selectedAgentId, "size-3.5")}
-          rightIcon={<ChevronDown className="opacity-50" />}
+          rightIcon={<IconChevronDown className="opacity-50" />}
           className="min-w-0"
         >
           <span className={cn("truncate", isCompact ? "max-w-32" : "max-w-56")}>
             {loading
               ? t("toolbar.loading")
-              : (triggerModelLabel ?? selectedAgentLabel)}
+              : triggerModelLabel
+                ? `${selectedAgentLabel} · ${triggerModelLabel}`
+                : selectedAgentLabel}
           </span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-auto max-h-[min(24rem,50vh)] p-0">
+      <PopoverContent
+        align="start"
+        className="w-auto max-h-[min(24rem,50vh)] p-0"
+      >
         <div className="flex max-h-[inherit]">
           <div className="flex shrink-0 flex-col p-1">
             <div className="shrink-0 px-2 py-1.5 text-sm font-semibold">
@@ -211,7 +229,7 @@ export function AgentModelPicker({
                         {agent.label}
                       </span>
                       {isSelected ? (
-                        <Check className="size-4 shrink-0 text-muted-foreground" />
+                        <IconCheck className="size-4 shrink-0 text-muted-foreground" />
                       ) : null}
                     </PickerItem>
                   );
@@ -240,7 +258,7 @@ export function AgentModelPicker({
                             "hover:bg-muted focus:bg-muted focus:outline-none",
                           )}
                         >
-                          <ChevronRight
+                          <IconChevronRight
                             className={cn(
                               "size-3.5 shrink-0 text-muted-foreground transition-transform",
                               expanded && "rotate-90",
@@ -267,11 +285,29 @@ export function AgentModelPicker({
                                     {modelName}
                                   </div>
                                   {model.id === currentModelId ? (
-                                    <Check className="size-4 shrink-0 text-muted-foreground" />
+                                    <IconCheck className="size-4 shrink-0 text-muted-foreground" />
                                   ) : null}
                                 </PickerItem>
                               );
                             })}
+                          </div>
+                        ) : group.hasSelectedModel ? (
+                          <div className="pb-1">
+                            {group.models
+                              .filter((m) => m.id === currentModelId)
+                              .map((model) => (
+                                <PickerItem
+                                  key={model.id}
+                                  onClick={() => handleModelSelect(model.id)}
+                                  selected
+                                  className="justify-between pl-6"
+                                >
+                                  <div className="min-w-0 flex-1 truncate">
+                                    {getModelDisplayName(model)}
+                                  </div>
+                                  <IconCheck className="size-4 shrink-0 text-muted-foreground" />
+                                </PickerItem>
+                              ))}
                           </div>
                         ) : null}
                       </div>

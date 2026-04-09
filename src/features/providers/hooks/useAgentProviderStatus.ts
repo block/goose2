@@ -39,7 +39,9 @@ async function checkAgentProviderReady(providerId: string): Promise<boolean> {
     }
 
     if (provider.authCommand) {
-      return localStorage.getItem(`agent-provider-auth:${provider.id}`) === "true";
+      return (
+        localStorage.getItem(`agent-provider-auth:${provider.id}`) === "true"
+      );
     }
 
     return true;
@@ -48,29 +50,20 @@ async function checkAgentProviderReady(providerId: string): Promise<boolean> {
   }
 }
 
-const EMPTY_SET = new Set<string>(["goose"]);
+const INITIAL_READY_AGENTS = new Set<string>(["goose"]);
 
 export function useAgentProviderStatus(): UseAgentProviderStatusReturn {
-  const [readyAgentIds, setReadyAgentIds] = useState<Set<string>>(EMPTY_SET);
+  const [readyAgentIds, setReadyAgentIds] = useState<Set<string>>(INITIAL_READY_AGENTS);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     const agentIds = getAgentProviders().map((provider) => provider.id);
     let remaining = agentIds.length;
-    const t0 = performance.now();
-    console.log(
-      `[model-debug] useAgentProviderStatus checking ${agentIds.length} agents:`,
-      agentIds,
-    );
 
     for (const agentId of agentIds) {
-      const agentT0 = performance.now();
       checkAgentProviderReady(agentId)
         .then((isReady) => {
-          console.log(
-            `[model-debug] agent ${agentId} ready=${isReady} in ${(performance.now() - agentT0).toFixed(0)}ms`,
-          );
           if (!cancelled && isReady) {
             setReadyAgentIds((current) => {
               if (current.has(agentId)) {
@@ -86,9 +79,6 @@ export function useAgentProviderStatus(): UseAgentProviderStatusReturn {
         .finally(() => {
           remaining -= 1;
           if (!cancelled && remaining === 0) {
-            console.log(
-              `[model-debug] useAgentProviderStatus ALL DONE in ${(performance.now() - t0).toFixed(0)}ms`,
-            );
             setLoading(false);
           }
         });
@@ -122,11 +112,4 @@ export function useAgentProviderStatus(): UseAgentProviderStatusReturn {
     loading,
     refresh,
   };
-}
-
-export function isAgentProviderReady(providerId: string): boolean {
-  const entry = getCatalogEntry(providerId);
-  if (!entry || entry.category !== "agent") return false;
-  if (entry.setupMethod === "none") return true;
-  return false;
 }

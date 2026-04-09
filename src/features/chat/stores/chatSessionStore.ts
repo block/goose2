@@ -382,9 +382,6 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     ) {
       return;
     }
-    console.log(
-      `[model-debug] cacheModelsForProvider WRITE ${providerId}: ${models.length} models [${models.map((m) => m.id).join(", ")}]`,
-    );
     set((state) => {
       const updated = {
         ...state.modelCacheByProvider,

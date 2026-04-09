@@ -464,10 +464,13 @@ export function useAcpStream(enabled: boolean): void {
     unlisteners.push(
       listen<AcpModelStatePayload>("acp:model_state", (event) => {
         if (!active) return;
-        const { sessionId, providerId, currentModelId, currentModelName, availableModels } = event.payload;
-        console.log(
-          `[model-debug] acp:model_state received session=${sessionId.slice(0, 8)} provider=${providerId ?? "?"} currentModel=${currentModelId} models=[${availableModels.map((m) => m.id).join(", ")}]`,
-        );
+        const {
+          sessionId,
+          providerId,
+          currentModelId,
+          currentModelName,
+          availableModels,
+        } = event.payload;
         const sessionStore = useChatSessionStore.getState();
         if (providerId) {
           sessionStore.cacheModelsForProvider(providerId, availableModels);
@@ -476,9 +479,6 @@ export function useAcpStream(enabled: boolean): void {
         const sessionProvider = session?.providerId;
         if (sessionProvider) {
           if (!providerId || providerId !== sessionProvider) {
-            console.log(
-              `[model-debug] acp:model_state SKIPPED session update — provider mismatch (event=${providerId ?? "null"} session=${sessionProvider})`,
-            );
             return;
           }
         }

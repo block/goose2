@@ -1,3 +1,4 @@
+use acp_client::SessionModelState;
 use serde::Serialize;
 
 /// Payload for the `acp:message_created` event.
@@ -78,4 +79,15 @@ pub(crate) struct ModelStatePayload {
     pub current_model_id: String,
     pub current_model_name: Option<String>,
     pub available_models: Vec<ModelOption>,
+}
+
+pub(crate) fn model_options_from_state(state: &SessionModelState) -> Vec<ModelOption> {
+    state
+        .available_models
+        .iter()
+        .map(|model| ModelOption {
+            id: model.model_id.to_string(),
+            name: model.name.clone(),
+        })
+        .collect()
 }

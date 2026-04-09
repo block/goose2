@@ -4,20 +4,9 @@ use tauri::Emitter;
 use acp_client::{MessageWriter, SessionInfoUpdate, SessionModelState};
 
 use super::payloads::{
-    DonePayload, MessageCreatedPayload, ModelOption, ModelStatePayload, SessionInfoPayload,
-    TextPayload, ToolCallPayload, ToolResultPayload, ToolTitlePayload,
+    model_options_from_state, DonePayload, MessageCreatedPayload, ModelStatePayload,
+    SessionInfoPayload, TextPayload, ToolCallPayload, ToolResultPayload, ToolTitlePayload,
 };
-
-fn model_options_from_state(state: &SessionModelState) -> Vec<ModelOption> {
-    state
-        .available_models
-        .iter()
-        .map(|model| ModelOption {
-            id: model.model_id.to_string(),
-            name: model.name.clone(),
-        })
-        .collect()
-}
 
 /// A [`MessageWriter`] implementation that streams ACP output to the frontend
 /// via Tauri events. No local persistence — the goose binary is the sole

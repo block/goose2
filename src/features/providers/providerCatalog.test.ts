@@ -18,16 +18,18 @@ describe("resolveAgentProviderCatalogId", () => {
   });
 
   it("does not treat model providers as agents", () => {
-    expect(resolveAgentProviderCatalogId("databricks", "Databricks")).toBeNull();
+    expect(
+      resolveAgentProviderCatalogId("databricks", "Databricks"),
+    ).toBeNull();
   });
 
   it("matches fuzzy agent labels with extra suffixes", () => {
     expect(
       resolveAgentProviderCatalogId("custom-id", "Claude Code (ACP)"),
     ).toBe("claude-acp");
-    expect(
-      resolveAgentProviderCatalogId("custom-id", "Codex CLI (ACP)"),
-    ).toBe("codex-acp");
+    expect(resolveAgentProviderCatalogId("custom-id", "Codex CLI (ACP)")).toBe(
+      "codex-acp",
+    );
     expect(
       resolveAgentProviderCatalogId("custom-id", "Cursor Agent Stable"),
     ).toBe("cursor-agent");
