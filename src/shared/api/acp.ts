@@ -21,7 +21,21 @@ export interface AcpPrepareSessionOptions {
 
 /** Discover ACP providers installed on the system. */
 export async function discoverAcpProviders(): Promise<AcpProvider[]> {
-  return invoke("discover_acp_providers");
+  const t0 = performance.now();
+  console.log("[model-debug] invoke discover_acp_providers");
+  try {
+    const result = await invoke<AcpProvider[]>("discover_acp_providers");
+    console.log(
+      `[model-debug] invoke discover_acp_providers DONE in ${(performance.now() - t0).toFixed(0)}ms — ${result.length} providers`,
+    );
+    return result;
+  } catch (err) {
+    console.error(
+      `[model-debug] invoke discover_acp_providers ERROR in ${(performance.now() - t0).toFixed(0)}ms:`,
+      err,
+    );
+    throw err;
+  }
 }
 
 /** Send a message to an ACP agent. Response streams via Tauri events. */
@@ -51,22 +65,54 @@ export async function acpPrepareSession(
   options: AcpPrepareSessionOptions = {},
 ): Promise<void> {
   const { workingDir, personaId } = options;
-  return invoke("acp_prepare_session", {
-    sessionId,
-    providerId,
-    workingDir: workingDir ?? null,
-    personaId: personaId ?? null,
-  });
+  const t0 = performance.now();
+  console.log(
+    `[model-debug] invoke acp_prepare_session session=${sessionId.slice(0, 8)} provider=${providerId}`,
+  );
+  try {
+    const result = await invoke("acp_prepare_session", {
+      sessionId,
+      providerId,
+      workingDir: workingDir ?? null,
+      personaId: personaId ?? null,
+    });
+    console.log(
+      `[model-debug] invoke acp_prepare_session DONE session=${sessionId.slice(0, 8)} provider=${providerId} in ${(performance.now() - t0).toFixed(0)}ms`,
+    );
+    return result;
+  } catch (err) {
+    console.error(
+      `[model-debug] invoke acp_prepare_session ERROR session=${sessionId.slice(0, 8)} provider=${providerId} in ${(performance.now() - t0).toFixed(0)}ms:`,
+      err,
+    );
+    throw err;
+  }
 }
 
 export async function acpSetModel(
   sessionId: string,
   modelId: string,
 ): Promise<void> {
-  return invoke("acp_set_model", {
-    sessionId,
-    modelId,
-  });
+  const t0 = performance.now();
+  console.log(
+    `[model-debug] invoke acp_set_model session=${sessionId.slice(0, 8)} model=${modelId}`,
+  );
+  try {
+    const result = await invoke("acp_set_model", {
+      sessionId,
+      modelId,
+    });
+    console.log(
+      `[model-debug] invoke acp_set_model DONE session=${sessionId.slice(0, 8)} model=${modelId} in ${(performance.now() - t0).toFixed(0)}ms`,
+    );
+    return result;
+  } catch (err) {
+    console.error(
+      `[model-debug] invoke acp_set_model ERROR session=${sessionId.slice(0, 8)} model=${modelId} in ${(performance.now() - t0).toFixed(0)}ms:`,
+      err,
+    );
+    throw err;
+  }
 }
 
 /** Session info returned by the goose binary's list_sessions. */

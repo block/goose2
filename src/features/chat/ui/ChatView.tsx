@@ -196,18 +196,17 @@ export function ChatView({
       if (providerId === selectedProvider) {
         return;
       }
-      setGlobalSelectedProvider(providerId);
+      console.log(
+        `[model-debug] handleProviderChange ${selectedProvider} → ${providerId}`,
+      );
       const sessionStore = useChatSessionStore.getState();
       const cached = sessionStore.getCachedModels(providerId);
-      sessionStore.setSessionModels(activeSessionId, cached);
-      sessionStore.updateSession(activeSessionId, {
-        providerId,
-        modelId: cached.length > 0 ? cached[0].id : undefined,
-        modelName:
-          cached.length > 0
-            ? (cached[0].displayName ?? cached[0].name)
-            : undefined,
-      });
+      console.log(
+        `[model-debug] cache for ${providerId}: ${cached.length} models`,
+        cached.map((m) => m.id),
+      );
+      sessionStore.switchSessionProvider(activeSessionId, providerId, cached);
+      setGlobalSelectedProvider(providerId);
     },
     [activeSessionId, selectedProvider, setGlobalSelectedProvider],
   );
@@ -225,9 +224,20 @@ export function ChatView({
       if (!activeSessionId || modelId === session?.modelId) {
         return;
       }
-
+      console.log(
+        `[model-debug] handleModelChange session=${activeSessionId.slice(0, 8)} model=${modelId}`,
+      );
+      const models = useChatSessionStore.getState().getSessionModels(activeSessionId);
+      const selected = models.find((m) => m.id === modelId);
+      useChatSessionStore.getState().updateSession(activeSessionId, {
+        modelId,
+        modelName: selected?.displayName ?? selected?.name ?? modelId,
+      });
       acpSetModel(activeSessionId, modelId).catch((error) => {
-        console.error("Failed to update ACP model:", error);
+        console.error(
+          `[model-debug] acpSetModel FAILED model=${modelId}:`,
+          error,
+        );
       });
     },
     [activeSessionId, session?.modelId],
@@ -284,7 +294,6 @@ export function ChatView({
   const personaInfo = selectedPersona
     ? { id: selectedPersona.id, name: selectedPersona.displayName }
     : undefined;
-
   const {
     messages,
     chatState,
@@ -309,12 +318,36 @@ export function ChatView({
     }
 
     let cancelled = false;
+    const sessionStore = useChatSessionStore.getState();
+    const currentSession = sessionStore.getSession(activeSessionId);
+    if (currentSession && currentSession.providerId !== selectedProvider) {
+      sessionStore.updateSession(activeSessionId, {
+        providerId: selectedProvider,
+      });
+    }
+    const t0 = performance.now();
+    console.log(
+      `[model-debug] acpPrepareSession START session=${activeSessionId.slice(0, 8)} provider=${selectedProvider}`,
+    );
     acpPrepareSession(activeSessionId, selectedProvider, {
       workingDir: effectiveWorkingDir,
       personaId: selectedPersonaId ?? undefined,
-    }).catch((error) => {
-      if (!cancelled) console.error("Failed to prepare ACP session:", error);
-    });
+    })
+      .then(() => {
+        if (!cancelled) {
+          console.log(
+            `[model-debug] acpPrepareSession DONE session=${activeSessionId.slice(0, 8)} provider=${selectedProvider} in ${(performance.now() - t0).toFixed(0)}ms`,
+          );
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          console.error(
+            `[model-debug] acpPrepareSession FAILED session=${activeSessionId.slice(0, 8)} provider=${selectedProvider} in ${(performance.now() - t0).toFixed(0)}ms:`,
+            error,
+          );
+        }
+      });
     return () => {
       cancelled = true;
     };

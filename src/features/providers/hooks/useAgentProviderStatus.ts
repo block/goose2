@@ -58,10 +58,19 @@ export function useAgentProviderStatus(): UseAgentProviderStatusReturn {
     let cancelled = false;
     const agentIds = getAgentProviders().map((provider) => provider.id);
     let remaining = agentIds.length;
+    const t0 = performance.now();
+    console.log(
+      `[model-debug] useAgentProviderStatus checking ${agentIds.length} agents:`,
+      agentIds,
+    );
 
     for (const agentId of agentIds) {
+      const agentT0 = performance.now();
       checkAgentProviderReady(agentId)
         .then((isReady) => {
+          console.log(
+            `[model-debug] agent ${agentId} ready=${isReady} in ${(performance.now() - agentT0).toFixed(0)}ms`,
+          );
           if (!cancelled && isReady) {
             setReadyAgentIds((current) => {
               if (current.has(agentId)) {
@@ -77,6 +86,9 @@ export function useAgentProviderStatus(): UseAgentProviderStatusReturn {
         .finally(() => {
           remaining -= 1;
           if (!cancelled && remaining === 0) {
+            console.log(
+              `[model-debug] useAgentProviderStatus ALL DONE in ${(performance.now() - t0).toFixed(0)}ms`,
+            );
             setLoading(false);
           }
         });

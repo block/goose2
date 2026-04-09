@@ -183,15 +183,13 @@ export function AgentModelPicker({
           <span className={cn("truncate", isCompact ? "max-w-32" : "max-w-56")}>
             {loading
               ? t("toolbar.loading")
-              : triggerModelLabel
-                ? `${selectedAgentLabel} · ${triggerModelLabel}`
-                : selectedAgentLabel}
+              : (triggerModelLabel ?? selectedAgentLabel)}
           </span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="max-h-[min(24rem,50vh)] p-0">
+      <PopoverContent align="start" className="w-auto max-h-[min(24rem,50vh)] p-0">
         <div className="flex max-h-[inherit]">
-          <div className="flex w-44 flex-col p-1">
+          <div className="flex shrink-0 flex-col p-1">
             <div className="shrink-0 px-2 py-1.5 text-sm font-semibold">
               {t("toolbar.agent")}
             </div>
@@ -222,7 +220,7 @@ export function AgentModelPicker({
             </ScrollArea>
           </div>
           <Separator orientation="vertical" className="self-stretch" />
-          <div className="flex w-64 min-w-0 flex-col p-1">
+          <div className="flex shrink-0 flex-col p-1">
             <div className="shrink-0 px-2 py-1.5 text-sm font-semibold">
               {t("toolbar.model")}
             </div>

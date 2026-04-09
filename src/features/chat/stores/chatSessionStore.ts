@@ -61,6 +61,11 @@ interface ChatSessionStoreActions {
 
   setContextPanelOpen: (sessionId: string, open: boolean) => void;
   setSessionModels: (sessionId: string, models: ModelOption[]) => void;
+  switchSessionProvider: (
+    sessionId: string,
+    providerId: string,
+    models: ModelOption[],
+  ) => void;
   cacheModelsForProvider: (providerId: string, models: ModelOption[]) => void;
   getCachedModels: (providerId: string) => ModelOption[];
 
@@ -74,6 +79,7 @@ interface ChatSessionStoreActions {
 export type ChatSessionStore = ChatSessionStoreState & ChatSessionStoreActions;
 
 const SESSION_CACHE_STORAGE_KEY = "goose:chat-sessions";
+const MODEL_CACHE_STORAGE_KEY = "goose:model-cache";
 
 function loadCachedSessions(): ChatSession[] {
   if (typeof window === "undefined") return [];
@@ -117,6 +123,29 @@ function persistSessions(sessions: ChatSession[]): void {
   }
 }
 
+function loadModelCache(): Record<string, ModelOption[]> {
+  if (typeof window === "undefined") return {};
+  try {
+    const stored = window.localStorage.getItem(MODEL_CACHE_STORAGE_KEY);
+    if (!stored) return {};
+    const parsed = JSON.parse(stored);
+    return typeof parsed === "object" && parsed !== null
+      ? (parsed as Record<string, ModelOption[]>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function persistModelCache(cache: Record<string, ModelOption[]>): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(MODEL_CACHE_STORAGE_KEY, JSON.stringify(cache));
+  } catch {
+    // localStorage may be unavailable
+  }
+}
+
 /** Map a backend Session to the frontend ChatSession shape. */
 export function sessionToChatSession(session: Session): ChatSession {
   return {
@@ -143,7 +172,7 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
   isLoading: false,
   contextPanelOpenBySession: {},
   modelsBySession: {},
-  modelCacheByProvider: {},
+  modelCacheByProvider: loadModelCache(),
 
   // Session lifecycle — local-only for now.
   // The goose binary creates the real ACP session on first prompt
@@ -319,14 +348,51 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     }));
   },
 
+  switchSessionProvider: (sessionId, providerId, models) => {
+    set((state) => ({
+      modelsBySession: {
+        ...state.modelsBySession,
+        [sessionId]: models,
+      },
+      sessions: state.sessions.map((s) =>
+        s.id === sessionId
+          ? {
+              ...s,
+              providerId,
+              modelId: models.length > 0 ? models[0].id : undefined,
+              modelName:
+                models.length > 0
+                  ? (models[0].displayName ?? models[0].name)
+                  : undefined,
+              updatedAt: s.updatedAt,
+            }
+          : s,
+      ),
+    }));
+    persistSessions(get().sessions);
+  },
+
   cacheModelsForProvider: (providerId, models) => {
     if (models.length === 0) return;
-    set((state) => ({
-      modelCacheByProvider: {
+    const existing = get().modelCacheByProvider[providerId];
+    if (
+      existing &&
+      existing.length === models.length &&
+      existing.every((m, i) => m.id === models[i].id)
+    ) {
+      return;
+    }
+    console.log(
+      `[model-debug] cacheModelsForProvider WRITE ${providerId}: ${models.length} models [${models.map((m) => m.id).join(", ")}]`,
+    );
+    set((state) => {
+      const updated = {
         ...state.modelCacheByProvider,
         [providerId]: models,
-      },
-    }));
+      };
+      persistModelCache(updated);
+      return { modelCacheByProvider: updated };
+    });
   },
 
   getCachedModels: (providerId) =>

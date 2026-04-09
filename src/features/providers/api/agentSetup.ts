@@ -9,11 +9,21 @@ interface AgentSetupOutput {
 export async function checkAgentInstalled(
   providerId: string,
 ): Promise<boolean> {
-  return invoke("check_agent_installed", { providerId });
+  const t0 = performance.now();
+  const result = await invoke<boolean>("check_agent_installed", { providerId });
+  console.log(
+    `[model-debug] checkAgentInstalled(${providerId}) = ${result} in ${(performance.now() - t0).toFixed(0)}ms`,
+  );
+  return result;
 }
 
 export async function checkAgentAuth(providerId: string): Promise<boolean> {
-  return invoke("check_agent_auth", { providerId });
+  const t0 = performance.now();
+  const result = await invoke<boolean>("check_agent_auth", { providerId });
+  console.log(
+    `[model-debug] checkAgentAuth(${providerId}) = ${result} in ${(performance.now() - t0).toFixed(0)}ms`,
+  );
+  return result;
 }
 
 export async function installAgent(providerId: string): Promise<void> {

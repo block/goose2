@@ -465,13 +465,22 @@ export function useAcpStream(enabled: boolean): void {
       listen<AcpModelStatePayload>("acp:model_state", (event) => {
         if (!active) return;
         const { sessionId, providerId, currentModelId, currentModelName, availableModels } = event.payload;
+        console.log(
+          `[model-debug] acp:model_state received session=${sessionId.slice(0, 8)} provider=${providerId ?? "?"} currentModel=${currentModelId} models=[${availableModels.map((m) => m.id).join(", ")}]`,
+        );
         const sessionStore = useChatSessionStore.getState();
-        const session = sessionStore.getSession(sessionId);
-        if (providerId && session?.providerId && providerId !== session.providerId) {
-          return;
-        }
         if (providerId) {
           sessionStore.cacheModelsForProvider(providerId, availableModels);
+        }
+        const session = sessionStore.getSession(sessionId);
+        const sessionProvider = session?.providerId;
+        if (sessionProvider) {
+          if (!providerId || providerId !== sessionProvider) {
+            console.log(
+              `[model-debug] acp:model_state SKIPPED session update — provider mismatch (event=${providerId ?? "null"} session=${sessionProvider})`,
+            );
+            return;
+          }
         }
         const modelName = currentModelName ?? currentModelId;
         sessionStore.setSessionModels(sessionId, availableModels);
