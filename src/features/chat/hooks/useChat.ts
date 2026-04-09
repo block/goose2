@@ -165,7 +165,7 @@ export function useChat(
       const sessionStore = useChatSessionStore.getState();
       const session = sessionStore.getSession(sessionId);
       const wasDraft = !!session?.draft;
-      const draftModelId = session?.modelId;
+      const selectedModelId = session?.modelId;
 
       if (wasDraft) {
         sessionStore.promoteDraft(sessionId);
@@ -203,12 +203,14 @@ export function useChat(
         const systemPrompt =
           systemPromptOverride ?? agent?.systemPrompt ?? undefined;
 
-        if (wasDraft && draftModelId) {
+        if (wasDraft || selectedModelId) {
           await acpPrepareSession(sessionId, providerId, {
             workingDir: workingDirOverride,
             personaId: effectivePersonaInfo?.id,
           });
-          await acpSetModel(sessionId, draftModelId);
+          if (selectedModelId) {
+            await acpSetModel(sessionId, selectedModelId);
+          }
         }
 
         // Send via ACP — response streams back through Tauri events

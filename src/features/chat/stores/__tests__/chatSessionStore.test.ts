@@ -10,7 +10,9 @@ import { acpListSessions } from "@/shared/api/acp";
 
 const mockedAcpListSessions = vi.mocked(acpListSessions);
 
-const SESSION_CACHE_KEY = "goose:chat-sessions";
+const LEGACY_SESSION_CACHE_KEY = "goose:chat-sessions";
+const OVERLAY_CACHE_KEY = "goose:acp-session-metadata";
+const DRAFT_SESSION_CACHE_KEY = "goose:chat-draft-sessions";
 
 function resetStore() {
   useChatSessionStore.setState({
@@ -19,18 +21,23 @@ function resetStore() {
     isLoading: false,
     contextPanelOpenBySession: {},
     modelsBySession: {},
+    modelCacheByProvider: {},
   });
 }
 
 describe("chatSessionStore", () => {
   beforeEach(() => {
     resetStore();
-    window.localStorage.removeItem(SESSION_CACHE_KEY);
+    window.localStorage.removeItem(LEGACY_SESSION_CACHE_KEY);
+    window.localStorage.removeItem(OVERLAY_CACHE_KEY);
+    window.localStorage.removeItem(DRAFT_SESSION_CACHE_KEY);
     vi.clearAllMocks();
   });
 
   afterEach(() => {
-    window.localStorage.removeItem(SESSION_CACHE_KEY);
+    window.localStorage.removeItem(LEGACY_SESSION_CACHE_KEY);
+    window.localStorage.removeItem(OVERLAY_CACHE_KEY);
+    window.localStorage.removeItem(DRAFT_SESSION_CACHE_KEY);
   });
 
   describe("createDraftSession", () => {
@@ -183,6 +190,74 @@ describe("chatSessionStore", () => {
       expect(sessions.find((s) => s.id === draft.id)).toBeDefined();
     });
 
+    it("migrates promoted draft metadata onto the resolved ACP session id", async () => {
+      const draft = useChatSessionStore.getState().createDraftSession({
+        title: "Project Draft",
+        projectId: "project-123",
+        providerId: "goose",
+      });
+
+      useChatSessionStore.getState().promoteDraft(draft.id);
+      useChatSessionStore.getState().setSessionAcpId(draft.id, "acp-1");
+
+      mockedAcpListSessions.mockResolvedValue([
+        {
+          sessionId: "acp-1",
+          title: "ACP Session",
+          updatedAt: "2026-04-02",
+          messageCount: 3,
+        },
+      ]);
+
+      await useChatSessionStore.getState().loadSessions();
+
+      const session = useChatSessionStore.getState().sessions[0];
+      expect(session.id).toBe("acp-1");
+      expect(session.acpSessionId).toBe("acp-1");
+      expect(session.projectId).toBe("project-123");
+      expect(session.providerId).toBe("goose");
+    });
+
+    it("rehydrates cached project metadata for ACP sessions", async () => {
+      window.localStorage.setItem(
+        LEGACY_SESSION_CACHE_KEY,
+        JSON.stringify([
+          {
+            id: "acp-1",
+            title: "Renamed Project Chat",
+            projectId: "project-123",
+            providerId: "openai",
+            personaId: "persona-1",
+            createdAt: "2026-03-31",
+            updatedAt: "2026-04-01",
+            messageCount: 4,
+            userSetName: true,
+          },
+        ]),
+      );
+
+      mockedAcpListSessions.mockResolvedValue([
+        {
+          sessionId: "acp-1",
+          title: null,
+          updatedAt: "2026-04-02",
+          messageCount: 7,
+        },
+      ]);
+
+      await useChatSessionStore.getState().loadSessions();
+
+      const session = useChatSessionStore.getState().sessions[0];
+      expect(session.title).toBe("Renamed Project Chat");
+      expect(session.projectId).toBe("project-123");
+      expect(session.providerId).toBe("openai");
+      expect(session.personaId).toBe("persona-1");
+      expect(session.createdAt).toBe("2026-03-31");
+      expect(session.updatedAt).toBe("2026-04-02");
+      expect(session.messageCount).toBe(7);
+      expect(session.userSetName).toBe(true);
+    });
+
     it("drops stale non-draft sessions that are no longer in ACP", async () => {
       useChatSessionStore.setState({
         sessions: [
@@ -231,10 +306,18 @@ describe("chatSessionStore", () => {
       expect(useChatSessionStore.getState().isLoading).toBe(false);
     });
 
-    it("falls back to cached drafts on error", async () => {
+    it("falls back to cached sessions on error", async () => {
       window.localStorage.setItem(
-        SESSION_CACHE_KEY,
+        LEGACY_SESSION_CACHE_KEY,
         JSON.stringify([
+          {
+            id: "cached-session",
+            title: "Cached Session",
+            projectId: "project-123",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            messageCount: 8,
+          },
           {
             id: "cached-draft",
             title: "Cached Draft",
@@ -251,9 +334,15 @@ describe("chatSessionStore", () => {
       await useChatSessionStore.getState().loadSessions();
 
       const sessions = useChatSessionStore.getState().sessions;
-      expect(sessions).toHaveLength(1);
-      expect(sessions[0].id).toBe("cached-draft");
-      expect(sessions[0].draft).toBe(true);
+      expect(sessions).toHaveLength(2);
+      expect(
+        sessions.find((session) => session.id === "cached-session"),
+      ).toMatchObject({
+        projectId: "project-123",
+      });
+      expect(
+        sessions.find((session) => session.id === "cached-draft")?.draft,
+      ).toBe(true);
     });
   });
 

@@ -66,6 +66,19 @@ pub(crate) struct SessionInfoPayload {
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub(crate) struct SessionBoundPayload {
+    pub session_id: String,
+    pub goose_session_id: String,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ReplayCompletePayload {
+    pub session_id: String,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct ModelOption {
     pub id: String,
     pub name: String,

@@ -7,10 +7,11 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use agent_client_protocol::{
-    Agent, CancelNotification, ClientSideConnection, ListSessionsRequest, LoadSessionRequest,
-    NewSessionRequest, SessionConfigKind, SessionConfigOption, SessionConfigSelectOptions,
-    SetSessionConfigOptionRequest,
+    Agent, CancelNotification, ClientSideConnection, ExtRequest, ListSessionsRequest,
+    LoadSessionRequest, NewSessionRequest, SessionConfigKind, SessionConfigOption,
+    SessionConfigSelectOptions, SetSessionConfigOptionRequest,
 };
+use serde_json::value::RawValue;
 use tokio::sync::Mutex;
 
 use super::dispatcher::SessionEventDispatcher;
@@ -88,12 +89,95 @@ fn needs_provider_update(current_provider_id: Option<&str>, requested_provider_i
     current_provider_id != Some(requested_provider_id)
 }
 
+fn prepared_session_for_key(
+    sessions: &HashMap<String, PreparedSession>,
+    composite_key: &str,
+    local_session_id: &str,
+) -> Option<PreparedSession> {
+    sessions
+        .get(composite_key)
+        .cloned()
+        .or_else(|| sessions.get(local_session_id).cloned())
+}
+
+async fn update_working_dir_inner(
+    connection: &Arc<ClientSideConnection>,
+    goose_session_id: &str,
+    working_dir: &PathBuf,
+) -> Result<(), String> {
+    let params = RawValue::from_string(
+        serde_json::json!({
+            "sessionId": goose_session_id,
+            "workingDir": working_dir,
+        })
+        .to_string(),
+    )
+    .map_err(|error| format!("Failed to build working dir update request: {error}"))?;
+
+    connection
+        .ext_method(ExtRequest::new("goose/working_dir/update", params.into()))
+        .await
+        .map_err(|error| format!("Failed to update Goose ACP working directory: {error:?}"))?;
+
+    Ok(())
+}
+
 pub(super) struct PrepareSessionInput {
     pub(super) composite_key: String,
     pub(super) local_session_id: String,
     pub(super) provider_id: String,
     pub(super) working_dir: PathBuf,
     pub(super) existing_agent_session_id: Option<String>,
+}
+
+async fn try_load_existing_session(
+    connection: &Arc<ClientSideConnection>,
+    dispatcher: &Arc<SessionEventDispatcher>,
+    local_session_id: &str,
+    candidate_session_id: &str,
+    provider_id: &str,
+    working_dir: &PathBuf,
+) -> Result<Option<String>, String> {
+    let response = match connection
+        .load_session(LoadSessionRequest::new(
+            candidate_session_id.to_string(),
+            working_dir.clone(),
+        ))
+        .await
+    {
+        Ok(response) => response,
+        Err(_) => return Ok(None),
+    };
+
+    dispatcher
+        .bind_session(candidate_session_id, local_session_id, Some(provider_id))
+        .await;
+
+    if let Some(models) = &response.models {
+        dispatcher.emit_model_state(local_session_id, Some(provider_id), models);
+    }
+    if let Some(options) = &response.config_options {
+        dispatcher.emit_model_state_from_options(local_session_id, Some(provider_id), options);
+    }
+    update_working_dir_inner(connection, candidate_session_id, working_dir).await?;
+
+    let loaded_provider_id = response
+        .config_options
+        .as_deref()
+        .and_then(|options| extract_current_select_value(options, "provider"));
+    if needs_provider_update(loaded_provider_id.as_deref(), provider_id) {
+        let response = connection
+            .set_session_config_option(SetSessionConfigOptionRequest::new(
+                candidate_session_id.to_string(),
+                "provider",
+                provider_id,
+            ))
+            .await
+            .map_err(|error| format!("Failed to update provider via Goose ACP: {error:?}"))?;
+        dispatcher.emit_model_state_from_options(local_session_id, Some(provider_id), &response.config_options);
+    }
+
+    Ok(Some(candidate_session_id.to_string()))
 }
 
 pub(super) async fn prepare_session_inner(
@@ -124,7 +208,7 @@ pub(super) async fn prepare_session_inner(
     let prepare_result: Result<(String, Option<PreparedSession>), String> = async {
         let existing_prepared = {
             let guard = state.lock().await;
-            guard.sessions.get(&composite_key).cloned()
+            prepared_session_for_key(&guard.sessions, &composite_key, &local_session_id)
         };
 
         if let Some(prepared) = existing_prepared {
@@ -137,28 +221,26 @@ pub(super) async fn prepare_session_inner(
                 .await;
 
             if prepared.working_dir != working_dir {
-                let response = connection
-                    .load_session(LoadSessionRequest::new(
-                        prepared.goose_session_id.clone(),
-                        working_dir.clone(),
-                    ))
-                    .await
-                    .map_err(|error| format!("Failed to load Goose session: {error:?}"))?;
-                if let Some(models) = &response.models {
-                    dispatcher.emit_model_state(&local_session_id, Some(&provider_id), models);
-                }
-                if let Some(options) = &response.config_options {
-                    dispatcher.emit_model_state_from_options(
-                        &local_session_id,
-                        Some(&provider_id),
-                        options,
-                    );
-                }
+                update_working_dir_inner(connection, &prepared.goose_session_id, &working_dir)
+                    .await?;
 
                 let mut guard = state.lock().await;
-                if let Some(session) = guard.sessions.get_mut(&composite_key) {
-                    session.working_dir = working_dir.clone();
-                }
+                guard.sessions.insert(
+                    composite_key.clone(),
+                    PreparedSession {
+                        goose_session_id: prepared.goose_session_id.clone(),
+                        provider_id: prepared.provider_id.clone(),
+                        working_dir: working_dir.clone(),
+                    },
+                );
+                guard.sessions.insert(
+                    local_session_id.clone(),
+                    PreparedSession {
+                        goose_session_id: prepared.goose_session_id.clone(),
+                        provider_id: prepared.provider_id.clone(),
+                        working_dir: working_dir.clone(),
+                    },
+                );
             }
 
             if needs_provider_update(Some(&prepared.provider_id), &provider_id) {
@@ -179,95 +261,81 @@ pub(super) async fn prepare_session_inner(
                 );
 
                 let mut guard = state.lock().await;
-                if let Some(session) = guard.sessions.get_mut(&composite_key) {
-                    session.provider_id = provider_id.clone();
-                }
+                let updated_working_dir = guard
+                    .sessions
+                    .get(&composite_key)
+                    .map(|session| session.working_dir.clone())
+                    .unwrap_or_else(|| prepared.working_dir.clone());
+                let updated = PreparedSession {
+                    goose_session_id: prepared.goose_session_id.clone(),
+                    provider_id: provider_id.clone(),
+                    working_dir: updated_working_dir,
+                };
+                guard.sessions.insert(composite_key.clone(), updated.clone());
+                guard.sessions.insert(local_session_id.clone(), updated);
             }
 
             return Ok((prepared.goose_session_id, None));
         }
 
         let goose_session_id = if let Some(existing_id) = existing_agent_session_id {
-            dispatcher
-                .bind_session(&existing_id, &local_session_id, Some(&provider_id))
-                .await;
-
-            let response = connection
-                .load_session(LoadSessionRequest::new(
-                    existing_id.clone(),
-                    working_dir.clone(),
-                ))
-                .await
-                .map_err(|error| format!("Failed to load Goose session: {error:?}"))?;
-
-            if let Some(models) = &response.models {
-                dispatcher.emit_model_state(&local_session_id, Some(&provider_id), models);
-            }
-            if let Some(options) = &response.config_options {
-                dispatcher.emit_model_state_from_options(
-                    &local_session_id,
-                    Some(&provider_id),
-                    options,
-                );
-            }
-
-            let loaded_provider_id = response
-                .config_options
-                .as_deref()
-                .and_then(|options| extract_current_select_value(options, "provider"));
-            if needs_provider_update(loaded_provider_id.as_deref(), &provider_id) {
-                let response = connection
-                    .set_session_config_option(SetSessionConfigOptionRequest::new(
-                        existing_id.clone(),
-                        "provider",
-                        provider_id.as_str(),
-                    ))
-                    .await
-                    .map_err(|error| {
-                        format!("Failed to update provider via Goose ACP: {error:?}")
-                    })?;
-                dispatcher.emit_model_state_from_options(
-                    &local_session_id,
-                    Some(&provider_id),
-                    &response.config_options,
-                );
-            }
-
-            existing_id
+            try_load_existing_session(
+                connection,
+                dispatcher,
+                &local_session_id,
+                &existing_id,
+                &provider_id,
+                &working_dir,
+            )
+            .await?
+            .ok_or_else(|| format!("Failed to load Goose session '{existing_id}'"))?
         } else {
-            let mut request = NewSessionRequest::new(working_dir.clone());
-            if provider_id != "goose" {
-                let mut meta = serde_json::Map::new();
-                meta.insert(
-                    "provider".into(),
-                    serde_json::Value::String(provider_id.clone()),
-                );
-                request = request.meta(meta);
+            if let Some(existing_id) = try_load_existing_session(
+                connection,
+                dispatcher,
+                &local_session_id,
+                &local_session_id,
+                &provider_id,
+                &working_dir,
+            )
+            .await?
+            {
+                existing_id
+            } else {
+                let mut request = NewSessionRequest::new(working_dir.clone());
+                if provider_id != "goose" {
+                    let mut meta = serde_json::Map::new();
+                    meta.insert(
+                        "provider".into(),
+                        serde_json::Value::String(provider_id.clone()),
+                    );
+                    request = request.meta(meta);
+                }
+
+                let response = connection
+                    .new_session(request)
+                    .await
+                    .map_err(|error| format!("Failed to create Goose session: {error:?}"))?;
+
+                let new_id = response.session_id.to_string();
+
+                dispatcher
+                    .bind_session(&new_id, &local_session_id, Some(&provider_id))
+                    .await;
+
+                if let Some(models) = &response.models {
+                    dispatcher.emit_model_state(&local_session_id, Some(&provider_id), models);
+                }
+                if let Some(options) = &response.config_options {
+                    dispatcher.emit_model_state_from_options(
+                        &local_session_id,
+                        Some(&provider_id),
+                        options,
+                    );
+                }
+
+                new_id
             }
-
-            let response = connection
-                .new_session(request)
-                .await
-                .map_err(|error| format!("Failed to create Goose session: {error:?}"))?;
-
-            let new_id = response.session_id.to_string();
-
-            dispatcher
-                .bind_session(&new_id, &local_session_id, Some(&provider_id))
-                .await;
-
-            if let Some(models) = &response.models {
-                dispatcher.emit_model_state(&local_session_id, Some(&provider_id), models);
-            }
-            if let Some(options) = &response.config_options {
-                dispatcher.emit_model_state_from_options(
-                    &local_session_id,
-                    Some(&provider_id),
-                    options,
-                );
-            }
-
-            new_id
         };
 
         Ok((
@@ -353,6 +421,7 @@ pub(super) async fn load_session_inner(
 
     // Finalize any in-progress replay assistant message
     dispatcher.finalize_replay(goose_session_id).await;
+    dispatcher.emit_replay_complete(local_session_id);
 
     if let Some(models) = &response.models {
         dispatcher.emit_model_state(local_session_id, None, models);

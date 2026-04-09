@@ -1,6 +1,6 @@
 use serde::Deserialize;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 fn projects_dir() -> Result<PathBuf, String> {
     let home = dirs::home_dir().ok_or("Could not determine home directory")?;
@@ -61,7 +61,7 @@ fn slugify(name: &str) -> String {
 
 /// Scan all project directories and find the one whose project.json has the given id.
 /// Returns (dir_path, ProjectInfo).
-fn find_project_by_id(id: &str) -> Result<(PathBuf, ProjectInfo), String> {
+fn find_project_by_id(id: &str) -> Result<(PathBuf, StoredProjectInfo), String> {
     let base = projects_dir()?;
     if !base.exists() {
         return Err(format!("Project with id \"{}\" not found", id));
@@ -82,7 +82,7 @@ fn find_project_by_id(id: &str) -> Result<(PathBuf, ProjectInfo), String> {
             Ok(r) => r,
             Err(_) => continue,
         };
-        let info: ProjectInfo = match serde_json::from_str(&raw) {
+        let info: StoredProjectInfo = match serde_json::from_str(&raw) {
             Ok(i) => i,
             Err(_) => continue,
         };
@@ -94,7 +94,59 @@ fn find_project_by_id(id: &str) -> Result<(PathBuf, ProjectInfo), String> {
     Err(format!("Project with id \"{}\" not found", id))
 }
 
+fn deserialize_working_dirs<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum WorkingDirsField {
+        Many(Vec<String>),
+        One(String),
+        Null,
+    }
+
+    let value = Option::<WorkingDirsField>::deserialize(deserializer)?;
+    let dirs = match value {
+        Some(WorkingDirsField::Many(dirs)) => dirs,
+        Some(WorkingDirsField::One(dir)) => vec![dir],
+        Some(WorkingDirsField::Null) | None => Vec::new(),
+    };
+
+    Ok(dirs
+        .into_iter()
+        .map(|dir| dir.trim().to_string())
+        .filter(|dir| !dir.is_empty())
+        .collect())
+}
+
+fn project_artifacts_dir(project_dir: &Path) -> String {
+    project_dir.join("artifacts").to_string_lossy().into_owned()
+}
+
 #[derive(serde::Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct StoredProjectInfo {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub prompt: String,
+    pub icon: String,
+    pub color: String,
+    pub preferred_provider: Option<String>,
+    pub preferred_model: Option<String>,
+    #[serde(default, alias = "workingDir", deserialize_with = "deserialize_working_dirs")]
+    pub working_dirs: Vec<String>,
+    pub use_worktrees: bool,
+    #[serde(default)]
+    pub order: i32,
+    #[serde(default)]
+    pub archived_at: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(serde::Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectInfo {
     pub id: String,
@@ -114,6 +166,27 @@ pub struct ProjectInfo {
     pub archived_at: Option<String>,
     pub created_at: String,
     pub updated_at: String,
+    pub artifacts_dir: String,
+}
+
+fn project_info_from_stored(project_dir: &Path, stored: StoredProjectInfo) -> ProjectInfo {
+    ProjectInfo {
+        id: stored.id,
+        name: stored.name,
+        description: stored.description,
+        prompt: stored.prompt,
+        icon: stored.icon,
+        color: stored.color,
+        preferred_provider: stored.preferred_provider,
+        preferred_model: stored.preferred_model,
+        working_dirs: stored.working_dirs,
+        use_worktrees: stored.use_worktrees,
+        order: stored.order,
+        archived_at: stored.archived_at,
+        created_at: stored.created_at,
+        updated_at: stored.updated_at,
+        artifacts_dir: project_artifacts_dir(project_dir),
+    }
 }
 
 #[tauri::command]
@@ -141,12 +214,12 @@ pub fn list_projects() -> Result<Vec<ProjectInfo>, String> {
             Ok(r) => r,
             Err(_) => continue,
         };
-        let info: ProjectInfo = match serde_json::from_str(&raw) {
+        let info: StoredProjectInfo = match serde_json::from_str(&raw) {
             Ok(i) => i,
             Err(_) => continue,
         };
 
-        projects.push(info);
+        projects.push(project_info_from_stored(&path, info));
     }
 
     projects.sort_by_key(|p| p.order);
@@ -174,9 +247,9 @@ pub fn list_archived_projects() -> Result<Vec<ProjectInfo>, String> {
             continue;
         }
         let raw = fs::read_to_string(&project_json).unwrap_or_default();
-        if let Ok(info) = serde_json::from_str::<ProjectInfo>(&raw) {
+        if let Ok(info) = serde_json::from_str::<StoredProjectInfo>(&raw) {
             if info.archived_at.is_some() {
-                projects.push(info);
+                projects.push(project_info_from_stored(&path, info));
             }
         }
     }
@@ -230,7 +303,7 @@ pub fn create_project(
     fs::create_dir_all(&dir).map_err(|e| format!("Failed to create project directory: {}", e))?;
 
     let now = now_timestamp();
-    let info = ProjectInfo {
+    let stored = StoredProjectInfo {
         id: generate_id(),
         name,
         description,
@@ -248,11 +321,11 @@ pub fn create_project(
     };
 
     let project_path = dir.join("project.json");
-    let json = serde_json::to_string_pretty(&info)
+    let json = serde_json::to_string_pretty(&stored)
         .map_err(|e| format!("Failed to serialize project: {}", e))?;
     fs::write(&project_path, json).map_err(|e| format!("Failed to write project.json: {}", e))?;
 
-    Ok(info)
+    Ok(project_info_from_stored(&dir, stored))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -275,7 +348,7 @@ pub fn update_project(
 
     let (dir, existing) = find_project_by_id(&id)?;
 
-    let info = ProjectInfo {
+    let stored = StoredProjectInfo {
         id: existing.id,
         name,
         description,
@@ -293,11 +366,11 @@ pub fn update_project(
     };
 
     let project_path = dir.join("project.json");
-    let json = serde_json::to_string_pretty(&info)
+    let json = serde_json::to_string_pretty(&stored)
         .map_err(|e| format!("Failed to serialize project: {}", e))?;
     fs::write(&project_path, json).map_err(|e| format!("Failed to write project.json: {}", e))?;
 
-    Ok(info)
+    Ok(project_info_from_stored(&dir, stored))
 }
 
 #[tauri::command]
@@ -309,8 +382,8 @@ pub fn delete_project(id: String) -> Result<(), String> {
 
 #[tauri::command]
 pub fn get_project(id: String) -> Result<ProjectInfo, String> {
-    let (_, info) = find_project_by_id(&id)?;
-    Ok(info)
+    let (dir, info) = find_project_by_id(&id)?;
+    Ok(project_info_from_stored(&dir, info))
 }
 
 #[tauri::command]
@@ -332,7 +405,7 @@ pub fn archive_project(id: String) -> Result<(), String> {
             continue;
         }
         let raw = fs::read_to_string(&project_json).unwrap_or_default();
-        if let Ok(mut info) = serde_json::from_str::<ProjectInfo>(&raw) {
+        if let Ok(mut info) = serde_json::from_str::<StoredProjectInfo>(&raw) {
             if info.id == id {
                 info.archived_at = Some(now_timestamp());
                 let json = serde_json::to_string_pretty(&info)
@@ -365,7 +438,7 @@ pub fn restore_project(id: String) -> Result<(), String> {
             continue;
         }
         let raw = fs::read_to_string(&project_json).unwrap_or_default();
-        if let Ok(mut info) = serde_json::from_str::<ProjectInfo>(&raw) {
+        if let Ok(mut info) = serde_json::from_str::<StoredProjectInfo>(&raw) {
             if info.id == id {
                 info.archived_at = None;
                 let json = serde_json::to_string_pretty(&info)
@@ -377,4 +450,41 @@ pub fn restore_project(id: String) -> Result<(), String> {
     }
 
     Err(format!("Project with id \"{}\" not found", id))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{project_artifacts_dir, StoredProjectInfo};
+    use std::path::Path;
+
+    #[test]
+    fn deserializes_legacy_single_working_dir() {
+        let project: StoredProjectInfo = serde_json::from_str(
+            r##"{
+              "id": "project-1",
+              "name": "Legacy",
+              "description": "",
+              "prompt": "",
+              "icon": "📁",
+              "color": "#000000",
+              "preferredProvider": null,
+              "preferredModel": null,
+              "workingDir": "/tmp/legacy",
+              "useWorktrees": false,
+              "createdAt": "now",
+              "updatedAt": "now"
+            }"##,
+        )
+        .expect("legacy project");
+
+        assert_eq!(project.working_dirs, vec!["/tmp/legacy"]);
+    }
+
+    #[test]
+    fn builds_project_artifacts_dir_inside_project_storage() {
+        assert_eq!(
+            project_artifacts_dir(Path::new("/Users/test/.goose/projects/sample-project")),
+            "/Users/test/.goose/projects/sample-project/artifacts"
+        );
+    }
 }

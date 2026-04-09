@@ -17,6 +17,9 @@ import { findExistingDraft } from "@/features/chat/lib/newChat";
 import { DEFAULT_CHAT_TITLE } from "@/features/chat/lib/sessionTitle";
 import { useAppStartup } from "./hooks/useAppStartup";
 import { AppShellContent } from "./ui/AppShellContent";
+import { acpPrepareSession } from "@/shared/api/acp";
+import { getHomeDir } from "@/shared/api/system";
+import { resolveProjectWorkingDir } from "@/features/projects/lib/chatProjectContext";
 
 export type AppView =
   | "home"
@@ -83,18 +86,30 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       console.log(
         `[perf:load] ${sessionId.slice(0, 8)} import took ${(t2 - t1).toFixed(1)}ms`,
       );
-      // For sessions loaded from ACP, the session ID is the goose session ID
-      await acpLoadSession(sessionId, sessionId);
+      const session = useChatSessionStore.getState().getSession(sessionId);
+      const gooseSessionId = session?.acpSessionId ?? sessionId;
+      const project = session?.projectId
+        ? (useProjectStore
+            .getState()
+            .projects.find((candidate) => candidate.id === session.projectId) ??
+          null)
+        : null;
+      let workingDir = resolveProjectWorkingDir(project);
+      if (!workingDir && !session?.projectId) {
+        const homeDir = await getHomeDir();
+        const normalizedHome = homeDir.replace(/\\/g, "/").replace(/\/+$/, "");
+        workingDir = `${normalizedHome}/.goose/artifacts`;
+      }
+      await acpLoadSession(sessionId, gooseSessionId, workingDir);
       const t3 = performance.now();
       console.log(
         `[perf:load] ${sessionId.slice(0, 8)} acpLoadSession resolved in ${(t3 - t2).toFixed(1)}ms (total ${(t3 - t0).toFixed(1)}ms)`,
       );
     } catch (err) {
       console.error("Failed to load session messages:", err);
-    } finally {
       useChatStore.getState().setSessionLoading(sessionId, false);
       console.log(
-        `[perf:load] ${sessionId.slice(0, 8)} done, loading=false at +${(performance.now() - t0).toFixed(1)}ms`,
+        `[perf:load] ${sessionId.slice(0, 8)} failed, loading=false at +${(performance.now() - t0).toFixed(1)}ms`,
       );
     }
   }, []);
@@ -286,8 +301,46 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const handleMoveToProject = useCallback(
     (sessionId: string, projectId: string | null) => {
       sessionStore.updateSession(sessionId, { projectId });
+
+      const session = useChatSessionStore.getState().getSession(sessionId);
+      if (!session || session.draft) {
+        return;
+      }
+
+      void (async () => {
+        const nextProject =
+          projectId == null
+            ? null
+            : (useProjectStore
+                .getState()
+                .projects.find((project) => project.id === projectId) ?? null);
+        let nextWorkingDir = resolveProjectWorkingDir(nextProject);
+        if (!nextWorkingDir && projectId == null) {
+          const homeDir = await getHomeDir();
+          const normalizedHome = homeDir
+            .replace(/\\/g, "/")
+            .replace(/\/+$/, "");
+          nextWorkingDir = `${normalizedHome}/.goose/artifacts`;
+        }
+        if (!nextWorkingDir) {
+          return;
+        }
+        await acpPrepareSession(
+          sessionId,
+          session.providerId ?? agentStore.selectedProvider ?? "goose",
+          {
+            workingDir: nextWorkingDir,
+            personaId: session.personaId,
+          },
+        );
+      })().catch((error) => {
+        console.error(
+          "Failed to update ACP session project working directory:",
+          error,
+        );
+      });
     },
-    [sessionStore],
+    [agentStore.selectedProvider, sessionStore],
   );
 
   const handleRenameChat = useCallback(

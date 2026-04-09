@@ -11,13 +11,13 @@ import { useChatStore } from "../stores/chatStore";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { useProviderSelection } from "@/features/agents/hooks/useProviderSelection";
 import { useChatSessionStore } from "../stores/chatSessionStore";
-import { getProject, type ProjectInfo } from "@/features/projects/api/projects";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
 import { acpPrepareSession, acpSetModel } from "@/shared/api/acp";
 import {
   buildProjectSystemPrompt,
   composeSystemPrompt,
   getProjectFolderOption,
+  resolveProjectWorkingDir,
 } from "@/features/projects/lib/chatProjectContext";
 import { useAvatarSrc } from "@/shared/hooks/useAvatarSrc";
 import { getHomeDir } from "@/shared/api/system";
@@ -76,18 +76,16 @@ export function ChatView({
     (s) => s.modelsBySession[activeSessionId] ?? EMPTY_MODELS,
   );
   const projects = useProjectStore((s) => s.projects);
+  const projectsLoading = useProjectStore((s) => s.loading);
   const storedProject = useProjectStore((s) =>
     session?.projectId
       ? s.projects.find((candidate) => candidate.id === session.projectId)
       : undefined,
   );
-  const [fallbackProject, setFallbackProject] = useState<ProjectInfo | null>(
-    null,
-  );
   const [homeArtifactsRoot, setHomeArtifactsRoot] = useState<string | null>(
     null,
   );
-  const project = storedProject ?? fallbackProject;
+  const project = storedProject ?? null;
   const contextPanelLabel = isContextPanelOpen
     ? t("context.closePanel")
     : t("context.openPanel");
@@ -114,12 +112,24 @@ export function ChatView({
     () => getProjectFolderOption(project),
     [project],
   );
-  const effectiveWorkingDir =
-    projectFolders[0]?.path ?? homeArtifactsRoot ?? undefined;
+  const resolvedProjectWorkingDir = useMemo(
+    () => resolveProjectWorkingDir(project),
+    [project],
+  );
+  const projectMetadataPending = Boolean(
+    session?.projectId && !resolvedProjectWorkingDir && projectsLoading,
+  );
+  const effectiveWorkingDir = resolvedProjectWorkingDir
+    ? resolvedProjectWorkingDir
+    : !session?.projectId
+      ? (homeArtifactsRoot ?? undefined)
+      : undefined;
   const allowedArtifactRoots = useMemo(() => {
-    const roots = projectFolders
-      .map((folder) => folder.path?.trim())
-      .filter((path): path is string => Boolean(path));
+    const roots = [
+      ...projectFolders
+        .map((folder) => folder.path?.trim())
+        .filter((path): path is string => Boolean(path)),
+    ];
     if (homeArtifactsRoot) {
       roots.push(homeArtifactsRoot);
     }
@@ -134,30 +144,6 @@ export function ChatView({
       composeSystemPrompt(selectedPersona?.systemPrompt, projectSystemPrompt),
     [selectedPersona?.systemPrompt, projectSystemPrompt],
   );
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!session?.projectId || storedProject) {
-      setFallbackProject(null);
-      return;
-    }
-
-    getProject(session.projectId)
-      .then((projectInfo) => {
-        if (!cancelled) {
-          setFallbackProject(projectInfo);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setFallbackProject(null);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [session?.projectId, storedProject]);
 
   useEffect(() => {
     let cancelled = false;
@@ -190,11 +176,40 @@ export function ChatView({
 
   const handleProjectChange = useCallback(
     (projectId: string | null) => {
+      const nextProject =
+        projectId == null
+          ? null
+          : (useProjectStore
+              .getState()
+              .projects.find((candidate) => candidate.id === projectId) ??
+            null);
+      const nextWorkingDir =
+        resolveProjectWorkingDir(nextProject) ??
+        (projectId == null ? (homeArtifactsRoot ?? undefined) : undefined);
+
       useChatSessionStore
         .getState()
         .updateSession(activeSessionId, { projectId });
+
+      if (!session?.draft && selectedProvider && nextWorkingDir) {
+        void acpPrepareSession(activeSessionId, selectedProvider, {
+          workingDir: nextWorkingDir,
+          personaId: selectedPersonaId ?? undefined,
+        }).catch((error) => {
+          console.error(
+            "Failed to update ACP session working directory:",
+            error,
+          );
+        });
+      }
     },
-    [activeSessionId],
+    [
+      activeSessionId,
+      homeArtifactsRoot,
+      selectedPersonaId,
+      selectedProvider,
+      session?.draft,
+    ],
   );
   const handleModelChange = useCallback(
     (modelId: string) => {
@@ -296,40 +311,6 @@ export function ChatView({
     personaInfo,
     effectiveWorkingDir,
   );
-  useEffect(() => {
-    if (
-      session?.draft ||
-      chatState === "thinking" ||
-      chatState === "streaming"
-    ) {
-      return;
-    }
-
-    let cancelled = false;
-    const sessionStore = useChatSessionStore.getState();
-    const currentSession = sessionStore.getSession(activeSessionId);
-    if (currentSession && currentSession.providerId !== selectedProvider) {
-      sessionStore.updateSession(activeSessionId, {
-        providerId: selectedProvider,
-      });
-    }
-    acpPrepareSession(activeSessionId, selectedProvider, {
-      workingDir: effectiveWorkingDir,
-      personaId: selectedPersonaId ?? undefined,
-    }).catch((error) => {
-      if (!cancelled) console.error("Failed to prepare ACP session:", error);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    activeSessionId,
-    chatState,
-    effectiveWorkingDir,
-    session?.draft,
-    selectedPersonaId,
-    selectedProvider,
-  ]);
   const isLoadingHistory = useChatStore(
     (s) =>
       s.loadingSessionIds.has(activeSessionId) &&
@@ -451,6 +432,7 @@ export function ChatView({
 
           <ChatInput
             onSend={handleSend}
+            disabled={projectMetadataPending}
             queuedMessage={queue.queuedMessage}
             onDismissQueue={queue.dismiss}
             initialValue={draftValue}

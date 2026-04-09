@@ -1,6 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
-use super::{needs_provider_update, ManagerState};
+use std::path::PathBuf;
+
+use super::{needs_provider_update, prepared_session_for_key, ManagerState, PreparedSession};
 use crate::services::acp::split_composite_key;
 
 #[test]
@@ -33,4 +35,24 @@ fn split_composite_key_extracts_local_session_id() {
         ("session-1", Some("persona-1"))
     );
     assert_eq!(split_composite_key("session-1"), ("session-1", None));
+}
+
+#[test]
+fn prepared_session_lookup_falls_back_to_local_session_id() {
+    let mut sessions = HashMap::new();
+    sessions.insert(
+        "session-1".to_string(),
+        PreparedSession {
+            goose_session_id: "goose-1".to_string(),
+            provider_id: "goose".to_string(),
+            working_dir: PathBuf::from("/tmp/project"),
+        },
+    );
+
+    let prepared =
+        prepared_session_for_key(&sessions, "session-1__persona-1", "session-1").expect("prepared session");
+
+    assert_eq!(prepared.goose_session_id, "goose-1");
+    assert_eq!(prepared.provider_id, "goose");
+    assert_eq!(prepared.working_dir, PathBuf::from("/tmp/project"));
 }

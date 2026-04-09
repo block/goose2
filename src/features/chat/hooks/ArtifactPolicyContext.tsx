@@ -82,6 +82,31 @@ function basenameOf(path: string): string {
   return parts[parts.length - 1] ?? path;
 }
 
+function homeArtifactsRootFromRoots(roots: string[]): string | null {
+  return (
+    roots.find((root) => /\/\.goose\/artifacts\/?$/.test(root.trim())) ?? null
+  );
+}
+
+function fallbackArtifactPath(path: string, roots: string[]): string | null {
+  const normalized = path.trim();
+  if (!/\/\.goose\/projects\/.+\/artifacts\/.+/.test(normalized)) {
+    return null;
+  }
+
+  const filename = basenameOf(normalized);
+  if (!filename || filename === normalized) {
+    return null;
+  }
+
+  const homeArtifactsRoot = homeArtifactsRootFromRoots(roots);
+  if (!homeArtifactsRoot) {
+    return null;
+  }
+
+  return `${homeArtifactsRoot.replace(/\/+$/, "")}/${filename}`;
+}
+
 export function ArtifactPolicyProvider({
   messages,
   allowedRoots,
@@ -134,25 +159,44 @@ export function ArtifactPolicyProvider({
     [normalizedRoots],
   );
 
-  const checkPathExists = useCallback((path: string) => pathExists(path), []);
+  const resolveOpenTarget = useCallback(
+    async (path: string): Promise<string | null> => {
+      if (await pathExists(path)) {
+        return path;
+      }
+
+      const fallbackPath = fallbackArtifactPath(path, normalizedRoots);
+      if (fallbackPath && (await pathExists(fallbackPath))) {
+        return fallbackPath;
+      }
+
+      return null;
+    },
+    [normalizedRoots],
+  );
+
+  const checkPathExists = useCallback(
+    async (path: string) => (await resolveOpenTarget(path)) !== null,
+    [resolveOpenTarget],
+  );
 
   const openResolvedPath = useCallback(
     async (path: string) => {
-      const exists = await checkPathExists(path);
-      if (!exists) {
+      const resolvedTarget = await resolveOpenTarget(path);
+      if (!resolvedTarget) {
         throw new Error(`File not found: ${path}`);
       }
 
-      const key = path.trim().toLowerCase();
+      const key = resolvedTarget.trim().toLowerCase();
       const now = Date.now();
       const lastOpenAt = lastOpenAtByPathRef.current.get(key) ?? 0;
       if (now - lastOpenAt < 1200) {
         return;
       }
       lastOpenAtByPathRef.current.set(key, now);
-      await openPath(path);
+      await openPath(resolvedTarget);
     },
-    [checkPathExists],
+    [resolveOpenTarget],
   );
 
   const getAllSessionArtifacts = useCallback((): SessionArtifact[] => {

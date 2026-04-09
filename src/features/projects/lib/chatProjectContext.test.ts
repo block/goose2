@@ -4,6 +4,7 @@ import {
   composeSystemPrompt,
   getProjectFolderName,
   getProjectFolderOption,
+  resolveProjectWorkingDir,
 } from "./chatProjectContext";
 
 describe("chatProjectContext", () => {
@@ -18,6 +19,7 @@ describe("chatProjectContext", () => {
       preferredProvider: "goose",
       preferredModel: "claude-sonnet-4",
       workingDirs: ["/Users/wesb/dev/goose2"],
+      artifactsDir: "/Users/wesb/.goose/projects/goose2/artifacts",
       useWorktrees: true,
       order: 0,
       archivedAt: null,
@@ -53,26 +55,56 @@ describe("chatProjectContext", () => {
     expect(
       getProjectFolderOption({
         workingDirs: ["/Users/wesb/dev/goose2", "/Users/wesb/dev/other"],
+        artifactsDir: "/Users/wesb/.goose/projects/goose2/artifacts",
       }),
     ).toEqual([
       {
-        id: "/Users/wesb/dev/goose2",
-        name: "goose2",
-        path: "/Users/wesb/dev/goose2",
+        id: "/Users/wesb/dev/goose2/artifacts",
+        name: "artifacts",
+        path: "/Users/wesb/dev/goose2/artifacts",
       },
       {
-        id: "/Users/wesb/dev/other",
-        name: "other",
-        path: "/Users/wesb/dev/other",
+        id: "/Users/wesb/dev/other/artifacts",
+        name: "artifacts",
+        path: "/Users/wesb/dev/other/artifacts",
       },
     ]);
   });
 
   it("returns an empty array when workingDirs is empty", () => {
-    expect(getProjectFolderOption({ workingDirs: [] })).toEqual([]);
+    expect(
+      getProjectFolderOption({
+        workingDirs: [],
+        artifactsDir: "/Users/wesb/.goose/projects/sample-project/artifacts",
+      }),
+    ).toEqual([
+      {
+        id: "/Users/wesb/.goose/projects/sample-project/artifacts",
+        name: "artifacts",
+        path: "/Users/wesb/.goose/projects/sample-project/artifacts",
+      },
+    ]);
   });
 
   it("returns an empty array when project is null", () => {
     expect(getProjectFolderOption(null)).toEqual([]);
+  });
+
+  it("resolves the first working directory to an artifacts subfolder", () => {
+    expect(
+      resolveProjectWorkingDir({
+        workingDirs: ["/Users/wesb/dev/goose2", "/Users/wesb/dev/other"],
+        artifactsDir: "/Users/wesb/.goose/projects/goose2/artifacts",
+      }),
+    ).toBe("/Users/wesb/dev/goose2/artifacts");
+  });
+
+  it("falls back to the project artifacts dir when no working dirs exist", () => {
+    expect(
+      resolveProjectWorkingDir({
+        workingDirs: [],
+        artifactsDir: "/Users/wesb/.goose/projects/sample-project/artifacts",
+      }),
+    ).toBe("/Users/wesb/.goose/projects/sample-project/artifacts");
   });
 });

@@ -15,7 +15,8 @@ use tokio::sync::Mutex;
 
 use crate::services::acp::payloads::{
     model_options_from_state, DonePayload, MessageCreatedPayload, ModelOption, ModelStatePayload,
-    SessionInfoPayload, TextPayload, ToolCallPayload, ToolResultPayload, ToolTitlePayload,
+    ReplayCompletePayload, SessionBoundPayload, SessionInfoPayload, TextPayload, ToolCallPayload,
+    ToolResultPayload, ToolTitlePayload,
 };
 
 fn model_options_from_select_options(options: &SessionConfigSelectOptions) -> Vec<ModelOption> {
@@ -83,6 +84,14 @@ impl SessionEventDispatcher {
                 canceled: false,
                 replay_message_id: None,
             });
+
+        let _ = self.app_handle.emit(
+            "acp:session_bound",
+            SessionBoundPayload {
+                session_id: local_session_id.to_string(),
+                goose_session_id: goose_session_id.to_string(),
+            },
+        );
     }
 
     pub(super) async fn attach_writer(
@@ -222,6 +231,15 @@ impl SessionEventDispatcher {
                 current_model_id,
                 current_model_name,
                 available_models,
+            },
+        );
+    }
+
+    pub(super) fn emit_replay_complete(&self, local_session_id: &str) {
+        let _ = self.app_handle.emit(
+            "acp:replay_complete",
+            ReplayCompletePayload {
+                session_id: local_session_id.to_string(),
             },
         );
     }

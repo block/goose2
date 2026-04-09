@@ -199,6 +199,50 @@ describe("useAcpStream", () => {
     expect(listeners.size).toBe(0);
   });
 
+  it("flushes replayed history only after acp:replay_complete", async () => {
+    useChatStore.getState().setSessionLoading(sessionId, true);
+
+    renderHook(() => useAcpStream(true));
+    await vi.waitFor(() =>
+      expect(listeners.get("acp:message_created")).toBeDefined(),
+    );
+
+    act(() => {
+      emit("acp:message_created", {
+        sessionId,
+        messageId: "replay-msg",
+      });
+      emit("acp:text", {
+        sessionId,
+        messageId: "replay-msg",
+        text: "replayed history",
+      });
+      emit("acp:done", {
+        sessionId,
+        messageId: "replay-msg",
+      });
+    });
+
+    expect(
+      useChatStore.getState().messagesBySession[sessionId],
+    ).toBeUndefined();
+    expect(useChatStore.getState().loadingSessionIds.has(sessionId)).toBe(true);
+
+    act(() => {
+      emit("acp:replay_complete", { sessionId });
+    });
+
+    const messages = useChatStore.getState().messagesBySession[sessionId];
+    expect(useChatStore.getState().loadingSessionIds.has(sessionId)).toBe(
+      false,
+    );
+    expect(messages).toHaveLength(1);
+    const text = messages[0].content.find((content) => content.type === "text");
+    if (text && "text" in text) {
+      expect(text.text).toBe("replayed history");
+    }
+  });
+
   it("stores model state for the targeted session", async () => {
     renderHook(() => useAcpStream(true));
     await vi.waitFor(() =>

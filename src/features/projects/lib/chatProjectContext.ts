@@ -21,18 +21,39 @@ export function getProjectFolderName(path: string): string {
   return parts[parts.length - 1] ?? normalized;
 }
 
+function appendArtifactsSegment(path: string): string {
+  return `${path.replace(/[\\/]+$/, "")}/artifacts`;
+}
+
+function resolveProjectFolderPaths(
+  project: Pick<ProjectInfo, "workingDirs" | "artifactsDir"> | null | undefined,
+): string[] {
+  const workingDirs = (project?.workingDirs ?? [])
+    .map((directory) => trimValue(directory))
+    .filter((directory): directory is string => directory !== null);
+
+  if (workingDirs.length > 0) {
+    return workingDirs.map(appendArtifactsSegment);
+  }
+
+  const artifactsDir = trimValue(project?.artifactsDir);
+  return artifactsDir ? [artifactsDir] : [];
+}
+
 export function getProjectFolderOption(
-  project: Pick<ProjectInfo, "workingDirs"> | null | undefined,
+  project: Pick<ProjectInfo, "workingDirs" | "artifactsDir"> | null | undefined,
 ): ProjectFolderOption[] {
-  const dirs = project?.workingDirs ?? [];
-  return dirs
-    .map((d) => trimValue(d))
-    .filter((d): d is string => d !== null)
-    .map((d) => ({
-      id: d,
-      name: getProjectFolderName(d),
-      path: d,
-    }));
+  return resolveProjectFolderPaths(project).map((d) => ({
+    id: d,
+    name: getProjectFolderName(d),
+    path: d,
+  }));
+}
+
+export function resolveProjectWorkingDir(
+  project: Pick<ProjectInfo, "workingDirs" | "artifactsDir"> | null | undefined,
+): string | undefined {
+  return resolveProjectFolderPaths(project)[0];
 }
 
 export function buildProjectSystemPrompt(
