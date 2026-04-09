@@ -169,7 +169,7 @@ describe("ToolCallAdapter — ArtifactActions", () => {
     ).toBeInTheDocument();
   });
 
-  it('shows "detected" label for low-confidence primary candidate', () => {
+  it('does not show "detected" label for low-confidence primary candidate', () => {
     const lowConf = makeCandidate({ confidence: "low" });
     mockResolveToolCardDisplay.mockReturnValue({
       role: "primary_host",
@@ -179,7 +179,7 @@ describe("ToolCallAdapter — ArtifactActions", () => {
 
     renderAdapter();
 
-    expect(screen.getByText("detected")).toBeInTheDocument();
+    expect(screen.queryByText("detected")).not.toBeInTheDocument();
   });
 
   it('does NOT show "detected" label for high-confidence candidate', () => {
@@ -195,7 +195,7 @@ describe("ToolCallAdapter — ArtifactActions", () => {
     expect(screen.queryByText("detected")).not.toBeInTheDocument();
   });
 
-  it('shows "detected" label for low-confidence secondary candidate', async () => {
+  it('does not show "detected" label for low-confidence secondary candidate', async () => {
     const user = userEvent.setup();
     const primary = makeCandidate();
     const lowConfSecondary = makeCandidate({
@@ -213,7 +213,7 @@ describe("ToolCallAdapter — ArtifactActions", () => {
     renderAdapter();
     await user.click(screen.getByText(/more outputs/i));
 
-    expect(screen.getByText("detected")).toBeInTheDocument();
+    expect(screen.queryByText("detected")).not.toBeInTheDocument();
   });
 
   it("opens file when primary button is clicked", async () => {

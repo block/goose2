@@ -118,8 +118,7 @@ export function MessageTimeline({
           return (
             <div key={message.id} className={index === 0 ? "mt-0" : "mt-4"}>
               {showDateSeparator && (
-                <div className="my-4 flex items-center gap-3 px-4">
-                  <div className="h-px flex-1 bg-border" />
+                <div className="my-4 px-4 text-center">
                   <span className="text-[11px] font-medium text-muted-foreground">
                     {formatDateSeparator(
                       message.created,
@@ -128,7 +127,6 @@ export function MessageTimeline({
                       formatDate,
                     )}
                   </span>
-                  <div className="h-px flex-1 bg-border" />
                 </div>
               )}
               <MessageBubble

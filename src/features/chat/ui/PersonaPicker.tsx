@@ -162,10 +162,10 @@ function PersonaMenuItem({
   isSelected: boolean;
   onSelect: () => void;
 }) {
-  // Extract a short description from the system prompt (first sentence)
-  const shortDesc = useMemo(() => {
-    const first = persona.systemPrompt.split(/\.\s/)[0] ?? "";
-    return first.length > 60 ? `${first.slice(0, 57)}...` : first;
+  // Keep the first sentence as a summary and let layout, not string slicing,
+  // decide where the visible truncation happens.
+  const summary = useMemo(() => {
+    return persona.systemPrompt.split(/\.\s/)[0]?.trim() ?? "";
   }, [persona.systemPrompt]);
 
   return (
@@ -176,10 +176,10 @@ function PersonaMenuItem({
       <PersonaAvatar persona={persona} size="md" />
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="text-sm font-medium">{persona.displayName}</span>
-        {shortDesc && (
-          <span className="text-[11px] leading-snug text-muted-foreground">
-            {shortDesc}
-          </span>
+        {summary && (
+          <p className="line-clamp-2 break-words text-[11px] leading-snug text-muted-foreground">
+            {summary}
+          </p>
         )}
       </div>
       {isSelected && (

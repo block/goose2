@@ -110,7 +110,6 @@
     "voiceInputSoon": "Entrada de voz (pronto)"
   },
   "tools": {
-    "detected": "detectado",
     "fileNotFound": "Archivo no encontrado: {{path}}",
     "moreOutputs": "Más salidas ({{count}})",
     "openFile": "Abrir archivo",

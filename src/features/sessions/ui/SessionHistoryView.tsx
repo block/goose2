@@ -172,7 +172,7 @@ export function SessionHistoryView({
             </div>
             <Button
               type="button"
-              variant="ghost-light"
+              variant="outline-flat"
               size="xs"
               onClick={() => fileInputRef.current?.click()}
             >

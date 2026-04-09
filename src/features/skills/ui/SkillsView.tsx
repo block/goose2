@@ -313,7 +313,7 @@ export function SkillsView() {
               />
               <Button
                 type="button"
-                variant="outline"
+                variant="outline-flat"
                 size="xs"
                 onClick={() => importInputRef.current?.click()}
               >
@@ -322,7 +322,7 @@ export function SkillsView() {
               </Button>
               <Button
                 type="button"
-                variant="outline"
+                variant="outline-flat"
                 size="xs"
                 onClick={handleNewSkill}
               >
