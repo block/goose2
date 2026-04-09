@@ -37,7 +37,7 @@ tokio-util = { version = "0.7", features = ["compat", "rt"] }
 async-trait = "0.1"
 agent-client-protocol = "0.10.4"
 tokio-tungstenite = "0.21.0"
-acp-client = { git = "https://github.com/block/builderbot", rev = "6cb674a704f3a9e402a76e9aeed734144d6cec11" }
+acp-client = { git = "https://github.com/block/builderbot", rev = "db184d20cb48e0c90bbd3fea4a4a871fc9d8a6ad" }
 doctor = { git = "https://github.com/block/builderbot", rev = "bfce29264181236a2e5b4fd903ace6291f6a7594" }
 
 [target.'cfg(target_os = "macos")'.dependencies]
