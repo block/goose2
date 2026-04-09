@@ -213,6 +213,8 @@ export function ChatInput({
       }
     };
   }, []);
+  // Focus the textarea on mount so the user can type immediately
+  useEffect(() => textareaRef.current?.focus(), []);
 
   const handleSend = useCallback(() => {
     if (!canSend) return;
