@@ -33,7 +33,7 @@ describe("AgentModelPicker", () => {
 
     expect(
       screen.getByRole("button", { name: /choose agent and model/i }),
-    ).toHaveTextContent("Goose · GPT-4o");
+    ).toHaveTextContent("GPT-4o");
   });
 
   it("calls onModelChange when a model is selected", async () => {

@@ -196,9 +196,7 @@ export function AgentModelPicker({
           <span className={cn("truncate", isCompact ? "max-w-32" : "max-w-56")}>
             {loading
               ? t("toolbar.loading")
-              : triggerModelLabel
-                ? `${selectedAgentLabel} · ${triggerModelLabel}`
-                : selectedAgentLabel}
+              : (triggerModelLabel ?? selectedAgentLabel)}
           </span>
         </Button>
       </PopoverTrigger>

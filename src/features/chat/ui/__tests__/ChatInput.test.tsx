@@ -112,7 +112,7 @@ describe("ChatInput", () => {
     );
     expect(
       screen.getByRole("button", { name: /choose agent and model/i }),
-    ).toHaveTextContent("Goose · GPT-4o");
+    ).toHaveTextContent("GPT-4o");
   });
 
   it("shows default model name in model picker", () => {
@@ -125,7 +125,7 @@ describe("ChatInput", () => {
     );
     expect(
       screen.getByRole("button", { name: /choose agent and model/i }),
-    ).toHaveTextContent("Goose · Claude Sonnet 4");
+    ).toHaveTextContent("Claude Sonnet 4");
   });
 
   it("shows default provider label", () => {
