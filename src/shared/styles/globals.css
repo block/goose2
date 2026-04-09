@@ -220,7 +220,7 @@
   --label-font-weight: 600;
   --label-line-height: 1.2;
 
-  /* Pull quote */
+  /* Pull quote — visual punctuation for longform */
   --pullquote-size: clamp(1.5rem, 3vw, 2.5rem);
   --pullquote-line-height: 1.3;
   --pullquote-weight: 300;
@@ -418,11 +418,13 @@
   --color-surface-dark-muted: var(--surface-dark-muted);
   --color-surface-dark-border: var(--surface-dark-border);
 
-  /* fonts */
-  --font-sans: "Cash Sans", sans-serif;
-  --font-mono: "Cash Sans Mono", monospace;
+  /* fonts — no bundled fonts; consumers bring their own */
+  --font-sans:
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Geist Mono", monospace;
   --font-serif: serif;
-  --font-display: "Cash Sans Wide", "Cash Sans", sans-serif;
+  --font-display:
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
   /* shape — pill-first radius system */
   --radius-pill: 999px;
@@ -431,7 +433,7 @@
   --radius-card: 20px;
   --radius-card-lg: 24px;
   --radius-card-sm: 14px;
-  --radius-dropdown: 10px;
+  --radius-dropdown: 20px;
   --radius-overlay: 20px;
   --radius-modal: 16px;
 
@@ -605,6 +607,17 @@
     }
   }
 
+  @keyframes hero-blur-in {
+    from {
+      opacity: 0;
+      filter: blur(12px);
+    }
+    to {
+      opacity: 1;
+      filter: blur(0);
+    }
+  }
+
   @keyframes word-reveal {
     from {
       opacity: 0;
@@ -619,69 +632,25 @@
   }
 }
 
-/* Font Faces — Cash Sans (CDN) */
-@font-face {
-  font-family: "Cash Sans";
-  src:
-    url(https://cash-f.squarecdn.com/static/fonts/cashsans/woff2/CashSans-Regular.woff2)
-    format("woff2"),
-    url(https://cash-f.squarecdn.com/static/fonts/cashsans/woff/CashSans-Regular.woff)
-    format("woff");
-  font-weight: 400;
-  font-style: normal;
-}
-@font-face {
-  font-family: "Cash Sans";
-  src:
-    url(https://cash-f.squarecdn.com/static/fonts/cashsans/woff2/CashSans-Medium.woff2)
-    format("woff2"),
-    url(https://cash-f.squarecdn.com/static/fonts/cashsans/woff/CashSans-Medium.woff)
-    format("woff");
-  font-weight: 500;
-  font-style: normal;
-}
-@font-face {
-  font-family: "Cash Sans";
-  src:
-    url(https://cash-f.squarecdn.com/static/fonts/cashsans/woff2/CashSans-Bold.woff2)
-    format("woff2"),
-    url(https://cash-f.squarecdn.com/static/fonts/cashsans/woff/CashSans-Bold.woff)
-    format("woff");
-  font-weight: 700;
-  font-style: normal;
+@keyframes fadeToFull {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
-/* Font Faces — Cash Sans Wide (local) */
-@font-face {
-  font-family: "Cash Sans Wide";
-  src: url(../../assets/fonts/CashSansWide-Regular.woff2) format("woff2");
-  font-weight: 400;
-  font-style: normal;
+@keyframes fadeToSubtle {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.08;
+  }
 }
-@font-face {
-  font-family: "Cash Sans Wide";
-  src: url(../../assets/fonts/CashSansWide-Medium.woff2) format("woff2");
-  font-weight: 500;
-  font-style: normal;
-}
-@font-face {
-  font-family: "Cash Sans Wide";
-  src: url(../../assets/fonts/CashSansWide-Semibold.woff2) format("woff2");
-  font-weight: 600;
-  font-style: normal;
-}
-@font-face {
-  font-family: "Cash Sans Wide";
-  src: url(../../assets/fonts/CashSansWide-Bold.woff2) format("woff2");
-  font-weight: 700;
-  font-style: normal;
-}
-@font-face {
-  font-family: "Cash Sans Wide";
-  src: url(../../assets/fonts/CashSansWide-Black.woff2) format("woff2");
-  font-weight: 900;
-  font-style: normal;
-}
+
+/* @font-face — add your own here */
 
 /* App shell lock — outside @layer so nothing can override */
 html,
@@ -730,6 +699,16 @@ body,
   ::-webkit-scrollbar-thumb {
     background: transparent;
     border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #999;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background: transparent;
+  }
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: #666;
   }
 
   .scrollbar-none {
