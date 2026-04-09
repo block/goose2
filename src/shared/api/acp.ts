@@ -64,6 +64,7 @@ export interface AcpSessionInfo {
   sessionId: string;
   title: string | null;
   updatedAt: string | null;
+  messageCount: number;
 }
 
 /** List all sessions known to the goose binary. */
@@ -87,6 +88,23 @@ export async function acpLoadSession(
     gooseSessionId,
     workingDir: workingDir ?? null,
   });
+}
+
+/** Export a session as JSON via the goose binary. */
+export async function acpExportSession(sessionId: string): Promise<string> {
+  return invoke("acp_export_session", { sessionId });
+}
+
+/** Import a session from JSON via the goose binary. Returns new session metadata. */
+export async function acpImportSession(json: string): Promise<AcpSessionInfo> {
+  return invoke("acp_import_session", { json });
+}
+
+/** Duplicate (fork) a session via the goose binary. Returns new session metadata. */
+export async function acpDuplicateSession(
+  sessionId: string,
+): Promise<AcpSessionInfo> {
+  return invoke("acp_duplicate_session", { sessionId });
 }
 
 /** Cancel an in-progress ACP session so the backend stops streaming. */

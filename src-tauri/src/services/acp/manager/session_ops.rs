@@ -13,12 +13,13 @@ use tokio::sync::Mutex;
 use super::dispatcher::SessionEventDispatcher;
 
 /// Lightweight session metadata returned by `list_sessions`.
-#[derive(Clone, Debug, serde::Serialize)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AcpSessionInfo {
     pub session_id: String,
     pub title: Option<String>,
     pub updated_at: Option<String>,
+    pub message_count: usize,
 }
 
 #[derive(Clone)]
@@ -363,10 +364,19 @@ pub(super) async fn list_sessions_inner(
     Ok(response
         .sessions
         .into_iter()
-        .map(|info| AcpSessionInfo {
-            session_id: info.session_id.to_string(),
-            title: info.title,
-            updated_at: info.updated_at,
+        .map(|info| {
+            let message_count = info
+                .meta
+                .as_ref()
+                .and_then(|m| m.get("messageCount"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0) as usize;
+            AcpSessionInfo {
+                session_id: info.session_id.to_string(),
+                title: info.title,
+                updated_at: info.updated_at,
+                message_count,
+            }
         })
         .collect())
 }

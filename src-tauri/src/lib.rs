@@ -52,6 +52,9 @@ pub fn run() {
             commands::acp::acp_load_session,
             commands::acp::acp_list_running,
             commands::acp::acp_cancel_all,
+            commands::acp::acp_export_session,
+            commands::acp::acp_import_session,
+            commands::acp::acp_duplicate_session,
             commands::skills::create_skill,
             commands::skills::list_skills,
             commands::skills::delete_skill,
@@ -80,6 +83,7 @@ pub fn run() {
             commands::agent_setup::install_agent,
             commands::agent_setup::authenticate_agent,
             commands::system::get_home_dir,
+            commands::system::save_exported_session_file,
             commands::system::path_exists,
         ])
         .setup(|_app| Ok(()))

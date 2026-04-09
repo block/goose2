@@ -268,3 +268,42 @@ pub async fn acp_cancel_all(registry: State<'_, Arc<AcpSessionRegistry>>) -> Res
     registry.cancel_all();
     Ok(())
 }
+
+/// Export a session as JSON via the goose binary.
+///
+/// The goose binary reads the session from its database and returns
+/// an OG-goose-compatible JSON string with a `conversation` field.
+#[tauri::command]
+pub async fn acp_export_session(
+    app_handle: AppHandle,
+    session_id: String,
+) -> Result<String, String> {
+    let manager = GooseAcpManager::start(app_handle).await?;
+    manager.export_session(session_id).await
+}
+
+/// Import a session from JSON via the goose binary.
+///
+/// The goose binary parses the JSON (detecting OG vs v1 format),
+/// creates a new session, populates messages, and returns metadata.
+#[tauri::command]
+pub async fn acp_import_session(
+    app_handle: AppHandle,
+    json: String,
+) -> Result<AcpSessionInfo, String> {
+    let manager = GooseAcpManager::start(app_handle).await?;
+    manager.import_session(json).await
+}
+
+/// Duplicate (fork) a session via the goose binary.
+///
+/// The goose binary reads the source session, creates a new one
+/// with the same messages, and returns the new session's metadata.
+#[tauri::command]
+pub async fn acp_duplicate_session(
+    app_handle: AppHandle,
+    session_id: String,
+) -> Result<AcpSessionInfo, String> {
+    let manager = GooseAcpManager::start(app_handle).await?;
+    manager.fork_session(session_id).await
+}

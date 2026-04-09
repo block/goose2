@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { AppShell } from "@/app/AppShell";
 import { useScrollFade } from "@/shared/hooks/useScrollFade";
 import { useZoom } from "@/shared/hooks/useZoom";
+import { Toaster } from "@/shared/ui/sonner";
 
 export function App() {
   useScrollFade();
@@ -30,5 +31,10 @@ export function App() {
     };
   }, []);
 
-  return <AppShell />;
+  return (
+    <>
+      <AppShell />
+      <Toaster />
+    </>
+  );
 }

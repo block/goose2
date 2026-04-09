@@ -16,9 +16,9 @@ const EXCEPTIONS = {
       "Drag-and-drop handlers plus activeProjectId highlight for draft-in-project sessions.",
   },
   "src/features/chat/ui/ChatView.tsx": {
-    limit: 505,
+    limit: 520,
     justification:
-      "Added useSessionAutoTitle hook call for smart session naming.",
+      "ACP prewarm guards, project-aware working dir selection, and chat bootstrapping still live together here.",
   },
   "src/features/sidebar/ui/Sidebar.tsx": {
     limit: 580,
@@ -26,9 +26,9 @@ const EXCEPTIONS = {
       "Search-as-you-type filtering and draft-aware sidebar highlight logic.",
   },
   "src-tauri/src/services/acp/manager.rs": {
-    limit: 520,
+    limit: 630,
     justification:
-      "ACP manager command dispatch loop — each new command variant adds ~10 lines of boilerplate.",
+      "ACP manager command dispatch loop — export/import/fork session ext_method dispatch adds boilerplate.",
   },
 };
 

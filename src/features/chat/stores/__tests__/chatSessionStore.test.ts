@@ -134,8 +134,18 @@ describe("chatSessionStore", () => {
   describe("loadSessions", () => {
     it("loads sessions from ACP and maps them correctly", async () => {
       mockedAcpListSessions.mockResolvedValue([
-        { sessionId: "acp-1", title: "ACP Session 1", updatedAt: "2026-04-01" },
-        { sessionId: "acp-2", title: null, updatedAt: "2026-04-02" },
+        {
+          sessionId: "acp-1",
+          title: "ACP Session 1",
+          updatedAt: "2026-04-01",
+          messageCount: 4,
+        },
+        {
+          sessionId: "acp-2",
+          title: null,
+          updatedAt: "2026-04-02",
+          messageCount: 7,
+        },
       ]);
 
       await useChatSessionStore.getState().loadSessions();
@@ -144,8 +154,10 @@ describe("chatSessionStore", () => {
       expect(sessions).toHaveLength(2);
       expect(sessions[0].id).toBe("acp-2"); // Most recent first
       expect(sessions[0].title).toBe("Untitled"); // null title becomes "Untitled"
+      expect(sessions[0].messageCount).toBe(7);
       expect(sessions[1].id).toBe("acp-1");
       expect(sessions[1].title).toBe("ACP Session 1");
+      expect(sessions[1].messageCount).toBe(4);
     });
 
     it("preserves local drafts alongside ACP sessions", async () => {
@@ -154,7 +166,12 @@ describe("chatSessionStore", () => {
       });
 
       mockedAcpListSessions.mockResolvedValue([
-        { sessionId: "acp-1", title: "ACP Session", updatedAt: "2026-04-01" },
+        {
+          sessionId: "acp-1",
+          title: "ACP Session",
+          updatedAt: "2026-04-01",
+          messageCount: 3,
+        },
       ]);
 
       await useChatSessionStore.getState().loadSessions();
@@ -163,6 +180,37 @@ describe("chatSessionStore", () => {
       expect(sessions).toHaveLength(2);
       expect(sessions.find((s) => s.id === "acp-1")).toBeDefined();
       expect(sessions.find((s) => s.id === draft.id)).toBeDefined();
+    });
+
+    it("drops stale non-draft sessions that are no longer in ACP", async () => {
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "stale-session",
+            title: "Stale Session",
+            createdAt: "2026-04-01",
+            updatedAt: "2026-04-01",
+            messageCount: 2,
+          },
+        ],
+        activeSessionId: "stale-session",
+      });
+
+      mockedAcpListSessions.mockResolvedValue([
+        {
+          sessionId: "acp-1",
+          title: "ACP Session",
+          updatedAt: "2026-04-02",
+          messageCount: 1,
+        },
+      ]);
+
+      await useChatSessionStore.getState().loadSessions();
+
+      const state = useChatSessionStore.getState();
+      expect(state.sessions).toHaveLength(1);
+      expect(state.sessions[0].id).toBe("acp-1");
+      expect(state.activeSessionId).toBeNull();
     });
 
     it("sets isLoading during fetch", async () => {
@@ -267,12 +315,15 @@ describe("chatSessionStore", () => {
   });
 
   describe("archiveSession", () => {
-    it("removes the session from the list", async () => {
+    it("sets archivedAt on the session", async () => {
       const session = useChatSessionStore.getState().createDraftSession();
 
       await useChatSessionStore.getState().archiveSession(session.id);
 
-      expect(useChatSessionStore.getState().sessions).toHaveLength(0);
+      const archived = useChatSessionStore
+        .getState()
+        .sessions.find((s) => s.id === session.id);
+      expect(archived?.archivedAt).toBeDefined();
     });
 
     it("clears activeSessionId if archiving the active session", async () => {
@@ -282,6 +333,45 @@ describe("chatSessionStore", () => {
       await useChatSessionStore.getState().archiveSession(session.id);
 
       expect(useChatSessionStore.getState().activeSessionId).toBeNull();
+    });
+  });
+
+  describe("addSession", () => {
+    it("prepends a new session to the list", () => {
+      const { addSession } = useChatSessionStore.getState();
+      addSession({
+        id: "imported-1",
+        title: "Imported Session",
+        createdAt: "2026-01-01T00:00:00Z",
+        updatedAt: "2026-01-01T00:00:00Z",
+        messageCount: 5,
+      });
+      const sessions = useChatSessionStore.getState().sessions;
+      expect(sessions[0].id).toBe("imported-1");
+      expect(sessions[0].title).toBe("Imported Session");
+      expect(sessions[0].messageCount).toBe(5);
+    });
+
+    it("does not create a duplicate if session ID already exists", () => {
+      const { addSession } = useChatSessionStore.getState();
+      addSession({
+        id: "dup-1",
+        title: "First",
+        createdAt: "2026-01-01T00:00:00Z",
+        updatedAt: "2026-01-01T00:00:00Z",
+        messageCount: 1,
+      });
+      addSession({
+        id: "dup-1",
+        title: "Second",
+        createdAt: "2026-01-01T00:00:00Z",
+        updatedAt: "2026-01-01T00:00:00Z",
+        messageCount: 2,
+      });
+      const sessions = useChatSessionStore.getState().sessions;
+      const matches = sessions.filter((s) => s.id === "dup-1");
+      expect(matches).toHaveLength(1);
+      expect(matches[0].title).toBe("Second");
     });
   });
 });
