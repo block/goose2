@@ -1,27 +1,52 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Sparkles, User } from "lucide-react";
+import { IconFile, IconFolder } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 import { useAvatarSrc } from "@/shared/hooks/useAvatarSrc";
 import type { Persona } from "@/shared/types/agents";
 
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export interface FileMentionItem {
+  /** Absolute path used when inserting into the message. */
+  resolvedPath: string;
+  /** Shortened display path (e.g. ~/project/src/foo.ts). */
+  displayPath: string;
+  /** Just the filename portion. */
+  filename: string;
+  kind: "file" | "folder" | "path";
+}
+
+export type MentionItem =
+  | { type: "persona"; persona: Persona }
+  | { type: "file"; file: FileMentionItem };
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 interface MentionAutocompleteProps {
   personas: Persona[];
+  files?: FileMentionItem[];
   query: string;
   isOpen: boolean;
-  onSelect: (persona: Persona) => void;
-  /** Optional close handler (called on Escape). */
+  onSelectPersona: (persona: Persona) => void;
+  onSelectFile?: (file: FileMentionItem) => void;
   onClose?: (() => void) | undefined;
   anchorRect?: DOMRect | null;
-  /** Index of the currently highlighted item (controlled by parent). */
   selectedIndex?: number;
 }
 
 export function MentionAutocomplete({
   personas,
+  files = [],
   query,
   isOpen,
-  onSelect,
+  onSelectPersona,
+  onSelectFile,
   anchorRect,
   selectedIndex: controlledIndex,
 }: MentionAutocompleteProps) {
@@ -30,31 +55,61 @@ export function MentionAutocomplete({
   const selectedIndex = controlledIndex ?? internalIndex;
   const listRef = useRef<HTMLDivElement>(null);
 
-  const filtered = useMemo(() => {
+  const { filteredPersonas, filteredFiles } = useMemo(() => {
     const q = query.toLowerCase();
-    if (!q) return personas;
-    return personas.filter((p) => p.displayName.toLowerCase().includes(q));
-  }, [personas, query]);
+    const fp = q
+      ? personas.filter((p) => p.displayName.toLowerCase().includes(q))
+      : personas;
+    const ff = q
+      ? files.filter(
+          (f) =>
+            f.filename.toLowerCase().includes(q) ||
+            f.displayPath.toLowerCase().includes(q),
+        )
+      : files;
+    return { filteredPersonas: fp, filteredFiles: ff };
+  }, [personas, files, query]);
+
+  const items: MentionItem[] = useMemo(() => {
+    const result: MentionItem[] = filteredPersonas.map((p) => ({
+      type: "persona" as const,
+      persona: p,
+    }));
+    for (const f of filteredFiles) {
+      result.push({ type: "file" as const, file: f });
+    }
+    return result;
+  }, [filteredPersonas, filteredFiles]);
 
   // Reset index when results change
   // biome-ignore lint/correctness/useExhaustiveDependencies: reset on query/result changes
   useEffect(() => {
     setInternalIndex(0);
-  }, [filtered.length, query]);
+  }, [items.length, query]);
 
   const handleSelect = useCallback(
-    (persona: Persona) => {
-      onSelect(persona);
+    (item: MentionItem) => {
+      if (item.type === "persona") {
+        onSelectPersona(item.persona);
+      } else {
+        onSelectFile?.(item.file);
+      }
     },
-    [onSelect],
+    [onSelectPersona, onSelectFile],
   );
 
-  if (!isOpen || filtered.length === 0) return null;
+  if (!isOpen || items.length === 0) return null;
+
+  // Determine section boundaries for headers
+  const personaCount = filteredPersonas.length;
+  const fileCount = filteredFiles.length;
+  const showPersonaHeader = personaCount > 0 && fileCount > 0;
+  const showFileHeader = fileCount > 0;
 
   return (
     <div
       ref={listRef}
-      className="absolute z-50 w-64 rounded-lg border border-border bg-background shadow-popover"
+      className="absolute z-50 w-72 rounded-lg border border-border bg-background shadow-popover"
       style={{
         bottom: anchorRect ? "calc(100% + 4px)" : undefined,
         left: anchorRect ? 16 : undefined,
@@ -62,11 +117,18 @@ export function MentionAutocomplete({
       role="listbox"
       aria-label={t("mention.ariaLabel")}
     >
-      <div className="px-2 py-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-        {t("mention.title")}
-      </div>
-      <div className="max-h-48 overflow-y-auto px-1 pb-1">
-        {filtered.map((persona, index) => (
+      <div className="max-h-56 overflow-y-auto px-1 py-1">
+        {showPersonaHeader && (
+          <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            {t("mention.title")}
+          </div>
+        )}
+        {!showPersonaHeader && personaCount > 0 && (
+          <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            {t("mention.title")}
+          </div>
+        )}
+        {filteredPersonas.map((persona, index) => (
           <button
             key={persona.id}
             type="button"
@@ -78,7 +140,7 @@ export function MentionAutocomplete({
                 ? "bg-accent text-foreground"
                 : "text-muted-foreground hover:bg-accent/50",
             )}
-            onClick={() => handleSelect(persona)}
+            onClick={() => handleSelect({ type: "persona", persona })}
             onMouseEnter={() => setInternalIndex(index)}
           >
             <MentionAvatar persona={persona} />
@@ -95,10 +157,53 @@ export function MentionAutocomplete({
             </div>
           </button>
         ))}
+
+        {showFileHeader && (
+          <div className="mt-1 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            {t("mention.filesTitle")}
+          </div>
+        )}
+        {filteredFiles.map((file, i) => {
+          const globalIndex = personaCount + i;
+          return (
+            <button
+              key={file.resolvedPath}
+              type="button"
+              role="option"
+              aria-selected={globalIndex === selectedIndex}
+              className={cn(
+                "flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors",
+                globalIndex === selectedIndex
+                  ? "bg-accent text-foreground"
+                  : "text-muted-foreground hover:bg-accent/50",
+              )}
+              onClick={() => handleSelect({ type: "file", file })}
+              onMouseEnter={() => setInternalIndex(globalIndex)}
+            >
+              {file.kind === "folder" ? (
+                <IconFolder className="size-4 shrink-0" />
+              ) : (
+                <IconFile className="size-4 shrink-0" />
+              )}
+              <div className="flex min-w-0 flex-col">
+                <span className="truncate text-sm font-medium">
+                  {file.filename}
+                </span>
+                <span className="truncate text-[10px] text-muted-foreground">
+                  {file.displayPath}
+                </span>
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Avatar helper (unchanged)
+// ---------------------------------------------------------------------------
 
 function MentionAvatar({ persona }: { persona: Persona }) {
   const avatarSrc = useAvatarSrc(persona.avatar);
@@ -130,8 +235,14 @@ function MentionAvatar({ persona }: { persona: Persona }) {
   );
 }
 
-// Hook to manage mention detection and keyboard navigation in a textarea
-export function useMentionDetection(personas: Persona[] = []) {
+// ---------------------------------------------------------------------------
+// Hook — mention detection + keyboard navigation
+// ---------------------------------------------------------------------------
+
+export function useMentionDetection(
+  personas: Persona[] = [],
+  files: FileMentionItem[] = [],
+) {
   const [mentionState, setMentionState] = useState<{
     isOpen: boolean;
     query: string;
@@ -139,16 +250,28 @@ export function useMentionDetection(personas: Persona[] = []) {
     selectedIndex: number;
   }>({ isOpen: false, query: "", startIndex: -1, selectedIndex: 0 });
 
-  const filtered = useMemo(() => {
-    if (!mentionState.isOpen) return personas;
+  const { filteredPersonas, filteredFiles } = useMemo(() => {
+    if (!mentionState.isOpen) {
+      return { filteredPersonas: personas, filteredFiles: files };
+    }
     const q = mentionState.query.toLowerCase();
-    if (!q) return personas;
-    return personas.filter((p) => p.displayName.toLowerCase().includes(q));
-  }, [personas, mentionState.isOpen, mentionState.query]);
+    if (!q) return { filteredPersonas: personas, filteredFiles: files };
+    return {
+      filteredPersonas: personas.filter((p) =>
+        p.displayName.toLowerCase().includes(q),
+      ),
+      filteredFiles: files.filter(
+        (f) =>
+          f.filename.toLowerCase().includes(q) ||
+          f.displayPath.toLowerCase().includes(q),
+      ),
+    };
+  }, [personas, files, mentionState.isOpen, mentionState.query]);
+
+  const totalCount = filteredPersonas.length + filteredFiles.length;
 
   const detectMention = useCallback(
     (value: string, cursorPos: number) => {
-      // Look backwards from cursor for an unmatched @
       const beforeCursor = value.slice(0, cursorPos);
       const lastAt = beforeCursor.lastIndexOf("@");
 
@@ -180,7 +303,7 @@ export function useMentionDetection(personas: Persona[] = []) {
       const query = beforeCursor.slice(lastAt + 1);
 
       // Close if there's a space after the query (mention completed) or too long
-      if (query.includes(" ") || query.length > 30) {
+      if (query.includes(" ") || query.length > 50) {
         if (mentionState.isOpen) {
           setMentionState({
             isOpen: false,
@@ -211,26 +334,38 @@ export function useMentionDetection(personas: Persona[] = []) {
     });
   }, []);
 
-  /** Move highlight up/down. Returns true if the event was consumed. */
   const navigateMention = useCallback(
     (direction: "up" | "down"): boolean => {
-      if (!mentionState.isOpen || filtered.length === 0) return false;
+      if (!mentionState.isOpen || totalCount === 0) return false;
       setMentionState((prev) => {
         const delta = direction === "down" ? 1 : -1;
-        const next =
-          (prev.selectedIndex + delta + filtered.length) % filtered.length;
+        const next = (prev.selectedIndex + delta + totalCount) % totalCount;
         return { ...prev, selectedIndex: next };
       });
       return true;
     },
-    [mentionState.isOpen, filtered.length],
+    [mentionState.isOpen, totalCount],
   );
 
-  /** Confirm the currently highlighted item. Returns the persona or null. */
-  const confirmMention = useCallback((): Persona | null => {
-    if (!mentionState.isOpen || filtered.length === 0) return null;
-    return filtered[mentionState.selectedIndex] ?? null;
-  }, [mentionState.isOpen, mentionState.selectedIndex, filtered]);
+  /** Confirm the currently highlighted item. Returns persona, file, or null. */
+  const confirmMention = useCallback((): MentionItem | null => {
+    if (!mentionState.isOpen || totalCount === 0) return null;
+    const idx = mentionState.selectedIndex;
+    if (idx < filteredPersonas.length) {
+      return { type: "persona", persona: filteredPersonas[idx] };
+    }
+    const fileIdx = idx - filteredPersonas.length;
+    if (fileIdx < filteredFiles.length) {
+      return { type: "file", file: filteredFiles[fileIdx] };
+    }
+    return null;
+  }, [
+    mentionState.isOpen,
+    mentionState.selectedIndex,
+    totalCount,
+    filteredPersonas,
+    filteredFiles,
+  ]);
 
   return {
     mentionOpen: mentionState.isOpen,
