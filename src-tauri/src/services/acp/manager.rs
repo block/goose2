@@ -1,14 +1,14 @@
+mod command_dispatch;
 mod dispatcher;
 mod session_ops;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use acp_client::MessageWriter;
 use agent_client_protocol::{
-    Agent, ClientSideConnection, ExtRequest, Implementation, InitializeRequest, NewSessionRequest,
-    ProtocolVersion,
+    Agent, ClientSideConnection, ExtRequest, Implementation, InitializeRequest, ProtocolVersion,
 };
 use futures::{SinkExt, StreamExt};
 use serde::Deserialize;
@@ -22,10 +22,6 @@ use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 use super::goose_serve::{GooseServeProcess, WS_BRIDGE_BUFFER_BYTES};
 use dispatcher::{SessionEventDispatcher, SessionRoute};
 pub use session_ops::AcpSessionInfo;
-use session_ops::{
-    cancel_session_inner, list_sessions_inner, load_session_inner, prepare_session_inner,
-    send_prompt_inner, ManagerState, PrepareSessionInput,
-};
 
 enum ManagerCommand {
     ListProviders {
@@ -63,15 +59,17 @@ enum ManagerCommand {
         composite_key: String,
         response: oneshot::Sender<Result<bool, String>>,
     },
-    ResolveSession {
-        session_lookup_key: String,
-        response: oneshot::Sender<Option<String>>,
-    },
-    /// Create a new empty session in the goose binary.
-    /// Returns the goose session ID (thread_id UUID).
-    CreateSession {
-        working_dir: PathBuf,
+    ExportSession {
+        session_id: String,
         response: oneshot::Sender<Result<String, String>>,
+    },
+    ImportSession {
+        json: String,
+        response: oneshot::Sender<Result<AcpSessionInfo, String>>,
+    },
+    ForkSession {
+        session_id: String,
+        response: oneshot::Sender<Result<AcpSessionInfo, String>>,
     },
 }
 
@@ -229,45 +227,67 @@ impl GooseAcpManager {
             .map_err(|_| "Goose ACP manager dropped cancel request".to_string())?
     }
 
-    pub async fn resolve_session_id(
-        &self,
-        session_lookup_key: String,
-    ) -> Result<Option<String>, String> {
+    /// Export a session as JSON via the goose binary.
+    pub async fn export_session(&self, session_id: String) -> Result<String, String> {
         let (response_tx, response_rx) = oneshot::channel();
         self.command_tx
-            .send(ManagerCommand::ResolveSession {
-                session_lookup_key,
+            .send(ManagerCommand::ExportSession {
+                session_id,
                 response: response_tx,
             })
             .map_err(|_| "Goose ACP manager is unavailable".to_string())?;
         response_rx
             .await
-            .map_err(|_| "Goose ACP manager dropped resolve session request".to_string())
+            .map_err(|_| "Goose ACP manager dropped export session request".to_string())?
     }
 
-    /// Create a new empty session in the goose binary.
-    ///
-    /// Returns the goose session ID (the UUID that the ACP protocol uses
-    /// as the session identifier). This is used by import/duplicate to
-    /// register the session with the binary before populating messages
-    /// via direct SQLite writes.
-    pub async fn create_session(&self, working_dir: PathBuf) -> Result<String, String> {
+    /// Import a session from JSON via the goose binary.
+    pub async fn import_session(&self, json: String) -> Result<AcpSessionInfo, String> {
         let (response_tx, response_rx) = oneshot::channel();
         self.command_tx
-            .send(ManagerCommand::CreateSession {
-                working_dir,
+            .send(ManagerCommand::ImportSession {
+                json,
                 response: response_tx,
             })
             .map_err(|_| "Goose ACP manager is unavailable".to_string())?;
         response_rx
             .await
-            .map_err(|_| "Goose ACP manager dropped create session request".to_string())?
+            .map_err(|_| "Goose ACP manager dropped import session request".to_string())?
     }
+
+    /// Fork (duplicate) a session via the goose binary.
+    pub async fn fork_session(&self, session_id: String) -> Result<AcpSessionInfo, String> {
+        let (response_tx, response_rx) = oneshot::channel();
+        self.command_tx
+            .send(ManagerCommand::ForkSession {
+                session_id,
+                response: response_tx,
+            })
+            .map_err(|_| "Goose ACP manager is unavailable".to_string())?;
+        response_rx
+            .await
+            .map_err(|_| "Goose ACP manager dropped fork session request".to_string())?
+    }
+}
+
+/// Call a goose ext_method and return the raw JSON response string.
+async fn call_ext_method(
+    connection: &Arc<ClientSideConnection>,
+    method: &str,
+    params_json: serde_json::Value,
+) -> Result<String, String> {
+    let params = RawValue::from_string(params_json.to_string())
+        .map_err(|e| format!("Failed to build {method} request: {e}"))?;
+    let resp = connection
+        .ext_method(ExtRequest::new(method, params.into()))
+        .await
+        .map_err(|e| format!("{method} failed via Goose ACP: {e:?}"))?;
+    Ok(resp.0.get().to_string())
 }
 
 fn run_manager_thread(
     app_handle: tauri::AppHandle,
-    mut command_rx: mpsc::UnboundedReceiver<ManagerCommand>,
+    command_rx: mpsc::UnboundedReceiver<ManagerCommand>,
     ready_tx: oneshot::Sender<Result<(), String>>,
 ) {
     let runtime = match tokio::runtime::Builder::new_current_thread()
@@ -412,176 +432,6 @@ fn run_manager_thread(
             }
         };
 
-        let state = Arc::new(Mutex::new(ManagerState {
-            sessions: HashMap::new(),
-            op_locks: HashMap::new(),
-            pending_cancels: HashSet::new(),
-            preparing_sessions: HashSet::new(),
-        }));
-
-        while let Some(command) = command_rx.recv().await {
-            match command {
-                ManagerCommand::ListProviders { response } => {
-                    let connection = Arc::clone(&connection);
-                    tokio::task::spawn_local(async move {
-                        let result = async {
-                            let params = RawValue::from_string("{}".to_string())
-                                .map_err(|error| format!("Failed to build ACP request body: {error}"))?;
-                            let response_value = connection
-                                .ext_method(ExtRequest::new("goose/providers/list", params.into()))
-                                .await
-                                .map_err(|error| {
-                                    format!("Failed to list providers via Goose ACP: {error:?}")
-                                })?;
-                            let parsed: GooseProvidersResponse =
-                                serde_json::from_str(response_value.0.get()).map_err(|error| {
-                                    format!("Failed to decode Goose provider list: {error}")
-                                })?;
-                            Ok::<_, String>(parsed.providers)
-                        }
-                        .await;
-                        let _ = response.send(result);
-                    });
-                }
-                ManagerCommand::ListSessions { response } => {
-                    let connection = Arc::clone(&connection);
-                    tokio::task::spawn_local(async move {
-                        let result = list_sessions_inner(&connection).await;
-                        let _ = response.send(result);
-                    });
-                }
-                ManagerCommand::LoadSession {
-                    local_session_id,
-                    goose_session_id,
-                    working_dir,
-                    response,
-                } => {
-                    let connection = Arc::clone(&connection);
-                    let dispatcher = dispatcher.clone();
-                    let state = Arc::clone(&state);
-                    tokio::task::spawn_local(async move {
-                        let result = load_session_inner(
-                            &connection,
-                            &dispatcher,
-                            &state,
-                            &local_session_id,
-                            &goose_session_id,
-                            working_dir,
-                        )
-                        .await;
-                        let _ = response.send(result);
-                    });
-                }
-                ManagerCommand::PrepareSession {
-                    composite_key,
-                    local_session_id,
-                    provider_id,
-                    working_dir,
-                    existing_agent_session_id,
-                    response,
-                } => {
-                    let connection = Arc::clone(&connection);
-                    let dispatcher = dispatcher.clone();
-                    let state = Arc::clone(&state);
-                    tokio::task::spawn_local(async move {
-                        let result = prepare_session_inner(
-                            &connection,
-                            &dispatcher,
-                            &state,
-                            PrepareSessionInput {
-                                composite_key,
-                                local_session_id,
-                                provider_id,
-                                working_dir,
-                                existing_agent_session_id,
-                            },
-                        )
-                        .await
-                        .map(|_| ());
-                        let _ = response.send(result);
-                    });
-                }
-                ManagerCommand::SendPrompt {
-                    composite_key,
-                    local_session_id,
-                    provider_id,
-                    working_dir,
-                    existing_agent_session_id,
-                    writer,
-                    prompt,
-                    images,
-                    response,
-                } => {
-                    let connection = Arc::clone(&connection);
-                    let dispatcher = dispatcher.clone();
-                    let state = Arc::clone(&state);
-                    tokio::task::spawn_local(async move {
-                        let result = send_prompt_inner(
-                            &connection,
-                            &dispatcher,
-                            &state,
-                            composite_key,
-                            local_session_id,
-                            provider_id,
-                            working_dir,
-                            existing_agent_session_id,
-                            writer,
-                            prompt,
-                            images,
-                        )
-                        .await;
-                        let _ = response.send(result);
-                    });
-                }
-                ManagerCommand::CancelSession {
-                    composite_key,
-                    response,
-                } => {
-                    let connection = Arc::clone(&connection);
-                    let dispatcher = dispatcher.clone();
-                    let state = Arc::clone(&state);
-                    tokio::task::spawn_local(async move {
-                        let result =
-                            cancel_session_inner(&connection, &dispatcher, &state, &composite_key)
-                                .await;
-                        let _ = response.send(result);
-                    });
-                }
-                ManagerCommand::ResolveSession {
-                    session_lookup_key,
-                    response,
-                } => {
-                    let state = Arc::clone(&state);
-                    tokio::task::spawn_local(async move {
-                        let resolved = {
-                            let guard = state.lock().await;
-                            guard
-                                .sessions
-                                .get(&session_lookup_key)
-                                .map(|session| session.goose_session_id.clone())
-                        };
-                        let _ = response.send(resolved);
-                    });
-                }
-                ManagerCommand::CreateSession {
-                    working_dir,
-                    response,
-                } => {
-                    let connection = Arc::clone(&connection);
-                    tokio::task::spawn_local(async move {
-                        let result = async {
-                            let request = NewSessionRequest::new(working_dir);
-                            let resp = connection
-                                .new_session(request)
-                                .await
-                                .map_err(|e| format!("Failed to create session: {e:?}"))?;
-                            Ok::<_, String>(resp.session_id.to_string())
-                        }
-                        .await;
-                        let _ = response.send(result);
-                    });
-                }
-            }
-        }
+        command_dispatch::dispatch_commands(command_rx, connection, dispatcher).await;
     });
 }

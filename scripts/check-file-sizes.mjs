@@ -26,14 +26,9 @@ const EXCEPTIONS = {
       "Search-as-you-type filtering and draft-aware sidebar highlight logic.",
   },
   "src-tauri/src/services/acp/manager.rs": {
-    limit: 600,
+    limit: 630,
     justification:
-      "ACP manager command dispatch loop — create/import/export session resolution adds boilerplate until command handling is split further.",
-  },
-  "src-tauri/src/services/session_db.rs": {
-    limit: 650,
-    justification:
-      "Single SQLite access module for session export/import/duplicate. Includes backfill_thread_messages_if_missing repair function.",
+      "ACP manager command dispatch loop — export/import/fork session ext_method dispatch adds boilerplate.",
   },
 };
 
