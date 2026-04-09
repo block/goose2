@@ -159,6 +159,10 @@ export function SidebarChatRow({
         setDragging(true);
       }}
       onDragEnd={() => setDragging(false)}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        setMenuOpen(true);
+      }}
       className={cn(
         "relative flex items-center group rounded-md transition-colors duration-200 active:cursor-grabbing",
         dragging && "opacity-40 bg-accent/30",
