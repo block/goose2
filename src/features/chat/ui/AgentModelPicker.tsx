@@ -210,7 +210,7 @@ export function AgentModelPicker({
               {t("toolbar.agent")}
             </div>
             <ScrollArea className="min-h-0 flex-1">
-              <div>
+              <div className="pt-0.5">
                 {agents.map((agent) => {
                   const isSelected = agent.id === selectedAgentId;
 

@@ -122,7 +122,7 @@
   --text-warning: var(--color-yellow-200);
   --text-info: var(--color-blue-200);
 
-  --ring: var(--border-strong);
+  --ring: color-mix(in srgb, var(--border-strong) 20%, transparent);
 
   /* Alpha variants */
   --dark-10: rgba(26, 26, 26, 0.1);
@@ -304,7 +304,7 @@
   --text-warning: var(--color-yellow-100);
   --text-info: var(--color-blue-100);
 
-  --ring: var(--border-strong);
+  --ring: color-mix(in srgb, var(--border-strong) 20%, transparent);
 
   /* Alpha variants (dark mode) */
   --dark-10: rgba(242, 242, 242, 0.1);
@@ -728,6 +728,14 @@ body,
   *:not(body):not(.focus-override) {
     &:focus-visible {
       @apply ring-ring ring-offset-background ring-2 ring-offset-1 outline-hidden;
+    }
+  }
+
+  [data-slot="dropdown-menu-content"],
+  [data-slot="popover-content"],
+  [data-slot="context-menu-content"] {
+    &:focus-visible {
+      @apply ring-0 ring-offset-0;
     }
   }
 
