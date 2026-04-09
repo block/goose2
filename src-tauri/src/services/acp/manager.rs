@@ -71,6 +71,11 @@ enum ManagerCommand {
         session_id: String,
         response: oneshot::Sender<Result<AcpSessionInfo, String>>,
     },
+    SetModel {
+        local_session_id: String,
+        model_id: String,
+        response: oneshot::Sender<Result<(), String>>,
+    },
 }
 
 pub struct GooseAcpManager {
@@ -225,6 +230,24 @@ impl GooseAcpManager {
         response_rx
             .await
             .map_err(|_| "Goose ACP manager dropped cancel request".to_string())?
+    }
+
+    pub async fn set_model(
+        &self,
+        local_session_id: String,
+        model_id: String,
+    ) -> Result<(), String> {
+        let (response_tx, response_rx) = oneshot::channel();
+        self.command_tx
+            .send(ManagerCommand::SetModel {
+                local_session_id,
+                model_id,
+                response: response_tx,
+            })
+            .map_err(|_| "Goose ACP manager is unavailable".to_string())?;
+        response_rx
+            .await
+            .map_err(|_| "Goose ACP manager dropped set model request".to_string())?
     }
 
     /// Export a session as JSON via the goose binary.

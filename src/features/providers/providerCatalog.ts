@@ -431,3 +431,91 @@ export function getAgentProviders(): ProviderCatalogEntry[] {
 export function getModelProviders(): ProviderCatalogEntry[] {
   return PROVIDER_CATALOG.filter((p) => p.category === "model");
 }
+
+function normalizeProviderKey(value: string): string {
+  return value
+    .toLowerCase()
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .join("_");
+}
+
+const AGENT_PROVIDER_ALIAS_MAP: Record<string, string> = {
+  goose: "goose",
+  claude_acp: "claude-acp",
+  claude_code: "claude-acp",
+  claude: "claude-acp",
+  codex_acp: "codex-acp",
+  codex_cli: "codex-acp",
+  codex: "codex-acp",
+  copilot_acp: "copilot-acp",
+  github_copilot: "copilot-acp",
+  github_copilot_cli: "copilot-acp",
+  cursor_agent: "cursor-agent",
+  cursor: "cursor-agent",
+  amp_acp: "amp-acp",
+  amp: "amp-acp",
+  pi_acp: "pi-acp",
+  pi: "pi-acp",
+};
+
+const AGENT_PROVIDER_FUZZY_MATCHERS: Array<[string, string]> = [
+  ["goose", "goose"],
+  ["claude", "claude-acp"],
+  ["codex", "codex-acp"],
+  ["cursor", "cursor-agent"],
+  ["copilot", "copilot-acp"],
+  ["amp", "amp-acp"],
+];
+
+export function resolveAgentProviderCatalogIdStrict(
+  providerId: string,
+): string | null {
+  const directMatch = getAgentProviders().find(
+    (provider) => provider.id === providerId,
+  );
+  if (directMatch) {
+    return directMatch.id;
+  }
+
+  const normalized = normalizeProviderKey(providerId);
+  const aliasMatch = AGENT_PROVIDER_ALIAS_MAP[normalized];
+  if (aliasMatch) {
+    return aliasMatch;
+  }
+
+  return null;
+}
+
+export function resolveAgentProviderCatalogId(
+  providerId: string,
+  label?: string,
+): string | null {
+  const directMatch = getAgentProviders().find(
+    (provider) => provider.id === providerId,
+  );
+  if (directMatch) {
+    return directMatch.id;
+  }
+
+  const normalizedCandidates = [providerId, label ?? ""]
+    .map((value) => normalizeProviderKey(value))
+    .filter(Boolean);
+
+  for (const candidate of normalizedCandidates) {
+    const aliasMatch = AGENT_PROVIDER_ALIAS_MAP[candidate];
+    if (aliasMatch) {
+      return aliasMatch;
+    }
+  }
+
+  for (const candidate of normalizedCandidates) {
+    for (const [needle, catalogId] of AGENT_PROVIDER_FUZZY_MATCHERS) {
+      if (candidate.includes(needle)) {
+        return catalogId;
+      }
+    }
+  }
+
+  return null;
+}

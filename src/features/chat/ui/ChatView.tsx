@@ -19,7 +19,7 @@ import { useProviderSelection } from "@/features/agents/hooks/useProviderSelecti
 import { useChatSessionStore } from "../stores/chatSessionStore";
 import { getProject, type ProjectInfo } from "@/features/projects/api/projects";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
-import { acpPrepareSession } from "@/shared/api/acp";
+import { acpPrepareSession, acpSetModel } from "@/shared/api/acp";
 import {
   buildProjectSystemPrompt,
   composeSystemPrompt,
@@ -29,6 +29,9 @@ import { useAvatarSrc } from "@/shared/hooks/useAvatarSrc";
 import { getHomeDir } from "@/shared/api/system";
 import { Button } from "@/shared/ui/button";
 import { ArtifactPolicyProvider } from "../hooks/ArtifactPolicyContext";
+import type { ModelOption } from "../types";
+
+const EMPTY_MODELS: ModelOption[] = [];
 
 interface ChatViewProps {
   sessionId: string;
@@ -84,6 +87,9 @@ export function ChatView({
   );
   const session = useChatSessionStore((s) =>
     s.sessions.find((candidate) => candidate.id === activeSessionId),
+  );
+  const availableModels = useChatSessionStore(
+    (s) => s.modelsBySession[activeSessionId] ?? EMPTY_MODELS,
   );
   const projects = useProjectStore((s) => s.projects);
   const storedProject = useProjectStore((s) =>
@@ -191,9 +197,17 @@ export function ChatView({
         return;
       }
       setGlobalSelectedProvider(providerId);
-      useChatSessionStore
-        .getState()
-        .updateSession(activeSessionId, { providerId });
+      const sessionStore = useChatSessionStore.getState();
+      const cached = sessionStore.getCachedModels(providerId);
+      sessionStore.setSessionModels(activeSessionId, cached);
+      sessionStore.updateSession(activeSessionId, {
+        providerId,
+        modelId: cached.length > 0 ? cached[0].id : undefined,
+        modelName:
+          cached.length > 0
+            ? (cached[0].displayName ?? cached[0].name)
+            : undefined,
+      });
     },
     [activeSessionId, selectedProvider, setGlobalSelectedProvider],
   );
@@ -205,6 +219,18 @@ export function ChatView({
         .updateSession(activeSessionId, { projectId });
     },
     [activeSessionId],
+  );
+  const handleModelChange = useCallback(
+    (modelId: string) => {
+      if (!activeSessionId || modelId === session?.modelId) {
+        return;
+      }
+
+      acpSetModel(activeSessionId, modelId).catch((error) => {
+        console.error("Failed to update ACP model:", error);
+      });
+    },
+    [activeSessionId, session?.modelId],
   );
 
   // When persona changes, update the provider to match persona's default
@@ -435,6 +461,10 @@ export function ChatView({
             providersLoading={providersLoading}
             selectedProvider={selectedProvider}
             onProviderChange={handleProviderChange}
+            currentModelId={session?.modelId ?? null}
+            currentModel={session?.modelName}
+            availableModels={availableModels}
+            onModelChange={handleModelChange}
             selectedProjectId={session?.projectId ?? null}
             availableProjects={availableProjects}
             onProjectChange={handleProjectChange}

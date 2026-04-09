@@ -11,6 +11,7 @@ use agent_client_protocol::{
 use tokio::sync::Mutex;
 
 use super::dispatcher::SessionEventDispatcher;
+use crate::services::acp::split_composite_key;
 
 /// Lightweight session metadata returned by `list_sessions`.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -124,7 +125,7 @@ pub(super) async fn prepare_session_inner(
 
         if let Some(prepared) = existing_prepared {
             dispatcher
-                .bind_session(&prepared.goose_session_id, &local_session_id)
+                .bind_session(&prepared.goose_session_id, &local_session_id, Some(&provider_id))
                 .await;
 
             if prepared.working_dir != working_dir {
@@ -136,10 +137,10 @@ pub(super) async fn prepare_session_inner(
                     .await
                     .map_err(|error| format!("Failed to load Goose session: {error:?}"))?;
                 if let Some(models) = &response.models {
-                    dispatcher.emit_model_state(&local_session_id, models);
+                    dispatcher.emit_model_state(&local_session_id, Some(&provider_id), models);
                 }
                 if let Some(options) = &response.config_options {
-                    dispatcher.emit_model_state_from_options(&local_session_id, options);
+                    dispatcher.emit_model_state_from_options(&local_session_id, Some(&provider_id), options);
                 }
 
                 let mut guard = state.lock().await;
@@ -160,7 +161,7 @@ pub(super) async fn prepare_session_inner(
                         format!("Failed to update provider via Goose ACP: {error:?}")
                     })?;
                 dispatcher
-                    .emit_model_state_from_options(&local_session_id, &response.config_options);
+                    .emit_model_state_from_options(&local_session_id, Some(&provider_id), &response.config_options);
 
                 let mut guard = state.lock().await;
                 if let Some(session) = guard.sessions.get_mut(&composite_key) {
@@ -173,7 +174,7 @@ pub(super) async fn prepare_session_inner(
 
         let goose_session_id = if let Some(existing_id) = existing_agent_session_id {
             dispatcher
-                .bind_session(&existing_id, &local_session_id)
+                .bind_session(&existing_id, &local_session_id, Some(&provider_id))
                 .await;
 
             let response = connection
@@ -185,10 +186,10 @@ pub(super) async fn prepare_session_inner(
                 .map_err(|error| format!("Failed to load Goose session: {error:?}"))?;
 
             if let Some(models) = &response.models {
-                dispatcher.emit_model_state(&local_session_id, models);
+                dispatcher.emit_model_state(&local_session_id, Some(&provider_id), models);
             }
             if let Some(options) = &response.config_options {
-                dispatcher.emit_model_state_from_options(&local_session_id, options);
+                dispatcher.emit_model_state_from_options(&local_session_id, Some(&provider_id), options);
             }
 
             let loaded_provider_id = response
@@ -207,7 +208,7 @@ pub(super) async fn prepare_session_inner(
                         format!("Failed to update provider via Goose ACP: {error:?}")
                     })?;
                 dispatcher
-                    .emit_model_state_from_options(&local_session_id, &response.config_options);
+                    .emit_model_state_from_options(&local_session_id, Some(&provider_id), &response.config_options);
             }
 
             existing_id
@@ -229,13 +230,13 @@ pub(super) async fn prepare_session_inner(
 
             let new_id = response.session_id.to_string();
 
-            dispatcher.bind_session(&new_id, &local_session_id).await;
+            dispatcher.bind_session(&new_id, &local_session_id, Some(&provider_id)).await;
 
             if let Some(models) = &response.models {
-                dispatcher.emit_model_state(&local_session_id, models);
+                dispatcher.emit_model_state(&local_session_id, Some(&provider_id), models);
             }
             if let Some(options) = &response.config_options {
-                dispatcher.emit_model_state_from_options(&local_session_id, options);
+                dispatcher.emit_model_state_from_options(&local_session_id, Some(&provider_id), options);
             }
 
             new_id
@@ -291,6 +292,7 @@ pub(super) async fn send_prompt_inner(
     prompt: String,
     images: Vec<(String, String)>,
 ) -> Result<(), String> {
+    let provider_id_for_writer = provider_id.clone();
     let goose_session_id = match prepare_session_inner(
         connection,
         dispatcher,
@@ -317,7 +319,7 @@ pub(super) async fn send_prompt_inner(
     }
 
     dispatcher
-        .attach_writer(&goose_session_id, &local_session_id, writer.clone())
+        .attach_writer(&goose_session_id, &local_session_id, Some(&provider_id_for_writer), writer.clone())
         .await;
 
     if dispatcher.is_canceled(&goose_session_id).await
@@ -396,7 +398,7 @@ pub(super) async fn load_session_inner(
     working_dir: PathBuf,
 ) -> Result<(), String> {
     dispatcher
-        .bind_session(goose_session_id, local_session_id)
+        .bind_session(goose_session_id, local_session_id, None)
         .await;
 
     let response = connection
@@ -411,10 +413,10 @@ pub(super) async fn load_session_inner(
     dispatcher.finalize_replay(goose_session_id).await;
 
     if let Some(models) = &response.models {
-        dispatcher.emit_model_state(local_session_id, models);
+        dispatcher.emit_model_state(local_session_id, None, models);
     }
     if let Some(options) = &response.config_options {
-        dispatcher.emit_model_state_from_options(local_session_id, options);
+        dispatcher.emit_model_state_from_options(local_session_id, None, options);
     }
 
     // Register the session so future prompts reuse this goose session
@@ -467,11 +469,67 @@ pub(super) async fn cancel_session_inner(
     Ok(true)
 }
 
+pub(super) async fn set_model_inner(
+    connection: &Arc<ClientSideConnection>,
+    dispatcher: &Arc<SessionEventDispatcher>,
+    state: &Arc<Mutex<ManagerState>>,
+    local_session_id: &str,
+    model_id: &str,
+) -> Result<(), String> {
+    let prepared_sessions = {
+        let guard = state.lock().await;
+        guard
+            .sessions
+            .iter()
+            .filter_map(|(composite_key, session)| {
+                let (session_id, _) = split_composite_key(composite_key);
+                (session_id == local_session_id).then_some((
+                    composite_key.clone(),
+                    session.goose_session_id.clone(),
+                    session.provider_id.clone(),
+                ))
+            })
+            .collect::<Vec<_>>()
+    };
+
+    if prepared_sessions.is_empty() {
+        return Err(format!(
+            "Failed to update model for session '{local_session_id}': no prepared ACP session"
+        ));
+    }
+
+    let mut updated_goose_sessions = HashSet::new();
+    for (composite_key, goose_session_id, provider_id) in prepared_sessions {
+        if !updated_goose_sessions.insert(goose_session_id.clone()) {
+            continue;
+        }
+
+        let session_lock = {
+            let mut guard = state.lock().await;
+            guard.session_lock(&composite_key)
+        };
+        let _lock_guard = session_lock.lock().await;
+
+        let response = connection
+            .set_session_config_option(SetSessionConfigOptionRequest::new(
+                goose_session_id,
+                "model",
+                model_id,
+            ))
+            .await
+            .map_err(|error| format!("Failed to update model via Goose ACP: {error:?}"))?;
+        dispatcher.emit_model_state_from_options(local_session_id, Some(&provider_id), &response.config_options);
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::{HashMap, HashSet};
 
     use super::{needs_provider_update, ManagerState};
+    use crate::services::acp::split_composite_key;
 
     #[test]
     fn provider_update_detects_switch_back_to_goose() {
@@ -494,5 +552,14 @@ mod tests {
 
         assert!(state.take_cancel_requested("session-1"));
         assert!(!state.take_cancel_requested("session-1"));
+    }
+
+    #[test]
+    fn split_composite_key_extracts_local_session_id() {
+        assert_eq!(
+            split_composite_key("session-1__persona-1"),
+            ("session-1", Some("persona-1"))
+        );
+        assert_eq!(split_composite_key("session-1"), ("session-1", None));
     }
 }

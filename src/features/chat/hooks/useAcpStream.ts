@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useChatStore } from "../stores/chatStore";
 import { useChatSessionStore } from "../stores/chatSessionStore";
+import type { ModelOption } from "../types";
 import { isDefaultChatTitle } from "../lib/sessionTitle";
 import type {
   Message,
@@ -63,8 +64,10 @@ interface AcpSessionInfoPayload {
 
 interface AcpModelStatePayload {
   sessionId: string;
+  providerId?: string | null;
   currentModelId: string;
   currentModelName?: string;
+  availableModels: ModelOption[];
 }
 
 interface AcpUsageUpdatePayload {
@@ -461,11 +464,21 @@ export function useAcpStream(enabled: boolean): void {
     unlisteners.push(
       listen<AcpModelStatePayload>("acp:model_state", (event) => {
         if (!active) return;
-        const modelName =
-          event.payload.currentModelName ?? event.payload.currentModelId;
-        useChatSessionStore
-          .getState()
-          .updateSession(event.payload.sessionId, { modelName });
+        const { sessionId, providerId, currentModelId, currentModelName, availableModels } = event.payload;
+        const sessionStore = useChatSessionStore.getState();
+        const session = sessionStore.getSession(sessionId);
+        if (providerId && session?.providerId && providerId !== session.providerId) {
+          return;
+        }
+        if (providerId) {
+          sessionStore.cacheModelsForProvider(providerId, availableModels);
+        }
+        const modelName = currentModelName ?? currentModelId;
+        sessionStore.setSessionModels(sessionId, availableModels);
+        sessionStore.updateSession(sessionId, {
+          modelId: currentModelId,
+          modelName,
+        });
       }),
     );
 

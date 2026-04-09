@@ -8,7 +8,7 @@ use tokio::sync::{mpsc, Mutex};
 use super::dispatcher::SessionEventDispatcher;
 use super::session_ops::{
     cancel_session_inner, list_sessions_inner, load_session_inner, prepare_session_inner,
-    send_prompt_inner, AcpSessionInfo, ManagerState, PrepareSessionInput,
+    send_prompt_inner, set_model_inner, AcpSessionInfo, ManagerState, PrepareSessionInput,
 };
 use super::{call_ext_method, GooseProvidersResponse, ManagerCommand};
 
@@ -229,6 +229,26 @@ pub(super) async fn dispatch_commands(
                             message_count,
                         })
                     }
+                    .await;
+                    let _ = response.send(result);
+                });
+            }
+            ManagerCommand::SetModel {
+                local_session_id,
+                model_id,
+                response,
+            } => {
+                let connection = Arc::clone(&connection);
+                let dispatcher = dispatcher.clone();
+                let state = Arc::clone(&state);
+                tokio::task::spawn_local(async move {
+                    let result = set_model_inner(
+                        &connection,
+                        &dispatcher,
+                        &state,
+                        &local_session_id,
+                        &model_id,
+                    )
                     .await;
                     let _ = response.send(result);
                 });

@@ -18,13 +18,7 @@ import { ImageLightbox } from "@/shared/ui/ImageLightbox";
 import type { PastedImage } from "@/shared/types/messages";
 import { resizeImage } from "../lib/resizeImage";
 import { useImageDropTarget } from "../hooks/useImageDropTarget";
-
-export interface ModelOption {
-  id: string;
-  name: string;
-  displayName?: string;
-  provider?: string;
-}
+import type { ModelOption } from "../types";
 
 export interface ProjectOption {
   id: string;
@@ -54,6 +48,7 @@ interface ChatInputProps {
   selectedProvider?: string;
   onProviderChange?: (providerId: string) => void;
   // Model
+  currentModelId?: string | null;
   currentModel?: string;
   availableModels?: ModelOption[];
   onModelChange?: (modelId: string) => void;
@@ -141,7 +136,8 @@ export function ChatInput({
   providersLoading = false,
   selectedProvider = "goose",
   onProviderChange,
-  currentModel = "Claude Sonnet 4",
+  currentModelId = null,
+  currentModel,
   availableModels = [],
   onModelChange,
   selectedProjectId = null,
@@ -363,6 +359,8 @@ export function ChatInput({
     providers.find((p) => p.id === selectedProvider)?.label ??
     formatProviderLabel(selectedProvider);
   const agentDisplayName = activePersona?.displayName ?? providerDisplayName;
+  const resolvedCurrentModel =
+    currentModel ?? availableModels[0]?.displayName ?? availableModels[0]?.name;
   const effectivePlaceholder = t("input.placeholder", {
     agent: agentDisplayName,
   });
@@ -475,7 +473,8 @@ export function ChatInput({
               providersLoading={providersLoading}
               selectedProvider={selectedProvider}
               onProviderChange={(id) => onProviderChange?.(id)}
-              currentModel={currentModel}
+              currentModelId={currentModelId}
+              currentModel={resolvedCurrentModel}
               availableModels={availableModels}
               onModelChange={onModelChange}
               selectedProjectId={selectedProjectId}

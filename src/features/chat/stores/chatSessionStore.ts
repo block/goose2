@@ -2,6 +2,9 @@ import { create } from "zustand";
 import type { Session } from "@/shared/types/chat";
 import { acpListSessions } from "@/shared/api/acp";
 import { DEFAULT_CHAT_TITLE } from "@/features/chat/lib/sessionTitle";
+import type { ModelOption } from "../types";
+
+const EMPTY_MODELS: ModelOption[] = [];
 
 // Extended session metadata used by the frontend session list
 export interface ChatSession {
@@ -11,6 +14,7 @@ export interface ChatSession {
   agentId?: string;
   providerId?: string;
   personaId?: string;
+  modelId?: string;
   modelName?: string;
   createdAt: string; // ISO timestamp
   updatedAt: string;
@@ -25,6 +29,8 @@ interface ChatSessionStoreState {
   activeSessionId: string | null;
   isLoading: boolean;
   contextPanelOpenBySession: Record<string, boolean>;
+  modelsBySession: Record<string, ModelOption[]>;
+  modelCacheByProvider: Record<string, ModelOption[]>;
 }
 
 interface CreateSessionOpts {
@@ -54,11 +60,15 @@ interface ChatSessionStoreActions {
   setActiveSession: (sessionId: string | null) => void;
 
   setContextPanelOpen: (sessionId: string, open: boolean) => void;
+  setSessionModels: (sessionId: string, models: ModelOption[]) => void;
+  cacheModelsForProvider: (providerId: string, models: ModelOption[]) => void;
+  getCachedModels: (providerId: string) => ModelOption[];
 
   // Helpers
   getSession: (id: string) => ChatSession | undefined;
   getActiveSession: () => ChatSession | null;
   getArchivedSessions: () => ChatSession[];
+  getSessionModels: (sessionId: string) => ModelOption[];
 }
 
 export type ChatSessionStore = ChatSessionStoreState & ChatSessionStoreActions;
@@ -116,6 +126,7 @@ export function sessionToChatSession(session: Session): ChatSession {
     projectId: session.projectId,
     providerId: session.providerId,
     personaId: session.personaId,
+    modelId: session.modelId,
     modelName: session.modelName,
     createdAt: session.createdAt,
     updatedAt: session.updatedAt,
@@ -131,6 +142,8 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
   activeSessionId: null,
   isLoading: false,
   contextPanelOpenBySession: {},
+  modelsBySession: {},
+  modelCacheByProvider: {},
 
   // Session lifecycle — local-only for now.
   // The goose binary creates the real ACP session on first prompt
@@ -177,11 +190,14 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     const session = get().sessions.find((s) => s.id === id);
     if (!session?.draft) return;
     const { [id]: _, ...remainingPanelState } = get().contextPanelOpenBySession;
+    const remainingModels = { ...get().modelsBySession };
+    delete remainingModels[id];
     set((state) => ({
       sessions: state.sessions.filter((s) => s.id !== id),
       activeSessionId:
         state.activeSessionId === id ? null : state.activeSessionId,
       contextPanelOpenBySession: remainingPanelState,
+      modelsBySession: remainingModels,
     }));
   },
 
@@ -258,12 +274,15 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
   },
 
   archiveSession: async (id) => {
+    const remainingModels = { ...get().modelsBySession };
+    delete remainingModels[id];
     set((state) => ({
       sessions: state.sessions.map((s) =>
         s.id === id ? { ...s, archivedAt: new Date().toISOString() } : s,
       ),
       activeSessionId:
         state.activeSessionId === id ? null : state.activeSessionId,
+      modelsBySession: remainingModels,
     }));
     persistSessions(get().sessions);
   },
@@ -291,6 +310,28 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     }));
   },
 
+  setSessionModels: (sessionId, models) => {
+    set((state) => ({
+      modelsBySession: {
+        ...state.modelsBySession,
+        [sessionId]: models,
+      },
+    }));
+  },
+
+  cacheModelsForProvider: (providerId, models) => {
+    if (models.length === 0) return;
+    set((state) => ({
+      modelCacheByProvider: {
+        ...state.modelCacheByProvider,
+        [providerId]: models,
+      },
+    }));
+  },
+
+  getCachedModels: (providerId) =>
+    get().modelCacheByProvider[providerId] ?? EMPTY_MODELS,
+
   // Helpers
   getSession: (id) => get().sessions.find((s) => s.id === id),
 
@@ -299,6 +340,8 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     if (!activeSessionId) return null;
     return sessions.find((s) => s.id === activeSessionId) ?? null;
   },
-
   getArchivedSessions: () => get().sessions.filter((s) => !!s.archivedAt),
+
+  getSessionModels: (sessionId) =>
+    get().modelsBySession[sessionId] ?? EMPTY_MODELS,
 }));

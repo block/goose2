@@ -18,6 +18,7 @@ function resetStore() {
     activeSessionId: null,
     isLoading: false,
     contextPanelOpenBySession: {},
+    modelsBySession: {},
   });
 }
 
@@ -311,6 +312,48 @@ describe("chatSessionStore", () => {
         .sessions.find((s) => s.id === session.id);
       expect(updated?.updatedAt).not.toBe(originalUpdatedAt);
       expect(updated?.updatedAt).toBe(newTimestamp);
+    });
+  });
+
+  describe("session models", () => {
+    it("stores models per session", () => {
+      const session = useChatSessionStore.getState().createDraftSession();
+
+      useChatSessionStore.getState().setSessionModels(session.id, [
+        { id: "claude-sonnet-4", name: "Claude Sonnet 4" },
+        { id: "gpt-4o", name: "GPT-4o" },
+      ]);
+
+      expect(useChatSessionStore.getState().getSessionModels(session.id)).toEqual([
+        { id: "claude-sonnet-4", name: "Claude Sonnet 4" },
+        { id: "gpt-4o", name: "GPT-4o" },
+      ]);
+    });
+
+    it("removes stored models when a draft session is removed", () => {
+      const session = useChatSessionStore.getState().createDraftSession();
+      useChatSessionStore.getState().setSessionModels(session.id, [
+        { id: "claude-sonnet-4", name: "Claude Sonnet 4" },
+      ]);
+
+      useChatSessionStore.getState().removeDraft(session.id);
+
+      expect(useChatSessionStore.getState().getSessionModels(session.id)).toEqual(
+        [],
+      );
+    });
+
+    it("removes stored models when a session is archived", async () => {
+      const session = useChatSessionStore.getState().createDraftSession();
+      useChatSessionStore.getState().setSessionModels(session.id, [
+        { id: "claude-sonnet-4", name: "Claude Sonnet 4" },
+      ]);
+
+      await useChatSessionStore.getState().archiveSession(session.id);
+
+      expect(useChatSessionStore.getState().getSessionModels(session.id)).toEqual(
+        [],
+      );
     });
   });
 

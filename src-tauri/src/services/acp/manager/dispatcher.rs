@@ -14,16 +14,48 @@ use tauri::Emitter;
 use tokio::sync::Mutex;
 
 use crate::services::acp::payloads::{
-    DonePayload, MessageCreatedPayload, ModelStatePayload, SessionInfoPayload, TextPayload,
-    ToolCallPayload, ToolResultPayload, ToolTitlePayload,
+    DonePayload, MessageCreatedPayload, ModelOption, ModelStatePayload, SessionInfoPayload,
+    TextPayload, ToolCallPayload, ToolResultPayload, ToolTitlePayload,
 };
+
+fn model_options_from_state(state: &SessionModelState) -> Vec<ModelOption> {
+    state
+        .available_models
+        .iter()
+        .map(|model| ModelOption {
+            id: model.model_id.to_string(),
+            name: model.name.clone(),
+        })
+        .collect()
+}
+
+fn model_options_from_select_options(options: &SessionConfigSelectOptions) -> Vec<ModelOption> {
+    match options {
+        SessionConfigSelectOptions::Ungrouped(values) => values
+            .iter()
+            .map(|value| ModelOption {
+                id: value.value.to_string(),
+                name: value.name.clone(),
+            })
+            .collect(),
+        SessionConfigSelectOptions::Grouped(groups) => groups
+            .iter()
+            .flat_map(|group| group.options.iter())
+            .map(|value| ModelOption {
+                id: value.value.to_string(),
+                name: value.name.clone(),
+            })
+            .collect(),
+        _ => Vec::new(),
+    }
+}
 
 #[derive(Clone)]
 pub(super) struct SessionRoute {
     pub(super) local_session_id: String,
+    pub(super) provider_id: Option<String>,
     pub(super) writer: Option<Arc<dyn MessageWriter>>,
     pub(super) canceled: bool,
-    /// Tracks the current assistant message ID during replay (no writer).
     pub(super) replay_message_id: Option<String>,
 }
 
@@ -40,13 +72,24 @@ impl SessionEventDispatcher {
         Self { app_handle, routes }
     }
 
-    pub(super) async fn bind_session(&self, goose_session_id: &str, local_session_id: &str) {
+    pub(super) async fn bind_session(
+        &self,
+        goose_session_id: &str,
+        local_session_id: &str,
+        provider_id: Option<&str>,
+    ) {
         let mut routes = self.routes.lock().await;
         routes
             .entry(goose_session_id.to_string())
-            .and_modify(|route| route.local_session_id = local_session_id.to_string())
+            .and_modify(|route| {
+                route.local_session_id = local_session_id.to_string();
+                if let Some(pid) = provider_id {
+                    route.provider_id = Some(pid.to_string());
+                }
+            })
             .or_insert_with(|| SessionRoute {
                 local_session_id: local_session_id.to_string(),
+                provider_id: provider_id.map(ToString::to_string),
                 writer: None,
                 canceled: false,
                 replay_message_id: None,
@@ -57,6 +100,7 @@ impl SessionEventDispatcher {
         &self,
         goose_session_id: &str,
         local_session_id: &str,
+        provider_id: Option<&str>,
         writer: Arc<dyn MessageWriter>,
     ) {
         let mut routes = self.routes.lock().await;
@@ -64,6 +108,7 @@ impl SessionEventDispatcher {
             goose_session_id.to_string(),
             SessionRoute {
                 local_session_id: local_session_id.to_string(),
+                provider_id: provider_id.map(ToString::to_string),
                 writer: Some(writer),
                 canceled: false,
                 replay_message_id: None,
@@ -125,18 +170,26 @@ impl SessionEventDispatcher {
         );
     }
 
-    pub(super) fn emit_model_state(&self, local_session_id: &str, state: &SessionModelState) {
+    pub(super) fn emit_model_state(
+        &self,
+        local_session_id: &str,
+        provider_id: Option<&str>,
+        state: &SessionModelState,
+    ) {
         let current_model_name = state
             .available_models
             .iter()
             .find(|model| model.model_id == state.current_model_id)
             .map(|model| model.name.clone());
+        let available_models = model_options_from_state(state);
         let _ = self.app_handle.emit(
             "acp:model_state",
             ModelStatePayload {
                 session_id: local_session_id.to_string(),
+                provider_id: provider_id.map(ToString::to_string),
                 current_model_id: state.current_model_id.to_string(),
                 current_model_name,
+                available_models,
             },
         );
     }
@@ -144,6 +197,7 @@ impl SessionEventDispatcher {
     pub(super) fn emit_model_state_from_options(
         &self,
         local_session_id: &str,
+        provider_id: Option<&str>,
         options: &[SessionConfigOption],
     ) {
         let Some(option) = options
@@ -157,6 +211,7 @@ impl SessionEventDispatcher {
             return;
         };
         let current_model_id = select.current_value.to_string();
+        let available_models = model_options_from_select_options(&select.options);
         let current_model_name = match &select.options {
             SessionConfigSelectOptions::Ungrouped(values) => values
                 .iter()
@@ -174,8 +229,10 @@ impl SessionEventDispatcher {
             "acp:model_state",
             ModelStatePayload {
                 session_id: local_session_id.to_string(),
+                provider_id: provider_id.map(ToString::to_string),
                 current_model_id,
                 current_model_name,
+                available_models,
             },
         );
     }
@@ -252,7 +309,11 @@ impl Client for SessionEventDispatcher {
                 return Ok(());
             }
             SessionUpdate::ConfigOptionUpdate(update) => {
-                self.emit_model_state_from_options(&route.local_session_id, &update.config_options);
+                self.emit_model_state_from_options(
+                    &route.local_session_id,
+                    route.provider_id.as_deref(),
+                    &update.config_options,
+                );
                 return Ok(());
             }
             _ => {}

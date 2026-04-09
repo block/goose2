@@ -76,6 +76,7 @@ describe("useAcpStream", () => {
       ],
       activeSessionId: sessionId,
       isLoading: false,
+      modelsBySession: {},
     });
   });
 
@@ -196,6 +197,36 @@ describe("useAcpStream", () => {
   it("does not register listeners when disabled", () => {
     renderHook(() => useAcpStream(false));
     expect(listeners.size).toBe(0);
+  });
+
+  it("stores model state for the targeted session", async () => {
+    renderHook(() => useAcpStream(true));
+    await vi.waitFor(() =>
+      expect(listeners.get("acp:model_state")).toBeDefined(),
+    );
+
+    act(() => {
+      emit("acp:model_state", {
+        sessionId,
+        currentModelId: "claude-sonnet-4",
+        currentModelName: "Claude Sonnet 4",
+        availableModels: [
+          { id: "claude-sonnet-4", name: "Claude Sonnet 4" },
+          { id: "gpt-4o", name: "GPT-4o" },
+        ],
+      });
+    });
+
+    expect(
+      useChatSessionStore.getState().getSession(sessionId)?.modelName,
+    ).toBe("Claude Sonnet 4");
+    expect(useChatSessionStore.getState().getSession(sessionId)?.modelId).toBe(
+      "claude-sonnet-4",
+    );
+    expect(useChatSessionStore.getState().getSessionModels(sessionId)).toEqual([
+      { id: "claude-sonnet-4", name: "Claude Sonnet 4" },
+      { id: "gpt-4o", name: "GPT-4o" },
+    ]);
   });
 
   it("creates the streaming assistant message from backend metadata", async () => {

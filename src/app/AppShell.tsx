@@ -12,6 +12,7 @@ import { CreateProjectDialog } from "@/features/projects/ui/CreateProjectDialog"
 import { archiveProject } from "@/features/projects/api/projects";
 import type { ProjectInfo } from "@/features/projects/api/projects";
 import { SettingsModal } from "@/features/settings/ui/SettingsModal";
+import type { SectionId } from "@/features/settings/ui/SettingsModal";
 import { TopBar } from "./ui/TopBar";
 import { useChatStore } from "@/features/chat/stores/chatStore";
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
@@ -41,6 +42,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsInitialSection, setSettingsInitialSection] =
+    useState<SectionId>("appearance");
   const [createProjectOpen, setCreateProjectOpen] = useState(false);
   const [createProjectInitialWorkingDir, setCreateProjectInitialWorkingDir] =
     useState<string | null>(null);
@@ -246,6 +249,10 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     },
     [chatStore, sessionStore, cleanupEmptyDraft],
   );
+  const openSettings = useCallback((section: SectionId = "appearance") => {
+    setSettingsInitialSection(section);
+    setSettingsOpen(true);
+  }, []);
 
   const handleArchiveChat = useCallback(
     async (sessionId: string) => {
@@ -501,7 +508,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
-      <TopBar onSettingsClick={() => setSettingsOpen(true)} />
+      <TopBar onSettingsClick={() => openSettings()} />
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <div
@@ -562,7 +569,12 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         />
       </div>
 
-      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
+      {settingsOpen && (
+        <SettingsModal
+          initialSection={settingsInitialSection}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
 
       <CreateProjectDialog
         isOpen={createProjectOpen}

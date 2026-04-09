@@ -1,10 +1,7 @@
-import { Mic, ChevronDown, Check, ArrowUp, Square } from "lucide-react";
+import { useMemo } from "react";
+import { Mic, ArrowUp, Square } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useLocaleFormatting } from "@/shared/i18n";
-import {
-  formatProviderLabel,
-  getProviderIcon,
-} from "@/shared/ui/icons/ProviderIcons";
 import { IconLibraryPlusFilled } from "@tabler/icons-react";
 import type { AcpProvider } from "@/shared/api/acp";
 import type { Persona } from "@/shared/types/agents";
@@ -12,17 +9,17 @@ import { cn } from "@/shared/lib/cn";
 import { ChatInputSelector } from "./ChatInputSelector";
 import { ContextRing } from "./ContextRing";
 import { PersonaPicker } from "./PersonaPicker";
-import type { ModelOption, ProjectOption } from "./ChatInput";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "@/shared/ui/dropdown-menu";
+import type { ProjectOption } from "./ChatInput";
 import { Button } from "@/shared/ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/shared/ui/tooltip";
+import { AgentModelPicker } from "./AgentModelPicker";
+import type { ModelOption } from "../types";
+import { formatProviderLabel } from "@/shared/ui/icons/ProviderIcons";
+import { useAgentProviderStatus } from "@/features/providers/hooks/useAgentProviderStatus";
+import {
+  getCatalogEntry,
+  resolveAgentProviderCatalogIdStrict,
+} from "@/features/providers/providerCatalog";
 
 const NO_PROJECT_VALUE = "__no_project__";
 const CREATE_PROJECT_VALUE = "__create_project__";
@@ -52,7 +49,8 @@ interface ChatInputToolbarProps {
   selectedProvider: string;
   onProviderChange: (providerId: string) => void;
   // Model
-  currentModel: string;
+  currentModelId?: string | null;
+  currentModel?: string;
   availableModels: ModelOption[];
   onModelChange?: (modelId: string) => void;
   // Project
@@ -84,6 +82,7 @@ export function ChatInputToolbar({
   providersLoading,
   selectedProvider,
   onProviderChange,
+  currentModelId,
   currentModel,
   availableModels,
   onModelChange,
@@ -102,17 +101,35 @@ export function ChatInputToolbar({
 }: ChatInputToolbarProps) {
   const { t } = useTranslation("chat");
   const { formatNumber } = useLocaleFormatting();
-  const availableProviderItems =
-    providers.length > 0
-      ? providers
-      : selectedProvider
-        ? [
-            {
-              id: selectedProvider,
-              label: formatProviderLabel(selectedProvider),
-            },
-          ]
-        : [];
+  const { readyAgentIds } = useAgentProviderStatus();
+
+  const agentProviders = useMemo(() => {
+    const seen = new Set<string>();
+    const connected: AcpProvider[] = [];
+    for (const p of providers) {
+      const catalogId = resolveAgentProviderCatalogIdStrict(p.id);
+      if (
+        catalogId === null ||
+        !readyAgentIds.has(catalogId) ||
+        seen.has(catalogId)
+      )
+        continue;
+      seen.add(catalogId);
+      connected.push({
+        id: p.id,
+        label: getCatalogEntry(catalogId)?.displayName ?? p.label,
+      });
+    }
+    if (connected.length > 0) return connected;
+    return [
+      {
+        id: selectedProvider,
+        label:
+          getCatalogEntry(selectedProvider)?.displayName ??
+          formatProviderLabel(selectedProvider),
+      },
+    ];
+  }, [providers, readyAgentIds, selectedProvider]);
   const selectedProject = availableProjects.find(
     (project) => project.id === selectedProjectId,
   );
@@ -120,9 +137,6 @@ export function ChatInputToolbar({
   const projectTitle = selectedProject?.workingDirs.length
     ? selectedProject.workingDirs.join(", ")
     : undefined;
-  const providerLabel =
-    availableProviderItems.find((provider) => provider.id === selectedProvider)
-      ?.label ?? formatProviderLabel(selectedProvider);
 
   const handleProjectValueChange = (value: string) => {
     if (value === CREATE_PROJECT_VALUE) {
@@ -137,74 +151,18 @@ export function ChatInputToolbar({
     <div className="flex items-center justify-between gap-2">
       {/* Left side: pickers */}
       <div className="flex items-center gap-0.5">
-        {(availableProviderItems.length > 0 || providersLoading) && (
-          <ChatInputSelector
-            ariaLabel={t("toolbar.chooseProvider")}
-            value={selectedProvider}
-            triggerLabel={
-              providersLoading ? t("toolbar.loading") : providerLabel
-            }
-            icon={getProviderIcon(selectedProvider, "size-3.5")}
-            triggerVariant="toolbar"
-            triggerSize="sm"
-            menuLabel={t("toolbar.chooseProvider")}
-            disabled={providersLoading}
-            sections={[
-              {
-                items: availableProviderItems.map((provider) => ({
-                  value: provider.id,
-                  label: provider.label,
-                  icon: getProviderIcon(provider.id, "size-4"),
-                })),
-              },
-            ]}
-            onValueChange={onProviderChange}
+        {(agentProviders.length > 0 || providersLoading) && (
+          <AgentModelPicker
+            agents={agentProviders}
+            selectedAgentId={selectedProvider}
+            onAgentChange={onProviderChange}
+            currentModelId={currentModelId}
+            currentModelName={currentModel ?? null}
+            availableModels={availableModels}
+            onModelChange={onModelChange}
+            loading={providersLoading}
+            isCompact={isCompact}
           />
-        )}
-
-        {availableModels.length > 0 && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                rightIcon={<ChevronDown className="opacity-50" />}
-                className="gap-1.5 rounded-lg px-2.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
-                aria-label={t("toolbar.selectModel")}
-              >
-                {!isCompact && <span>{currentModel}</span>}
-                {isCompact && (
-                  <span className="max-w-[60px] truncate">{currentModel}</span>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
-              <DropdownMenuLabel>{t("toolbar.model")}</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {availableModels.map((model) => (
-                <DropdownMenuItem
-                  key={model.id}
-                  onSelect={() => onModelChange?.(model.id)}
-                  className="flex items-center justify-between"
-                >
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-sm">
-                      {model.displayName ?? model.name}
-                    </span>
-                    {model.provider && (
-                      <span className="text-xs text-muted-foreground">
-                        {model.provider}
-                      </span>
-                    )}
-                  </div>
-                  {model.id === currentModel && (
-                    <Check className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  )}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
         )}
 
         <ChatInputSelector
