@@ -6,10 +6,15 @@ import { isDefaultChatTitle } from "../lib/sessionTitle";
 import type {
   Message,
   MessageCompletionStatus,
-  MessageContent,
   ToolRequestContent,
   ToolResponseContent,
 } from "@/shared/types/messages";
+import {
+  ensureReplayBuffer,
+  getBufferedMessage,
+  getAndDeleteReplayBuffer,
+  findLatestUnpairedToolRequest,
+} from "./replayBuffer";
 
 // --- Event payload types ---
 
@@ -68,28 +73,6 @@ interface AcpUsageUpdatePayload {
   size: number;
 }
 
-function findLatestUnpairedToolRequest(
-  content: MessageContent[],
-): ToolRequestContent | null {
-  for (let index = content.length - 1; index >= 0; index -= 1) {
-    const block = content[index];
-    if (block?.type !== "toolRequest") {
-      continue;
-    }
-
-    const alreadyHasResponse = content.some(
-      (candidate): candidate is ToolResponseContent =>
-        candidate.type === "toolResponse" && candidate.id === block.id,
-    );
-
-    if (!alreadyHasResponse) {
-      return block;
-    }
-  }
-
-  return null;
-}
-
 function updateCompletionStatus(
   message: Message,
   completionStatus: MessageCompletionStatus,
@@ -142,136 +125,163 @@ function shouldTrackStreamingEvent(
  *
  * Subscribes to `acp:text`, `acp:done`, `acp:tool_call`, `acp:tool_title`,
  * and `acp:tool_result` events, updating whichever session the event targets.
+ *
+ * During session history replay, events are buffered in a module-level map
+ * (see `replayBuffer.ts`) and flushed as a single `setMessages()` call when
+ * loading completes, avoiding O(N²) re-renders.
  */
 export function useAcpStream(enabled: boolean): void {
   useEffect(() => {
     if (!enabled) return;
 
-    // Guard against duplicate listeners from React StrictMode double-mounting.
-    // Each listener checks this flag before acting; cleanup sets it immediately.
     let active = true;
-
     const unlisteners: Promise<UnlistenFn>[] = [];
+
+    // Flush replay buffers when a session transitions from loading → loaded.
+    //
+    // Re-entrancy note: setMessages() below triggers another Zustand state
+    // update, which re-invokes this subscriber synchronously. On the second
+    // invocation the `sid` has already been removed from both prev and current
+    // loadingSessionIds, so the for-of loop won't re-match it. Additionally,
+    // getAndDeleteReplayBuffer already deleted the buffer on the first pass,
+    // providing a second guard against double-flush.
+    const unsubscribeFlush = useChatStore.subscribe((state, prevState) => {
+      if (!active) return;
+      for (const sid of prevState.loadingSessionIds) {
+        if (!state.loadingSessionIds.has(sid)) {
+          const buffer = getAndDeleteReplayBuffer(sid);
+          if (buffer && buffer.length > 0) {
+            console.log(
+              `[perf:stream] ${sid.slice(0, 8)} flushing replay buffer (${buffer.length} messages) at ${performance.now().toFixed(1)}ms`,
+            );
+            useChatStore.getState().setMessages(sid, buffer);
+          }
+        }
+      }
+    });
 
     unlisteners.push(
       listen<AcpMessageCreatedPayload>("acp:message_created", (event) => {
         if (!active) return;
-        console.log(
-          `[perf:stream] ${event.payload.sessionId.slice(0, 8)} message_created mid=${event.payload.messageId.slice(0, 8)} at ${performance.now().toFixed(1)}ms`,
-        );
         const store = useChatStore.getState();
+        const { sessionId, messageId, personaId, personaName } = event.payload;
 
-        // Accept if: session is loading (replay), or we're actively streaming/thinking
-        const isLoading = store.loadingSessionIds.has(event.payload.sessionId);
-        if (!isLoading) {
-          if (
-            !shouldTrackStreamingEvent(
-              store,
-              event.payload.sessionId,
-              event.payload.messageId,
-            )
-          ) {
-            return;
+        if (store.loadingSessionIds.has(sessionId)) {
+          if (!getBufferedMessage(sessionId, messageId)) {
+            ensureReplayBuffer(sessionId).push({
+              id: messageId,
+              role: "assistant",
+              created: Date.now(),
+              content: [],
+              metadata: {
+                userVisible: true,
+                agentVisible: true,
+                personaId,
+                personaName,
+                completionStatus: "inProgress",
+              },
+            });
           }
+          return;
         }
 
-        const existing = store.messagesBySession[event.payload.sessionId]?.find(
-          (message) => message.id === event.payload.messageId,
+        if (!shouldTrackStreamingEvent(store, sessionId, messageId)) {
+          return;
+        }
+
+        const existing = store.messagesBySession[sessionId]?.find(
+          (message) => message.id === messageId,
         );
 
         if (!existing) {
-          store.addMessage(event.payload.sessionId, {
-            id: event.payload.messageId,
+          store.addMessage(sessionId, {
+            id: messageId,
             role: "assistant",
             created: Date.now(),
             content: [],
             metadata: {
               userVisible: true,
               agentVisible: true,
-              personaId: event.payload.personaId,
-              personaName: event.payload.personaName,
+              personaId,
+              personaName,
               completionStatus: "inProgress",
             },
           });
         }
 
-        store.setStreamingMessageId(
-          event.payload.sessionId,
-          event.payload.messageId,
-        );
+        store.setStreamingMessageId(sessionId, messageId);
       }),
     );
 
-    // acp:text — append streamed text to the current trailing text segment
     unlisteners.push(
       listen<AcpTextPayload>("acp:text", (event) => {
         if (!active) return;
-        console.log(
-          `[perf:stream] ${event.payload.sessionId.slice(0, 8)} text mid=${event.payload.messageId.slice(0, 8)} len=${event.payload.text.length} at ${performance.now().toFixed(1)}ms`,
-        );
         const store = useChatStore.getState();
-        if (
-          !shouldTrackStreamingEvent(
-            store,
-            event.payload.sessionId,
-            event.payload.messageId,
-          )
-        ) {
+        const { sessionId, messageId, text } = event.payload;
+
+        if (store.loadingSessionIds.has(sessionId)) {
+          const msg = getBufferedMessage(sessionId, messageId);
+          if (msg) {
+            const last = msg.content[msg.content.length - 1];
+            if (last?.type === "text") {
+              (last as { type: "text"; text: string }).text += text;
+            } else {
+              msg.content.push({ type: "text", text });
+            }
+          }
           return;
         }
-        store.setStreamingMessageId(
-          event.payload.sessionId,
-          event.payload.messageId,
-        );
-        store.updateStreamingText(event.payload.sessionId, event.payload.text);
+
+        if (!shouldTrackStreamingEvent(store, sessionId, messageId)) {
+          return;
+        }
+        store.setStreamingMessageId(sessionId, messageId);
+        store.updateStreamingText(sessionId, text);
       }),
     );
 
-    // acp:done — finalize the message, set chat state to idle
     unlisteners.push(
       listen<AcpDonePayload>("acp:done", (event) => {
         if (!active) return;
-        console.log(
-          `[perf:stream] ${event.payload.sessionId.slice(0, 8)} done mid=${event.payload.messageId.slice(0, 8)} at ${performance.now().toFixed(1)}ms`,
-        );
         const store = useChatStore.getState();
-        const isLoading = store.loadingSessionIds.has(event.payload.sessionId);
+        const { sessionId, messageId } = event.payload;
+        const isLoading = store.loadingSessionIds.has(sessionId);
 
-        store.updateMessage(
-          event.payload.sessionId,
-          event.payload.messageId,
-          (message) => {
-            // Mark any tool requests still in "executing" as completed.
-            // During replay, tool_result events may not fire for every
-            // tool call (e.g. when the result content type has no preview),
-            // so we finalize them here to stop running timers.
-            const content = message.content.map((block) =>
+        if (isLoading) {
+          const msg = getBufferedMessage(sessionId, messageId);
+          if (msg) {
+            msg.content = msg.content.map((block) =>
               block.type === "toolRequest" && block.status === "executing"
                 ? { ...block, status: "completed" as const }
                 : block,
             );
-            return updateCompletionStatus({ ...message, content }, "completed");
-          },
-        );
-        store.setStreamingMessageId(event.payload.sessionId, null);
-
-        // During replay, don't reset chat state or trigger side effects
-        if (isLoading) return;
-
-        store.setChatState(event.payload.sessionId, "idle");
-        if (
-          useChatSessionStore.getState().activeSessionId !==
-          event.payload.sessionId
-        ) {
-          store.markSessionUnread(event.payload.sessionId);
+            const updated = updateCompletionStatus(msg, "completed");
+            if (updated !== msg && updated.metadata) {
+              msg.metadata = updated.metadata;
+            }
+          }
+          return;
         }
 
-        // Generate a title from the first user message if the session still
-        // has the default "New Chat" title (i.e. no ACP title was received).
+        store.updateMessage(sessionId, messageId, (message) => {
+          const content = message.content.map((block) =>
+            block.type === "toolRequest" && block.status === "executing"
+              ? { ...block, status: "completed" as const }
+              : block,
+          );
+          return updateCompletionStatus({ ...message, content }, "completed");
+        });
+        store.setStreamingMessageId(sessionId, null);
+
+        store.setChatState(sessionId, "idle");
+        if (useChatSessionStore.getState().activeSessionId !== sessionId) {
+          store.markSessionUnread(sessionId);
+        }
+
         const sessionStore = useChatSessionStore.getState();
-        const session = sessionStore.getSession(event.payload.sessionId);
+        const session = sessionStore.getSession(sessionId);
         if (session && isDefaultChatTitle(session.title)) {
-          const messages = store.messagesBySession[event.payload.sessionId];
+          const messages = store.messagesBySession[sessionId];
           const firstUserMsg = messages?.find((m) => m.role === "user");
           if (firstUserMsg) {
             const textContent = firstUserMsg.content.find(
@@ -279,7 +289,7 @@ export function useAcpStream(enabled: boolean): void {
             );
             if (textContent && "text" in textContent) {
               const title = textContent.text.slice(0, 100);
-              sessionStore.updateSession(event.payload.sessionId, {
+              sessionStore.updateSession(sessionId, {
                 title,
                 updatedAt: new Date().toISOString(),
               });
@@ -289,43 +299,63 @@ export function useAcpStream(enabled: boolean): void {
       }),
     );
 
-    // acp:tool_call — add a tool request to the streaming message
     unlisteners.push(
       listen<AcpToolCallPayload>("acp:tool_call", (event) => {
         if (!active) return;
         const store = useChatStore.getState();
-        if (
-          !shouldTrackStreamingEvent(
-            store,
-            event.payload.sessionId,
-            event.payload.messageId,
-          )
-        ) {
+        const { sessionId, messageId, toolCallId, title } = event.payload;
+
+        if (store.loadingSessionIds.has(sessionId)) {
+          const msg = getBufferedMessage(sessionId, messageId);
+          if (msg) {
+            msg.content.push({
+              type: "toolRequest",
+              id: toolCallId,
+              name: title,
+              arguments: {},
+              status: "executing",
+              startedAt: Date.now(),
+            });
+          }
+          return;
+        }
+
+        if (!shouldTrackStreamingEvent(store, sessionId, messageId)) {
           return;
         }
 
         const toolRequest: ToolRequestContent = {
           type: "toolRequest",
-          id: event.payload.toolCallId,
-          name: event.payload.title,
+          id: toolCallId,
+          name: title,
           arguments: {},
           status: "executing",
           startedAt: Date.now(),
         };
-        store.setStreamingMessageId(
-          event.payload.sessionId,
-          event.payload.messageId,
-        );
-        store.appendToStreamingMessage(event.payload.sessionId, toolRequest);
+        store.setStreamingMessageId(sessionId, messageId);
+        store.appendToStreamingMessage(sessionId, toolRequest);
       }),
     );
 
-    // acp:tool_title — update a tool call's title
     unlisteners.push(
       listen<AcpToolTitlePayload>("acp:tool_title", (event) => {
         if (!active) return;
         const { sessionId: sid, messageId, toolCallId, title } = event.payload;
         const store = useChatStore.getState();
+
+        if (store.loadingSessionIds.has(sid)) {
+          const msg = getBufferedMessage(sid, messageId);
+          if (msg) {
+            const tc = msg.content.find(
+              (c) => c.type === "toolRequest" && c.id === toolCallId,
+            );
+            if (tc && tc.type === "toolRequest") {
+              (tc as ToolRequestContent).name = title;
+            }
+          }
+          return;
+        }
+
         if (!shouldTrackStreamingEvent(store, sid, messageId)) {
           return;
         }
@@ -340,75 +370,76 @@ export function useAcpStream(enabled: boolean): void {
       }),
     );
 
-    // acp:tool_result — add a tool response
     unlisteners.push(
       listen<AcpToolResultPayload>("acp:tool_result", (event) => {
         if (!active) return;
         const store = useChatStore.getState();
-        if (
-          !shouldTrackStreamingEvent(
-            store,
-            event.payload.sessionId,
-            event.payload.messageId,
-          )
-        ) {
+        const { sessionId, messageId, content } = event.payload;
+
+        if (store.loadingSessionIds.has(sessionId)) {
+          const msg = getBufferedMessage(sessionId, messageId);
+          if (msg) {
+            const toolRequest = findLatestUnpairedToolRequest(msg.content);
+            if (toolRequest) {
+              const idx = msg.content.indexOf(toolRequest);
+              if (idx >= 0) {
+                msg.content[idx] = { ...toolRequest, status: "completed" };
+              }
+            }
+            msg.content.push({
+              type: "toolResponse",
+              id: toolRequest?.id ?? crypto.randomUUID(),
+              name: toolRequest?.name ?? "",
+              result: content,
+              isError: false,
+            });
+          }
           return;
         }
-        const streamingMessage = event.payload.messageId
-          ? store.messagesBySession[event.payload.sessionId]?.find(
-              (message) => message.id === event.payload.messageId,
+
+        if (!shouldTrackStreamingEvent(store, sessionId, messageId)) {
+          return;
+        }
+        const streamingMessage = messageId
+          ? store.messagesBySession[sessionId]?.find(
+              (message) => message.id === messageId,
             )
           : undefined;
         const toolRequest = streamingMessage
           ? findLatestUnpairedToolRequest(streamingMessage.content)
           : null;
-        store.updateMessage(
-          event.payload.sessionId,
-          event.payload.messageId,
-          (message) => ({
-            ...message,
-            content: message.content.map((block) =>
-              block.type === "toolRequest" && block.id === toolRequest?.id
-                ? { ...block, status: "completed" }
-                : block,
-            ),
-          }),
-        );
+        store.updateMessage(sessionId, messageId, (message) => ({
+          ...message,
+          content: message.content.map((block) =>
+            block.type === "toolRequest" && block.id === toolRequest?.id
+              ? { ...block, status: "completed" }
+              : block,
+          ),
+        }));
         const toolResponse: ToolResponseContent = {
           type: "toolResponse",
           id: toolRequest?.id ?? crypto.randomUUID(),
           name: toolRequest?.name ?? "",
-          result: event.payload.content,
+          result: content,
           isError: false,
         };
-        store.setStreamingMessageId(
-          event.payload.sessionId,
-          event.payload.messageId,
-        );
-        store.appendToStreamingMessage(event.payload.sessionId, toolResponse);
+        store.setStreamingMessageId(sessionId, messageId);
+        store.appendToStreamingMessage(sessionId, toolResponse);
       }),
     );
 
-    // acp:session_info — update session title from ACP provider
-    // Replay: user messages from load_session history
     unlisteners.push(
       listen<{ sessionId: string; messageId: string; text: string }>(
         "acp:replay_user_message",
         (event) => {
           if (!active) return;
-          console.log(
-            `[perf:stream] ${event.payload.sessionId.slice(0, 8)} replay_user_message at ${performance.now().toFixed(1)}ms`,
-          );
-          const store = useChatStore.getState();
-          store.addMessage(event.payload.sessionId, {
-            id: event.payload.messageId,
+          const { sessionId, messageId, text } = event.payload;
+          ensureReplayBuffer(sessionId).push({
+            id: messageId,
             role: "user",
             created: Date.now(),
-            content: [{ type: "text", text: event.payload.text }],
-            metadata: {
-              userVisible: true,
-              agentVisible: true,
-            },
+            content: [{ type: "text", text }],
+            metadata: { userVisible: true, agentVisible: true },
           });
         },
       ),
@@ -427,7 +458,6 @@ export function useAcpStream(enabled: boolean): void {
       }),
     );
 
-    // acp:model_state — update model name from ACP provider
     unlisteners.push(
       listen<AcpModelStatePayload>("acp:model_state", (event) => {
         if (!active) return;
@@ -439,7 +469,6 @@ export function useAcpStream(enabled: boolean): void {
       }),
     );
 
-    // acp:usage_update — update context window token usage
     unlisteners.push(
       listen<AcpUsageUpdatePayload>("acp:usage_update", (event) => {
         if (!active) return;
@@ -450,10 +479,9 @@ export function useAcpStream(enabled: boolean): void {
       }),
     );
 
-    // Cleanup: mark inactive immediately to prevent stale listeners from
-    // firing during the async unlisten, then tear down actual subscriptions.
     return () => {
       active = false;
+      unsubscribeFlush();
       for (const unlistenPromise of unlisteners) {
         unlistenPromise.then((unlisten) => unlisten());
       }
