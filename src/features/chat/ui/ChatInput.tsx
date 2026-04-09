@@ -6,10 +6,8 @@ import type { Persona } from "@/shared/types/agents";
 import { cn } from "@/shared/lib/cn";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
-import {
-  MentionAutocomplete,
-  useMentionDetection,
-} from "./MentionAutocomplete";
+import { MentionAutocomplete } from "./MentionAutocomplete";
+import { useMentionHandlers } from "../hooks/useMentionHandlers";
 import { ChatInputToolbar } from "./ChatInputToolbar";
 import { formatProviderLabel } from "@/shared/ui/icons/ProviderIcons";
 import { TooltipProvider } from "@/shared/ui/tooltip";
@@ -174,15 +172,24 @@ export function ChatInput({
     !disabled;
 
   const {
+    fileMentionItems,
     mentionOpen,
     mentionQuery,
-    mentionStartIndex,
     mentionSelectedIndex,
     detectMention,
     closeMention,
     navigateMention,
     confirmMention,
-  } = useMentionDetection(personas);
+    handlePersonaMentionSelect,
+    handleFileMentionSelect,
+    handleMentionConfirm,
+  } = useMentionHandlers({
+    personas,
+    text,
+    setText,
+    textareaRef,
+    onPersonaChange,
+  });
 
   useEffect(() => {
     const el = containerRef.current;
@@ -229,36 +236,6 @@ export function ChatInput({
     }
   }, [canSend, text, images, onSend, selectedPersonaId, setText]);
 
-  const handleMentionSelect = useCallback(
-    (persona: Persona) => {
-      const before = text.slice(0, mentionStartIndex);
-      const after = text.slice(mentionStartIndex + 1 + mentionQuery.length);
-      const newText = `${before}${after}`.replace(/\s{2,}/g, " ");
-      setText(newText);
-      closeMention();
-      onPersonaChange?.(persona.id);
-
-      requestAnimationFrame(() => {
-        const ta = textareaRef.current;
-        if (ta) {
-          ta.focus();
-          ta.style.height = "auto";
-          ta.style.height = `${Math.min(ta.scrollHeight, 200)}px`;
-          const cursorPos = Math.min(before.length, newText.length);
-          ta.setSelectionRange(cursorPos, cursorPos);
-        }
-      });
-    },
-    [
-      text,
-      mentionStartIndex,
-      mentionQuery,
-      closeMention,
-      onPersonaChange,
-      setText,
-    ],
-  );
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (mentionOpen) {
       if (e.key === "Escape") {
@@ -272,10 +249,10 @@ export function ChatInput({
         return;
       }
       if (e.key === "Enter" || e.key === "Tab") {
-        const persona = confirmMention();
-        if (persona) {
+        const item = confirmMention();
+        if (item) {
           e.preventDefault();
-          handleMentionSelect(persona);
+          handleMentionConfirm(item);
           return;
         }
       }
@@ -396,9 +373,11 @@ export function ChatInput({
             )}
             <MentionAutocomplete
               personas={personas}
+              files={fileMentionItems}
               query={mentionQuery}
               isOpen={mentionOpen}
-              onSelect={handleMentionSelect}
+              onSelectPersona={handlePersonaMentionSelect}
+              onSelectFile={handleFileMentionSelect}
               onClose={closeMention}
               selectedIndex={mentionSelectedIndex}
             />
