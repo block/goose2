@@ -40,6 +40,21 @@ function resolveProjectFolderPaths(
   return artifactsDir ? [artifactsDir] : [];
 }
 
+export function getProjectArtifactRoots(
+  project: Pick<ProjectInfo, "workingDirs" | "artifactsDir"> | null | undefined,
+): string[] {
+  const workingDirs = (project?.workingDirs ?? [])
+    .map((directory) => trimValue(directory))
+    .filter((directory): directory is string => directory !== null);
+
+  if (workingDirs.length > 0) {
+    return [...workingDirs.map(appendArtifactsSegment), ...workingDirs];
+  }
+
+  const artifactsDir = trimValue(project?.artifactsDir);
+  return artifactsDir ? [artifactsDir] : [];
+}
+
 export function getProjectFolderOption(
   project: Pick<ProjectInfo, "workingDirs" | "artifactsDir"> | null | undefined,
 ): ProjectFolderOption[] {
@@ -63,6 +78,7 @@ export function buildProjectSystemPrompt(
     return undefined;
   }
 
+  const artifactDir = resolveProjectWorkingDir(project);
   const settings: string[] = [`Project name: ${project.name}`];
   const description = trimValue(project.description);
   const workingDirs = (project.workingDirs ?? [])
@@ -75,6 +91,9 @@ export function buildProjectSystemPrompt(
   }
   if (workingDirs.length > 0) {
     settings.push(`Working directories: ${workingDirs.join(", ")}`);
+  }
+  if (artifactDir) {
+    settings.push(`Artifact directory: ${artifactDir}`);
   }
   if (project.preferredProvider) {
     settings.push(`Preferred provider: ${project.preferredProvider}`);
@@ -91,6 +110,17 @@ export function buildProjectSystemPrompt(
   const sections = [
     `<project-settings>\n${settings.join("\n")}\n</project-settings>`,
   ];
+
+  if (artifactDir) {
+    sections.push(
+      `<project-file-policy>\n` +
+        `Write newly generated files to ${artifactDir} by default.\n` +
+        `When creating translations, variants, summaries, or derived documents from existing project files, save the new file in ${artifactDir} instead of the project root.\n` +
+        `Only write outside ${artifactDir} when the user explicitly asks you to edit or create a file at a specific path.\n` +
+        `If you need to read existing files elsewhere in the project, that is fine, but generated outputs should stay in ${artifactDir} unless the user says otherwise.\n` +
+        `</project-file-policy>`,
+    );
+  }
 
   if (prompt) {
     sections.push(`<project-instructions>\n${prompt}\n</project-instructions>`);

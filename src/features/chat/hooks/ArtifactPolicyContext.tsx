@@ -91,6 +91,10 @@ function homeArtifactsRootFromRoots(roots: string[]): string | null {
 function fallbackArtifactPath(path: string, roots: string[]): string | null {
   const normalized = path.trim();
   if (!/\/\.goose\/projects\/.+\/artifacts\/.+/.test(normalized)) {
+    const strippedArtifactsPath = normalized.replace("/artifacts/", "/");
+    if (strippedArtifactsPath !== normalized) {
+      return strippedArtifactsPath;
+    }
     return null;
   }
 

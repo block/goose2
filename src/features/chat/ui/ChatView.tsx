@@ -16,7 +16,7 @@ import { acpPrepareSession, acpSetModel } from "@/shared/api/acp";
 import {
   buildProjectSystemPrompt,
   composeSystemPrompt,
-  getProjectFolderOption,
+  getProjectArtifactRoots,
   resolveProjectWorkingDir,
 } from "@/features/projects/lib/chatProjectContext";
 import { useAvatarSrc } from "@/shared/hooks/useAvatarSrc";
@@ -108,8 +108,8 @@ export function ChatView({
     globalSelectedProvider;
 
   const selectedPersona = personas.find((p) => p.id === selectedPersonaId);
-  const projectFolders = useMemo(
-    () => getProjectFolderOption(project),
+  const projectArtifactRoots = useMemo(
+    () => getProjectArtifactRoots(project),
     [project],
   );
   const resolvedProjectWorkingDir = useMemo(
@@ -126,15 +126,13 @@ export function ChatView({
       : undefined;
   const allowedArtifactRoots = useMemo(() => {
     const roots = [
-      ...projectFolders
-        .map((folder) => folder.path?.trim())
-        .filter((path): path is string => Boolean(path)),
+      ...projectArtifactRoots.map((path) => path.trim()).filter(Boolean),
     ];
     if (homeArtifactsRoot) {
       roots.push(homeArtifactsRoot);
     }
     return [...new Set(roots)];
-  }, [homeArtifactsRoot, projectFolders]);
+  }, [homeArtifactsRoot, projectArtifactRoots]);
   const projectSystemPrompt = useMemo(
     () => buildProjectSystemPrompt(project),
     [project],

@@ -72,7 +72,11 @@ function TextFollowupProbe({
   );
 }
 
-function FallbackProbe() {
+function FallbackProbe({
+  path = "/Users/test/.goose/projects/sample-project/artifacts/report.md",
+}: {
+  path?: string;
+}) {
   const { pathExists, openResolvedPath } = useArtifactPolicyContext();
 
   return (
@@ -80,23 +84,14 @@ function FallbackProbe() {
       <button
         type="button"
         onClick={async () => {
-          const exists = await pathExists(
-            "/Users/test/.goose/projects/sample-project/artifacts/report.md",
-          );
+          const exists = await pathExists(path);
           (window as Window & { __artifactExists?: boolean }).__artifactExists =
             exists;
         }}
       >
         Check path
       </button>
-      <button
-        type="button"
-        onClick={() =>
-          void openResolvedPath(
-            "/Users/test/.goose/projects/sample-project/artifacts/report.md",
-          )
-        }
-      >
+      <button type="button" onClick={() => void openResolvedPath(path)}>
         Open path
       </button>
     </div>
@@ -206,6 +201,42 @@ describe("ArtifactPolicyContext", () => {
     await waitFor(() => {
       expect(mockOpenPath).toHaveBeenCalledWith(
         "/Users/test/.goose/artifacts/report.md",
+      );
+    });
+  });
+
+  it("falls back from a working-dir artifacts path to the project root when the file lives there", async () => {
+    mockPathExists.mockReset();
+    mockOpenPath.mockReset();
+    mockPathExists.mockImplementation(
+      async (path: string) =>
+        path === "/Users/test/project-a/README_ENHANCED.md",
+    );
+
+    render(
+      <ArtifactPolicyProvider
+        messages={[]}
+        allowedRoots={[
+          "/Users/test/project-a/artifacts",
+          "/Users/test/project-a",
+          "/Users/test/.goose/artifacts",
+        ]}
+      >
+        <FallbackProbe path="/Users/test/project-a/artifacts/README_ENHANCED.md" />
+      </ArtifactPolicyProvider>,
+    );
+
+    screen.getByRole("button", { name: "Check path" }).click();
+    await waitFor(() => {
+      expect(
+        (window as Window & { __artifactExists?: boolean }).__artifactExists,
+      ).toBe(true);
+    });
+
+    screen.getByRole("button", { name: "Open path" }).click();
+    await waitFor(() => {
+      expect(mockOpenPath).toHaveBeenCalledWith(
+        "/Users/test/project-a/README_ENHANCED.md",
       );
     });
   });

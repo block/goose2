@@ -100,6 +100,16 @@ fn prepared_session_for_key(
         .or_else(|| sessions.get(local_session_id).cloned())
 }
 
+fn register_prepared_session_keys(
+    sessions: &mut HashMap<String, PreparedSession>,
+    composite_key: &str,
+    local_session_id: &str,
+    prepared: PreparedSession,
+) {
+    sessions.insert(composite_key.to_string(), prepared.clone());
+    sessions.insert(local_session_id.to_string(), prepared);
+}
+
 async fn update_working_dir_inner(
     connection: &Arc<ClientSideConnection>,
     goose_session_id: &str,
@@ -224,21 +234,25 @@ pub(super) async fn prepare_session_inner(
                 )
                 .await;
 
+            {
+                let mut guard = state.lock().await;
+                register_prepared_session_keys(
+                    &mut guard.sessions,
+                    &composite_key,
+                    &local_session_id,
+                    prepared.clone(),
+                );
+            }
+
             if prepared.working_dir != working_dir {
                 update_working_dir_inner(connection, &prepared.goose_session_id, &working_dir)
                     .await?;
 
                 let mut guard = state.lock().await;
-                guard.sessions.insert(
-                    composite_key.clone(),
-                    PreparedSession {
-                        goose_session_id: prepared.goose_session_id.clone(),
-                        provider_id: prepared.provider_id.clone(),
-                        working_dir: working_dir.clone(),
-                    },
-                );
-                guard.sessions.insert(
-                    local_session_id.clone(),
+                register_prepared_session_keys(
+                    &mut guard.sessions,
+                    &composite_key,
+                    &local_session_id,
                     PreparedSession {
                         goose_session_id: prepared.goose_session_id.clone(),
                         provider_id: prepared.provider_id.clone(),
@@ -275,10 +289,12 @@ pub(super) async fn prepare_session_inner(
                     provider_id: provider_id.clone(),
                     working_dir: updated_working_dir,
                 };
-                guard
-                    .sessions
-                    .insert(composite_key.clone(), updated.clone());
-                guard.sessions.insert(local_session_id.clone(), updated);
+                register_prepared_session_keys(
+                    &mut guard.sessions,
+                    &composite_key,
+                    &local_session_id,
+                    updated,
+                );
             }
 
             return Ok((prepared.goose_session_id, None));

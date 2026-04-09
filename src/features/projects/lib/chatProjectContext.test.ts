@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildProjectSystemPrompt,
   composeSystemPrompt,
+  getProjectArtifactRoots,
   getProjectFolderName,
   getProjectFolderOption,
   resolveProjectWorkingDir,
@@ -32,9 +33,16 @@ describe("chatProjectContext", () => {
     expect(systemPrompt).toContain(
       "Working directories: /Users/wesb/dev/goose2",
     );
+    expect(systemPrompt).toContain(
+      "Artifact directory: /Users/wesb/dev/goose2/artifacts",
+    );
     expect(systemPrompt).toContain("Preferred provider: goose");
     expect(systemPrompt).toContain(
       "Use git worktrees for branch isolation: yes",
+    );
+    expect(systemPrompt).toContain("<project-file-policy>");
+    expect(systemPrompt).toContain(
+      "Write newly generated files to /Users/wesb/dev/goose2/artifacts by default.",
     );
     expect(systemPrompt).toContain("<project-instructions>");
     expect(systemPrompt).toContain("Always read AGENTS.md before editing.");
@@ -88,6 +96,20 @@ describe("chatProjectContext", () => {
 
   it("returns an empty array when project is null", () => {
     expect(getProjectFolderOption(null)).toEqual([]);
+  });
+
+  it("includes working dirs as compatibility roots after artifacts folders", () => {
+    expect(
+      getProjectArtifactRoots({
+        workingDirs: ["/Users/wesb/dev/goose2", "/Users/wesb/dev/other"],
+        artifactsDir: "/Users/wesb/.goose/projects/goose2/artifacts",
+      }),
+    ).toEqual([
+      "/Users/wesb/dev/goose2/artifacts",
+      "/Users/wesb/dev/other/artifacts",
+      "/Users/wesb/dev/goose2",
+      "/Users/wesb/dev/other",
+    ]);
   });
 
   it("resolves the first working directory to an artifacts subfolder", () => {
