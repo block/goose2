@@ -1,10 +1,16 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MoreVertical, Copy, Pencil, Trash2, Download } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { Avatar, AvatarImage, AvatarFallback } from "@/shared/ui/avatar";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
 import { useAvatarSrc } from "@/shared/hooks/useAvatarSrc";
 import type { Persona } from "@/shared/types/agents";
 
@@ -29,18 +35,6 @@ export function PersonaCard({
 }: PersonaCardProps) {
   const { t } = useTranslation(["agents", "common"]);
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [menuOpen]);
 
   const initials = persona.displayName.charAt(0).toUpperCase();
   const avatarSrc = useAvatarSrc(persona.avatar);
@@ -65,95 +59,49 @@ export function PersonaCard({
       )}
     >
       {/* Dropdown trigger */}
-      <div ref={menuRef} className="absolute right-2 top-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          aria-label={t("card.options")}
-          aria-haspopup="true"
-          aria-expanded={menuOpen}
-          onClick={(e) => {
-            e.stopPropagation();
-            setMenuOpen((prev) => !prev);
-          }}
-          className={cn(
-            "size-6 rounded-md text-muted-foreground hover:text-foreground",
-            menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100",
-          )}
-        >
-          <MoreVertical className="size-4" />
-        </Button>
-
-        {menuOpen && (
-          <div
-            role="menu"
-            className="absolute right-0 top-full z-10 mt-1 w-36 rounded-lg border border-border bg-background py-1 shadow-popover"
-          >
+      <div className="absolute right-2 top-2">
+        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+          <DropdownMenuTrigger asChild>
             <Button
               type="button"
               variant="ghost"
-              size="xs"
-              role="menuitem"
-              onClick={(e) => {
-                e.stopPropagation();
-                setMenuOpen(false);
-                onEdit?.(persona);
-              }}
-              className="w-full justify-start"
+              size="icon-xs"
+              aria-label={t("card.options")}
+              onClick={(e) => e.stopPropagation()}
+              className={cn(
+                "size-6 rounded-md text-muted-foreground hover:text-foreground",
+                menuOpen
+                  ? "opacity-100"
+                  : "opacity-0 group-hover:opacity-100",
+              )}
             >
+              <MoreVertical className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" sideOffset={4}>
+            <DropdownMenuItem onClick={() => onEdit?.(persona)}>
               <Pencil className="size-3.5" />
               {t("common:actions.edit")}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              role="menuitem"
-              onClick={(e) => {
-                e.stopPropagation();
-                setMenuOpen(false);
-                onDuplicate?.(persona);
-              }}
-              className="w-full justify-start"
-            >
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onDuplicate?.(persona)}>
               <Copy className="size-3.5" />
               {t("common:actions.duplicate")}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              role="menuitem"
-              onClick={(e) => {
-                e.stopPropagation();
-                setMenuOpen(false);
-                onExport?.(persona);
-              }}
-              className="w-full justify-start"
-            >
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onExport?.(persona)}>
               <Download className="size-3.5" />
               {t("common:actions.export")}
-            </Button>
+            </DropdownMenuItem>
             {!persona.isBuiltin && !persona.isFromDisk && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="xs"
-                role="menuitem"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMenuOpen(false);
-                  onDelete?.(persona);
-                }}
-                className="w-full justify-start text-destructive hover:text-destructive"
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => onDelete?.(persona)}
               >
                 <Trash2 className="size-3.5" />
                 {t("common:actions.delete")}
-              </Button>
+              </DropdownMenuItem>
             )}
-          </div>
-        )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Avatar */}

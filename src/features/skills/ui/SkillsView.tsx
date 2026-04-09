@@ -14,6 +14,12 @@ import { cn } from "@/shared/lib/cn";
 import { SearchBar } from "@/shared/ui/SearchBar";
 import { Button, buttonVariants } from "@/shared/ui/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -48,99 +54,42 @@ function SkillCardMenu({
   onDelete: (skill: SkillInfo) => void;
 }) {
   const { t } = useTranslation(["skills", "common"]);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [menuOpen]);
 
   return (
-    <div ref={menuRef} className="relative shrink-0">
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        aria-label={t("view.optionsAria", { name: skill.name })}
-        aria-haspopup="true"
-        aria-expanded={menuOpen}
-        onClick={() => setMenuOpen((prev) => !prev)}
-        className="size-6 rounded-md text-muted-foreground hover:text-foreground"
-      >
-        <MoreHorizontal className="size-3.5" />
-      </Button>
-
-      {menuOpen && (
-        <div
-          role="menu"
-          className="absolute right-0 top-full z-10 mt-1 w-36 rounded-lg border border-border bg-background py-1 shadow-popover"
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          aria-label={t("view.optionsAria", { name: skill.name })}
+          className="size-6 rounded-md text-muted-foreground hover:text-foreground"
         >
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            role="menuitem"
-            onClick={() => {
-              setMenuOpen(false);
-              onEdit(skill);
-            }}
-            className="w-full justify-start"
-          >
-            <Pencil className="size-3.5" />
-            {t("common:actions.edit")}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            role="menuitem"
-            onClick={() => {
-              setMenuOpen(false);
-              onDuplicate(skill);
-            }}
-            className="w-full justify-start"
-          >
-            <Copy className="size-3.5" />
-            {t("common:actions.duplicate")}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            role="menuitem"
-            onClick={() => {
-              setMenuOpen(false);
-              onExport(skill);
-            }}
-            className="w-full justify-start"
-          >
-            <Download className="size-3.5" />
-            {t("common:actions.export")}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            role="menuitem"
-            onClick={() => {
-              setMenuOpen(false);
-              onDelete(skill);
-            }}
-            className="w-full justify-start text-destructive hover:text-destructive"
-          >
-            <Trash2 className="size-3.5" />
-            {t("common:actions.delete")}
-          </Button>
-        </div>
-      )}
-    </div>
+          <MoreHorizontal className="size-3.5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" sideOffset={4}>
+        <DropdownMenuItem onClick={() => onEdit(skill)}>
+          <Pencil className="size-3.5" />
+          {t("common:actions.edit")}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onDuplicate(skill)}>
+          <Copy className="size-3.5" />
+          {t("common:actions.duplicate")}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onExport(skill)}>
+          <Download className="size-3.5" />
+          {t("common:actions.export")}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          variant="destructive"
+          onClick={() => onDelete(skill)}
+        >
+          <Trash2 className="size-3.5" />
+          {t("common:actions.delete")}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
