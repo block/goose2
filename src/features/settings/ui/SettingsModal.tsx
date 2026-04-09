@@ -68,7 +68,6 @@ export function SettingsModal({
 }: SettingsModalProps) {
   const { t } = useTranslation(["settings", "common"]);
   const { preference, setLocalePreference, systemLocaleLabel } = useLocale();
-  const { formatNumber } = useLocaleFormatting();
   const [activeSection, setActiveSection] = useState<SectionId>(initialSection);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);

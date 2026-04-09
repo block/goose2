@@ -123,16 +123,6 @@ function shouldTrackStreamingEvent(
   return runtime.chatState === "thinking" || runtime.chatState === "streaming";
 }
 
-/**
- * Hook that listens to Tauri events for ACP streaming responses.
- *
- * Subscribes to `acp:text`, `acp:done`, `acp:tool_call`, `acp:tool_title`,
- * and `acp:tool_result` events, updating whichever session the event targets.
- *
- * During session history replay, events are buffered in a module-level map
- * (see `replayBuffer.ts`) and flushed as a single `setMessages()` call when
- * loading completes, avoiding O(N²) re-renders.
- */
 export function useAcpStream(enabled: boolean): void {
   useEffect(() => {
     if (!enabled) return;
@@ -140,14 +130,6 @@ export function useAcpStream(enabled: boolean): void {
     let active = true;
     const unlisteners: Promise<UnlistenFn>[] = [];
 
-    // Flush replay buffers when a session transitions from loading → loaded.
-    //
-    // Re-entrancy note: setMessages() below triggers another Zustand state
-    // update, which re-invokes this subscriber synchronously. On the second
-    // invocation the `sid` has already been removed from both prev and current
-    // loadingSessionIds, so the for-of loop won't re-match it. Additionally,
-    // getAndDeleteReplayBuffer already deleted the buffer on the first pass,
-    // providing a second guard against double-flush.
     const unsubscribeFlush = useChatStore.subscribe((state, prevState) => {
       if (!active) return;
       for (const sid of prevState.loadingSessionIds) {

@@ -7,7 +7,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use acp_client::MessageWriter;
+use agent_client_protocol::{Agent, ClientSideConnection, ExtRequest};
 use serde::Deserialize;
+use serde_json::value::RawValue;
 use tokio::sync::{mpsc, oneshot, OnceCell};
 
 pub use session_ops::AcpSessionInfo;
