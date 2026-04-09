@@ -29,11 +29,13 @@ function HomeClock() {
 
   return (
     <div className="mb-1 flex items-baseline gap-1.5 pl-4">
-      <span className="text-6xl font-light font-display tracking-tight text-foreground">
+      <span className="text-6xl font-normal font-display tracking-tight text-foreground">
         {hour}:{minute}
       </span>
       {dayPeriod ? (
-        <span className="text-lg text-muted-foreground">{dayPeriod}</span>
+        <span className="text-lg font-normal text-muted-foreground">
+          {dayPeriod}
+        </span>
       ) : null}
     </div>
   );
@@ -122,12 +124,12 @@ export function HomeScreen({ onStartChat, onCreateProject }: HomeScreenProps) {
   return (
     <div className="h-full w-full overflow-y-auto">
       <div className="relative flex min-h-full flex-col items-center justify-center px-6 pb-4">
-        <div className="flex w-full max-w-[600px] flex-col">
+        <div className="flex w-full max-w-[600px] flex-col antialiased">
           {/* Clock */}
           <HomeClock />
 
           {/* Greeting */}
-          <p className="mb-6 pl-4 text-xl font-light font-display text-muted-foreground">
+          <p className="mb-6 pl-4 text-xl font-normal font-display text-muted-foreground">
             {greeting}
           </p>
 
