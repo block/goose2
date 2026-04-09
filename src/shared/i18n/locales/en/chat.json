@@ -11,7 +11,10 @@
   "context": {
     "closePanel": "Close context panel",
     "openPanel": "Open context panel",
-    "ringAria": "Context: {{percent}}% used"
+    "ringAria": "Context: {{percent}}% used",
+    "warningHigh": "Context window is {{percent}}% full. Consider compacting the conversation.",
+    "warningCritical": "Context window nearly full ({{percent}}%). Compaction recommended to avoid errors.",
+    "dismiss": "Dismiss"
   },
   "contextPanel": {
     "actions": {

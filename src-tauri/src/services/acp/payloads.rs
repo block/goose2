@@ -94,6 +94,15 @@ pub(crate) struct ModelStatePayload {
     pub available_models: Vec<ModelOption>,
 }
 
+/// Payload for the `acp:usage_update` event.
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct UsageUpdatePayload {
+    pub session_id: String,
+    pub used: u64,
+    pub size: u64,
+}
+
 pub(crate) fn model_options_from_state(state: &SessionModelState) -> Vec<ModelOption> {
     state
         .available_models
