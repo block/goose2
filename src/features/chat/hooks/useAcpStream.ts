@@ -138,6 +138,13 @@ export function useAcpStream(enabled: boolean): void {
     const unlisteners: Promise<UnlistenFn>[] = [];
 
     // Flush replay buffers when a session transitions from loading → loaded.
+    //
+    // Re-entrancy note: setMessages() below triggers another Zustand state
+    // update, which re-invokes this subscriber synchronously. On the second
+    // invocation the `sid` has already been removed from both prev and current
+    // loadingSessionIds, so the for-of loop won't re-match it. Additionally,
+    // getAndDeleteReplayBuffer already deleted the buffer on the first pass,
+    // providing a second guard against double-flush.
     const unsubscribeFlush = useChatStore.subscribe((state, prevState) => {
       if (!active) return;
       for (const sid of prevState.loadingSessionIds) {
@@ -248,8 +255,9 @@ export function useAcpStream(enabled: boolean): void {
                 ? { ...block, status: "completed" as const }
                 : block,
             );
-            if (msg.metadata) {
-              msg.metadata = { ...msg.metadata, completionStatus: "completed" };
+            const updated = updateCompletionStatus(msg, "completed");
+            if (updated !== msg && updated.metadata) {
+              msg.metadata = updated.metadata;
             }
           }
           return;

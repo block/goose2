@@ -43,6 +43,11 @@ export function getAndDeleteReplayBuffer(
   return buffer;
 }
 
+/** Discard the replay buffer for a session without returning it. */
+export function clearReplayBuffer(sessionId: string): void {
+  replayBuffers.delete(sessionId);
+}
+
 export function findLatestUnpairedToolRequest(
   content: MessageContent[],
 ): ToolRequestContent | null {

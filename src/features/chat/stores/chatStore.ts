@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { Message, MessageContent } from "@/shared/types/messages";
+import { clearReplayBuffer } from "../hooks/replayBuffer";
 import type {
   ChatState,
   SessionChatRuntime,
@@ -442,6 +443,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   // Cleanup
   cleanupSession: (sessionId) => {
+    // Discard any orphaned replay buffer so module-level Map doesn't leak.
+    clearReplayBuffer(sessionId);
     set((state) => {
       const { [sessionId]: _, ...rest } = state.messagesBySession;
       const { [sessionId]: __, ...remainingSessionState } =
