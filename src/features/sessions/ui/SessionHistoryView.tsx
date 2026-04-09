@@ -163,7 +163,6 @@ export function SessionHistoryView({
                       id={session.id}
                       title={session.title}
                       updatedAt={session.updatedAt}
-                      messageCount={session.messageCount}
                       personaName={
                         session.personaId
                           ? getPersonaName(session.personaId)

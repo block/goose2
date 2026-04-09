@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Calendar,
-  MessageSquare,
   Folder,
   Bot,
   MoreHorizontal,
@@ -30,7 +29,6 @@ interface SessionCardProps {
   id: string;
   title: string;
   updatedAt: string;
-  messageCount?: number;
   personaName?: string;
   projectName?: string;
   projectColor?: string;
@@ -46,7 +44,6 @@ export function SessionCard({
   id,
   title,
   updatedAt,
-  messageCount,
   personaName,
   projectName,
   projectColor,
@@ -58,7 +55,7 @@ export function SessionCard({
   onUnarchive,
 }: SessionCardProps) {
   const { t } = useTranslation(["sessions", "common"]);
-  const { formatNumber, formatRelativeTimeToNow } = useLocaleFormatting();
+  const { formatRelativeTimeToNow } = useLocaleFormatting();
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -156,18 +153,6 @@ export function SessionCard({
           <Calendar className="size-3 shrink-0" />
           <span>{formatRelativeTimeToNow(updatedAt)}</span>
         </div>
-
-        {messageCount != null && (
-          <div className="flex items-center gap-1.5">
-            <MessageSquare className="size-3 shrink-0" />
-            <span>
-              {t("messageCount", {
-                count: messageCount,
-                displayCount: formatNumber(messageCount),
-              })}
-            </span>
-          </div>
-        )}
 
         {personaName && (
           <div className="flex items-center gap-1.5">
