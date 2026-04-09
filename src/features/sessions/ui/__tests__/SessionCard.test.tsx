@@ -8,15 +8,13 @@ describe("SessionCard", () => {
     id: "s1",
     title: "Fix sidebar bug",
     updatedAt: new Date().toISOString(),
-    messageCount: 12,
     onSelect: vi.fn(),
   };
 
-  it("renders title and message count", () => {
+  it("renders title", () => {
     render(<SessionCard {...defaultProps} />);
 
     expect(screen.getByText("Fix sidebar bug")).toBeInTheDocument();
-    expect(screen.getByText("12 messages")).toBeInTheDocument();
   });
 
   it("renders persona name when provided", () => {
