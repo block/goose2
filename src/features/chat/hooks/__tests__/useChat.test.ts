@@ -2,14 +2,19 @@ import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { useChatStore } from "../../stores/chatStore";
+import { useChatSessionStore } from "../../stores/chatSessionStore";
 import type { Message } from "@/shared/types/messages";
 
 const mockAcpSendMessage = vi.fn();
 const mockAcpCancelSession = vi.fn();
+const mockAcpPrepareSession = vi.fn();
+const mockAcpSetModel = vi.fn();
 
 vi.mock("@/shared/api/acp", () => ({
   acpSendMessage: (...args: unknown[]) => mockAcpSendMessage(...args),
   acpCancelSession: (...args: unknown[]) => mockAcpCancelSession(...args),
+  acpPrepareSession: (...args: unknown[]) => mockAcpPrepareSession(...args),
+  acpSetModel: (...args: unknown[]) => mockAcpSetModel(...args),
 }));
 
 import { useChat } from "../useChat";
@@ -55,6 +60,14 @@ describe("useChat", () => {
       activeSessionId: null,
       isConnected: true,
     });
+    useChatSessionStore.setState({
+      sessions: [],
+      activeSessionId: null,
+      isLoading: false,
+      contextPanelOpenBySession: {},
+      modelsBySession: {},
+      modelCacheByProvider: {},
+    });
     useAgentStore.setState({
       personas: [
         {
@@ -83,6 +96,8 @@ describe("useChat", () => {
       editingPersona: null,
     });
     mockAcpCancelSession.mockResolvedValue(true);
+    mockAcpPrepareSession.mockResolvedValue(undefined);
+    mockAcpSetModel.mockResolvedValue(undefined);
   });
 
   it("cancels the active override persona instead of the hook default persona", async () => {
@@ -325,6 +340,47 @@ describe("useChat", () => {
     await act(async () => {
       await firstPromise;
     });
+  });
+
+  it("prepares draft sessions before applying a selected model on first send", async () => {
+    useChatSessionStore.setState({
+      sessions: [
+        {
+          id: "session-1",
+          title: "New Chat",
+          providerId: "openai",
+          modelId: "gpt-4.1",
+          modelName: "GPT-4.1",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          messageCount: 0,
+          draft: true,
+        },
+      ],
+    });
+
+    const { result } = renderHook(() => useChat("session-1", "openai"));
+
+    await act(async () => {
+      await result.current.sendMessage("Hello");
+    });
+
+    expect(mockAcpPrepareSession).toHaveBeenCalledWith("session-1", "openai", {
+      workingDir: undefined,
+      personaId: undefined,
+    });
+    expect(mockAcpSetModel).toHaveBeenCalledWith("session-1", "gpt-4.1");
+    expect(mockAcpSendMessage).toHaveBeenCalledWith(
+      "session-1",
+      "openai",
+      "Hello",
+      {
+        systemPrompt: undefined,
+        workingDir: undefined,
+        personaId: undefined,
+        personaName: undefined,
+      },
+    );
   });
 
   it("appends an error message and removes the empty assistant placeholder when send fails", async () => {

@@ -229,6 +229,45 @@ describe("useAcpStream", () => {
     ]);
   });
 
+  it("accepts providerless model state when the session already has a provider", async () => {
+    useChatSessionStore.setState((state) => ({
+      ...state,
+      sessions: state.sessions.map((session) =>
+        session.id === sessionId
+          ? { ...session, providerId: "openai" }
+          : session,
+      ),
+    }));
+
+    renderHook(() => useAcpStream(true));
+    await vi.waitFor(() =>
+      expect(listeners.get("acp:model_state")).toBeDefined(),
+    );
+
+    act(() => {
+      emit("acp:model_state", {
+        sessionId,
+        currentModelId: "gpt-4.1",
+        currentModelName: "GPT-4.1",
+        availableModels: [
+          { id: "gpt-4.1", name: "GPT-4.1" },
+          { id: "gpt-4o", name: "GPT-4o" },
+        ],
+      });
+    });
+
+    expect(
+      useChatSessionStore.getState().getSession(sessionId)?.modelName,
+    ).toBe("GPT-4.1");
+    expect(useChatSessionStore.getState().getSession(sessionId)?.modelId).toBe(
+      "gpt-4.1",
+    );
+    expect(useChatSessionStore.getState().getSessionModels(sessionId)).toEqual([
+      { id: "gpt-4.1", name: "GPT-4.1" },
+      { id: "gpt-4o", name: "GPT-4o" },
+    ]);
+  });
+
   it("creates the streaming assistant message from backend metadata", async () => {
     useChatStore.getState().setChatState(sessionId, "streaming");
 

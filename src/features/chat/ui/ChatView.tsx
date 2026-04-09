@@ -215,6 +215,10 @@ export function ChatView({
         modelName: selected?.displayName ?? selected?.name ?? modelId,
       });
 
+      if (session?.draft) {
+        return;
+      }
+
       acpSetModel(activeSessionId, modelId).catch((error) => {
         console.error("Failed to set model:", error);
         // Rollback to previous model on failure
@@ -224,7 +228,7 @@ export function ChatView({
         });
       });
     },
-    [activeSessionId, session?.modelId, session?.modelName],
+    [activeSessionId, session?.draft, session?.modelId, session?.modelName],
   );
 
   // When persona changes, update the provider to match persona's default

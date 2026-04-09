@@ -459,13 +459,11 @@ export function useAcpStream(enabled: boolean): void {
         }
         const session = sessionStore.getSession(sessionId);
         const sessionProvider = session?.providerId;
-        if (sessionProvider) {
-          if (!providerId || providerId !== sessionProvider) {
-            console.debug(
-              `[acp:model_state] Ignoring event: provider mismatch (event: ${providerId ?? "none"}, session: ${sessionProvider})`,
-            );
-            return;
-          }
+        if (providerId && sessionProvider && providerId !== sessionProvider) {
+          console.debug(
+            `[acp:model_state] Ignoring event: provider mismatch (event: ${providerId}, session: ${sessionProvider})`,
+          );
+          return;
         }
         const modelName = currentModelName ?? currentModelId;
         sessionStore.setSessionModels(sessionId, availableModels);
