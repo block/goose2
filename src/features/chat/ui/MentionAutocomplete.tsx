@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Sparkles, User } from "lucide-react";
 import { IconFile, IconFolder } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 import { useAvatarSrc } from "@/shared/hooks/useAvatarSrc";
+import { PopoverContent } from "@/shared/ui/popover";
 import type { Persona } from "@/shared/types/agents";
 
 // ---------------------------------------------------------------------------
@@ -36,7 +37,6 @@ interface MentionAutocompleteProps {
   onSelectPersona: (persona: Persona) => void;
   onSelectFile?: (file: FileMentionItem) => void;
   onClose?: (() => void) | undefined;
-  anchorRect?: DOMRect | null;
   selectedIndex?: number;
 }
 
@@ -47,13 +47,11 @@ export function MentionAutocomplete({
   isOpen,
   onSelectPersona,
   onSelectFile,
-  anchorRect,
   selectedIndex: controlledIndex,
 }: MentionAutocompleteProps) {
   const { t } = useTranslation("chat");
   const [internalIndex, setInternalIndex] = useState(0);
   const selectedIndex = controlledIndex ?? internalIndex;
-  const listRef = useRef<HTMLDivElement>(null);
 
   const { filteredPersonas, filteredFiles } = useMemo(() => {
     const q = query.toLowerCase();
@@ -107,17 +105,19 @@ export function MentionAutocomplete({
   const showFileHeader = fileCount > 0;
 
   return (
-    <div
-      ref={listRef}
-      className="absolute z-50 w-72 rounded-lg border border-border bg-background shadow-popover"
-      style={{
-        bottom: anchorRect ? "calc(100% + 4px)" : undefined,
-        left: anchorRect ? 16 : undefined,
-      }}
+    <PopoverContent
+      side="top"
+      align="start"
+      sideOffset={4}
+      className="w-72 px-1 py-1"
+      onOpenAutoFocus={(e) => e.preventDefault()}
+      onCloseAutoFocus={(e) => e.preventDefault()}
+      onEscapeKeyDown={(e) => e.preventDefault()}
+      onInteractOutside={(e) => e.preventDefault()}
       role="listbox"
       aria-label={t("mention.ariaLabel")}
     >
-      <div className="max-h-56 overflow-y-auto px-1 py-1">
+      <div className="max-h-56 overflow-y-auto">
         {showPersonaHeader && (
           <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
             {t("mention.title")}
@@ -197,7 +197,7 @@ export function MentionAutocomplete({
           );
         })}
       </div>
-    </div>
+    </PopoverContent>
   );
 }
 

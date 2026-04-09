@@ -6,6 +6,7 @@ import type { Persona } from "@/shared/types/agents";
 import { cn } from "@/shared/lib/cn";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
+import { Popover, PopoverAnchor } from "@/shared/ui/popover";
 import { MentionAutocomplete } from "./MentionAutocomplete";
 import { useMentionHandlers } from "../hooks/useMentionHandlers";
 import { PastedImageThumb, FileAttachmentChips } from "./ChatInputAttachments";
@@ -327,37 +328,38 @@ export function ChatInput({
     <TooltipProvider delayDuration={300}>
       <div className={cn("px-4 pb-6 pt-2", className)} ref={containerRef}>
         <div className="mx-auto max-w-3xl">
-          {/* biome-ignore lint/a11y/noStaticElementInteractions: drop zone for image files */}
-          <div
-            className={cn(
-              "relative rounded-2xl border border-border bg-background px-4 pb-3 pt-4 transition-colors",
-              isImageDragOver && "bg-muted/20",
-            )}
-            onDragEnter={handleDragEnter}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            {isImageDragOver && (
-              <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-2xl border border-dashed border-border bg-background/70">
-                <Badge
-                  variant="secondary"
-                  className="px-3 py-1 text-sm shadow-sm"
-                >
-                  {t("attachments.dropToAttach")}
-                </Badge>
-              </div>
-            )}
-            <MentionAutocomplete
-              personas={personas}
-              files={fileMentionItems}
-              query={mentionQuery}
-              isOpen={mentionOpen}
-              onSelectPersona={handlePersonaMentionSelect}
-              onSelectFile={handleFileMentionSelect}
-              onClose={closeMention}
-              selectedIndex={mentionSelectedIndex}
-            />
+          <Popover open={mentionOpen}>
+            {/* biome-ignore lint/a11y/noStaticElementInteractions: drop zone for image files */}
+            <div
+              className={cn(
+                "relative rounded-2xl border border-border bg-background px-4 pb-3 pt-4 transition-colors",
+                isImageDragOver && "bg-muted/20",
+              )}
+              onDragEnter={handleDragEnter}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              {isImageDragOver && (
+                <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-2xl border border-dashed border-border bg-background/70">
+                  <Badge
+                    variant="secondary"
+                    className="px-3 py-1 text-sm shadow-sm"
+                  >
+                    {t("attachments.dropToAttach")}
+                  </Badge>
+                </div>
+              )}
+              <MentionAutocomplete
+                personas={personas}
+                files={fileMentionItems}
+                query={mentionQuery}
+                isOpen={mentionOpen}
+                onSelectPersona={handlePersonaMentionSelect}
+                onSelectFile={handleFileMentionSelect}
+                onClose={closeMention}
+                selectedIndex={mentionSelectedIndex}
+              />
 
             {images.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-2">
@@ -414,18 +416,20 @@ export function ChatInput({
               </div>
             )}
 
-            <textarea
-              ref={textareaRef}
-              value={text}
-              onChange={handleInput}
-              onKeyDown={handleKeyDown}
-              onPaste={handlePaste}
-              placeholder={effectivePlaceholder}
-              disabled={disabled}
-              rows={1}
-              className="mb-3 min-h-[36px] max-h-[200px] w-full resize-none bg-transparent px-1 text-[14px] leading-relaxed text-foreground placeholder:font-light placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 disabled:opacity-60"
-              aria-label={t("input.ariaLabel")}
-            />
+            <PopoverAnchor asChild>
+              <textarea
+                ref={textareaRef}
+                value={text}
+                onChange={handleInput}
+                onKeyDown={handleKeyDown}
+                onPaste={handlePaste}
+                placeholder={effectivePlaceholder}
+                disabled={disabled}
+                rows={1}
+                className="mb-3 min-h-[36px] max-h-[200px] w-full resize-none bg-transparent px-1 text-[14px] leading-relaxed text-foreground placeholder:font-light placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 disabled:opacity-60"
+                aria-label={t("input.ariaLabel")}
+              />
+            </PopoverAnchor>
 
             <ChatInputToolbar
               personas={personas}
@@ -454,6 +458,7 @@ export function ChatInput({
               isCompact={isCompact}
             />
           </div>
+          </Popover>
         </div>
       </div>
     </TooltipProvider>
