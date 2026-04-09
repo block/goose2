@@ -127,7 +127,11 @@ pub(super) async fn prepare_session_inner(
 
         if let Some(prepared) = existing_prepared {
             dispatcher
-                .bind_session(&prepared.goose_session_id, &local_session_id, Some(&provider_id))
+                .bind_session(
+                    &prepared.goose_session_id,
+                    &local_session_id,
+                    Some(&provider_id),
+                )
                 .await;
 
             if prepared.working_dir != working_dir {
@@ -142,7 +146,11 @@ pub(super) async fn prepare_session_inner(
                     dispatcher.emit_model_state(&local_session_id, Some(&provider_id), models);
                 }
                 if let Some(options) = &response.config_options {
-                    dispatcher.emit_model_state_from_options(&local_session_id, Some(&provider_id), options);
+                    dispatcher.emit_model_state_from_options(
+                        &local_session_id,
+                        Some(&provider_id),
+                        options,
+                    );
                 }
 
                 let mut guard = state.lock().await;
@@ -162,8 +170,11 @@ pub(super) async fn prepare_session_inner(
                     .map_err(|error| {
                         format!("Failed to update provider via Goose ACP: {error:?}")
                     })?;
-                dispatcher
-                    .emit_model_state_from_options(&local_session_id, Some(&provider_id), &response.config_options);
+                dispatcher.emit_model_state_from_options(
+                    &local_session_id,
+                    Some(&provider_id),
+                    &response.config_options,
+                );
 
                 let mut guard = state.lock().await;
                 if let Some(session) = guard.sessions.get_mut(&composite_key) {
@@ -191,7 +202,11 @@ pub(super) async fn prepare_session_inner(
                 dispatcher.emit_model_state(&local_session_id, Some(&provider_id), models);
             }
             if let Some(options) = &response.config_options {
-                dispatcher.emit_model_state_from_options(&local_session_id, Some(&provider_id), options);
+                dispatcher.emit_model_state_from_options(
+                    &local_session_id,
+                    Some(&provider_id),
+                    options,
+                );
             }
 
             let loaded_provider_id = response
@@ -209,8 +224,11 @@ pub(super) async fn prepare_session_inner(
                     .map_err(|error| {
                         format!("Failed to update provider via Goose ACP: {error:?}")
                     })?;
-                dispatcher
-                    .emit_model_state_from_options(&local_session_id, Some(&provider_id), &response.config_options);
+                dispatcher.emit_model_state_from_options(
+                    &local_session_id,
+                    Some(&provider_id),
+                    &response.config_options,
+                );
             }
 
             existing_id
@@ -232,13 +250,19 @@ pub(super) async fn prepare_session_inner(
 
             let new_id = response.session_id.to_string();
 
-            dispatcher.bind_session(&new_id, &local_session_id, Some(&provider_id)).await;
+            dispatcher
+                .bind_session(&new_id, &local_session_id, Some(&provider_id))
+                .await;
 
             if let Some(models) = &response.models {
                 dispatcher.emit_model_state(&local_session_id, Some(&provider_id), models);
             }
             if let Some(options) = &response.config_options {
-                dispatcher.emit_model_state_from_options(&local_session_id, Some(&provider_id), options);
+                dispatcher.emit_model_state_from_options(
+                    &local_session_id,
+                    Some(&provider_id),
+                    options,
+                );
             }
 
             new_id
@@ -434,7 +458,11 @@ pub(super) async fn set_model_inner(
             ))
             .await
             .map_err(|error| format!("Failed to update model via Goose ACP: {error:?}"))?;
-        dispatcher.emit_model_state_from_options(local_session_id, Some(&provider_id), &response.config_options);
+        dispatcher.emit_model_state_from_options(
+            local_session_id,
+            Some(&provider_id),
+            &response.config_options,
+        );
     }
 
     Ok(())
