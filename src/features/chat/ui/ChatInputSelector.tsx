@@ -79,14 +79,6 @@ export function ChatInputSelector({
       <DropdownMenuContent
         align="start"
         className={cn(contentWidth === "wide" ? "w-72" : "w-56")}
-        onOpenAutoFocus={(e) => {
-          e.preventDefault();
-          const content = e.currentTarget as HTMLElement;
-          const selected = content.querySelector<HTMLElement>(
-            "[data-selected]",
-          );
-          selected?.focus();
-        }}
       >
         {menuLabel ? (
           <>
@@ -112,7 +104,6 @@ export function ChatInputSelector({
                 disabled={item.disabled}
                 onSelect={() => onValueChange(item.value)}
                 className="justify-between gap-2"
-                data-selected={item.value === value ? "" : undefined}
               >
                 <div
                   className={cn(

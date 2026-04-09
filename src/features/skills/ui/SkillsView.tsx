@@ -81,10 +81,7 @@ function SkillCardMenu({
           <Download className="size-3.5" />
           {t("common:actions.export")}
         </DropdownMenuItem>
-        <DropdownMenuItem
-          variant="destructive"
-          onClick={() => onDelete(skill)}
-        >
+        <DropdownMenuItem variant="destructive" onClick={() => onDelete(skill)}>
           <Trash2 className="size-3.5" />
           {t("common:actions.delete")}
         </DropdownMenuItem>

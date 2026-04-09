@@ -70,9 +70,7 @@ export function PersonaCard({
               onClick={(e) => e.stopPropagation()}
               className={cn(
                 "size-6 rounded-md text-muted-foreground hover:text-foreground",
-                menuOpen
-                  ? "opacity-100"
-                  : "opacity-0 group-hover:opacity-100",
+                menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100",
               )}
             >
               <MoreVertical className="size-4" />

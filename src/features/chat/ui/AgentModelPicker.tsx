@@ -10,7 +10,6 @@ import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import { ScrollArea } from "@/shared/ui/scroll-area";
-import { Separator } from "@/shared/ui/separator";
 import {
   formatProviderLabel,
   getProviderIcon,
@@ -225,9 +224,9 @@ export function AgentModelPicker({
             const cols = Array.from(
               content.querySelectorAll<HTMLElement>("[data-col]"),
             );
-            const currentCol = (
-              document.activeElement as HTMLElement
-            )?.closest("[data-col]");
+            const currentCol = (document.activeElement as HTMLElement)?.closest(
+              "[data-col]",
+            );
             const colIdx = cols.indexOf(currentCol as HTMLElement);
             const targetCol =
               e.key === "ArrowRight"
