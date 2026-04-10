@@ -12,7 +12,9 @@ export function useSidebarHighlight(
   const [hoveredRect, setHoveredRect] = useState<HighlightRect | null>(null);
   const [activeRect, setActiveRect] = useState<HighlightRect | null>(null);
   const [isHovering, setIsHovering] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
   const activeElRef = useRef<HTMLElement | null>(null);
+  const resizeTimerRef = useRef(0);
 
   const measureElement = useCallback(
     (el: HTMLElement): HighlightRect | null => {
@@ -36,7 +38,7 @@ export function useSidebarHighlight(
     if (!nav) return;
 
     let rafId = 0;
-    const observer = new MutationObserver(() => {
+    const remeasure = () => {
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
         const el = activeElRef.current;
@@ -44,12 +46,31 @@ export function useSidebarHighlight(
         const rect = measureElement(el);
         if (rect) setActiveRect(rect);
       });
-    });
+    };
 
-    observer.observe(nav, { childList: true, subtree: true });
+    const mutationObserver = new MutationObserver(remeasure);
+    mutationObserver.observe(nav, { childList: true, subtree: true });
+
+    // Also re-measure when the nav resizes (e.g. sidebar expand/collapse
+    // transitions change item positions even without DOM mutations).
+    // Suppress the frame's transition while resizing so it snaps to position
+    // instead of sliding from the old (collapsed-layout) coordinates.
+    const resizeObserver = new ResizeObserver(() => {
+      setIsResizing(true);
+      clearTimeout(resizeTimerRef.current);
+      resizeTimerRef.current = window.setTimeout(
+        () => setIsResizing(false),
+        400,
+      );
+      remeasure();
+    });
+    resizeObserver.observe(nav);
+
     return () => {
       cancelAnimationFrame(rafId);
-      observer.disconnect();
+      clearTimeout(resizeTimerRef.current);
+      mutationObserver.disconnect();
+      resizeObserver.disconnect();
     };
   }, [navRef, measureElement]);
 
@@ -85,6 +106,7 @@ export function useSidebarHighlight(
   return {
     currentRect,
     isHovering,
+    isResizing,
     onItemMouseEnter,
     onNavMouseLeave,
     updateActiveRect,
