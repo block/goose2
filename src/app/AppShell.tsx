@@ -481,10 +481,20 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           clearActiveSession(activeSessionId);
         }
       }
+      // Cmd/Ctrl+N opens new conversation screen
+      if (e.key === "n" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        const { activeSessionId } = useChatSessionStore.getState();
+        if (activeSessionId) {
+          cleanupEmptyDraft(activeSessionId);
+        }
+        sessionStore.setActiveSession(null);
+        setActiveView("home");
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [clearActiveSession]);
+  }, [clearActiveSession, cleanupEmptyDraft, sessionStore]);
 
   const activeSessionPersonaId = activeSession?.personaId;
   const handleInitialMessageConsumed = useCallback(() => {
