@@ -49,5 +49,8 @@ keyring = { version = "3", features = ["windows-native"] }
 [target.'cfg(target_os = "linux")'.dependencies]
 keyring = { version = "3", features = ["linux-native-sync-persistent", "crypto-rust"] }
 
+[features]
+test-bridge = []
+
 [dev-dependencies]
 tempfile = "3"

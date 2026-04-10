@@ -1,5 +1,6 @@
 mod commands;
 mod services;
+mod test_bridge;
 mod types;
 
 use std::sync::Arc;
@@ -33,6 +34,7 @@ pub fn run() {
         .manage(PersonaStore::new())
         .manage(GooseConfig::new())
         .manage(acp_registry)
+        .manage(test_bridge::BridgeState::new())
         .invoke_handler(tauri::generate_handler![
             commands::agents::list_personas,
             commands::agents::create_persona,
@@ -86,8 +88,13 @@ pub fn run() {
             commands::system::get_home_dir,
             commands::system::save_exported_session_file,
             commands::system::path_exists,
+            test_bridge::bridge_result,
         ])
-        .setup(|_app| Ok(()))
+        .setup(|_app| {
+            #[cfg(feature = "test-bridge")]
+            test_bridge::start_test_bridge(_app.handle().clone());
+            Ok(())
+        })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(move |_app, event| {
