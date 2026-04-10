@@ -186,8 +186,9 @@ export function MessageTimeline({
               }}
               className={cn(
                 index === 0 ? "mt-0" : "mt-4",
+                "rounded-xl transition-[background-color,box-shadow]",
                 pulsingMessageId === message.id &&
-                  "rounded-xl bg-accent/35 px-2 py-2 transition-colors",
+                  "bg-accent/25 ring-2 ring-accent/35 ring-inset",
               )}
             >
               {showDateSeparator && (
