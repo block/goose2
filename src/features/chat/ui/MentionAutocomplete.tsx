@@ -99,12 +99,6 @@ export function MentionAutocomplete({
 
   if (!isOpen || items.length === 0) return null;
 
-  // Determine section boundaries for headers
-  const personaCount = filteredPersonas.length;
-  const fileCount = filteredFiles.length;
-  const showPersonaHeader = personaCount > 0 && fileCount > 0;
-  const showFileHeader = fileCount > 0;
-
   return (
     <PopoverContent
       side="top"
@@ -119,12 +113,7 @@ export function MentionAutocomplete({
       aria-label={t("mention.ariaLabel")}
     >
       <div className="max-h-56 overflow-y-auto">
-        {showPersonaHeader && (
-          <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-            {t("mention.title")}
-          </div>
-        )}
-        {!showPersonaHeader && personaCount > 0 && (
+        {filteredPersonas.length > 0 && (
           <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
             {t("mention.title")}
           </div>
@@ -163,13 +152,13 @@ export function MentionAutocomplete({
           </button>
         ))}
 
-        {showFileHeader && (
+        {filteredFiles.length > 0 && (
           <div className="mt-1 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
             {t("mention.filesTitle")}
           </div>
         )}
         {filteredFiles.map((file, i) => {
-          const globalIndex = personaCount + i;
+          const globalIndex = filteredPersonas.length + i;
           return (
             <button
               key={file.resolvedPath}

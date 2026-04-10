@@ -170,7 +170,7 @@ export function useMentionHandlers({
     (persona: Persona) => {
       const before = text.slice(0, mentionStartIndex);
       const after = text.slice(mentionStartIndex + 1 + mentionQuery.length);
-      const newText = `${before}${after}`.replace(/\s{2,}/g, " ");
+      const newText = `${before}${after}`.trimStart();
       pendingCursorRef.current = Math.min(before.length, newText.length);
       setText(newText);
       closeMention();
@@ -191,7 +191,7 @@ export function useMentionHandlers({
       const before = text.slice(0, mentionStartIndex);
       const after = text.slice(mentionStartIndex + 1 + mentionQuery.length);
       const inserted = file.resolvedPath;
-      const newText = `${before}${inserted} ${after}`.replace(/\s{2,}/g, " ");
+      const newText = `${before}${inserted} ${after}`;
       pendingCursorRef.current = before.length + inserted.length + 1;
       setText(newText);
       closeMention();
