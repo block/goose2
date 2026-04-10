@@ -65,15 +65,7 @@ pub fn get_git_state(path: String) -> Result<GitState, String> {
         .map(|main_path| normalize_path_string(&current_root) != main_path)
         .unwrap_or(false);
 
-    let worktree_branches: std::collections::HashSet<&str> = worktrees
-        .iter()
-        .filter_map(|wt| wt.branch.as_deref())
-        .collect();
-    let local_branches = list_local_branches(&repo_path)
-        .unwrap_or_default()
-        .into_iter()
-        .filter(|b| !worktree_branches.contains(b.as_str()))
-        .collect();
+    let local_branches = list_local_branches(&repo_path).unwrap_or_default();
 
     Ok(GitState {
         is_git_repo: true,
@@ -240,7 +232,10 @@ fn normalize_path_string(path: &str) -> String {
 }
 
 fn list_local_branches(path: &Path) -> Result<Vec<String>, String> {
-    let output = run_git_success(path, &["branch", "--list", "--format=%(refname:short)"])?;
+    let output = run_git_success(
+        path,
+        &["for-each-ref", "--sort=-committerdate", "--format=%(refname:short)", "refs/heads"],
+    )?;
     Ok(output
         .lines()
         .map(|line| line.trim().to_string())

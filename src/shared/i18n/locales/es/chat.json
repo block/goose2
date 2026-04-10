@@ -28,10 +28,13 @@
       "gitRead": "No se pudo leer el estado de git."
     },
     "picker": {
-      "selectBranch": "Seleccionar rama",
+      "selectContext": "Seleccionar árbol de trabajo o rama",
       "worktrees": "Árboles de trabajo",
-      "branches": "Ramas",
-      "switchBranch": "cambiar rama",
+      "allBranches": "Todas las ramas",
+      "checkedOutBranch": "Rama: {{branch}}",
+      "switchCurrentWorktree": "Cambiar de rama",
+      "currentBranch": "Rama actual",
+      "checkedOutInWorktree": "Activa en {{path}}",
       "dirtyTitle": "Cambios sin confirmar",
       "dirtyDescription": "Tienes {{count}} cambio(s) sin confirmar. ¿Cómo deseas proceder?",
       "stashAndSwitch": "Guardar y cambiar",

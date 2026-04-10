@@ -7,6 +7,7 @@ import {
   IconGitBranch,
   IconCheck,
 } from "@tabler/icons-react";
+import { Badge } from "@/shared/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import {
   AlertDialog,
@@ -24,6 +25,7 @@ import type { GitState } from "@/shared/types/git";
 import type { WorkingContext } from "../../stores/chatSessionStore";
 
 interface WorkingContextPickerProps {
+  currentProjectPath: string | null;
   gitState: GitState | undefined;
   activeContext: WorkingContext | undefined;
   onSelect: (context: WorkingContext) => void;
@@ -43,7 +45,12 @@ export function shortenPath(fullPath: string): string {
   return home;
 }
 
+function normalizeComparablePath(path: string) {
+  return path.replace(/\\/g, "/").replace(/\/+$/, "");
+}
+
 export function WorkingContextPicker({
+  currentProjectPath,
   gitState,
   activeContext,
   onSelect,
@@ -58,13 +65,33 @@ export function WorkingContextPicker({
   const worktrees = gitState?.worktrees ?? [];
   const localBranches = gitState?.localBranches ?? [];
   const dirtyFileCount = gitState?.dirtyFileCount ?? 0;
-  const currentPath = activeContext?.path ?? worktrees[0]?.path;
-
-  const activeBranch = activeContext?.branch ?? gitState?.currentBranch;
+  const defaultWorktreePath =
+    worktrees.find(
+      (worktree) =>
+        normalizeComparablePath(worktree.path) ===
+        normalizeComparablePath(currentProjectPath ?? ""),
+    )?.path ?? worktrees[0]?.path;
+  const currentPath = activeContext?.path ?? defaultWorktreePath;
+  const activeWorktree =
+    worktrees.find((worktree) => worktree.path === currentPath) ?? null;
+  const activeBranch =
+    activeWorktree?.branch ?? activeContext?.branch ?? gitState?.currentBranch;
+  const activeWorktreeLabel = activeWorktree
+    ? shortenPath(activeWorktree.path)
+    : currentProjectPath
+      ? shortenPath(currentProjectPath)
+      : undefined;
+  const activeBranchLabel = activeBranch ?? t("contextPanel.states.detached");
+  const isMainWorktreeActive = activeWorktree?.isMain ?? false;
+  const worktreeByBranch = new Map(
+    worktrees
+      .filter((worktree) => worktree.branch)
+      .map((worktree) => [worktree.branch as string, worktree]),
+  );
 
   const handleWorktreeSelect = useCallback(
     (path: string, branch: string | null) => {
-      onSelect({ path, branch, type: "worktree" });
+      onSelect({ path, branch });
       setOpen(false);
     },
     [onSelect],
@@ -73,7 +100,7 @@ export function WorkingContextPicker({
   const finishSwitch = useCallback(
     (branch: string) => {
       if (!currentPath) return;
-      onSelect({ path: currentPath, branch, type: "branch" });
+      onSelect({ path: currentPath, branch });
       setOpen(false);
       setPendingBranch(null);
     },
@@ -124,20 +151,14 @@ export function WorkingContextPicker({
     [dirtyFileCount, performCarrySwitch],
   );
 
-  const isSelected = (branch: string | null, type: "worktree" | "branch") => {
-    if (!activeContext) return activeBranch === branch && type === "branch";
-    return activeContext.branch === branch && activeContext.type === type;
-  };
-
   const isWorktreeSelected = (path: string) => {
-    if (!activeContext) return worktrees.length === 1 && worktrees[0]?.path === path;
-    return activeContext.path === path && activeContext.type === "worktree";
+    return currentPath === path;
   };
 
   if (!gitState?.isGitRepo) return null;
 
   const hasWorktrees = worktrees.length > 0;
-  const hasBranches = localBranches.length > 0;
+  const hasBranches = isMainWorktreeActive && localBranches.length > 0;
 
   return (
     <>
@@ -146,15 +167,22 @@ export function WorkingContextPicker({
           <button
             type="button"
             className={cn(
-              "flex w-full items-center gap-2 rounded-md border border-border px-2.5 py-1.5",
+              "flex w-full items-center gap-2 rounded-md border border-border px-2.5 py-2",
               "text-xs text-foreground transition-colors",
               "hover:bg-background-alt focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
             )}
-            aria-label={t("contextPanel.picker.selectBranch")}
+            aria-label={t("contextPanel.picker.selectContext")}
           >
-            <IconGitBranch className="size-3.5 shrink-0 text-muted-foreground" />
-            <span className="min-w-0 flex-1 truncate text-left font-medium">
-              {activeBranch ?? t("contextPanel.states.detached")}
+            <IconFolder className="size-3.5 shrink-0 text-muted-foreground" />
+            <span className="min-w-0 flex-1 text-left">
+              <span className="block truncate font-medium text-foreground">
+                {activeWorktreeLabel ?? t("contextPanel.empty.folderNotSet")}
+              </span>
+              <span className="block truncate text-xxs text-foreground-subtle">
+                {t("contextPanel.picker.checkedOutBranch", {
+                  branch: activeBranchLabel,
+                })}
+              </span>
             </span>
             <IconChevronDown className="size-3 shrink-0 text-muted-foreground" />
           </button>
@@ -184,12 +212,19 @@ export function WorkingContextPicker({
                   <IconFolder className="size-3.5 shrink-0 text-muted-foreground" />
                   <div className="min-w-0 flex-1">
                     <span className="block truncate font-medium text-foreground">
-                      {wt.branch ?? t("contextPanel.states.detached")}
-                    </span>
-                    <span className="block truncate text-xxs text-foreground-subtle">
                       {shortenPath(wt.path)}
                     </span>
+                    <span className="block truncate text-xxs text-foreground-subtle">
+                      {t("contextPanel.picker.checkedOutBranch", {
+                        branch: wt.branch ?? t("contextPanel.states.detached"),
+                      })}
+                    </span>
                   </div>
+                  {wt.isMain ? (
+                    <Badge variant="outline" className="text-[10px]">
+                      {t("contextPanel.badges.main")}
+                    </Badge>
+                  ) : null}
                   {isWorktreeSelected(wt.path) ? (
                     <IconCheck className="size-3.5 shrink-0 text-brand" />
                   ) : null}
@@ -203,18 +238,22 @@ export function WorkingContextPicker({
               className={hasWorktrees ? "mt-1 border-t border-border pt-1" : ""}
             >
               <p className="px-2 pb-1.5 pt-1 text-xxs font-medium uppercase tracking-wider text-muted-foreground">
-                {t("contextPanel.picker.branches")}
+                {t("contextPanel.picker.allBranches")}
               </p>
               {localBranches.map((branch) => (
                 <button
                   key={branch}
                   type="button"
-                  disabled={switching}
+                  disabled={
+                    switching ||
+                    branch === activeBranch ||
+                    (worktreeByBranch.has(branch) &&
+                      worktreeByBranch.get(branch)?.path !== currentPath)
+                  }
                   className={cn(
                     "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors",
                     "hover:bg-muted focus-visible:outline-none focus-visible:bg-muted",
                     "disabled:opacity-50",
-                    isSelected(branch, "branch") && "bg-muted",
                   )}
                   onClick={() => handleBranchSelect(branch)}
                 >
@@ -224,10 +263,19 @@ export function WorkingContextPicker({
                       {branch}
                     </span>
                     <span className="block truncate text-xxs text-foreground-subtle">
-                      {t("contextPanel.picker.switchBranch")}
+                      {branch === activeBranch
+                        ? t("contextPanel.picker.currentBranch")
+                        : worktreeByBranch.has(branch) &&
+                            worktreeByBranch.get(branch)?.path !== currentPath
+                          ? t("contextPanel.picker.checkedOutInWorktree", {
+                              path: shortenPath(
+                                worktreeByBranch.get(branch)?.path ?? "",
+                              ),
+                            })
+                          : t("contextPanel.picker.switchCurrentWorktree")}
                     </span>
                   </div>
-                  {isSelected(branch, "branch") ? (
+                  {branch === activeBranch ? (
                     <IconCheck className="size-3.5 shrink-0 text-brand" />
                   ) : null}
                 </button>

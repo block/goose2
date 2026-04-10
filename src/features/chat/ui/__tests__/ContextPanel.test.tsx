@@ -45,7 +45,7 @@ describe("ContextPanel", () => {
         ],
         isWorktree: false,
         mainWorktreePath: "/Users/test/goose2",
-        localBranches: ["dev", "old-feature"],
+        localBranches: ["main", "feat/context-panel", "dev", "old-feature"],
       },
       error: null,
       isLoading: false,
@@ -70,7 +70,12 @@ describe("ContextPanel", () => {
     expect(screen.getByRole("tab", { name: /files/i })).toBeInTheDocument();
     expect(screen.getByText("Workspace")).toBeInTheDocument();
     expect(screen.getByText("Desktop UX")).toBeInTheDocument();
-    expect(screen.getByText("main")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /select worktree or branch/i }),
+    ).toHaveTextContent("~/goose2");
+    expect(
+      screen.getByRole("button", { name: /select worktree or branch/i }),
+    ).toHaveTextContent("Branch: main");
     expect(screen.getByText("3 uncommitted changes")).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: /files/i }));
@@ -117,8 +122,119 @@ describe("ContextPanel", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: /select branch/i }),
+      screen.getByRole("button", { name: /select worktree or branch/i }),
     ).toBeInTheDocument();
+  });
+
+  it("defaults to the current worktree path instead of the first worktree", () => {
+    mockUseGitState.mockReturnValue({
+      data: {
+        isGitRepo: true,
+        currentBranch: "feat/context-panel",
+        dirtyFileCount: 0,
+        worktrees: [
+          {
+            path: "/Users/test/goose2",
+            branch: "main",
+            isMain: true,
+          },
+          {
+            path: "/Users/test/goose2-feature",
+            branch: "feat/context-panel",
+            isMain: false,
+          },
+        ],
+        isWorktree: true,
+        mainWorktreePath: "/Users/test/goose2",
+        localBranches: ["feat/context-panel", "main", "dev"],
+      },
+      error: null,
+      isLoading: false,
+      isFetching: false,
+      refetch: vi.fn(),
+    });
+
+    render(
+      <ContextPanel
+        sessionId="test-session-4"
+        projectWorkingDirs={["/Users/test/goose2-feature"]}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /select worktree or branch/i }),
+    ).toHaveTextContent("~/goose2-feature");
+    expect(
+      screen.getByRole("button", { name: /select worktree or branch/i }),
+    ).toHaveTextContent("Branch: feat/context-panel");
+  });
+
+  it("shows all branches on the main worktree and ties worktree branches to their folders", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ContextPanel
+        sessionId="test-session-4b"
+        projectWorkingDirs={["/Users/test/goose2"]}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /select worktree or branch/i }),
+    );
+
+    expect(screen.getByText("All branches")).toBeInTheDocument();
+    expect(screen.getByText("Current branch").closest("button")).toBeDisabled();
+    expect(
+      screen
+        .getByText("Checked out in ~/goose2-feature")
+        .closest("button"),
+    ).toBeDisabled();
+    expect(screen.getByText("dev").closest("button")).not.toBeDisabled();
+  });
+
+  it("hides the branch list on non-main worktrees", async () => {
+    const user = userEvent.setup();
+
+    mockUseGitState.mockReturnValue({
+      data: {
+        isGitRepo: true,
+        currentBranch: "feat/context-panel",
+        dirtyFileCount: 0,
+        worktrees: [
+          {
+            path: "/Users/test/goose2",
+            branch: "main",
+            isMain: true,
+          },
+          {
+            path: "/Users/test/goose2-feature",
+            branch: "feat/context-panel",
+            isMain: false,
+          },
+        ],
+        isWorktree: true,
+        mainWorktreePath: "/Users/test/goose2",
+        localBranches: ["feat/context-panel", "main", "dev"],
+      },
+      error: null,
+      isLoading: false,
+      isFetching: false,
+      refetch: vi.fn(),
+    });
+
+    render(
+      <ContextPanel
+        sessionId="test-session-4c"
+        projectWorkingDirs={["/Users/test/goose2-feature"]}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /select worktree or branch/i }),
+    );
+
+    expect(screen.queryByText("All branches")).not.toBeInTheDocument();
   });
 
   it("shows the current branch in the picker when it is the only option", async () => {
@@ -138,7 +254,7 @@ describe("ContextPanel", () => {
         ],
         isWorktree: false,
         mainWorktreePath: "/Users/test/goose2",
-        localBranches: [],
+        localBranches: ["main"],
       },
       error: null,
       isLoading: false,
@@ -148,14 +264,17 @@ describe("ContextPanel", () => {
 
     render(
       <ContextPanel
-        sessionId="test-session-4"
+        sessionId="test-session-5"
         projectWorkingDirs={["/Users/test/goose2"]}
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /select branch/i }));
+    await user.click(
+      screen.getByRole("button", { name: /select worktree or branch/i }),
+    );
 
     expect(screen.getByText("Worktrees")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /main/i })).toBeInTheDocument();
+    expect(screen.getAllByText("~/goose2")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("Branch: main")[0]).toBeInTheDocument();
   });
 });

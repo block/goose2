@@ -40,7 +40,6 @@ export interface ChatSession {
 export interface WorkingContext {
   path: string;
   branch: string | null;
-  type: "worktree" | "branch";
 }
 
 interface ChatSessionStoreState {

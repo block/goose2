@@ -98,6 +98,7 @@ export function WorkspaceWidget({
         ) : gitState?.isGitRepo ? (
           <div className="space-y-2">
             <WorkingContextPicker
+              currentProjectPath={primaryWorkingDir}
               gitState={gitState}
               activeContext={activeContext}
               onSelect={onContextChange}

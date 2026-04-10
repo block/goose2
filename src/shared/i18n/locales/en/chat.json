@@ -28,10 +28,13 @@
       "gitRead": "Unable to read git status."
     },
     "picker": {
-      "selectBranch": "Select branch",
+      "selectContext": "Select worktree or branch",
       "worktrees": "Worktrees",
-      "branches": "Branches",
-      "switchBranch": "switch branch",
+      "allBranches": "All branches",
+      "checkedOutBranch": "Branch: {{branch}}",
+      "switchCurrentWorktree": "Switch branch",
+      "currentBranch": "Current branch",
+      "checkedOutInWorktree": "Checked out in {{path}}",
       "dirtyTitle": "Uncommitted Changes",
       "dirtyDescription": "You have {{count}} uncommitted change(s). How would you like to proceed?",
       "stashAndSwitch": "Stash & Switch",
