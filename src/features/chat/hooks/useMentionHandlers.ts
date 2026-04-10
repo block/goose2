@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { listFilesForMentions } from "@/shared/api/system";
 import type { Persona } from "@/shared/types/agents";
 import {
@@ -142,6 +142,25 @@ export function useMentionHandlers({
     confirmMention,
   } = useMentionDetection(personas, fileMentionItems);
 
+  // ---- post-selection cursor placement ------------------------------------
+  // After a mention is confirmed we update `text` via setState. A useEffect
+  // watches for a pending cursor position and applies focus + cursor once
+  // React has flushed the new text into the textarea.
+
+  const pendingCursorRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (pendingCursorRef.current == null) return;
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const pos = pendingCursorRef.current;
+    pendingCursorRef.current = null;
+    ta.focus();
+    ta.style.height = "auto";
+    ta.style.height = `${Math.min(ta.scrollHeight, 200)}px`;
+    ta.setSelectionRange(pos, pos);
+  }, [text, textareaRef]);
+
   // ---- selection handlers ------------------------------------------------
 
   const handlePersonaMentionSelect = useCallback(
@@ -149,20 +168,10 @@ export function useMentionHandlers({
       const before = text.slice(0, mentionStartIndex);
       const after = text.slice(mentionStartIndex + 1 + mentionQuery.length);
       const newText = `${before}${after}`.replace(/\s{2,}/g, " ");
+      pendingCursorRef.current = Math.min(before.length, newText.length);
       setText(newText);
       closeMention();
       onPersonaChange?.(persona.id);
-
-      requestAnimationFrame(() => {
-        const ta = textareaRef.current;
-        if (ta) {
-          ta.focus();
-          ta.style.height = "auto";
-          ta.style.height = `${Math.min(ta.scrollHeight, 200)}px`;
-          const cursorPos = Math.min(before.length, newText.length);
-          ta.setSelectionRange(cursorPos, cursorPos);
-        }
-      });
     },
     [
       text,
@@ -171,7 +180,6 @@ export function useMentionHandlers({
       closeMention,
       onPersonaChange,
       setText,
-      textareaRef,
     ],
   );
 
@@ -181,21 +189,11 @@ export function useMentionHandlers({
       const after = text.slice(mentionStartIndex + 1 + mentionQuery.length);
       const inserted = file.resolvedPath;
       const newText = `${before}${inserted} ${after}`.replace(/\s{2,}/g, " ");
+      pendingCursorRef.current = before.length + inserted.length + 1;
       setText(newText);
       closeMention();
-
-      requestAnimationFrame(() => {
-        const ta = textareaRef.current;
-        if (ta) {
-          ta.focus();
-          ta.style.height = "auto";
-          ta.style.height = `${Math.min(ta.scrollHeight, 200)}px`;
-          const cursorPos = before.length + inserted.length + 1;
-          ta.setSelectionRange(cursorPos, cursorPos);
-        }
-      });
     },
-    [text, mentionStartIndex, mentionQuery, closeMention, setText, textareaRef],
+    [text, mentionStartIndex, mentionQuery, closeMention, setText],
   );
 
   const handleMentionConfirm = useCallback(
