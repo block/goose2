@@ -42,7 +42,7 @@ export function PersonaCard({
   return (
     <section
       aria-label={t("card.ariaLabel", { name: persona.displayName })}
-      onClick={() => onSelect?.(persona)}
+      onClick={() => !menuOpen && onSelect?.(persona)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
