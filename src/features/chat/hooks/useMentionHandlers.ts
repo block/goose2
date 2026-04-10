@@ -78,8 +78,11 @@ export function useMentionHandlers({
   const [projectFilePaths, setProjectFilePaths] = useState<string[]>([]);
 
   useEffect(() => {
+    // Clear stale results immediately so users never see files from the
+    // previous project while the new scan is in flight.
+    setProjectFilePaths([]);
+
     if (!rootsKey) {
-      setProjectFilePaths([]);
       return;
     }
 
