@@ -13,7 +13,9 @@ vi.mock("@/features/providers/hooks/useAgentProviderStatus", () => ({
   }),
 }));
 
-const mockListFilesForMentions = vi.fn<(roots: string[], maxResults?: number) => Promise<string[]>>(async () => []);
+const mockListFilesForMentions = vi.fn<
+  (roots: string[], maxResults?: number) => Promise<string[]>
+>(async () => []);
 vi.mock("@/shared/api/system", () => ({
   listFilesForMentions: (roots: string[], maxResults?: number) =>
     mockListFilesForMentions(roots, maxResults),
