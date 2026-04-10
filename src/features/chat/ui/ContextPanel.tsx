@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FilesList } from "./FilesList";
 import { useGitState } from "@/shared/hooks/useGitState";
-import { switchBranch } from "@/shared/api/git";
+import { initRepo, stashChanges, switchBranch } from "@/shared/api/git";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { useChatSessionStore } from "../stores/chatSessionStore";
 import type { WorkingContext } from "../stores/chatSessionStore";
@@ -60,6 +60,23 @@ export function ContextPanel({
     [refetch],
   );
 
+  const handleStashAndSwitch = useCallback(
+    async (path: string, branch: string) => {
+      await stashChanges(path);
+      await switchBranch(path, branch);
+      await refetch();
+    },
+    [refetch],
+  );
+
+  const handleInitRepo = useCallback(
+    async (path: string) => {
+      await initRepo(path);
+      await refetch();
+    },
+    [refetch],
+  );
+
   return (
     <Tabs
       value={activeTab}
@@ -90,6 +107,8 @@ export function ContextPanel({
             activeContext={activeContext}
             onContextChange={handleContextChange}
             onSwitchBranch={handleSwitchBranch}
+            onStashAndSwitch={handleStashAndSwitch}
+            onInitRepo={handleInitRepo}
             onRefresh={() => void refetch()}
           />
           <ChangesWidget />

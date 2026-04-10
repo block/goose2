@@ -11,3 +11,11 @@ export async function switchBranch(
 ): Promise<void> {
   return invoke("git_switch_branch", { path, branch });
 }
+
+export async function stashChanges(path: string): Promise<void> {
+  return invoke("git_stash", { path });
+}
+
+export async function initRepo(path: string): Promise<void> {
+  return invoke("git_init", { path });
+}

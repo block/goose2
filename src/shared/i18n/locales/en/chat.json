@@ -22,8 +22,7 @@
       "noActiveProcesses": "No active processes",
       "noChanges": "No changes",
       "noProjectAssigned": "No project assigned.",
-      "noServersConfigured": "No servers configured",
-      "notGitRepo": "Not a git repository."
+      "noServersConfigured": "No servers configured"
     },
     "errors": {
       "gitRead": "Unable to read git status."
@@ -33,10 +32,18 @@
       "worktrees": "Worktrees",
       "branches": "Branches",
       "switchBranch": "switch branch",
-      "switchWarning": "You have uncommitted changes. Switching branches may cause conflicts.",
-      "switchConfirm": "Switch anyway",
-      "switchCancel": "Cancel",
-      "switchError": "Failed to switch branch"
+      "dirtyTitle": "Uncommitted Changes",
+      "dirtyDescription": "You have {{count}} uncommitted change(s). How would you like to proceed?",
+      "stashAndSwitch": "Stash & Switch",
+      "carryChanges": "Carry to Branch",
+      "cancel": "Cancel",
+      "switchError": "Failed to switch to {{branch}}. Your changes may conflict with the target branch.",
+      "stashError": "Failed to stash changes.",
+      "stashSuccess": "Changes stashed and switched to {{branch}}."
+    },
+    "git": {
+      "initRepo": "Initialize Git",
+      "initError": "Failed to initialize git repository."
     },
     "states": {
       "detached": "detached",

@@ -1,11 +1,11 @@
 import { useTranslation } from "react-i18next";
-import { IconFolder, IconRefresh } from "@tabler/icons-react";
+import { IconFolder, IconGitBranch, IconRefresh } from "@tabler/icons-react";
 import { Button } from "@/shared/ui/button";
 import { Spinner } from "@/shared/ui/spinner";
 import type { GitState } from "@/shared/types/git";
 import type { WorkingContext } from "../../stores/chatSessionStore";
 import { Widget } from "./Widget";
-import { WorkingContextPicker } from "./WorkingContextPicker";
+import { WorkingContextPicker, shortenPath } from "./WorkingContextPicker";
 
 interface WorkspaceWidgetProps {
   projectName?: string;
@@ -18,6 +18,8 @@ interface WorkspaceWidgetProps {
   activeContext: WorkingContext | undefined;
   onContextChange: (context: WorkingContext) => void;
   onSwitchBranch: (path: string, branch: string) => Promise<void>;
+  onStashAndSwitch: (path: string, branch: string) => Promise<void>;
+  onInitRepo: (path: string) => Promise<void>;
   onRefresh: () => void;
 }
 
@@ -32,6 +34,8 @@ export function WorkspaceWidget({
   activeContext,
   onContextChange,
   onSwitchBranch,
+  onStashAndSwitch,
+  onInitRepo,
   onRefresh,
 }: WorkspaceWidgetProps) {
   const { t } = useTranslation("chat");
@@ -98,6 +102,7 @@ export function WorkspaceWidget({
               activeContext={activeContext}
               onSelect={onContextChange}
               onSwitchBranch={onSwitchBranch}
+              onStashAndSwitch={onStashAndSwitch}
             />
             {dirtyFileCount > 0 ? (
               <div className="flex items-center gap-1.5">
@@ -111,7 +116,20 @@ export function WorkspaceWidget({
             ) : null}
           </div>
         ) : (
-          <p>{t("contextPanel.empty.notGitRepo")}</p>
+          <div className="space-y-3">
+            <p className="truncate text-foreground-subtle">
+              {shortenPath(primaryWorkingDir)}
+            </p>
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              onClick={() => void onInitRepo(primaryWorkingDir)}
+            >
+              <IconGitBranch className="size-3" />
+              {t("contextPanel.git.initRepo")}
+            </Button>
+          </div>
         )}
       </div>
     </Widget>

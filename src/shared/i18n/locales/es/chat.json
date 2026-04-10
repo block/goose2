@@ -22,8 +22,7 @@
       "noActiveProcesses": "No hay procesos activos",
       "noChanges": "No hay cambios",
       "noProjectAssigned": "No hay proyecto asignado.",
-      "noServersConfigured": "No hay servidores configurados",
-      "notGitRepo": "No es un repositorio git."
+      "noServersConfigured": "No hay servidores configurados"
     },
     "errors": {
       "gitRead": "No se pudo leer el estado de git."
@@ -33,10 +32,18 @@
       "worktrees": "Árboles de trabajo",
       "branches": "Ramas",
       "switchBranch": "cambiar rama",
-      "switchWarning": "Tienes cambios sin confirmar. Cambiar de rama puede causar conflictos.",
-      "switchConfirm": "Cambiar de todos modos",
-      "switchCancel": "Cancelar",
-      "switchError": "Error al cambiar de rama"
+      "dirtyTitle": "Cambios sin confirmar",
+      "dirtyDescription": "Tienes {{count}} cambio(s) sin confirmar. ¿Cómo deseas proceder?",
+      "stashAndSwitch": "Guardar y cambiar",
+      "carryChanges": "Llevar a la rama",
+      "cancel": "Cancelar",
+      "switchError": "Error al cambiar a {{branch}}. Tus cambios pueden entrar en conflicto con la rama destino.",
+      "stashError": "Error al guardar los cambios.",
+      "stashSuccess": "Cambios guardados y cambiado a {{branch}}."
+    },
+    "git": {
+      "initRepo": "Inicializar Git",
+      "initError": "Error al inicializar el repositorio git."
     },
     "states": {
       "detached": "detached",

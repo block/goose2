@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import {
   IconChevronDown,
   IconFolder,
@@ -17,6 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/ui/alert-dialog";
+import { buttonVariants } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/cn";
 import type { GitState } from "@/shared/types/git";
 import type { WorkingContext } from "../../stores/chatSessionStore";
@@ -26,9 +28,10 @@ interface WorkingContextPickerProps {
   activeContext: WorkingContext | undefined;
   onSelect: (context: WorkingContext) => void;
   onSwitchBranch: (path: string, branch: string) => Promise<void>;
+  onStashAndSwitch: (path: string, branch: string) => Promise<void>;
 }
 
-function shortenPath(fullPath: string): string {
+export function shortenPath(fullPath: string): string {
   const home =
     typeof window !== "undefined"
       ? fullPath.replace(/^\/Users\/[^/]+/, "~")
@@ -45,6 +48,7 @@ export function WorkingContextPicker({
   activeContext,
   onSelect,
   onSwitchBranch,
+  onStashAndSwitch,
 }: WorkingContextPickerProps) {
   const { t } = useTranslation("chat");
   const [open, setOpen] = useState(false);
@@ -66,20 +70,47 @@ export function WorkingContextPicker({
     [onSelect],
   );
 
-  const performBranchSwitch = useCallback(
+  const finishSwitch = useCallback(
+    (branch: string) => {
+      if (!currentPath) return;
+      onSelect({ path: currentPath, branch, type: "branch" });
+      setOpen(false);
+      setPendingBranch(null);
+    },
+    [currentPath, onSelect],
+  );
+
+  const performCarrySwitch = useCallback(
     async (branch: string) => {
       if (!currentPath) return;
       setSwitching(true);
       try {
         await onSwitchBranch(currentPath, branch);
-        onSelect({ path: currentPath, branch, type: "branch" });
-        setOpen(false);
+        finishSwitch(branch);
+      } catch {
+        toast.error(t("contextPanel.picker.switchError", { branch }));
       } finally {
         setSwitching(false);
-        setPendingBranch(null);
       }
     },
-    [currentPath, onSelect, onSwitchBranch],
+    [currentPath, onSwitchBranch, finishSwitch, t],
+  );
+
+  const performStashSwitch = useCallback(
+    async (branch: string) => {
+      if (!currentPath) return;
+      setSwitching(true);
+      try {
+        await onStashAndSwitch(currentPath, branch);
+        finishSwitch(branch);
+        toast.success(t("contextPanel.picker.stashSuccess", { branch }));
+      } catch {
+        toast.error(t("contextPanel.picker.stashError"));
+      } finally {
+        setSwitching(false);
+      }
+    },
+    [currentPath, onStashAndSwitch, finishSwitch, t],
   );
 
   const handleBranchSelect = useCallback(
@@ -87,24 +118,25 @@ export function WorkingContextPicker({
       if (dirtyFileCount > 0) {
         setPendingBranch(branch);
       } else {
-        void performBranchSwitch(branch);
+        void performCarrySwitch(branch);
       }
     },
-    [dirtyFileCount, performBranchSwitch],
+    [dirtyFileCount, performCarrySwitch],
   );
 
   const isSelected = (branch: string | null, type: "worktree" | "branch") => {
-    if (!activeContext) return false;
+    if (!activeContext) return activeBranch === branch && type === "branch";
     return activeContext.branch === branch && activeContext.type === type;
   };
 
   const isWorktreeSelected = (path: string) => {
-    return activeContext?.path === path && activeContext?.type === "worktree";
+    if (!activeContext) return worktrees.length === 1 && worktrees[0]?.path === path;
+    return activeContext.path === path && activeContext.type === "worktree";
   };
 
   if (!gitState?.isGitRepo) return null;
 
-  const hasWorktrees = worktrees.length > 1;
+  const hasWorktrees = worktrees.length > 0;
   const hasBranches = localBranches.length > 0;
 
   return (
@@ -214,24 +246,38 @@ export function WorkingContextPicker({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {t("contextPanel.picker.switchBranch")}
+              {t("contextPanel.picker.dirtyTitle")}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {t("contextPanel.picker.switchWarning")}
+              {t("contextPanel.picker.dirtyDescription", {
+                count: dirtyFileCount,
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>
-              {t("contextPanel.picker.switchCancel")}
+            <AlertDialogCancel disabled={switching}>
+              {t("contextPanel.picker.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
+              disabled={switching}
+              className={buttonVariants({ variant: "secondary" })}
               onClick={() => {
                 if (pendingBranch) {
-                  void performBranchSwitch(pendingBranch);
+                  void performCarrySwitch(pendingBranch);
                 }
               }}
             >
-              {t("contextPanel.picker.switchConfirm")}
+              {t("contextPanel.picker.carryChanges")}
+            </AlertDialogAction>
+            <AlertDialogAction
+              disabled={switching}
+              onClick={() => {
+                if (pendingBranch) {
+                  void performStashSwitch(pendingBranch);
+                }
+              }}
+            >
+              {t("contextPanel.picker.stashAndSwitch")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

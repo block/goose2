@@ -96,6 +96,26 @@ pub fn git_switch_branch(path: String, branch: String) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+pub fn git_stash(path: String) -> Result<(), String> {
+    let repo_path = PathBuf::from(&path);
+    if !repo_path.exists() {
+        return Err(format!("Path does not exist: {}", path));
+    }
+    run_git_success(&repo_path, &["stash"])?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn git_init(path: String) -> Result<(), String> {
+    let repo_path = PathBuf::from(&path);
+    if !repo_path.exists() {
+        return Err(format!("Path does not exist: {}", path));
+    }
+    run_git_success(&repo_path, &["init"])?;
+    Ok(())
+}
+
 fn is_git_repo(path: &Path) -> Result<bool, String> {
     let output = Command::new("git")
         .arg("rev-parse")

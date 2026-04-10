@@ -11,6 +11,8 @@ vi.mock("@/shared/hooks/useGitState", () => ({
 
 vi.mock("@/shared/api/git", () => ({
   switchBranch: vi.fn(),
+  stashChanges: vi.fn(),
+  initRepo: vi.fn(),
 }));
 
 vi.mock("../../hooks/ArtifactPolicyContext", () => ({
@@ -76,7 +78,7 @@ describe("ContextPanel", () => {
     expect(screen.getByText("No files yet")).toBeInTheDocument();
   });
 
-  it("shows a non-repo fallback message", async () => {
+  it("shows path and init button for non-git directory", async () => {
     mockUseGitState.mockReturnValue({
       data: {
         isGitRepo: false,
@@ -100,7 +102,9 @@ describe("ContextPanel", () => {
       />,
     );
 
-    expect(screen.getByText("Not a git repository.")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /initialize git/i }),
+    ).toBeInTheDocument();
   });
 
   it("shows the working context picker when git repo is available", () => {
@@ -115,5 +119,43 @@ describe("ContextPanel", () => {
     expect(
       screen.getByRole("button", { name: /select branch/i }),
     ).toBeInTheDocument();
+  });
+
+  it("shows the current branch in the picker when it is the only option", async () => {
+    const user = userEvent.setup();
+
+    mockUseGitState.mockReturnValue({
+      data: {
+        isGitRepo: true,
+        currentBranch: "main",
+        dirtyFileCount: 0,
+        worktrees: [
+          {
+            path: "/Users/test/goose2",
+            branch: "main",
+            isMain: true,
+          },
+        ],
+        isWorktree: false,
+        mainWorktreePath: "/Users/test/goose2",
+        localBranches: [],
+      },
+      error: null,
+      isLoading: false,
+      isFetching: false,
+      refetch: vi.fn(),
+    });
+
+    render(
+      <ContextPanel
+        sessionId="test-session-4"
+        projectWorkingDirs={["/Users/test/goose2"]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /select branch/i }));
+
+    expect(screen.getByText("Worktrees")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /main/i })).toBeInTheDocument();
   });
 });
