@@ -129,6 +129,37 @@ export function buildProjectSystemPrompt(
   return sections.join("\n\n");
 }
 
+/**
+ * Builds the default artifacts directory from a raw home-dir string.
+ * Normalises path separators and trailing slashes before appending `.goose/artifacts`.
+ */
+export function defaultArtifactsDir(homeDir: string): string {
+  const normalizedHome = homeDir.replace(/\\/g, "/").replace(/\/+$/, "");
+  return `${normalizedHome}/.goose/artifacts`;
+}
+
+/**
+ * Resolves the effective working directory for a session.
+ * Uses the project's working dir if available, otherwise falls back to
+ * `~/.goose/artifacts` using the provided home directory.
+ *
+ * When a project is provided but has no configured working dirs, returns
+ * `undefined` so the caller can decide how to handle it.
+ */
+export function resolveEffectiveWorkingDir(
+  project: Pick<ProjectInfo, "workingDirs" | "artifactsDir"> | null | undefined,
+  homeDir: string,
+): string | undefined {
+  const projectDir = resolveProjectWorkingDir(project);
+  if (projectDir) {
+    return projectDir;
+  }
+  if (project) {
+    return undefined;
+  }
+  return defaultArtifactsDir(homeDir);
+}
+
 export function composeSystemPrompt(
   ...parts: Array<string | null | undefined>
 ): string | undefined {

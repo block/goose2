@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   buildProjectSystemPrompt,
   composeSystemPrompt,
+  defaultArtifactsDir,
   getProjectArtifactRoots,
   getProjectFolderName,
   getProjectFolderOption,
+  resolveEffectiveWorkingDir,
   resolveProjectWorkingDir,
 } from "./chatProjectContext";
 
@@ -128,5 +130,54 @@ describe("chatProjectContext", () => {
         artifactsDir: "/Users/wesb/.goose/projects/sample-project/artifacts",
       }),
     ).toBe("/Users/wesb/.goose/projects/sample-project/artifacts");
+  });
+
+  describe("defaultArtifactsDir", () => {
+    it("normalises path separators and appends .goose/artifacts", () => {
+      expect(defaultArtifactsDir("/Users/wesb")).toBe(
+        "/Users/wesb/.goose/artifacts",
+      );
+    });
+
+    it("normalises backslashes on Windows-style paths", () => {
+      expect(defaultArtifactsDir("C:\\Users\\wesb\\")).toBe(
+        "C:/Users/wesb/.goose/artifacts",
+      );
+    });
+
+    it("strips trailing slashes", () => {
+      expect(defaultArtifactsDir("/Users/wesb/")).toBe(
+        "/Users/wesb/.goose/artifacts",
+      );
+    });
+  });
+
+  describe("resolveEffectiveWorkingDir", () => {
+    it("returns the project working dir when available", () => {
+      expect(
+        resolveEffectiveWorkingDir(
+          {
+            workingDirs: ["/Users/wesb/dev/goose2"],
+            artifactsDir: "/Users/wesb/.goose/projects/goose2/artifacts",
+          },
+          "/Users/wesb",
+        ),
+      ).toBe("/Users/wesb/dev/goose2/artifacts");
+    });
+
+    it("returns undefined when a project exists but has no working dirs", () => {
+      expect(
+        resolveEffectiveWorkingDir(
+          { workingDirs: [], artifactsDir: "" },
+          "/Users/wesb",
+        ),
+      ).toBeUndefined();
+    });
+
+    it("falls back to home artifacts dir when no project", () => {
+      expect(resolveEffectiveWorkingDir(null, "/Users/wesb")).toBe(
+        "/Users/wesb/.goose/artifacts",
+      );
+    });
   });
 });

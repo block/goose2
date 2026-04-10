@@ -26,9 +26,14 @@ const EXCEPTIONS = {
       "Shell still coordinates ACP session loading, project reassignment, and app-level chat routing.",
   },
   "src/features/chat/hooks/useAcpStream.ts": {
-    limit: 560,
+    limit: 580,
     justification:
-      "ACP replay, streaming, session binding, and model-state event handling are still centralized here.",
+      "ACP replay, streaming, session binding, model-state event handling, and replay timeout are still centralized here.",
+  },
+  "src/features/chat/hooks/__tests__/useAcpStream.test.ts": {
+    limit: 540,
+    justification:
+      "Covers replay buffering, timeout error state, and streaming edge cases in one cohesive suite.",
   },
   "src/features/chat/stores/__tests__/chatSessionStore.test.ts": {
     limit: 540,

@@ -241,6 +241,80 @@ describe("ArtifactPolicyContext", () => {
     });
   });
 
+  it("does not strip /artifacts/ from a parent directory in the path", async () => {
+    mockPathExists.mockReset();
+    mockOpenPath.mockReset();
+    // The file lives at the nested artifacts path — the parent `/artifacts/` should NOT be stripped
+    mockPathExists.mockImplementation(
+      async (path: string) =>
+        path === "/Users/test/artifacts/project/artifacts/README_ENHANCED.md",
+    );
+
+    render(
+      <ArtifactPolicyProvider
+        messages={[]}
+        allowedRoots={[
+          "/Users/test/artifacts/project/artifacts",
+          "/Users/test/artifacts/project",
+          "/Users/test/.goose/artifacts",
+        ]}
+      >
+        <FallbackProbe path="/Users/test/artifacts/project/artifacts/README_ENHANCED.md" />
+      </ArtifactPolicyProvider>,
+    );
+
+    screen.getByRole("button", { name: "Check path" }).click();
+    await waitFor(() => {
+      expect(
+        (window as Window & { __artifactExists?: boolean }).__artifactExists,
+      ).toBe(true);
+    });
+
+    screen.getByRole("button", { name: "Open path" }).click();
+    await waitFor(() => {
+      expect(mockOpenPath).toHaveBeenCalledWith(
+        "/Users/test/artifacts/project/artifacts/README_ENHANCED.md",
+      );
+    });
+  });
+
+  it("falls back correctly when /artifacts/ appears in a parent dir", async () => {
+    mockPathExists.mockReset();
+    mockOpenPath.mockReset();
+    // File is NOT at the artifacts path, but IS at the root-stripped path
+    mockPathExists.mockImplementation(
+      async (path: string) =>
+        path === "/Users/test/artifacts/project/README.md",
+    );
+
+    render(
+      <ArtifactPolicyProvider
+        messages={[]}
+        allowedRoots={[
+          "/Users/test/artifacts/project/artifacts",
+          "/Users/test/artifacts/project",
+          "/Users/test/.goose/artifacts",
+        ]}
+      >
+        <FallbackProbe path="/Users/test/artifacts/project/artifacts/README.md" />
+      </ArtifactPolicyProvider>,
+    );
+
+    screen.getByRole("button", { name: "Check path" }).click();
+    await waitFor(() => {
+      expect(
+        (window as Window & { __artifactExists?: boolean }).__artifactExists,
+      ).toBe(true);
+    });
+
+    screen.getByRole("button", { name: "Open path" }).click();
+    await waitFor(() => {
+      expect(mockOpenPath).toHaveBeenCalledWith(
+        "/Users/test/artifacts/project/README.md",
+      );
+    });
+  });
+
   it("uses assistant text after a tool call to populate file actions and the Files tab", () => {
     mockPathExists.mockReset();
     mockOpenPath.mockReset();
