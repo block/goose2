@@ -216,8 +216,7 @@ pub fn export_skill(name: String) -> Result<ExportSkillResult, String> {
     }
 
     let skill_md = dir.join("SKILL.md");
-    let raw =
-        fs::read_to_string(&skill_md).map_err(|e| format!("Failed to read SKILL.md: {e}"))?;
+    let raw = fs::read_to_string(&skill_md).map_err(|e| format!("Failed to read SKILL.md: {e}"))?;
     let (description, instructions) = parse_frontmatter(&raw);
 
     let export = SkillExportV1 {

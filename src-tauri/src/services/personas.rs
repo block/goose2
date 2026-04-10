@@ -148,8 +148,8 @@ impl PersonaStore {
         let yaml_str = &after_first[..end_idx];
         let body = after_first[end_idx + 4..].trim().to_string();
 
-        let frontmatter: MarkdownFrontmatter = serde_yaml::from_str(yaml_str)
-            .map_err(|e| format!("Invalid frontmatter YAML: {e}"))?;
+        let frontmatter: MarkdownFrontmatter =
+            serde_yaml::from_str(yaml_str).map_err(|e| format!("Invalid frontmatter YAML: {e}"))?;
 
         // Derive a stable ID from the filename (without extension)
         let slug = path
