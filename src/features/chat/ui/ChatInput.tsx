@@ -180,7 +180,6 @@ export function ChatInput({
 
   const {
     mentionOpen,
-    mentionQuery,
     mentionSelectedIndex,
     filteredPersonas,
     filteredFiles,
