@@ -73,6 +73,7 @@ pub fn run() {
             commands::doctor::run_doctor,
             commands::doctor::run_doctor_fix,
             commands::git::get_git_state,
+            commands::git::git_switch_branch,
             commands::credentials::get_provider_config,
             commands::credentials::save_provider_field,
             commands::credentials::delete_provider_config,

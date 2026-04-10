@@ -28,9 +28,21 @@
     "errors": {
       "gitRead": "Unable to read git status."
     },
+    "picker": {
+      "selectBranch": "Select branch",
+      "worktrees": "Worktrees",
+      "branches": "Branches",
+      "switchBranch": "switch branch",
+      "switchWarning": "You have uncommitted changes. Switching branches may cause conflicts.",
+      "switchConfirm": "Switch anyway",
+      "switchCancel": "Cancel",
+      "switchError": "Failed to switch branch"
+    },
     "states": {
       "detached": "detached",
-      "gitLoading": "Loading git status..."
+      "gitLoading": "Loading git status...",
+      "uncommittedChanges_one": "{{count}} uncommitted change",
+      "uncommittedChanges_other": "{{count}} uncommitted changes"
     },
     "tabs": {
       "details": "Details",

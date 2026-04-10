@@ -11,6 +11,7 @@ pub struct GitState {
     pub worktrees: Vec<WorktreeInfo>,
     pub is_worktree: bool,
     pub main_worktree_path: Option<String>,
+    pub local_branches: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -36,6 +37,7 @@ pub fn get_git_state(path: String) -> Result<GitState, String> {
             worktrees: Vec::new(),
             is_worktree: false,
             main_worktree_path: None,
+            local_branches: Vec::new(),
         });
     }
 
@@ -63,6 +65,16 @@ pub fn get_git_state(path: String) -> Result<GitState, String> {
         .map(|main_path| normalize_path_string(&current_root) != main_path)
         .unwrap_or(false);
 
+    let worktree_branches: std::collections::HashSet<&str> = worktrees
+        .iter()
+        .filter_map(|wt| wt.branch.as_deref())
+        .collect();
+    let local_branches = list_local_branches(&repo_path)
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|b| !worktree_branches.contains(b.as_str()))
+        .collect();
+
     Ok(GitState {
         is_git_repo: true,
         current_branch,
@@ -70,7 +82,18 @@ pub fn get_git_state(path: String) -> Result<GitState, String> {
         worktrees,
         is_worktree,
         main_worktree_path,
+        local_branches,
     })
+}
+
+#[tauri::command]
+pub fn git_switch_branch(path: String, branch: String) -> Result<(), String> {
+    let repo_path = PathBuf::from(&path);
+    if !repo_path.exists() {
+        return Err(format!("Path does not exist: {}", path));
+    }
+    run_git_success(&repo_path, &["switch", &branch])?;
+    Ok(())
 }
 
 fn is_git_repo(path: &Path) -> Result<bool, String> {
@@ -194,4 +217,13 @@ fn branch_name(branch_ref: &str) -> String {
 
 fn normalize_path_string(path: &str) -> String {
     path.replace('\\', "/").trim_end_matches('/').to_string()
+}
+
+fn list_local_branches(path: &Path) -> Result<Vec<String>, String> {
+    let output = run_git_success(path, &["branch", "--list", "--format=%(refname:short)"])?;
+    Ok(output
+        .lines()
+        .map(|line| line.trim().to_string())
+        .filter(|line| !line.is_empty())
+        .collect())
 }

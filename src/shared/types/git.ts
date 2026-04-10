@@ -11,4 +11,5 @@ export interface GitState {
   worktrees: WorktreeInfo[];
   isWorktree: boolean;
   mainWorktreePath: string | null;
+  localBranches: string[];
 }

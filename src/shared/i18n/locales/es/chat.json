@@ -28,9 +28,21 @@
     "errors": {
       "gitRead": "No se pudo leer el estado de git."
     },
+    "picker": {
+      "selectBranch": "Seleccionar rama",
+      "worktrees": "Árboles de trabajo",
+      "branches": "Ramas",
+      "switchBranch": "cambiar rama",
+      "switchWarning": "Tienes cambios sin confirmar. Cambiar de rama puede causar conflictos.",
+      "switchConfirm": "Cambiar de todos modos",
+      "switchCancel": "Cancelar",
+      "switchError": "Error al cambiar de rama"
+    },
     "states": {
       "detached": "detached",
-      "gitLoading": "Cargando estado de git..."
+      "gitLoading": "Cargando estado de git...",
+      "uncommittedChanges_one": "{{count}} cambio sin confirmar",
+      "uncommittedChanges_other": "{{count}} cambios sin confirmar"
     },
     "tabs": {
       "details": "Detalles",

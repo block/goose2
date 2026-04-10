@@ -9,6 +9,10 @@ vi.mock("@/shared/hooks/useGitState", () => ({
   useGitState: (...args: unknown[]) => mockUseGitState(...args),
 }));
 
+vi.mock("@/shared/api/git", () => ({
+  switchBranch: vi.fn(),
+}));
+
 vi.mock("../../hooks/ArtifactPolicyContext", () => ({
   useArtifactPolicyContext: () => ({
     getAllSessionArtifacts: () => [],
@@ -39,6 +43,7 @@ describe("ContextPanel", () => {
         ],
         isWorktree: false,
         mainWorktreePath: "/Users/test/goose2",
+        localBranches: ["dev", "old-feature"],
       },
       error: null,
       isLoading: false,
@@ -52,6 +57,7 @@ describe("ContextPanel", () => {
 
     render(
       <ContextPanel
+        sessionId="test-session-1"
         projectName="Desktop UX"
         projectColor="#22c55e"
         projectWorkingDirs={["/Users/test/goose2"]}
@@ -63,8 +69,7 @@ describe("ContextPanel", () => {
     expect(screen.getByText("Workspace")).toBeInTheDocument();
     expect(screen.getByText("Desktop UX")).toBeInTheDocument();
     expect(screen.getByText("main")).toBeInTheDocument();
-    expect(screen.getByText("feat/context-panel")).toBeInTheDocument();
-    expect(screen.getByText("Main")).toBeInTheDocument();
+    expect(screen.getByText("3 uncommitted changes")).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: /files/i }));
 
@@ -80,6 +85,7 @@ describe("ContextPanel", () => {
         worktrees: [],
         isWorktree: false,
         mainWorktreePath: null,
+        localBranches: [],
       },
       error: null,
       isLoading: false,
@@ -87,8 +93,27 @@ describe("ContextPanel", () => {
       refetch: vi.fn(),
     });
 
-    render(<ContextPanel projectWorkingDirs={["/Users/test/not-a-repo"]} />);
+    render(
+      <ContextPanel
+        sessionId="test-session-2"
+        projectWorkingDirs={["/Users/test/not-a-repo"]}
+      />,
+    );
 
     expect(screen.getByText("Not a git repository.")).toBeInTheDocument();
+  });
+
+  it("shows the working context picker when git repo is available", () => {
+    render(
+      <ContextPanel
+        sessionId="test-session-3"
+        projectName="Desktop UX"
+        projectWorkingDirs={["/Users/test/goose2"]}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /select branch/i }),
+    ).toBeInTheDocument();
   });
 });

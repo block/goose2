@@ -1,0 +1,119 @@
+import { useTranslation } from "react-i18next";
+import { IconFolder, IconRefresh } from "@tabler/icons-react";
+import { Button } from "@/shared/ui/button";
+import { Spinner } from "@/shared/ui/spinner";
+import type { GitState } from "@/shared/types/git";
+import type { WorkingContext } from "../../stores/chatSessionStore";
+import { Widget } from "./Widget";
+import { WorkingContextPicker } from "./WorkingContextPicker";
+
+interface WorkspaceWidgetProps {
+  projectName?: string;
+  projectColor?: string;
+  projectWorkingDirs: string[];
+  gitState: GitState | undefined;
+  isLoading: boolean;
+  isFetching: boolean;
+  error: Error | null;
+  activeContext: WorkingContext | undefined;
+  onContextChange: (context: WorkingContext) => void;
+  onSwitchBranch: (path: string, branch: string) => Promise<void>;
+  onRefresh: () => void;
+}
+
+export function WorkspaceWidget({
+  projectName,
+  projectColor,
+  projectWorkingDirs,
+  gitState,
+  isLoading,
+  isFetching,
+  error,
+  activeContext,
+  onContextChange,
+  onSwitchBranch,
+  onRefresh,
+}: WorkspaceWidgetProps) {
+  const { t } = useTranslation("chat");
+  const primaryWorkingDir = projectWorkingDirs[0] ?? null;
+
+  const gitErrorMessage =
+    error instanceof Error ? error.message : t("contextPanel.errors.gitRead");
+
+  const dirtyFileCount = gitState?.dirtyFileCount ?? 0;
+
+  return (
+    <Widget
+      title={t("contextPanel.widgets.workspace")}
+      icon={<IconFolder className="size-3.5" />}
+      action={
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          onClick={onRefresh}
+          disabled={!primaryWorkingDir || isFetching}
+          className="rounded-md"
+          aria-label={t("contextPanel.actions.refreshGitStatus")}
+          title={t("contextPanel.actions.refreshGitStatus")}
+        >
+          {isFetching ? (
+            <Spinner className="size-3" />
+          ) : (
+            <IconRefresh className="size-3" />
+          )}
+        </Button>
+      }
+    >
+      <div className="space-y-2.5">
+        {projectName ? (
+          <div className="flex items-center gap-2">
+            <span
+              className="inline-block size-2 shrink-0 rounded-full"
+              style={
+                projectColor ? { backgroundColor: projectColor } : undefined
+              }
+            />
+            <span className="truncate text-foreground">{projectName}</span>
+          </div>
+        ) : (
+          <p className="text-foreground-subtle">
+            {t("contextPanel.empty.noProjectAssigned")}
+          </p>
+        )}
+
+        {!primaryWorkingDir ? (
+          <p className="truncate">{t("contextPanel.empty.folderNotSet")}</p>
+        ) : isLoading && !gitState ? (
+          <div className="flex items-center gap-2 text-foreground">
+            <Spinner className="size-3.5" />
+            <span>{t("contextPanel.states.gitLoading")}</span>
+          </div>
+        ) : error ? (
+          <p className="text-destructive">{gitErrorMessage}</p>
+        ) : gitState?.isGitRepo ? (
+          <div className="space-y-2">
+            <WorkingContextPicker
+              gitState={gitState}
+              activeContext={activeContext}
+              onSelect={onContextChange}
+              onSwitchBranch={onSwitchBranch}
+            />
+            {dirtyFileCount > 0 ? (
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block size-1.5 shrink-0 rounded-full bg-warning" />
+                <span className="text-xxs text-foreground-subtle">
+                  {t("contextPanel.states.uncommittedChanges", {
+                    count: dirtyFileCount,
+                  })}
+                </span>
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <p>{t("contextPanel.empty.notGitRepo")}</p>
+        )}
+      </div>
+    </Widget>
+  );
+}
