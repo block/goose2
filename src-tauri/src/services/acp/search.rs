@@ -396,8 +396,8 @@ mod tests {
 
         let tool_result =
             search_exported_session("session-1", &exported, "tool").expect("search succeeds");
-        let reasoning_result = search_exported_session("session-1", &exported, "reasoning")
-            .expect("search succeeds");
+        let reasoning_result =
+            search_exported_session("session-1", &exported, "reasoning").expect("search succeeds");
 
         assert!(tool_result.is_none());
         assert!(reasoning_result.is_none());
