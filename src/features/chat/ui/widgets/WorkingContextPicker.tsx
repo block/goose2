@@ -5,9 +5,7 @@ import {
   IconChevronDown,
   IconFolder,
   IconGitBranch,
-  IconCheck,
 } from "@tabler/icons-react";
-import { Badge } from "@/shared/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import {
   AlertDialog,
@@ -45,6 +43,12 @@ export function shortenPath(fullPath: string): string {
   return home;
 }
 
+function worktreeName(fullPath: string): string {
+  const normalizedPath = normalizeComparablePath(fullPath);
+  const segments = normalizedPath.split("/");
+  return segments[segments.length - 1] || fullPath;
+}
+
 function normalizeComparablePath(path: string) {
   return path.replace(/\\/g, "/").replace(/\/+$/, "");
 }
@@ -59,7 +63,7 @@ export function WorkingContextPicker({
 }: WorkingContextPickerProps) {
   const { t } = useTranslation("chat");
   const [open, setOpen] = useState(false);
-  const [pendingBranch, setPendingBranch] = useState<string | null>(null);
+  const [pendingSwitch, setPendingSwitch] = useState<WorkingContext | null>(null);
   const [switching, setSwitching] = useState(false);
 
   const worktrees = gitState?.worktrees ?? [];
@@ -75,14 +79,17 @@ export function WorkingContextPicker({
   const activeWorktree =
     worktrees.find((worktree) => worktree.path === currentPath) ?? null;
   const activeBranch =
-    activeWorktree?.branch ?? activeContext?.branch ?? gitState?.currentBranch;
+    activeContext?.branch ?? activeWorktree?.branch ?? gitState?.currentBranch;
   const activeWorktreeLabel = activeWorktree
     ? shortenPath(activeWorktree.path)
     : currentProjectPath
       ? shortenPath(currentProjectPath)
       : undefined;
   const activeBranchLabel = activeBranch ?? t("contextPanel.states.detached");
-  const isMainWorktreeActive = activeWorktree?.isMain ?? false;
+  const mainWorktreePath =
+    gitState?.mainWorktreePath ??
+    worktrees.find((worktree) => worktree.isMain)?.path ??
+    null;
   const worktreeByBranch = new Map(
     worktrees
       .filter((worktree) => worktree.branch)
@@ -98,38 +105,35 @@ export function WorkingContextPicker({
   );
 
   const finishSwitch = useCallback(
-    (branch: string) => {
-      if (!currentPath) return;
-      onSelect({ path: currentPath, branch });
+    (path: string, branch: string) => {
+      onSelect({ path, branch });
       setOpen(false);
-      setPendingBranch(null);
+      setPendingSwitch(null);
     },
-    [currentPath, onSelect],
+    [onSelect],
   );
 
   const performCarrySwitch = useCallback(
-    async (branch: string) => {
-      if (!currentPath) return;
+    async (path: string, branch: string) => {
       setSwitching(true);
       try {
-        await onSwitchBranch(currentPath, branch);
-        finishSwitch(branch);
+        await onSwitchBranch(path, branch);
+        finishSwitch(path, branch);
       } catch {
         toast.error(t("contextPanel.picker.switchError", { branch }));
       } finally {
         setSwitching(false);
       }
     },
-    [currentPath, onSwitchBranch, finishSwitch, t],
+    [onSwitchBranch, finishSwitch, t],
   );
 
   const performStashSwitch = useCallback(
-    async (branch: string) => {
-      if (!currentPath) return;
+    async (path: string, branch: string) => {
       setSwitching(true);
       try {
-        await onStashAndSwitch(currentPath, branch);
-        finishSwitch(branch);
+        await onStashAndSwitch(path, branch);
+        finishSwitch(path, branch);
         toast.success(t("contextPanel.picker.stashSuccess", { branch }));
       } catch {
         toast.error(t("contextPanel.picker.stashError"));
@@ -137,18 +141,46 @@ export function WorkingContextPicker({
         setSwitching(false);
       }
     },
-    [currentPath, onStashAndSwitch, finishSwitch, t],
+    [onStashAndSwitch, finishSwitch, t],
+  );
+
+  const getBranchTargetPath = useCallback(
+    (branch: string) => {
+      const worktreeForBranch = worktreeByBranch.get(branch);
+      if (worktreeForBranch) {
+        return worktreeForBranch.path;
+      }
+      if (activeWorktree?.isMain) {
+        return currentPath ?? mainWorktreePath;
+      }
+      return mainWorktreePath ?? currentPath;
+    },
+    [activeWorktree?.isMain, currentPath, mainWorktreePath, worktreeByBranch],
   );
 
   const handleBranchSelect = useCallback(
     (branch: string) => {
-      if (dirtyFileCount > 0) {
-        setPendingBranch(branch);
+      const worktreeForBranch = worktreeByBranch.get(branch);
+      if (worktreeForBranch && worktreeForBranch.path !== currentPath) {
+        handleWorktreeSelect(worktreeForBranch.path, worktreeForBranch.branch);
+        return;
+      }
+      const targetPath = getBranchTargetPath(branch);
+      if (!targetPath) return;
+      if (targetPath === currentPath && dirtyFileCount > 0) {
+        setPendingSwitch({ path: targetPath, branch });
       } else {
-        void performCarrySwitch(branch);
+        void performCarrySwitch(targetPath, branch);
       }
     },
-    [dirtyFileCount, performCarrySwitch],
+    [
+      currentPath,
+      dirtyFileCount,
+      getBranchTargetPath,
+      handleWorktreeSelect,
+      performCarrySwitch,
+      worktreeByBranch,
+    ],
   );
 
   const isWorktreeSelected = (path: string) => {
@@ -158,7 +190,7 @@ export function WorkingContextPicker({
   if (!gitState?.isGitRepo) return null;
 
   const hasWorktrees = worktrees.length > 0;
-  const hasBranches = isMainWorktreeActive && localBranches.length > 0;
+  const hasBranches = localBranches.length > 0;
 
   return (
     <>
@@ -212,7 +244,7 @@ export function WorkingContextPicker({
                   <IconFolder className="size-3.5 shrink-0 text-muted-foreground" />
                   <div className="min-w-0 flex-1">
                     <span className="block truncate font-medium text-foreground">
-                      {shortenPath(wt.path)}
+                      {worktreeName(wt.path)}
                     </span>
                     <span className="block truncate text-xxs text-foreground-subtle">
                       {t("contextPanel.picker.checkedOutBranch", {
@@ -220,14 +252,6 @@ export function WorkingContextPicker({
                       })}
                     </span>
                   </div>
-                  {wt.isMain ? (
-                    <Badge variant="outline" className="text-[10px]">
-                      {t("contextPanel.badges.main")}
-                    </Badge>
-                  ) : null}
-                  {isWorktreeSelected(wt.path) ? (
-                    <IconCheck className="size-3.5 shrink-0 text-brand" />
-                  ) : null}
                 </button>
               ))}
             </div>
@@ -240,55 +264,50 @@ export function WorkingContextPicker({
               <p className="px-2 pb-1.5 pt-1 text-xxs font-medium uppercase tracking-wider text-muted-foreground">
                 {t("contextPanel.picker.allBranches")}
               </p>
-              {localBranches.map((branch) => (
-                <button
-                  key={branch}
-                  type="button"
-                  disabled={
-                    switching ||
-                    branch === activeBranch ||
-                    (worktreeByBranch.has(branch) &&
-                      worktreeByBranch.get(branch)?.path !== currentPath)
-                  }
-                  className={cn(
-                    "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors",
-                    "hover:bg-muted focus-visible:outline-none focus-visible:bg-muted",
-                    "disabled:opacity-50",
-                  )}
-                  onClick={() => handleBranchSelect(branch)}
-                >
-                  <IconGitBranch className="size-3.5 shrink-0 text-muted-foreground" />
-                  <div className="min-w-0 flex-1">
-                    <span className="block truncate font-medium text-foreground">
-                      {branch}
-                    </span>
-                    <span className="block truncate text-xxs text-foreground-subtle">
-                      {branch === activeBranch
-                        ? t("contextPanel.picker.currentBranch")
-                        : worktreeByBranch.has(branch) &&
-                            worktreeByBranch.get(branch)?.path !== currentPath
-                          ? t("contextPanel.picker.checkedOutInWorktree", {
-                              path: shortenPath(
-                                worktreeByBranch.get(branch)?.path ?? "",
-                              ),
-                            })
-                          : t("contextPanel.picker.switchCurrentWorktree")}
-                    </span>
-                  </div>
-                  {branch === activeBranch ? (
-                    <IconCheck className="size-3.5 shrink-0 text-brand" />
-                  ) : null}
-                </button>
-              ))}
+              {localBranches.map((branch) => {
+                const branchTargetPath = getBranchTargetPath(branch);
+                const isCurrentBranch = branch === activeBranch;
+                const branchMeta = isCurrentBranch
+                  ? t("contextPanel.picker.currentBranch")
+                  : branchTargetPath
+                    ? shortenPath(branchTargetPath)
+                    : null;
+
+                return (
+                  <button
+                    key={branch}
+                    type="button"
+                    disabled={switching || isCurrentBranch}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors",
+                      "hover:bg-muted focus-visible:outline-none focus-visible:bg-muted",
+                      "disabled:opacity-50",
+                    )}
+                    onClick={() => handleBranchSelect(branch)}
+                  >
+                    <IconGitBranch className="size-3.5 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0 flex-1">
+                      <span className="block truncate font-medium text-foreground">
+                        {branch}
+                      </span>
+                      {branchMeta ? (
+                        <span className="block truncate text-xxs text-muted-foreground">
+                          {branchMeta}
+                        </span>
+                      ) : null}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           ) : null}
         </PopoverContent>
       </Popover>
 
       <AlertDialog
-        open={pendingBranch !== null}
+        open={pendingSwitch !== null}
         onOpenChange={(isOpen) => {
-          if (!isOpen) setPendingBranch(null);
+          if (!isOpen) setPendingSwitch(null);
         }}
       >
         <AlertDialogContent>
@@ -310,8 +329,8 @@ export function WorkingContextPicker({
               disabled={switching}
               className={buttonVariants({ variant: "secondary" })}
               onClick={() => {
-                if (pendingBranch) {
-                  void performCarrySwitch(pendingBranch);
+                if (pendingSwitch?.branch) {
+                  void performCarrySwitch(pendingSwitch.path, pendingSwitch.branch);
                 }
               }}
             >
@@ -320,8 +339,8 @@ export function WorkingContextPicker({
             <AlertDialogAction
               disabled={switching}
               onClick={() => {
-                if (pendingBranch) {
-                  void performStashSwitch(pendingBranch);
+                if (pendingSwitch?.branch) {
+                  void performStashSwitch(pendingSwitch.path, pendingSwitch.branch);
                 }
               }}
             >

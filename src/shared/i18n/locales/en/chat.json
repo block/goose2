@@ -14,9 +14,6 @@
     "actions": {
       "refreshGitStatus": "Refresh git status"
     },
-    "badges": {
-      "main": "Main"
-    },
     "empty": {
       "folderNotSet": "Folder not set",
       "noActiveProcesses": "No active processes",
@@ -31,10 +28,8 @@
       "selectContext": "Select worktree or branch",
       "worktrees": "Worktrees",
       "allBranches": "All branches",
-      "checkedOutBranch": "Branch: {{branch}}",
-      "switchCurrentWorktree": "Switch branch",
+      "checkedOutBranch": "{{branch}}",
       "currentBranch": "Current branch",
-      "checkedOutInWorktree": "Checked out in {{path}}",
       "dirtyTitle": "Uncommitted Changes",
       "dirtyDescription": "You have {{count}} uncommitted change(s). How would you like to proceed?",
       "stashAndSwitch": "Stash & Switch",

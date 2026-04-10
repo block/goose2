@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import * as gitApi from "@/shared/api/git";
 import { ContextPanel } from "../ContextPanel";
 
 const mockUseGitState = vi.fn();
@@ -24,6 +25,11 @@ vi.mock("../../hooks/ArtifactPolicyContext", () => ({
 }));
 
 describe("ContextPanel", () => {
+  const getBranchButton = (branch: string) =>
+    screen
+      .getAllByRole("button")
+      .find((button) => button.textContent?.startsWith(branch));
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseGitState.mockReturnValue({
@@ -75,7 +81,7 @@ describe("ContextPanel", () => {
     ).toHaveTextContent("~/goose2");
     expect(
       screen.getByRole("button", { name: /select worktree or branch/i }),
-    ).toHaveTextContent("Branch: main");
+    ).toHaveTextContent("main");
     expect(screen.getByText("3 uncommitted changes")).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: /files/i }));
@@ -166,10 +172,10 @@ describe("ContextPanel", () => {
     ).toHaveTextContent("~/goose2-feature");
     expect(
       screen.getByRole("button", { name: /select worktree or branch/i }),
-    ).toHaveTextContent("Branch: feat/context-panel");
+    ).toHaveTextContent("feat/context-panel");
   });
 
-  it("shows all branches on the main worktree and ties worktree branches to their folders", async () => {
+  it("shows all branches on the main worktree and uses folder subtext for branch targets", async () => {
     const user = userEvent.setup();
 
     render(
@@ -185,15 +191,24 @@ describe("ContextPanel", () => {
 
     expect(screen.getByText("All branches")).toBeInTheDocument();
     expect(screen.getByText("Current branch").closest("button")).toBeDisabled();
+    expect(getBranchButton("feat/context-panel")).toHaveTextContent(
+      "~/goose2-feature",
+    );
+    expect(getBranchButton("dev")).toHaveTextContent("~/goose2");
+    expect(getBranchButton("dev")).not.toBeDisabled();
+
+    await user.click(getBranchButton("feat/context-panel")!);
+
     expect(
-      screen
-        .getByText("Checked out in ~/goose2-feature")
-        .closest("button"),
-    ).toBeDisabled();
-    expect(screen.getByText("dev").closest("button")).not.toBeDisabled();
+      screen.getByRole("button", { name: /select worktree or branch/i }),
+    ).toHaveTextContent("~/goose2-feature");
+    expect(
+      screen.getByRole("button", { name: /select worktree or branch/i }),
+    ).toHaveTextContent("feat/context-panel");
+    expect(vi.mocked(gitApi.switchBranch)).not.toHaveBeenCalled();
   });
 
-  it("hides the branch list on non-main worktrees", async () => {
+  it("shows all branches on non-main worktrees and routes untied branches through main", async () => {
     const user = userEvent.setup();
 
     mockUseGitState.mockReturnValue({
@@ -234,7 +249,22 @@ describe("ContextPanel", () => {
       screen.getByRole("button", { name: /select worktree or branch/i }),
     );
 
-    expect(screen.queryByText("All branches")).not.toBeInTheDocument();
+    expect(screen.getByText("All branches")).toBeInTheDocument();
+    expect(getBranchButton("main")).toHaveTextContent("~/goose2");
+    expect(getBranchButton("dev")).toHaveTextContent("~/goose2");
+
+    await user.click(screen.getByText("dev"));
+
+    expect(vi.mocked(gitApi.switchBranch)).toHaveBeenCalledWith(
+      "/Users/test/goose2",
+      "dev",
+    );
+    expect(
+      screen.getByRole("button", { name: /select worktree or branch/i }),
+    ).toHaveTextContent("~/goose2");
+    expect(
+      screen.getByRole("button", { name: /select worktree or branch/i }),
+    ).toHaveTextContent("dev");
   });
 
   it("shows the current branch in the picker when it is the only option", async () => {
@@ -274,7 +304,7 @@ describe("ContextPanel", () => {
     );
 
     expect(screen.getByText("Worktrees")).toBeInTheDocument();
-    expect(screen.getAllByText("~/goose2")[0]).toBeInTheDocument();
-    expect(screen.getAllByText("Branch: main")[0]).toBeInTheDocument();
+    expect(screen.getByText("goose2")).toBeInTheDocument();
+    expect(screen.getAllByText("main")[0]).toBeInTheDocument();
   });
 });
