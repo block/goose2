@@ -64,7 +64,8 @@
   },
   "mention": {
     "ariaLabel": "Sugerencias de menciones",
-    "title": "Menciona una persona"
+    "title": "Menciona una persona",
+    "filesTitle": "Archivos"
   },
   "message": {
     "copied": "Copiado",

@@ -86,6 +86,7 @@ pub fn run() {
             commands::system::get_home_dir,
             commands::system::save_exported_session_file,
             commands::system::path_exists,
+            commands::system::list_files_for_mentions,
         ])
         .setup(|_app| Ok(()))
         .build(tauri::generate_context!())

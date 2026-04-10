@@ -1,74 +1,130 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Sparkles, User } from "lucide-react";
+import { IconFile, IconFolder } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 import { useAvatarSrc } from "@/shared/hooks/useAvatarSrc";
+import { PopoverContent } from "@/shared/ui/popover";
 import type { Persona } from "@/shared/types/agents";
 
+// ---------------------------------------------------------------------------
+// Fuzzy subsequence matcher (fzf-style)
+// ---------------------------------------------------------------------------
+
+/** Returns true when every character in `query` appears in `target` in order. */
+export function fuzzyMatch(query: string, target: string): boolean {
+  let qi = 0;
+  for (let ti = 0; ti < target.length && qi < query.length; ti++) {
+    if (query[qi] === target[ti]) qi++;
+  }
+  return qi === query.length;
+}
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export interface FileMentionItem {
+  /** Absolute path used when inserting into the message. */
+  resolvedPath: string;
+  /** Shortened display path (e.g. ~/project/src/foo.ts). */
+  displayPath: string;
+  /** Just the filename portion. */
+  filename: string;
+  kind: "file" | "folder" | "path";
+}
+
+export type MentionItem =
+  | { type: "persona"; persona: Persona }
+  | { type: "file"; file: FileMentionItem };
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 interface MentionAutocompleteProps {
-  personas: Persona[];
-  query: string;
+  /** Pre-filtered personas from the hook. */
+  filteredPersonas: Persona[];
+  /** Pre-filtered files from the hook. */
+  filteredFiles?: FileMentionItem[];
   isOpen: boolean;
-  onSelect: (persona: Persona) => void;
-  /** Optional close handler (called on Escape). */
+  onSelectPersona: (persona: Persona) => void;
+  onSelectFile?: (file: FileMentionItem) => void;
   onClose?: (() => void) | undefined;
-  anchorRect?: DOMRect | null;
-  /** Index of the currently highlighted item (controlled by parent). */
   selectedIndex?: number;
 }
 
 export function MentionAutocomplete({
-  personas,
-  query,
+  filteredPersonas,
+  filteredFiles = [],
   isOpen,
-  onSelect,
-  anchorRect,
+  onSelectPersona,
+  onSelectFile,
   selectedIndex: controlledIndex,
 }: MentionAutocompleteProps) {
   const { t } = useTranslation("chat");
   const [internalIndex, setInternalIndex] = useState(0);
   const selectedIndex = controlledIndex ?? internalIndex;
-  const listRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<Map<number, HTMLButtonElement>>(new Map());
 
-  const filtered = useMemo(() => {
-    const q = query.toLowerCase();
-    if (!q) return personas;
-    return personas.filter((p) => p.displayName.toLowerCase().includes(q));
-  }, [personas, query]);
-
-  // Reset index when results change
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reset on query/result changes
+  // Scroll the active item into view when selectedIndex changes
   useEffect(() => {
-    setInternalIndex(0);
-  }, [filtered.length, query]);
+    const el = itemRefs.current.get(selectedIndex);
+    if (el) {
+      el.scrollIntoView({ block: "nearest" });
+    }
+  }, [selectedIndex]);
+
+  const items: MentionItem[] = useMemo(() => {
+    const result: MentionItem[] = filteredPersonas.map((p) => ({
+      type: "persona" as const,
+      persona: p,
+    }));
+    for (const f of filteredFiles) {
+      result.push({ type: "file" as const, file: f });
+    }
+    return result;
+  }, [filteredPersonas, filteredFiles]);
 
   const handleSelect = useCallback(
-    (persona: Persona) => {
-      onSelect(persona);
+    (item: MentionItem) => {
+      if (item.type === "persona") {
+        onSelectPersona(item.persona);
+      } else {
+        onSelectFile?.(item.file);
+      }
     },
-    [onSelect],
+    [onSelectPersona, onSelectFile],
   );
 
-  if (!isOpen || filtered.length === 0) return null;
+  if (!isOpen || items.length === 0) return null;
 
   return (
-    <div
-      ref={listRef}
-      className="absolute z-50 w-64 rounded-lg border border-border bg-background shadow-popover"
-      style={{
-        bottom: anchorRect ? "calc(100% + 4px)" : undefined,
-        left: anchorRect ? 16 : undefined,
-      }}
+    <PopoverContent
+      side="top"
+      align="start"
+      sideOffset={4}
+      className="w-72 px-1 py-1"
+      onOpenAutoFocus={(e) => e.preventDefault()}
+      onCloseAutoFocus={(e) => e.preventDefault()}
+      onEscapeKeyDown={(e) => e.preventDefault()}
+      onInteractOutside={(e) => e.preventDefault()}
       role="listbox"
       aria-label={t("mention.ariaLabel")}
     >
-      <div className="px-2 py-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-        {t("mention.title")}
-      </div>
-      <div className="max-h-48 overflow-y-auto px-1 pb-1">
-        {filtered.map((persona, index) => (
+      <div className="max-h-56 overflow-y-auto">
+        {filteredPersonas.length > 0 && (
+          <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            {t("mention.title")}
+          </div>
+        )}
+        {filteredPersonas.map((persona, index) => (
           <button
             key={persona.id}
+            ref={(el) => {
+              if (el) itemRefs.current.set(index, el);
+              else itemRefs.current.delete(index);
+            }}
             type="button"
             role="option"
             aria-selected={index === selectedIndex}
@@ -78,7 +134,7 @@ export function MentionAutocomplete({
                 ? "bg-accent text-foreground"
                 : "text-muted-foreground hover:bg-accent/50",
             )}
-            onClick={() => handleSelect(persona)}
+            onClick={() => handleSelect({ type: "persona", persona })}
             onMouseEnter={() => setInternalIndex(index)}
           >
             <MentionAvatar persona={persona} />
@@ -95,10 +151,57 @@ export function MentionAutocomplete({
             </div>
           </button>
         ))}
+
+        {filteredFiles.length > 0 && (
+          <div className="mt-1 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            {t("mention.filesTitle")}
+          </div>
+        )}
+        {filteredFiles.map((file, i) => {
+          const globalIndex = filteredPersonas.length + i;
+          return (
+            <button
+              key={file.resolvedPath}
+              ref={(el) => {
+                if (el) itemRefs.current.set(globalIndex, el);
+                else itemRefs.current.delete(globalIndex);
+              }}
+              type="button"
+              role="option"
+              aria-selected={globalIndex === selectedIndex}
+              className={cn(
+                "flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors",
+                globalIndex === selectedIndex
+                  ? "bg-accent text-foreground"
+                  : "text-muted-foreground hover:bg-accent/50",
+              )}
+              onClick={() => handleSelect({ type: "file", file })}
+              onMouseEnter={() => setInternalIndex(globalIndex)}
+            >
+              {file.kind === "folder" ? (
+                <IconFolder className="size-4 shrink-0" />
+              ) : (
+                <IconFile className="size-4 shrink-0" />
+              )}
+              <div className="flex min-w-0 flex-col">
+                <span className="truncate text-sm font-medium">
+                  {file.filename}
+                </span>
+                <span className="truncate text-[10px] text-muted-foreground">
+                  {file.displayPath}
+                </span>
+              </div>
+            </button>
+          );
+        })}
       </div>
-    </div>
+    </PopoverContent>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Avatar helper
+// ---------------------------------------------------------------------------
 
 function MentionAvatar({ persona }: { persona: Persona }) {
   const avatarSrc = useAvatarSrc(persona.avatar);
@@ -130,8 +233,14 @@ function MentionAvatar({ persona }: { persona: Persona }) {
   );
 }
 
-// Hook to manage mention detection and keyboard navigation in a textarea
-export function useMentionDetection(personas: Persona[] = []) {
+// ---------------------------------------------------------------------------
+// Hook — mention detection + keyboard navigation
+// ---------------------------------------------------------------------------
+
+export function useMentionDetection(
+  personas: Persona[] = [],
+  files: FileMentionItem[] = [],
+) {
   const [mentionState, setMentionState] = useState<{
     isOpen: boolean;
     query: string;
@@ -139,16 +248,28 @@ export function useMentionDetection(personas: Persona[] = []) {
     selectedIndex: number;
   }>({ isOpen: false, query: "", startIndex: -1, selectedIndex: 0 });
 
-  const filtered = useMemo(() => {
-    if (!mentionState.isOpen) return personas;
+  const { filteredPersonas, filteredFiles } = useMemo(() => {
+    if (!mentionState.isOpen) {
+      return { filteredPersonas: personas, filteredFiles: files };
+    }
     const q = mentionState.query.toLowerCase();
-    if (!q) return personas;
-    return personas.filter((p) => p.displayName.toLowerCase().includes(q));
-  }, [personas, mentionState.isOpen, mentionState.query]);
+    if (!q) return { filteredPersonas: personas, filteredFiles: files };
+    return {
+      filteredPersonas: personas.filter((p) =>
+        fuzzyMatch(q, p.displayName.toLowerCase()),
+      ),
+      filteredFiles: files.filter(
+        (f) =>
+          fuzzyMatch(q, f.filename.toLowerCase()) ||
+          fuzzyMatch(q, f.displayPath.toLowerCase()),
+      ),
+    };
+  }, [personas, files, mentionState.isOpen, mentionState.query]);
+
+  const totalCount = filteredPersonas.length + filteredFiles.length;
 
   const detectMention = useCallback(
     (value: string, cursorPos: number) => {
-      // Look backwards from cursor for an unmatched @
       const beforeCursor = value.slice(0, cursorPos);
       const lastAt = beforeCursor.lastIndexOf("@");
 
@@ -180,7 +301,7 @@ export function useMentionDetection(personas: Persona[] = []) {
       const query = beforeCursor.slice(lastAt + 1);
 
       // Close if there's a space after the query (mention completed) or too long
-      if (query.includes(" ") || query.length > 30) {
+      if (query.includes(" ") || query.length > 50) {
         if (mentionState.isOpen) {
           setMentionState({
             isOpen: false,
@@ -211,32 +332,46 @@ export function useMentionDetection(personas: Persona[] = []) {
     });
   }, []);
 
-  /** Move highlight up/down. Returns true if the event was consumed. */
   const navigateMention = useCallback(
     (direction: "up" | "down"): boolean => {
-      if (!mentionState.isOpen || filtered.length === 0) return false;
+      if (!mentionState.isOpen || totalCount === 0) return false;
       setMentionState((prev) => {
         const delta = direction === "down" ? 1 : -1;
-        const next =
-          (prev.selectedIndex + delta + filtered.length) % filtered.length;
+        const next = (prev.selectedIndex + delta + totalCount) % totalCount;
         return { ...prev, selectedIndex: next };
       });
       return true;
     },
-    [mentionState.isOpen, filtered.length],
+    [mentionState.isOpen, totalCount],
   );
 
-  /** Confirm the currently highlighted item. Returns the persona or null. */
-  const confirmMention = useCallback((): Persona | null => {
-    if (!mentionState.isOpen || filtered.length === 0) return null;
-    return filtered[mentionState.selectedIndex] ?? null;
-  }, [mentionState.isOpen, mentionState.selectedIndex, filtered]);
+  /** Confirm the currently highlighted item. Returns persona, file, or null. */
+  const confirmMention = useCallback((): MentionItem | null => {
+    if (!mentionState.isOpen || totalCount === 0) return null;
+    const idx = mentionState.selectedIndex;
+    if (idx < filteredPersonas.length) {
+      return { type: "persona", persona: filteredPersonas[idx] };
+    }
+    const fileIdx = idx - filteredPersonas.length;
+    if (fileIdx < filteredFiles.length) {
+      return { type: "file", file: filteredFiles[fileIdx] };
+    }
+    return null;
+  }, [
+    mentionState.isOpen,
+    mentionState.selectedIndex,
+    totalCount,
+    filteredPersonas,
+    filteredFiles,
+  ]);
 
   return {
     mentionOpen: mentionState.isOpen,
     mentionQuery: mentionState.query,
     mentionStartIndex: mentionState.startIndex,
     mentionSelectedIndex: mentionState.selectedIndex,
+    filteredPersonas,
+    filteredFiles,
     detectMention,
     closeMention,
     navigateMention,
