@@ -16,6 +16,7 @@ import { acpPrepareSession, acpSetModel } from "@/shared/api/acp";
 import {
   buildProjectSystemPrompt,
   composeSystemPrompt,
+  defaultArtifactsDir,
   getProjectArtifactRoots,
   resolveProjectWorkingDir,
 } from "@/features/projects/lib/chatProjectContext";
@@ -148,8 +149,7 @@ export function ChatView({
     getHomeDir()
       .then((homeDir) => {
         if (cancelled) return;
-        const normalizedHome = homeDir.replace(/\\/g, "/").replace(/\/+$/, "");
-        setHomeArtifactsRoot(`${normalizedHome}/.goose/artifacts`);
+        setHomeArtifactsRoot(defaultArtifactsDir(homeDir));
       })
       .catch(() => {
         if (cancelled) return;

@@ -19,7 +19,7 @@ import { useAppStartup } from "./hooks/useAppStartup";
 import { AppShellContent } from "./ui/AppShellContent";
 import { acpPrepareSession } from "@/shared/api/acp";
 import { getHomeDir } from "@/shared/api/system";
-import { resolveProjectWorkingDir } from "@/features/projects/lib/chatProjectContext";
+import { resolveEffectiveWorkingDir } from "@/features/projects/lib/chatProjectContext";
 
 export type AppView =
   | "home"
@@ -94,12 +94,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             .projects.find((candidate) => candidate.id === session.projectId) ??
           null)
         : null;
-      let workingDir = resolveProjectWorkingDir(project);
-      if (!workingDir && !session?.projectId) {
-        const homeDir = await getHomeDir();
-        const normalizedHome = homeDir.replace(/\\/g, "/").replace(/\/+$/, "");
-        workingDir = `${normalizedHome}/.goose/artifacts`;
-      }
+      const homeDir = await getHomeDir();
+      const workingDir = resolveEffectiveWorkingDir(project, homeDir);
       await acpLoadSession(sessionId, gooseSessionId, workingDir);
       const t3 = performance.now();
       console.log(
@@ -314,14 +310,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             : (useProjectStore
                 .getState()
                 .projects.find((project) => project.id === projectId) ?? null);
-        let nextWorkingDir = resolveProjectWorkingDir(nextProject);
-        if (!nextWorkingDir && projectId == null) {
-          const homeDir = await getHomeDir();
-          const normalizedHome = homeDir
-            .replace(/\\/g, "/")
-            .replace(/\/+$/, "");
-          nextWorkingDir = `${normalizedHome}/.goose/artifacts`;
-        }
+        const homeDir = await getHomeDir();
+        const nextWorkingDir = resolveEffectiveWorkingDir(nextProject, homeDir);
         if (!nextWorkingDir) {
           return;
         }

@@ -138,11 +138,42 @@ export function useAcpStream(enabled: boolean): void {
 
     let active = true;
     const unlisteners: Promise<UnlistenFn>[] = [];
+    const replayTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+
+    const REPLAY_TIMEOUT_MS = 30_000;
 
     const unsubscribeFlush = useChatStore.subscribe((state, prevState) => {
       if (!active) return;
+
+      // Start timeout for newly-loading sessions
+      for (const sid of state.loadingSessionIds) {
+        if (!prevState.loadingSessionIds.has(sid) && !replayTimeouts.has(sid)) {
+          const timer = setTimeout(() => {
+            replayTimeouts.delete(sid);
+            const store = useChatStore.getState();
+            if (store.loadingSessionIds.has(sid)) {
+              console.warn(
+                `[stream] ${sid.slice(0, 8)} replay_complete not received within ${REPLAY_TIMEOUT_MS / 1000}s — showing error`,
+              );
+              store.setSessionLoading(sid, false);
+              store.setError(
+                sid,
+                "Session history failed to load. Try reloading.",
+              );
+            }
+          }, REPLAY_TIMEOUT_MS);
+          replayTimeouts.set(sid, timer);
+        }
+      }
+
+      // Clear timeouts and flush buffers for sessions that finished loading
       for (const sid of prevState.loadingSessionIds) {
         if (!state.loadingSessionIds.has(sid)) {
+          const timer = replayTimeouts.get(sid);
+          if (timer) {
+            clearTimeout(timer);
+            replayTimeouts.delete(sid);
+          }
           const buffer = getAndDeleteReplayBuffer(sid);
           if (buffer && buffer.length > 0) {
             console.log(
@@ -533,6 +564,10 @@ export function useAcpStream(enabled: boolean): void {
     return () => {
       active = false;
       unsubscribeFlush();
+      for (const timer of replayTimeouts.values()) {
+        clearTimeout(timer);
+      }
+      replayTimeouts.clear();
       for (const unlistenPromise of unlisteners) {
         unlistenPromise.then((unlisten) => unlisten());
       }

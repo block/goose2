@@ -426,6 +426,66 @@ describe("useAcpStream", () => {
     });
   });
 
+  it("shows an error state when replay_complete is not received within the timeout", async () => {
+    vi.useFakeTimers();
+    try {
+      renderHook(() => useAcpStream(true));
+      await vi.waitFor(() =>
+        expect(listeners.get("acp:replay_complete")).toBeDefined(),
+      );
+
+      // Start loading AFTER the hook subscribes so the subscription sees the transition
+      act(() => {
+        useChatStore.getState().setSessionLoading(sessionId, true);
+      });
+
+      // Simulate time passing without replay_complete
+      act(() => {
+        vi.advanceTimersByTime(30_000);
+      });
+
+      expect(useChatStore.getState().loadingSessionIds.has(sessionId)).toBe(
+        false,
+      );
+      const runtime = useChatStore.getState().getSessionRuntime(sessionId);
+      expect(runtime.error).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("clears the replay timeout when replay_complete arrives in time", async () => {
+    vi.useFakeTimers();
+    try {
+      renderHook(() => useAcpStream(true));
+      await vi.waitFor(() =>
+        expect(listeners.get("acp:replay_complete")).toBeDefined(),
+      );
+
+      act(() => {
+        useChatStore.getState().setSessionLoading(sessionId, true);
+      });
+
+      // replay_complete arrives before timeout
+      act(() => {
+        emit("acp:replay_complete", { sessionId });
+      });
+
+      // Advance past the timeout — should NOT set error
+      act(() => {
+        vi.advanceTimersByTime(30_000);
+      });
+
+      const runtime = useChatStore.getState().getSessionRuntime(sessionId);
+      expect(runtime.error).toBeFalsy();
+      expect(useChatStore.getState().loadingSessionIds.has(sessionId)).toBe(
+        false,
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("ignores late tool results after a message is stopped", async () => {
     const store = useChatStore.getState();
     store.addMessage(sessionId, {

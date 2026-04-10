@@ -88,12 +88,26 @@ function homeArtifactsRootFromRoots(roots: string[]): string | null {
   );
 }
 
+function stripRootArtifactsSegment(
+  path: string,
+  roots: string[],
+): string | null {
+  for (const root of roots) {
+    const normalizedRoot = root.replace(/\/+$/, "");
+    const prefix = `${normalizedRoot}/artifacts/`;
+    if (path.startsWith(prefix)) {
+      return `${normalizedRoot}/${path.slice(prefix.length)}`;
+    }
+  }
+  return null;
+}
+
 function fallbackArtifactPath(path: string, roots: string[]): string | null {
   const normalized = path.trim();
   if (!/\/\.goose\/projects\/.+\/artifacts\/.+/.test(normalized)) {
-    const strippedArtifactsPath = normalized.replace("/artifacts/", "/");
-    if (strippedArtifactsPath !== normalized) {
-      return strippedArtifactsPath;
+    const rootAnchored = stripRootArtifactsSegment(normalized, roots);
+    if (rootAnchored) {
+      return rootAnchored;
     }
     return null;
   }
