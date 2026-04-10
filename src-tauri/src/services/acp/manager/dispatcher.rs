@@ -22,13 +22,13 @@ use crate::services::acp::payloads::{
 fn extract_user_message(raw: &str) -> &str {
     const OPEN: &str = "<user-message>\n";
     const CLOSE: &str = "\n</user-message>";
-    let start = match raw.find(OPEN) {
-        Some(s) => s + OPEN.len(),
-        None => return raw,
-    };
-    raw[start..]
-        .find(CLOSE)
-        .map_or(raw, |end| &raw[start..start + end])
+    if let Some(start) = raw.find(OPEN) {
+        let inner = start + OPEN.len();
+        if raw[inner..].ends_with(CLOSE) {
+            return &raw[inner..raw.len() - CLOSE.len()];
+        }
+    }
+    raw
 }
 fn model_options_from_select_options(options: &SessionConfigSelectOptions) -> Vec<ModelOption> {
     match options {

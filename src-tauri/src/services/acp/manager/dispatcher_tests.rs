@@ -16,3 +16,13 @@ fn extract_user_message_multiline() {
 fn extract_user_message_no_wrapper() {
     assert_eq!(extract_user_message("plain text"), "plain text");
 }
+
+#[test]
+fn extract_user_message_preserves_inner_delimiter() {
+    // User literally typed "</user-message>" in their message — must not truncate.
+    let wrapped = "<persona-instructions>\nstuff\n</persona-instructions>\n\n<user-message>\ncheck this tag: </user-message> cool right?\n</user-message>";
+    assert_eq!(
+        extract_user_message(wrapped),
+        "check this tag: </user-message> cool right?"
+    );
+}
