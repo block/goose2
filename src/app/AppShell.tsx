@@ -484,17 +484,12 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       // Cmd/Ctrl+N opens new conversation screen
       if (e.key === "n" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        const { activeSessionId } = useChatSessionStore.getState();
-        if (activeSessionId) {
-          cleanupEmptyDraft(activeSessionId);
-        }
-        sessionStore.setActiveSession(null);
-        setActiveView("home");
+        createNewTab();
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [clearActiveSession, cleanupEmptyDraft, sessionStore]);
+  }, [clearActiveSession, createNewTab]);
 
   const activeSessionPersonaId = activeSession?.personaId;
   const handleInitialMessageConsumed = useCallback(() => {
