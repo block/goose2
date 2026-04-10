@@ -4,8 +4,8 @@ use std::sync::Arc;
 use tauri::{AppHandle, State};
 
 use crate::services::acp::{
-    make_composite_key, AcpRunningSession, AcpService, AcpSessionInfo, AcpSessionRegistry,
-    GooseAcpManager,
+    make_composite_key, search_sessions_via_exports, AcpRunningSession, AcpService, AcpSessionInfo,
+    AcpSessionRegistry, GooseAcpManager, SessionSearchResult,
 };
 
 const DEPRECATED_PROVIDER_IDS: &[&str] = &["claude-code", "codex", "gemini-cli"];
@@ -164,6 +164,17 @@ pub async fn acp_set_model(
 pub async fn acp_list_sessions(app_handle: AppHandle) -> Result<Vec<AcpSessionInfo>, String> {
     let manager = GooseAcpManager::start(app_handle).await?;
     manager.list_sessions().await
+}
+
+/// Search session message content via exported Goose sessions.
+#[tauri::command]
+pub async fn acp_search_sessions(
+    app_handle: AppHandle,
+    query: String,
+    session_ids: Vec<String>,
+) -> Result<Vec<SessionSearchResult>, String> {
+    let manager = GooseAcpManager::start(app_handle).await?;
+    search_sessions_via_exports(&manager, &query, &session_ids).await
 }
 
 /// Load an existing session, replaying its messages as Tauri events.

@@ -265,27 +265,21 @@ export function ChatView({
       if (!activeSessionId || modelId === session?.modelId) {
         return;
       }
-
       const previousModelId = session?.modelId;
       const previousModelName = session?.modelName;
       const models = useChatSessionStore
         .getState()
         .getSessionModels(activeSessionId);
       const selected = models.find((m) => m.id === modelId);
-
-      // Optimistic update
       useChatSessionStore.getState().updateSession(activeSessionId, {
         modelId,
         modelName: selected?.displayName ?? selected?.name ?? modelId,
       });
-
       if (session?.draft) {
         return;
       }
-
       acpSetModel(activeSessionId, modelId).catch((error) => {
         console.error("Failed to set model:", error);
-        // Rollback to previous model on failure
         useChatSessionStore.getState().updateSession(activeSessionId, {
           modelId: previousModelId,
           modelName: previousModelName,
@@ -310,8 +304,6 @@ export function ChatView({
           handleProviderChange(matchingProvider.id);
         }
       }
-
-      // Update the active agent to match persona
       const agentStore = useAgentStore.getState();
       const matchingAgent = agentStore.agents.find(
         (a) => a.personaId === personaId,
@@ -319,8 +311,6 @@ export function ChatView({
       if (matchingAgent) {
         agentStore.setActiveAgent(matchingAgent.id);
       }
-
-      // Persist persona selection to session store
       useChatSessionStore
         .getState()
         .updateSession(activeSessionId, { personaId: personaId ?? undefined });
@@ -446,12 +436,18 @@ export function ChatView({
   const draftValue = useChatStore(
     (s) => s.draftsBySession[activeSessionId] ?? "",
   );
+  const scrollTarget = useChatStore(
+    (s) => s.scrollTargetMessageBySession[activeSessionId] ?? null,
+  );
   const handleDraftChange = useCallback(
     (text: string) => {
       useChatStore.getState().setDraft(activeSessionId, text);
     },
     [activeSessionId],
   );
+  const handleScrollTargetHandled = useCallback(() => {
+    useChatStore.getState().clearScrollTargetMessage(activeSessionId);
+  }, [activeSessionId]);
   return (
     <ArtifactPolicyProvider
       messages={messages}
@@ -465,6 +461,9 @@ export function ChatView({
             <MessageTimeline
               messages={messages}
               streamingMessageId={streamingMessageId}
+              scrollTargetMessageId={scrollTarget?.messageId ?? null}
+              scrollTargetQuery={scrollTarget?.query ?? null}
+              onScrollTargetHandled={handleScrollTargetHandled}
               agentName={displayAgentName}
               agentAvatarUrl={personaAvatarSrc ?? agentAvatarUrl}
             />

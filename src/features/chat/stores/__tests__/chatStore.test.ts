@@ -158,6 +158,21 @@ describe("chatStore", () => {
     expect(store.draftsBySession.s1).toBeUndefined();
     expect(store.activeSessionId).toBeNull();
   });
+
+  it("stores and clears scroll targets per session", () => {
+    const store = useChatStore.getState();
+
+    store.setScrollTargetMessage("s1", "message-1", "needle");
+    expect(useChatStore.getState().scrollTargetMessageBySession.s1).toEqual({
+      messageId: "message-1",
+      query: "needle",
+    });
+
+    store.clearScrollTargetMessage("s1");
+    expect(
+      useChatStore.getState().scrollTargetMessageBySession.s1,
+    ).toBeUndefined();
+  });
 });
 
 describe("chatStore draft localStorage persistence", () => {

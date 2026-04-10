@@ -64,9 +64,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     null,
   );
 
-  // TODO: wire to ACP load_session replay instead of fetching from SessionStore
   const loadSessionMessages = useCallback(async (sessionId: string) => {
-    // Skip if we already have messages for this session (e.g. it was just created)
     const existing = useChatStore.getState().messagesBySession[sessionId];
     if (existing && existing.length > 0) {
       console.log(
@@ -399,6 +397,18 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     [sessionStore, chatStore, loadSessionMessages, cleanupEmptyDraft],
   );
 
+  const handleSelectSearchResult = useCallback(
+    (sessionId: string, messageId?: string, query?: string) => {
+      if (messageId) {
+        useChatStore
+          .getState()
+          .setScrollTargetMessage(sessionId, messageId, query);
+      }
+      handleSelectSession(sessionId);
+    },
+    [handleSelectSession],
+  );
+
   const handleNavigate = useCallback(
     (view: AppView) => {
       if (view !== "chat") {
@@ -547,6 +557,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             onRenameChat={handleRenameChat}
             onMoveToProject={handleMoveToProject}
             onSelectSession={handleSelectSession}
+            onSelectSearchResult={handleSelectSearchResult}
             activeView={activeView}
             activeSessionId={activeSessionId}
             projects={projectStore.projects}
@@ -554,7 +565,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           />
         </div>
 
-        {/* Resize handle */}
         {/* biome-ignore lint/a11y/noStaticElementInteractions: drag handle for sidebar resize */}
         <div
           onMouseDown={handleResizeStart}
@@ -580,6 +590,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
               onInitialMessageConsumed={handleInitialMessageConsumed}
               onRenameChat={handleRenameChat}
               onSelectSession={handleSelectSession}
+              onSelectSearchResult={handleSelectSearchResult}
               onStartChatFromProject={handleStartChatFromProject}
             />
           )}

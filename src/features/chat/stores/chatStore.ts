@@ -54,34 +54,24 @@ export interface QueuedMessage {
   images?: { base64: string; mimeType: string }[];
 }
 
+export interface ScrollTargetMessage {
+  messageId: string;
+  query?: string;
+}
+
 interface ChatStoreState {
-  // Per-session messages
   messagesBySession: Record<string, Message[]>;
-
-  // Per-session runtime state
   sessionStateById: Record<string, SessionChatRuntime>;
-
-  // Per-session queued message (single-slot, survives tab switches)
   queuedMessageBySession: Record<string, QueuedMessage>;
-
-  // Per-session draft input text (survives tab switches)
   draftsBySession: Record<string, string>;
-
-  // Current session
   activeSessionId: string | null;
-
-  // Connection
   isConnected: boolean;
-
-  // Sessions currently being loaded from history (replay in progress)
   loadingSessionIds: Set<string>;
+  scrollTargetMessageBySession: Record<string, ScrollTargetMessage | null>;
 }
 
 interface ChatStoreActions {
-  // Session management
   setActiveSession: (sessionId: string) => void;
-
-  // Message management
   addMessage: (sessionId: string, message: Message) => void;
   updateMessage: (
     sessionId: string,
@@ -91,42 +81,32 @@ interface ChatStoreActions {
   removeMessage: (sessionId: string, messageId: string) => void;
   setMessages: (sessionId: string, messages: Message[]) => void;
   clearMessages: (sessionId: string) => void;
-
-  // Active session helpers (operate on activeSessionId)
   getActiveMessages: () => Message[];
   getSessionRuntime: (sessionId: string) => SessionChatRuntime;
-
-  // Streaming
   setStreamingMessageId: (sessionId: string, id: string | null) => void;
   appendToStreamingMessage: (
     sessionId: string,
     content: MessageContent,
   ) => void;
   updateStreamingText: (sessionId: string, text: string) => void;
-
-  // State
   setChatState: (sessionId: string, state: ChatState) => void;
   setError: (sessionId: string, error: string | null) => void;
   setConnected: (connected: boolean) => void;
   markSessionRead: (sessionId: string) => void;
   markSessionUnread: (sessionId: string) => void;
-
-  // Token tracking
   updateTokenState: (sessionId: string, state: Partial<TokenState>) => void;
   resetTokenState: (sessionId: string) => void;
-
-  // Message queue
   enqueueMessage: (sessionId: string, message: QueuedMessage) => void;
   dismissQueuedMessage: (sessionId: string) => void;
-
-  // Drafts
   setDraft: (sessionId: string, text: string) => void;
   clearDraft: (sessionId: string) => void;
-
-  // Session loading (replay)
   setSessionLoading: (sessionId: string, loading: boolean) => void;
-
-  // Cleanup
+  setScrollTargetMessage: (
+    sessionId: string,
+    messageId: string,
+    query?: string,
+  ) => void;
+  clearScrollTargetMessage: (sessionId: string) => void;
   cleanupSession: (sessionId: string) => void;
 }
 
@@ -141,6 +121,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   activeSessionId: null,
   isConnected: false,
   loadingSessionIds: new Set<string>(),
+  scrollTargetMessageBySession: {},
 
   // Session management
   setActiveSession: (sessionId) =>
@@ -441,6 +422,28 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       return { loadingSessionIds: next };
     }),
 
+  setScrollTargetMessage: (sessionId, messageId, query) =>
+    set((state) => ({
+      scrollTargetMessageBySession: {
+        ...state.scrollTargetMessageBySession,
+        [sessionId]: { messageId, query },
+      },
+    })),
+
+  clearScrollTargetMessage: (sessionId) =>
+    set((state) => {
+      if (!state.scrollTargetMessageBySession[sessionId]) {
+        return state;
+      }
+
+      const nextTargets = { ...state.scrollTargetMessageBySession };
+      delete nextTargets[sessionId];
+
+      return {
+        scrollTargetMessageBySession: nextTargets,
+      };
+    }),
+
   // Cleanup
   cleanupSession: (sessionId) => {
     // Discard any orphaned replay buffer so module-level Map doesn't leak.
@@ -452,11 +455,14 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       const { [sessionId]: ___, ...remainingQueued } =
         state.queuedMessageBySession;
       const { [sessionId]: ____, ...remainingDrafts } = state.draftsBySession;
+      const { [sessionId]: _____, ...remainingTargets } =
+        state.scrollTargetMessageBySession;
       return {
         messagesBySession: rest,
         sessionStateById: remainingSessionState,
         queuedMessageBySession: remainingQueued,
         draftsBySession: remainingDrafts,
+        scrollTargetMessageBySession: remainingTargets,
         activeSessionId:
           state.activeSessionId === sessionId ? null : state.activeSessionId,
       };
