@@ -19,15 +19,17 @@ use crate::services::acp::payloads::{
     ToolResultPayload, ToolTitlePayload,
 };
 
-/// Strip the `<user-message>` XML wrapper added by `AcpService::send_prompt`.
-/// Returns the raw string as-is when no wrapper is present.
 fn extract_user_message(raw: &str) -> &str {
     const OPEN: &str = "<user-message>\n";
     const CLOSE: &str = "\n</user-message>";
-    let start = match raw.find(OPEN) { Some(s) => s + OPEN.len(), None => return raw };
-    raw[start..].find(CLOSE).map_or(raw, |end| &raw[start..start + end])
+    let start = match raw.find(OPEN) {
+        Some(s) => s + OPEN.len(),
+        None => return raw,
+    };
+    raw[start..]
+        .find(CLOSE)
+        .map_or(raw, |end| &raw[start..start + end])
 }
-
 fn model_options_from_select_options(options: &SessionConfigSelectOptions) -> Vec<ModelOption> {
     match options {
         SessionConfigSelectOptions::Ungrouped(values) => values
