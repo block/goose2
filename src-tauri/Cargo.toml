@@ -42,6 +42,7 @@ doctor = { git = "https://github.com/block/builderbot", rev = "8e1c3ec145edc0df5
 
 [target.'cfg(target_os = "macos")'.dependencies]
 keyring = { version = "3", features = ["apple-native"] }
+objc2-app-kit = { version = "0.3.2", features = ["NSWindow", "NSResponder"], optional = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 keyring = { version = "3", features = ["windows-native"] }
@@ -50,7 +51,7 @@ keyring = { version = "3", features = ["windows-native"] }
 keyring = { version = "3", features = ["linux-native-sync-persistent", "crypto-rust"] }
 
 [features]
-test-bridge = []
+test-bridge = ["objc2-app-kit"]
 
 [dev-dependencies]
 tempfile = "3"

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpListener;
@@ -150,9 +152,10 @@ fn build_js(cmd: &TestCommand) -> String {
             let sel = cmd.selector.as_deref().unwrap_or("input");
             let val = cmd.value.as_deref().unwrap_or("");
             with_wait_for(sel, &format!(
-                r#"const setter = Object.getOwnPropertyDescriptor(
-                    HTMLInputElement.prototype, 'value'
-                ).set;
+                r#"const proto = el instanceof HTMLTextAreaElement
+                    ? HTMLTextAreaElement.prototype
+                    : HTMLInputElement.prototype;
+                const setter = Object.getOwnPropertyDescriptor(proto, 'value').set;
                 setter.call(el, "{}");
                 el.dispatchEvent(new Event('input', {{ bubbles: true }}));
                 el.dispatchEvent(new Event('change', {{ bubbles: true }}));
@@ -191,6 +194,57 @@ fn build_js(cmd: &TestCommand) -> String {
         }})();
         "#
     )
+}
+
+/// Get the macOS NSWindow number for screencapture -l
+#[cfg(all(target_os = "macos", feature = "test-bridge"))]
+fn get_ns_window_number(window: &WebviewWindow) -> Option<u32> {
+    let ns_window_ptr = window.ns_window().ok()?;
+    let ns_window = unsafe { &*(ns_window_ptr as *const objc2_app_kit::NSWindow) };
+    Some(ns_window.windowNumber() as u32)
+}
+
+/// Take a screenshot of the app window using macOS screencapture
+#[cfg(all(target_os = "macos", feature = "test-bridge"))]
+fn take_screenshot(window: &WebviewWindow, path: &str) -> TestResult {
+    if let Some(parent) = std::path::Path::new(path).parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+
+    let window_id = match get_ns_window_number(window) {
+        Some(id) => id,
+        None => {
+            return TestResult {
+                success: false,
+                data: None,
+                error: Some("Failed to get window ID".into()),
+            };
+        }
+    };
+
+    match std::process::Command::new("screencapture")
+        .args(["-x", "-l", &window_id.to_string(), path])
+        .output()
+    {
+        Ok(output) if output.status.success() => TestResult {
+            success: true,
+            data: Some(format!("Screenshot saved to {}", path)),
+            error: None,
+        },
+        Ok(output) => TestResult {
+            success: false,
+            data: None,
+            error: Some(format!(
+                "screencapture failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            )),
+        },
+        Err(e) => TestResult {
+            success: false,
+            data: None,
+            error: Some(format!("Failed to run screencapture: {}", e)),
+        },
+    }
 }
 
 /// Start the TCP server in a background thread
@@ -243,6 +297,15 @@ pub fn start_test_bridge(app_handle: AppHandle) {
                             continue;
                         }
                     };
+
+                    // Screenshot is handled natively, not via JS eval
+                    #[cfg(all(target_os = "macos", feature = "test-bridge"))]
+                    if cmd.action == "screenshot" {
+                        let path = cmd.value.as_deref().unwrap_or("screenshot.png");
+                        let resp = take_screenshot(&window, path);
+                        let _ = writeln!(stream, "{}", serde_json::to_string(&resp).unwrap());
+                        continue;
+                    }
 
                     let state = app.state::<BridgeState>();
                     state.reset();

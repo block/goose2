@@ -122,7 +122,7 @@ dev:
         fi
     fi
 
-    pnpm tauri dev --config "$TAURI_CONFIG"
+    pnpm tauri dev --features test-bridge --config "$TAURI_CONFIG"
 
 # Start the desktop app with dev config
 dev-debug:
