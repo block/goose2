@@ -26,12 +26,26 @@ const PERSONAS: Persona[] = [
   },
 ];
 
-const FILES: FileMentionItem[] = Array.from({ length: 12 }, (_, i) => ({
-  resolvedPath: `/project/src/file${i}.ts`,
-  displayPath: `src/file${i}.ts`,
-  filename: `file${i}.ts`,
-  kind: "file" as const,
-}));
+const FILES: FileMentionItem[] = [
+  ...Array.from({ length: 12 }, (_, i) => ({
+    resolvedPath: `/project/src/file${i}.ts`,
+    displayPath: `src/file${i}.ts`,
+    filename: `file${i}.ts`,
+    kind: "file" as const,
+  })),
+  {
+    resolvedPath: "/project/crates/sprout-acp/src/acp.rs",
+    displayPath: "crates/sprout-acp/src/acp.rs",
+    filename: "acp.rs",
+    kind: "file" as const,
+  },
+  {
+    resolvedPath: "/project/crates/sprout-acp/src/config.rs",
+    displayPath: "crates/sprout-acp/src/config.rs",
+    filename: "config.rs",
+    kind: "file" as const,
+  },
+];
 
 function renderAutocomplete(props: {
   selectedIndex?: number;
@@ -128,6 +142,23 @@ describe("MentionAutocomplete", () => {
     expect(screen.queryByText("Solo")).not.toBeInTheDocument();
     // No files match "review"
     expect(screen.queryByText("file0.ts")).not.toBeInTheDocument();
+  });
+
+  it("fuzzy-matches files by path subsequence", () => {
+    // "crates/sprout-acp/.rs" should match both acp.rs and config.rs
+    // via subsequence: each char appears in order in the displayPath
+    renderAutocomplete({ query: "crates/sprout-acp/.rs" });
+
+    expect(screen.getByText("acp.rs")).toBeInTheDocument();
+    expect(screen.getByText("config.rs")).toBeInTheDocument();
+    // Unrelated .ts files should not match
+    expect(screen.queryByText("file0.ts")).not.toBeInTheDocument();
+  });
+
+  it("fuzzy-matches persona names by subsequence", () => {
+    // "slo" matches "Solo" (s-o-l-o has s..l..o in order)
+    renderAutocomplete({ query: "slo" });
+    expect(screen.getByText("Solo")).toBeInTheDocument();
   });
 
   it("returns null when not open", () => {

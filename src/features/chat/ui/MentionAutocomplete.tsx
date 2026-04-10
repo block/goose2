@@ -8,6 +8,19 @@ import { PopoverContent } from "@/shared/ui/popover";
 import type { Persona } from "@/shared/types/agents";
 
 // ---------------------------------------------------------------------------
+// Fuzzy subsequence matcher (fzf-style)
+// ---------------------------------------------------------------------------
+
+/** Returns true when every character in `query` appears in `target` in order. */
+function fuzzyMatch(query: string, target: string): boolean {
+  let qi = 0;
+  for (let ti = 0; ti < target.length && qi < query.length; ti++) {
+    if (query[qi] === target[ti]) qi++;
+  }
+  return qi === query.length;
+}
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -65,13 +78,13 @@ export function MentionAutocomplete({
   const { filteredPersonas, filteredFiles } = useMemo(() => {
     const q = query.toLowerCase();
     const fp = q
-      ? personas.filter((p) => p.displayName.toLowerCase().includes(q))
+      ? personas.filter((p) => fuzzyMatch(q, p.displayName.toLowerCase()))
       : personas;
     const ff = q
       ? files.filter(
           (f) =>
-            f.filename.toLowerCase().includes(q) ||
-            f.displayPath.toLowerCase().includes(q),
+            fuzzyMatch(q, f.filename.toLowerCase()) ||
+            fuzzyMatch(q, f.displayPath.toLowerCase()),
         )
       : files;
     return { filteredPersonas: fp, filteredFiles: ff };
@@ -275,12 +288,12 @@ export function useMentionDetection(
     if (!q) return { filteredPersonas: personas, filteredFiles: files };
     return {
       filteredPersonas: personas.filter((p) =>
-        p.displayName.toLowerCase().includes(q),
+        fuzzyMatch(q, p.displayName.toLowerCase()),
       ),
       filteredFiles: files.filter(
         (f) =>
-          f.filename.toLowerCase().includes(q) ||
-          f.displayPath.toLowerCase().includes(q),
+          fuzzyMatch(q, f.filename.toLowerCase()) ||
+          fuzzyMatch(q, f.displayPath.toLowerCase()),
       ),
     };
   }, [personas, files, mentionState.isOpen, mentionState.query]);
