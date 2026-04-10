@@ -17,6 +17,13 @@ vi.mock("react-syntax-highlighter/dist/esm/styles/prism", () => ({
   oneDark: {},
 }));
 
+// Mock ResizeObserver for jsdom (not available by default)
+globalThis.ResizeObserver = class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
 // Mock matchMedia for jsdom (not available by default)
 Object.defineProperty(window, "matchMedia", {
   writable: true,
