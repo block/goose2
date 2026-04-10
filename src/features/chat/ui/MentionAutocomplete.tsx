@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Sparkles, User } from "lucide-react";
 import { IconFile, IconFolder } from "@tabler/icons-react";
@@ -52,6 +52,15 @@ export function MentionAutocomplete({
   const { t } = useTranslation("chat");
   const [internalIndex, setInternalIndex] = useState(0);
   const selectedIndex = controlledIndex ?? internalIndex;
+  const itemRefs = useRef<Map<number, HTMLButtonElement>>(new Map());
+
+  // Scroll the active item into view when selectedIndex changes
+  useEffect(() => {
+    const el = itemRefs.current.get(selectedIndex);
+    if (el) {
+      el.scrollIntoView({ block: "nearest" });
+    }
+  }, [selectedIndex]);
 
   const { filteredPersonas, filteredFiles } = useMemo(() => {
     const q = query.toLowerCase();
@@ -131,6 +140,10 @@ export function MentionAutocomplete({
         {filteredPersonas.map((persona, index) => (
           <button
             key={persona.id}
+            ref={(el) => {
+              if (el) itemRefs.current.set(index, el);
+              else itemRefs.current.delete(index);
+            }}
             type="button"
             role="option"
             aria-selected={index === selectedIndex}
@@ -168,6 +181,10 @@ export function MentionAutocomplete({
           return (
             <button
               key={file.resolvedPath}
+              ref={(el) => {
+                if (el) itemRefs.current.set(globalIndex, el);
+                else itemRefs.current.delete(globalIndex);
+              }}
               type="button"
               role="option"
               aria-selected={globalIndex === selectedIndex}
