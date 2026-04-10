@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
@@ -11,6 +11,12 @@ vi.mock("@/features/providers/hooks/useAgentProviderStatus", () => ({
     loading: false,
     refresh: vi.fn(),
   }),
+}));
+
+const mockListFilesForMentions = vi.fn(async () => [] as string[]);
+vi.mock("@/shared/api/system", () => ({
+  listFilesForMentions: (...args: unknown[]) =>
+    mockListFilesForMentions(...args),
 }));
 
 const TEST_PERSONAS: Persona[] = [
@@ -52,6 +58,11 @@ function StatefulChatInput({
 }
 
 describe("ChatInput", () => {
+  beforeEach(() => {
+    mockListFilesForMentions.mockClear();
+    mockListFilesForMentions.mockResolvedValue([]);
+  });
+
   it("renders with default placeholder", () => {
     render(<ChatInput onSend={vi.fn()} />);
     expect(
@@ -253,6 +264,44 @@ describe("ChatInput", () => {
 
     expect(input).toHaveValue("");
     expect(screen.getByText("@Reviewer")).toBeInTheDocument();
+  });
+
+  it("shows project files in @mention results and inserts the selected path", async () => {
+    const user = userEvent.setup();
+    mockListFilesForMentions.mockResolvedValue([
+      "/Users/wesb/dev/goose2/README.md",
+      "/Users/wesb/dev/goose2/src/features/chat/ui/ChatInput.tsx",
+    ]);
+
+    render(
+      <ChatInput
+        onSend={vi.fn()}
+        selectedProjectId="project-1"
+        availableProjects={[
+          {
+            id: "project-1",
+            name: "goose2",
+            workingDirs: ["/Users/wesb/dev/goose2"],
+          },
+        ]}
+      />,
+    );
+
+    expect(mockListFilesForMentions).toHaveBeenCalledWith([
+      "/Users/wesb/dev/goose2",
+    ]);
+
+    const input = screen.getByRole("textbox");
+    await user.type(input, "@read");
+
+    expect(await screen.findByText("Files")).toBeInTheDocument();
+
+    const fileOption = await screen.findByRole("option", {
+      name: /readme\.md/i,
+    });
+    await user.click(fileOption);
+
+    expect(input).toHaveValue("/Users/wesb/dev/goose2/README.md ");
   });
 
   // ---------------------------------------------------------------------------

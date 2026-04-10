@@ -164,6 +164,12 @@ export function ChatInput({
     () => personas.find((persona) => persona.id === selectedPersonaId) ?? null,
     [personas, selectedPersonaId],
   );
+  const selectedProject = useMemo(
+    () =>
+      availableProjects.find((project) => project.id === selectedProjectId) ??
+      null,
+    [availableProjects, selectedProjectId],
+  );
   const stickyPersona = activePersona;
 
   const hasQueuedMessage = queuedMessage !== null;
@@ -186,6 +192,7 @@ export function ChatInput({
     handleMentionConfirm,
   } = useMentionHandlers({
     personas,
+    projectWorkingDirs: selectedProject?.workingDirs,
     text,
     setText,
     textareaRef,
