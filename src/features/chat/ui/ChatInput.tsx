@@ -391,96 +391,96 @@ export function ChatInput({
                 selectedIndex={mentionSelectedIndex}
               />
 
-            {images.length > 0 && (
-              <div className="mb-2 flex flex-wrap gap-2">
-                {images.map((img, i) => (
-                  <PastedImageThumb
-                    key={img.objectUrl}
-                    objectUrl={img.objectUrl}
-                    index={i}
-                    onRemove={removeImage}
-                  />
-                ))}
-              </div>
-            )}
+              {images.length > 0 && (
+                <div className="mb-2 flex flex-wrap gap-2">
+                  {images.map((img, i) => (
+                    <PastedImageThumb
+                      key={img.objectUrl}
+                      objectUrl={img.objectUrl}
+                      index={i}
+                      onRemove={removeImage}
+                    />
+                  ))}
+                </div>
+              )}
 
-            {stickyPersona && (
-              <div className="mb-2 flex items-center gap-1.5">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-2.5 py-1 text-[11px] font-medium text-brand">
-                  <PersonaAvatar persona={stickyPersona} size="sm" />
-                  <span>@{stickyPersona.displayName}</span>
-                  <Button
+              {stickyPersona && (
+                <div className="mb-2 flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-2.5 py-1 text-[11px] font-medium text-brand">
+                    <PersonaAvatar persona={stickyPersona} size="sm" />
+                    <span>@{stickyPersona.displayName}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      className="ml-0.5 size-auto p-0 opacity-60 hover:bg-transparent hover:opacity-100"
+                      onClick={handleClearStickyPersona}
+                      aria-label={t("persona.clearActive")}
+                    >
+                      <X className="size-3" />
+                    </Button>
+                  </span>
+                </div>
+              )}
+
+              {queuedMessage && (
+                <div className="mb-2 flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-1.5">
+                  <span className="flex-1 truncate text-xs text-muted-foreground">
+                    {t("queue.label", { text: queuedMessage.text })}
+                  </span>
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    className="ml-0.5 size-auto p-0 opacity-60 hover:bg-transparent hover:opacity-100"
-                    onClick={handleClearStickyPersona}
-                    aria-label={t("persona.clearActive")}
+                    onClick={onDismissQueue}
+                    className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground"
+                    aria-label={t("queue.dismiss")}
                   >
-                    <X className="size-3" />
-                  </Button>
-                </span>
-              </div>
-            )}
+                    <X className="size-3.5" />
+                  </button>
+                </div>
+              )}
 
-            {queuedMessage && (
-              <div className="mb-2 flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-1.5">
-                <span className="flex-1 truncate text-xs text-muted-foreground">
-                  {t("queue.label", { text: queuedMessage.text })}
-                </span>
-                <button
-                  type="button"
-                  onClick={onDismissQueue}
-                  className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground"
-                  aria-label={t("queue.dismiss")}
-                >
-                  <X className="size-3.5" />
-                </button>
-              </div>
-            )}
+              <PopoverAnchor asChild>
+                <textarea
+                  ref={textareaRef}
+                  value={text}
+                  onChange={handleInput}
+                  onKeyDown={handleKeyDown}
+                  onPaste={handlePaste}
+                  placeholder={effectivePlaceholder}
+                  disabled={disabled}
+                  rows={1}
+                  className="mb-3 min-h-[36px] max-h-[200px] w-full resize-none bg-transparent px-1 text-[14px] leading-relaxed text-foreground placeholder:font-light placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 disabled:opacity-60"
+                  aria-label={t("input.ariaLabel")}
+                />
+              </PopoverAnchor>
 
-            <PopoverAnchor asChild>
-              <textarea
-                ref={textareaRef}
-                value={text}
-                onChange={handleInput}
-                onKeyDown={handleKeyDown}
-                onPaste={handlePaste}
-                placeholder={effectivePlaceholder}
-                disabled={disabled}
-                rows={1}
-                className="mb-3 min-h-[36px] max-h-[200px] w-full resize-none bg-transparent px-1 text-[14px] leading-relaxed text-foreground placeholder:font-light placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 disabled:opacity-60"
-                aria-label={t("input.ariaLabel")}
+              <ChatInputToolbar
+                personas={personas}
+                selectedPersonaId={selectedPersonaId}
+                onPersonaChange={onPersonaChange}
+                onCreatePersona={onCreatePersona}
+                providers={providers}
+                providersLoading={providersLoading}
+                selectedProvider={selectedProvider}
+                onProviderChange={(id) => onProviderChange?.(id)}
+                currentModelId={currentModelId}
+                currentModel={resolvedCurrentModel}
+                availableModels={availableModels}
+                onModelChange={onModelChange}
+                selectedProjectId={selectedProjectId}
+                availableProjects={availableProjects}
+                onProjectChange={onProjectChange}
+                onCreateProject={onCreateProject}
+                contextTokens={contextTokens}
+                contextLimit={contextLimit}
+                canSend={canSend}
+                isStreaming={isStreaming}
+                hasQueuedMessage={hasQueuedMessage}
+                onSend={handleSend}
+                onStop={onStop}
+                isCompact={isCompact}
               />
-            </PopoverAnchor>
-
-            <ChatInputToolbar
-              personas={personas}
-              selectedPersonaId={selectedPersonaId}
-              onPersonaChange={onPersonaChange}
-              onCreatePersona={onCreatePersona}
-              providers={providers}
-              providersLoading={providersLoading}
-              selectedProvider={selectedProvider}
-              onProviderChange={(id) => onProviderChange?.(id)}
-              currentModelId={currentModelId}
-              currentModel={resolvedCurrentModel}
-              availableModels={availableModels}
-              onModelChange={onModelChange}
-              selectedProjectId={selectedProjectId}
-              availableProjects={availableProjects}
-              onProjectChange={onProjectChange}
-              onCreateProject={onCreateProject}
-              contextTokens={contextTokens}
-              contextLimit={contextLimit}
-              canSend={canSend}
-              isStreaming={isStreaming}
-              hasQueuedMessage={hasQueuedMessage}
-              onSend={handleSend}
-              onStop={onStop}
-              isCompact={isCompact}
-            />
-          </div>
+            </div>
           </Popover>
         </div>
       </div>
