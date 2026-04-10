@@ -514,7 +514,6 @@ impl Client for SessionEventDispatcher {
         Ok(())
     }
 }
-
 #[cfg(test)]
 #[path = "dispatcher_tests.rs"]
 mod tests;
