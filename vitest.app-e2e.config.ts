@@ -9,7 +9,7 @@ export default defineConfig({
   },
   test: {
     include: ["tests/app-e2e/**/*.test.ts"],
-    testTimeout: 15000,
+    testTimeout: 60000,
     hookTimeout: 10000,
   },
 });

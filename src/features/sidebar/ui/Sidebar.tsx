@@ -441,6 +441,7 @@ export function Sidebar({
             <button
               ref={homeRef}
               type="button"
+              data-testid="nav-home"
               onClick={() => onNavigate?.("home")}
               onMouseEnter={onItemMouseEnter}
               title={collapsed ? t("navigation.home") : undefined}

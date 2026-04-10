@@ -1,4 +1,4 @@
-import net from "net";
+import net from "node:net";
 
 const PORT = 9999;
 
@@ -6,6 +6,7 @@ interface BridgeCommand {
   action: string;
   selector?: string;
   value?: string;
+  timeout?: number;
 }
 
 interface BridgeResult {
@@ -16,10 +17,26 @@ interface BridgeResult {
 
 export interface Bridge {
   snapshot: () => Promise<string>;
-  click: (selector?: string) => Promise<string>;
-  fill: (selector: string, value: string) => Promise<string>;
-  getText: (selector?: string) => Promise<string>;
+  click: (selector?: string, options?: { timeout?: number }) => Promise<string>;
+  fill: (
+    selector: string,
+    value: string,
+    options?: { timeout?: number },
+  ) => Promise<string>;
+  getText: (
+    selector?: string,
+    options?: { timeout?: number },
+  ) => Promise<string>;
   count: (selector: string) => Promise<number>;
+  keypress: (
+    selector?: string,
+    key?: string,
+    options?: { timeout?: number },
+  ) => Promise<string>;
+  waitForText: (
+    text: string,
+    options?: { selector?: string; timeout?: number },
+  ) => Promise<string>;
   scroll: (direction?: string) => Promise<string>;
   screenshot: (path?: string) => Promise<string>;
   close: () => void;
@@ -45,7 +62,7 @@ function send(socket: net.Socket, command: BridgeCommand): Promise<string> {
       }
     };
     socket.on("data", onData);
-    socket.write(JSON.stringify(command) + "\n");
+    socket.write(`${JSON.stringify(command)}\n`);
   });
 }
 
@@ -76,17 +93,49 @@ export async function createBridge({
     snapshot() {
       return send(socket, { action: "snapshot" });
     },
-    click(selector?: string) {
-      return send(socket, { action: "click", selector });
+    click(selector?: string, options?: { timeout?: number }) {
+      return send(socket, {
+        action: "click",
+        selector,
+        timeout: options?.timeout,
+      });
     },
-    fill(selector: string, value: string) {
-      return send(socket, { action: "fill", selector, value });
+    fill(selector: string, value: string, options?: { timeout?: number }) {
+      return send(socket, {
+        action: "fill",
+        selector,
+        value,
+        timeout: options?.timeout,
+      });
     },
-    getText(selector?: string) {
-      return send(socket, { action: "getText", selector });
+    getText(selector?: string, options?: { timeout?: number }) {
+      return send(socket, {
+        action: "getText",
+        selector,
+        timeout: options?.timeout,
+      });
     },
     count(selector: string) {
       return send(socket, { action: "count", selector }).then(Number);
+    },
+    keypress(selector?: string, key?: string, options?: { timeout?: number }) {
+      return send(socket, {
+        action: "keypress",
+        selector,
+        value: key,
+        timeout: options?.timeout,
+      });
+    },
+    waitForText(
+      text: string,
+      options?: { selector?: string; timeout?: number },
+    ) {
+      return send(socket, {
+        action: "waitForText",
+        selector: options?.selector ?? "body",
+        value: text,
+        timeout: options?.timeout ?? 30000,
+      });
     },
     scroll(direction?: string) {
       return send(socket, { action: "scroll", value: direction });

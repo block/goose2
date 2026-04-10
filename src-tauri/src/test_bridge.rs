@@ -12,6 +12,7 @@ struct TestCommand {
     action: String,
     selector: Option<String>,
     value: Option<String>,
+    timeout: Option<u64>,
 }
 
 /// The result sent back to the test script
@@ -47,12 +48,11 @@ impl BridgeState {
         }
     }
 
-    fn wait_for_result(&self) -> Option<String> {
+    fn wait_for_result(&self, timeout_ms: u64) -> Option<String> {
         let (lock, cvar) = &self.notify;
         let guard = lock.lock().unwrap();
-        let _result = cvar
-            .wait_timeout(guard, std::time::Duration::from_secs(5))
-            .unwrap();
+        let timeout = std::time::Duration::from_millis(timeout_ms + 1000);
+        let _result = cvar.wait_timeout(guard, timeout).unwrap();
         self.pending_result.lock().unwrap().take()
     }
 
@@ -63,24 +63,34 @@ impl BridgeState {
 }
 
 /// Wrap an action in a retry loop that waits for an element to appear
-fn with_wait_for(selector: &str, action_js: &str) -> String {
+fn escape_js_string(s: &str) -> String {
+    s.replace('\\', "\\\\")
+        .replace('\'', "\\'")
+        .replace('"', "\\\"")
+        .replace('\n', "\\n")
+}
+
+fn with_wait_for(selector: &str, action_js: &str, timeout_ms: u64) -> String {
+    let escaped = escape_js_string(selector);
     format!(
         r#"(async function() {{
+            const sel = "{escaped}";
             const start = Date.now();
-            while (Date.now() - start < 5000) {{
-                const el = document.querySelector("{selector}");
+            while (Date.now() - start < {timeout_ms}) {{
+                const el = document.querySelector(sel);
                 if (el) {{
                     {action_js}
                 }}
                 await new Promise(r => setTimeout(r, 100));
             }}
-            return "ERROR: timeout waiting for element: {selector}";
+            return "ERROR: timeout waiting for element: " + sel;
         }})()"#
     )
 }
 
 /// Build the JS to execute for each command, wrapped to send result back via invoke()
 fn build_js(cmd: &TestCommand) -> String {
+    let timeout_ms = cmd.timeout.unwrap_or(5000);
     let inner_js = match cmd.action.as_str() {
         "snapshot" => r#"
             (function() {
@@ -144,12 +154,12 @@ fn build_js(cmd: &TestCommand) -> String {
 
         "click" => {
             let sel = cmd.selector.as_deref().unwrap_or("body");
-            with_wait_for(sel, r#"el.click(); return "clicked";"#)
+            with_wait_for(sel, r#"el.click(); return "clicked";"#, timeout_ms)
         }
 
         "fill" => {
             let sel = cmd.selector.as_deref().unwrap_or("input");
-            let val = cmd.value.as_deref().unwrap_or("");
+            let val = escape_js_string(cmd.value.as_deref().unwrap_or(""));
             with_wait_for(sel, &format!(
                 r#"const proto = el instanceof HTMLTextAreaElement
                     ? HTMLTextAreaElement.prototype
@@ -159,18 +169,53 @@ fn build_js(cmd: &TestCommand) -> String {
                 el.dispatchEvent(new Event('input', {{ bubbles: true }}));
                 el.dispatchEvent(new Event('change', {{ bubbles: true }}));
                 return "filled";"#
-            ))
+            ), timeout_ms)
+        }
+
+        "keypress" => {
+            let sel = cmd.selector.as_deref().unwrap_or("body");
+            let key = cmd.value.as_deref().unwrap_or("Enter");
+            let escaped_key = escape_js_string(key);
+            with_wait_for(sel, &format!(
+                r#"const opts = {{ key: "{escaped_key}", code: "{escaped_key}", keyCode: "{escaped_key}" === "Enter" ? 13 : 0, bubbles: true, cancelable: true }};
+                el.dispatchEvent(new KeyboardEvent('keydown', opts));
+                el.dispatchEvent(new KeyboardEvent('keypress', opts));
+                el.dispatchEvent(new KeyboardEvent('keyup', opts));
+                return "keypressed";"#
+            ), timeout_ms)
         }
 
         "getText" => {
             let sel = cmd.selector.as_deref().unwrap_or("body");
-            with_wait_for(sel, "return el.innerText;")
+            with_wait_for(sel, "return el.innerText;", timeout_ms)
+        }
+
+        "waitForText" => {
+            let sel = cmd.selector.as_deref().unwrap_or("body");
+            let text = escape_js_string(cmd.value.as_deref().unwrap_or(""));
+            let escaped_sel = escape_js_string(sel);
+            format!(
+                r#"(async function() {{
+                    const sel = "{escaped_sel}";
+                    const text = "{text}";
+                    const start = Date.now();
+                    while (Date.now() - start < {timeout_ms}) {{
+                        const el = document.querySelector(sel);
+                        if (el && el.innerText.includes(text)) {{
+                            return el.innerText;
+                        }}
+                        await new Promise(r => setTimeout(r, 100));
+                    }}
+                    return "ERROR: timeout waiting for text: " + text;
+                }})()"#
+            )
         }
 
         "count" => {
             let sel = cmd.selector.as_deref().unwrap_or("*");
+            let escaped_sel = escape_js_string(sel);
             format!(
-                "String(document.querySelectorAll('{sel}').length)"
+                "String(document.querySelectorAll(\"{escaped_sel}\").length)"
             )
         }
 
@@ -328,7 +373,8 @@ pub fn start_test_bridge(app_handle: AppHandle) {
                         continue;
                     }
 
-                    let result = state.wait_for_result();
+                    let timeout_ms = cmd.timeout.unwrap_or(5000);
+                    let result = state.wait_for_result(timeout_ms);
                     let resp = match result {
                         Some(data) if data.starts_with("ERROR:") => TestResult {
                             success: false,
