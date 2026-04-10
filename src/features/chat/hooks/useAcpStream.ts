@@ -62,6 +62,11 @@ interface AcpSessionInfoPayload {
   title?: string;
 }
 
+interface AcpSessionBoundPayload {
+  sessionId: string;
+  gooseSessionId: string;
+}
+
 interface AcpModelStatePayload {
   sessionId: string;
   providerId?: string | null;
@@ -74,6 +79,10 @@ interface AcpUsageUpdatePayload {
   sessionId: string;
   used: number;
   size: number;
+}
+
+interface AcpReplayCompletePayload {
+  sessionId: string;
 }
 
 function updateCompletionStatus(
@@ -129,11 +138,42 @@ export function useAcpStream(enabled: boolean): void {
 
     let active = true;
     const unlisteners: Promise<UnlistenFn>[] = [];
+    const replayTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+
+    const REPLAY_TIMEOUT_MS = 30_000;
 
     const unsubscribeFlush = useChatStore.subscribe((state, prevState) => {
       if (!active) return;
+
+      // Start timeout for newly-loading sessions
+      for (const sid of state.loadingSessionIds) {
+        if (!prevState.loadingSessionIds.has(sid) && !replayTimeouts.has(sid)) {
+          const timer = setTimeout(() => {
+            replayTimeouts.delete(sid);
+            const store = useChatStore.getState();
+            if (store.loadingSessionIds.has(sid)) {
+              console.warn(
+                `[stream] ${sid.slice(0, 8)} replay_complete not received within ${REPLAY_TIMEOUT_MS / 1000}s — showing error`,
+              );
+              store.setSessionLoading(sid, false);
+              store.setError(
+                sid,
+                "Session history failed to load. Try reloading.",
+              );
+            }
+          }, REPLAY_TIMEOUT_MS);
+          replayTimeouts.set(sid, timer);
+        }
+      }
+
+      // Clear timeouts and flush buffers for sessions that finished loading
       for (const sid of prevState.loadingSessionIds) {
         if (!state.loadingSessionIds.has(sid)) {
+          const timer = replayTimeouts.get(sid);
+          if (timer) {
+            clearTimeout(timer);
+            replayTimeouts.delete(sid);
+          }
           const buffer = getAndDeleteReplayBuffer(sid);
           if (buffer && buffer.length > 0) {
             console.log(
@@ -144,6 +184,15 @@ export function useAcpStream(enabled: boolean): void {
         }
       }
     });
+
+    unlisteners.push(
+      listen<AcpReplayCompletePayload>("acp:replay_complete", (event) => {
+        if (!active) return;
+        useChatStore
+          .getState()
+          .setSessionLoading(event.payload.sessionId, false);
+      }),
+    );
 
     unlisteners.push(
       listen<AcpMessageCreatedPayload>("acp:message_created", (event) => {
@@ -274,10 +323,14 @@ export function useAcpStream(enabled: boolean): void {
             );
             if (textContent && "text" in textContent) {
               const title = textContent.text.slice(0, 100);
-              sessionStore.updateSession(sessionId, {
-                title,
-                updatedAt: new Date().toISOString(),
-              });
+              sessionStore.updateSession(
+                sessionId,
+                {
+                  title,
+                  updatedAt: new Date().toISOString(),
+                },
+                { persistOverlay: false },
+              );
             }
           }
         }
@@ -431,14 +484,31 @@ export function useAcpStream(enabled: boolean): void {
     );
 
     unlisteners.push(
+      listen<AcpSessionBoundPayload>("acp:session_bound", (event) => {
+        if (!active) return;
+        useChatSessionStore
+          .getState()
+          .setSessionAcpId(
+            event.payload.sessionId,
+            event.payload.gooseSessionId,
+          );
+      }),
+    );
+
+    unlisteners.push(
       listen<AcpSessionInfoPayload>("acp:session_info", (event) => {
         if (!active) return;
-        if (event.payload.title) {
-          useChatSessionStore
-            .getState()
-            .updateSession(event.payload.sessionId, {
+        const session = useChatSessionStore
+          .getState()
+          .getSession(event.payload.sessionId);
+        if (event.payload.title && !session?.userSetName) {
+          useChatSessionStore.getState().updateSession(
+            event.payload.sessionId,
+            {
               title: event.payload.title,
-            });
+            },
+            { persistOverlay: false },
+          );
         }
       }),
     );
@@ -467,10 +537,17 @@ export function useAcpStream(enabled: boolean): void {
         }
         const modelName = currentModelName ?? currentModelId;
         sessionStore.setSessionModels(sessionId, availableModels);
-        sessionStore.updateSession(sessionId, {
-          modelId: currentModelId,
-          modelName,
-        });
+        if (!providerId && session?.modelId) {
+          return;
+        }
+        sessionStore.updateSession(
+          sessionId,
+          {
+            modelId: currentModelId,
+            modelName,
+          },
+          { persistOverlay: false },
+        );
       }),
     );
 
@@ -487,6 +564,10 @@ export function useAcpStream(enabled: boolean): void {
     return () => {
       active = false;
       unsubscribeFlush();
+      for (const timer of replayTimeouts.values()) {
+        clearTimeout(timer);
+      }
+      replayTimeouts.clear();
       for (const unlistenPromise of unlisteners) {
         unlistenPromise.then((unlisten) => unlisten());
       }

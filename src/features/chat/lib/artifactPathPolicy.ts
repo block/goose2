@@ -166,6 +166,21 @@ function toSafeRecord(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function findPreferredToolCallIdForText(
+  orderedIds: string[],
+  byId: Map<string, ToolCallArtifactInput>,
+): string | null {
+  for (let index = orderedIds.length - 1; index >= 0; index -= 1) {
+    const toolCallId = orderedIds[index];
+    const toolCall = byId.get(toolCallId);
+    if (toolCall?.toolName && isWriteOrientedTool(toolCall.toolName)) {
+      return toolCallId;
+    }
+  }
+
+  return orderedIds[orderedIds.length - 1] ?? null;
+}
+
 function extractToolCallsFromMessage(
   message: Message,
 ): ToolCallArtifactInput[] {
@@ -212,6 +227,16 @@ function extractToolCallsFromMessage(
           existing.result = block.result;
         }
       }
+    }
+
+    if (block.type === "text") {
+      const targetToolCallId = findPreferredToolCallIdForText(orderedIds, byId);
+      if (!targetToolCallId) continue;
+      const existing = byId.get(targetToolCallId);
+      if (!existing) continue;
+      existing.result = existing.result
+        ? `${existing.result}\n${block.text}`
+        : block.text;
     }
   }
 

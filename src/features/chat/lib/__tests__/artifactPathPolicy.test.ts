@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildArtifactsIndexForMessages,
   dedupeAndRankCandidates,
   evaluatePathScope,
   extractToolCallCandidates,
@@ -273,6 +274,47 @@ describe("artifactPathPolicy", () => {
     expect(ranking.primaryCandidate?.resolvedPath).toBe(
       "/Users/test/button-interactions.html",
     );
+  });
+
+  it("extracts artifact paths from assistant text that follows tool calls", () => {
+    const result = buildArtifactsIndexForMessages(
+      [
+        {
+          id: "assistant-1",
+          role: "assistant",
+          created: Date.now(),
+          metadata: { userVisible: true, agentVisible: true },
+          content: [
+            {
+              type: "toolRequest",
+              id: "tool-1",
+              name: "writing markdown file about alphabet history",
+              arguments: {},
+              status: "completed",
+            },
+            {
+              type: "toolResponse",
+              id: "tool-1",
+              name: "writing markdown file about alphabet history",
+              result: "completed",
+              isError: false,
+            },
+            {
+              type: "text",
+              text: "The file alpha.md has been created at /Users/test/.goose/artifacts/alpha.md.",
+            },
+          ],
+        },
+      ],
+      ["/Users/test/.goose/artifacts"],
+    );
+
+    const ranking = result.byMessageId.get("assistant-1");
+    expect(ranking?.primaryToolCallId).toBe("tool-1");
+    expect(ranking?.primaryCandidate?.resolvedPath).toBe(
+      "/Users/test/.goose/artifacts/alpha.md",
+    );
+    expect(ranking?.primaryCandidate?.allowed).toBe(true);
   });
 
   it("prefers an allowed candidate as primary when top-ranked candidate is blocked", () => {

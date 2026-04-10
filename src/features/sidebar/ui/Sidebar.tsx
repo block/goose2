@@ -112,6 +112,7 @@ export function Sidebar({
     ];
 
   const MAX_RECENTS = 20;
+  const validProjectIds = new Set(projects.map((project) => project.id));
 
   const projectSessions = (() => {
     type SessionItem = {
@@ -137,7 +138,7 @@ export function Sidebar({
         isRunning: isSessionRunning(runtime.chatState),
         hasUnread: runtime.hasUnread,
       };
-      if (session.projectId) {
+      if (session.projectId && validProjectIds.has(session.projectId)) {
         if (!byProject[session.projectId]) byProject[session.projectId] = [];
         byProject[session.projectId].push(item);
       } else {
@@ -279,6 +280,7 @@ export function Sidebar({
   const {
     currentRect,
     isHovering,
+    isResizing: isHighlightResizing,
     onItemMouseEnter,
     onNavMouseLeave,
     updateActiveRect,
@@ -373,9 +375,10 @@ export function Sidebar({
               style={{
                 top: currentRect.top,
                 height: currentRect.height,
-                transition: isHovering
-                  ? "top 0ms, height 0ms"
-                  : "top 200ms ease, height 200ms ease, opacity 200ms ease",
+                transition:
+                  isHovering || isHighlightResizing
+                    ? "top 0ms, height 0ms"
+                    : "top 200ms ease, height 200ms ease, opacity 200ms ease",
               }}
             />
           )}

@@ -199,6 +199,50 @@ describe("useAcpStream", () => {
     expect(listeners.size).toBe(0);
   });
 
+  it("flushes replayed history only after acp:replay_complete", async () => {
+    useChatStore.getState().setSessionLoading(sessionId, true);
+
+    renderHook(() => useAcpStream(true));
+    await vi.waitFor(() =>
+      expect(listeners.get("acp:message_created")).toBeDefined(),
+    );
+
+    act(() => {
+      emit("acp:message_created", {
+        sessionId,
+        messageId: "replay-msg",
+      });
+      emit("acp:text", {
+        sessionId,
+        messageId: "replay-msg",
+        text: "replayed history",
+      });
+      emit("acp:done", {
+        sessionId,
+        messageId: "replay-msg",
+      });
+    });
+
+    expect(
+      useChatStore.getState().messagesBySession[sessionId],
+    ).toBeUndefined();
+    expect(useChatStore.getState().loadingSessionIds.has(sessionId)).toBe(true);
+
+    act(() => {
+      emit("acp:replay_complete", { sessionId });
+    });
+
+    const messages = useChatStore.getState().messagesBySession[sessionId];
+    expect(useChatStore.getState().loadingSessionIds.has(sessionId)).toBe(
+      false,
+    );
+    expect(messages).toHaveLength(1);
+    const text = messages[0].content.find((content) => content.type === "text");
+    if (text && "text" in text) {
+      expect(text.text).toBe("replayed history");
+    }
+  });
+
   it("stores model state for the targeted session", async () => {
     renderHook(() => useAcpStream(true));
     await vi.waitFor(() =>
@@ -380,6 +424,66 @@ describe("useAcpStream", () => {
       arguments: {},
       status: "executing",
     });
+  });
+
+  it("shows an error state when replay_complete is not received within the timeout", async () => {
+    vi.useFakeTimers();
+    try {
+      renderHook(() => useAcpStream(true));
+      await vi.waitFor(() =>
+        expect(listeners.get("acp:replay_complete")).toBeDefined(),
+      );
+
+      // Start loading AFTER the hook subscribes so the subscription sees the transition
+      act(() => {
+        useChatStore.getState().setSessionLoading(sessionId, true);
+      });
+
+      // Simulate time passing without replay_complete
+      act(() => {
+        vi.advanceTimersByTime(30_000);
+      });
+
+      expect(useChatStore.getState().loadingSessionIds.has(sessionId)).toBe(
+        false,
+      );
+      const runtime = useChatStore.getState().getSessionRuntime(sessionId);
+      expect(runtime.error).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("clears the replay timeout when replay_complete arrives in time", async () => {
+    vi.useFakeTimers();
+    try {
+      renderHook(() => useAcpStream(true));
+      await vi.waitFor(() =>
+        expect(listeners.get("acp:replay_complete")).toBeDefined(),
+      );
+
+      act(() => {
+        useChatStore.getState().setSessionLoading(sessionId, true);
+      });
+
+      // replay_complete arrives before timeout
+      act(() => {
+        emit("acp:replay_complete", { sessionId });
+      });
+
+      // Advance past the timeout — should NOT set error
+      act(() => {
+        vi.advanceTimersByTime(30_000);
+      });
+
+      const runtime = useChatStore.getState().getSessionRuntime(sessionId);
+      expect(runtime.error).toBeFalsy();
+      expect(useChatStore.getState().loadingSessionIds.has(sessionId)).toBe(
+        false,
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("ignores late tool results after a message is stopped", async () => {
