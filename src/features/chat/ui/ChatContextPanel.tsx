@@ -61,6 +61,7 @@ export function ChatContextPanel({
             >
               <aside className="flex min-w-0 flex-1 overflow-hidden rounded-xl border border-border bg-background">
                 <ContextPanel
+                  sessionId={activeSessionId}
                   projectName={project?.name}
                   projectColor={project?.color}
                   projectWorkingDirs={project?.workingDirs ?? []}

@@ -59,6 +59,12 @@ export function ChatView({
     (s) => s.contextPanelOpenBySession[activeSessionId] ?? false,
   );
   const setContextPanelOpen = useChatSessionStore((s) => s.setContextPanelOpen);
+  const activeWorkingContext = useChatSessionStore(
+    (s) => s.activeWorkingContextBySession[activeSessionId],
+  );
+  const clearActiveWorkingContext = useChatSessionStore(
+    (s) => s.clearActiveWorkingContext,
+  );
 
   const {
     providers,
@@ -120,11 +126,12 @@ export function ChatView({
   const projectMetadataPending = Boolean(
     session?.projectId && !resolvedProjectWorkingDir && projectsLoading,
   );
-  const effectiveWorkingDir = resolvedProjectWorkingDir
+  const defaultWorkingDir = resolvedProjectWorkingDir
     ? resolvedProjectWorkingDir
     : !session?.projectId
       ? (homeArtifactsRoot ?? undefined)
       : undefined;
+  const effectiveWorkingDir = activeWorkingContext?.path ?? defaultWorkingDir;
   const allowedArtifactRoots = useMemo(() => {
     const roots = [
       ...projectArtifactRoots.map((path) => path.trim()).filter(Boolean),
@@ -138,10 +145,19 @@ export function ChatView({
     () => buildProjectSystemPrompt(project),
     [project],
   );
+  const workingContextPrompt = useMemo(() => {
+    if (!activeWorkingContext?.branch) return undefined;
+    return `<active-working-context>\nActive branch: ${activeWorkingContext.branch}\nWorking directory: ${activeWorkingContext.path}\n</active-working-context>`;
+  }, [activeWorkingContext?.branch, activeWorkingContext?.path]);
+
   const effectiveSystemPrompt = useMemo(
     () =>
-      composeSystemPrompt(selectedPersona?.systemPrompt, projectSystemPrompt),
-    [selectedPersona?.systemPrompt, projectSystemPrompt],
+      composeSystemPrompt(
+        selectedPersona?.systemPrompt,
+        projectSystemPrompt,
+        workingContextPrompt,
+      ),
+    [selectedPersona?.systemPrompt, projectSystemPrompt, workingContextPrompt],
   );
 
   useEffect(() => {
@@ -159,6 +175,41 @@ export function ChatView({
       cancelled = true;
     };
   }, []);
+
+  const prevProjectIdRef = useRef(session?.projectId);
+  useEffect(() => {
+    const prevProjectId = prevProjectIdRef.current;
+    prevProjectIdRef.current = session?.projectId;
+    if (prevProjectId !== undefined && prevProjectId !== session?.projectId) {
+      clearActiveWorkingContext(activeSessionId);
+    }
+  }, [session?.projectId, activeSessionId, clearActiveWorkingContext]);
+
+  const prevContextRef = useRef(activeWorkingContext);
+  useEffect(() => {
+    const prev = prevContextRef.current;
+    if (
+      !activeWorkingContext ||
+      !selectedProvider ||
+      session?.draft ||
+      activeWorkingContext === prev
+    ) {
+      return;
+    }
+    prevContextRef.current = activeWorkingContext;
+    if (prev && prev.path === activeWorkingContext.path) return;
+    void acpPrepareSession(activeSessionId, selectedProvider, {
+      workingDir: activeWorkingContext.path,
+      personaId: selectedPersonaId ?? undefined,
+    }).catch(() => undefined);
+  }, [
+    activeWorkingContext,
+    activeSessionId,
+    selectedProvider,
+    selectedPersonaId,
+    session?.draft,
+  ]);
+
   const handleProviderChange = useCallback(
     (providerId: string) => {
       if (providerId === selectedProvider) {

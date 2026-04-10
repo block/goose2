@@ -12,21 +12,68 @@
   },
   "contextPanel": {
     "actions": {
+      "chooseCreateAction": "Elegir acción de creación",
       "refreshGitStatus": "Actualizar estado de git"
     },
-    "badges": {
-      "main": "Principal"
+    "createDialog": {
+      "baseBranch": "Rama base",
+      "branchDescription": "Crea una nueva rama y cambia este espacio de trabajo a ella.",
+      "branchError": "No se pudo crear la rama {{branch}}.",
+      "branchName": "Nombre de la rama",
+      "branchNamePlaceholder": "feature/mi-rama",
+      "branchSuccess": "Se creó y cambió a {{branch}}.",
+      "branchTitle": "Nueva rama",
+      "branchToOpen": "Rama para abrir",
+      "cancel": "Cancelar",
+      "createBranch": "Crear rama",
+      "createNewBranch": "Crear una nueva rama",
+      "createWorktree": "Crear worktree",
+      "creatingBranch": "Creando rama...",
+      "creatingWorktree": "Creando worktree...",
+      "noAvailableBranches": "No hay ramas disponibles",
+      "worktreeDescription": "Crea un worktree separado para una rama nueva o existente.",
+      "worktreeError": "No se pudo crear el worktree {{worktree}}.",
+      "worktreeName": "Nombre del worktree",
+      "worktreeNamePlaceholder": "mi-worktree",
+      "worktreePath": "Carpeta: {{path}}",
+      "worktreeSuccess": "Se creó el worktree {{worktree}}.",
+      "worktreeTitle": "Nuevo worktree"
     },
     "empty": {
       "folderNotSet": "Carpeta no configurada",
       "noActiveProcesses": "No hay procesos activos",
       "noChanges": "No hay cambios",
       "noProjectAssigned": "No hay proyecto asignado.",
-      "noServersConfigured": "No hay servidores configurados",
-      "notGitRepo": "No es un repositorio git."
+      "noServersConfigured": "No hay servidores configurados"
     },
     "errors": {
       "gitRead": "No se pudo leer el estado de git."
+    },
+    "picker": {
+      "selectContext": "Seleccionar árbol de trabajo o rama",
+      "worktrees": "Árboles de trabajo",
+      "allBranches": "Todas las ramas",
+      "checkedOutBranch": "{{branch}}",
+      "currentBranch": "Rama actual",
+      "dirtyTitle": "Cambios sin confirmar",
+      "dirtyDescription": "Tienes {{count}} cambio(s) sin confirmar. ¿Cómo deseas proceder?",
+      "stashAndSwitch": "Guardar y cambiar",
+      "carryChanges": "Llevar a la rama",
+      "cancel": "Cancelar",
+      "switchError": "Error al cambiar a {{branch}}. Tus cambios pueden entrar en conflicto con la rama destino.",
+      "stashError": "Error al guardar los cambios.",
+      "stashSuccess": "Cambios guardados y cambiado a {{branch}}."
+    },
+    "git": {
+      "fetch": "Fetch",
+      "fetchError": "No se pudieron traer los cambios.",
+      "fetchSuccess": "Se trajeron los cambios más recientes.",
+      "initRepo": "Inicializar Git",
+      "initError": "Error al inicializar el repositorio git.",
+      "pull": "Pull",
+      "pullWithCount": "Pull ({{count}})",
+      "pullError": "No se pudieron bajar los cambios.",
+      "pullSuccess": "Se bajaron los cambios más recientes."
     },
     "states": {
       "detached": "detached",

@@ -11,9 +11,14 @@ const EXCEPTIONS = {
       "Drag-and-drop handlers plus activeProjectId highlight for draft-in-project sessions.",
   },
   "src/features/chat/ui/ChatView.tsx": {
-    limit: 520,
+    limit: 535,
     justification:
-      "ACP prewarm guards, project-aware working dir selection, and chat bootstrapping still live together here.",
+      "ACP prewarm guards, project-aware working dir selection, working context sync, and chat bootstrapping still live together here.",
+  },
+  "src/features/chat/ui/__tests__/ContextPanel.test.tsx": {
+    limit: 550,
+    justification:
+      "Workspace widget integration tests cover branch switching, worktree creation, dirty-state dialogs, and picker interactions.",
   },
   "src/features/sidebar/ui/Sidebar.tsx": {
     limit: 580,

@@ -20,6 +20,7 @@ function resetStore() {
     activeSessionId: null,
     isLoading: false,
     contextPanelOpenBySession: {},
+    activeWorkingContextBySession: {},
     modelsBySession: {},
     modelCacheByProvider: {},
   });
