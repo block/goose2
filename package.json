@@ -22,7 +22,8 @@
     "test:e2e:smoke": "pnpm build && playwright test --project=smoke",
     "test:e2e:personas": "pnpm build && playwright test --project=personas",
     "test:e2e:skills": "pnpm build && playwright test --project=skills",
-    "test:e2e:drafts": "pnpm build && playwright test --project=drafts"
+    "test:e2e:drafts": "pnpm build && playwright test --project=drafts",
+    "test:app-e2e": "vitest run --config vitest.app-e2e.config.ts"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",

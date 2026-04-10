@@ -169,6 +169,14 @@ fn build_js(cmd: &TestCommand) -> String {
             with_wait_for(sel, "return el.innerText;")
         }
 
+        "count" => {
+            let sel = cmd.selector.as_deref().unwrap_or("*");
+            format!(
+                "String(document.querySelectorAll('{}').length)",
+                sel
+            )
+        }
+
         "scroll" => {
             let direction = cmd.value.as_deref().unwrap_or("down");
             match direction {
