@@ -7,7 +7,13 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["**", "!src-tauri/gen", "!.agents"]
+    "includes": [
+      "**",
+      "!src-tauri/gen",
+      "!.agents",
+      "!.worktrees",
+      "!.claude/worktrees"
+    ]
   },
   "formatter": {
     "enabled": true,

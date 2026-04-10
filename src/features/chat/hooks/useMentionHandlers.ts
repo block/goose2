@@ -149,6 +149,7 @@ export function useMentionHandlers({
 
   const pendingCursorRef = useRef<number | null>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: text triggers the effect after setText flushes
   useEffect(() => {
     if (pendingCursorRef.current == null) return;
     const ta = textareaRef.current;
