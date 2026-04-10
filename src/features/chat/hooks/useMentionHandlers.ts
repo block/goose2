@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { listFilesForMentions } from "@/shared/api/system";
 import type { Persona } from "@/shared/types/agents";
 import {
@@ -76,20 +76,13 @@ export function useMentionHandlers({
     [normalizedProjectRoots],
   );
   const [projectFilePaths, setProjectFilePaths] = useState<string[]>([]);
-  const loadedRootsKeyRef = useRef<string>("");
 
   useEffect(() => {
     if (!rootsKey) {
-      loadedRootsKeyRef.current = "";
       setProjectFilePaths([]);
       return;
     }
-    if (loadedRootsKeyRef.current === rootsKey) {
-      return;
-    }
 
-    loadedRootsKeyRef.current = rootsKey;
-    setProjectFilePaths([]);
     let cancelled = false;
 
     void listFilesForMentions(normalizedProjectRoots)
