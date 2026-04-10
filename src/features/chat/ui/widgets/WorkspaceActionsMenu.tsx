@@ -6,7 +6,11 @@ import { Button } from "@/shared/ui/button";
 import { SplitButton } from "@/shared/ui/split-button";
 import { Spinner } from "@/shared/ui/spinner";
 import type { WorkingContext } from "../../stores/chatSessionStore";
-import { WorkspaceCreateDialog, type WorkspaceCreateMode } from "./WorkspaceCreateDialog";
+import { formatErrorMessage } from "./formatError";
+import {
+  WorkspaceCreateDialog,
+  type WorkspaceCreateMode,
+} from "./WorkspaceCreateDialog";
 
 interface WorkspaceActionsMenuProps {
   currentProjectPath: string;
@@ -30,11 +34,6 @@ interface WorkspaceActionsMenuProps {
   ) => Promise<CreatedWorktree>;
 }
 
-function formatErrorMessage(error: unknown, fallback: string) {
-  const message = error instanceof Error ? error.message : String(error ?? "");
-  return message.trim() || fallback;
-}
-
 export function WorkspaceActionsMenu({
   currentProjectPath,
   gitState,
@@ -47,7 +46,9 @@ export function WorkspaceActionsMenu({
   onCreateWorktree,
 }: WorkspaceActionsMenuProps) {
   const { t } = useTranslation("chat");
-  const [dialogMode, setDialogMode] = useState<WorkspaceCreateMode | null>(null);
+  const [dialogMode, setDialogMode] = useState<WorkspaceCreateMode | null>(
+    null,
+  );
   const [activeCreateAction, setActiveCreateAction] =
     useState<WorkspaceCreateMode>("branch");
   const [runningAction, setRunningAction] = useState<"fetch" | "pull" | null>(
@@ -62,7 +63,8 @@ export function WorkspaceActionsMenu({
   const currentPath = activeContext?.path ?? defaultWorktreePath;
   const activeWorktree = useMemo(
     () =>
-      gitState.worktrees.find((worktree) => worktree.path === currentPath) ?? null,
+      gitState.worktrees.find((worktree) => worktree.path === currentPath) ??
+      null,
     [currentPath, gitState.worktrees],
   );
   const activeBranch =
@@ -98,9 +100,7 @@ export function WorkspaceActionsMenu({
       await run();
       toast.success(t(`contextPanel.git.${successKey}`));
     } catch (error) {
-      toast.error(
-        formatErrorMessage(error, t(`contextPanel.git.${errorKey}`)),
-      );
+      toast.error(formatErrorMessage(error, t(`contextPanel.git.${errorKey}`)));
     } finally {
       setRunningAction(null);
     }

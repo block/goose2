@@ -176,7 +176,6 @@ export function ChatView({
   const prevContextRef = useRef(activeWorkingContext);
   useEffect(() => {
     const prev = prevContextRef.current;
-    prevContextRef.current = activeWorkingContext;
     if (
       !activeWorkingContext ||
       !selectedProvider ||
@@ -185,13 +184,12 @@ export function ChatView({
     ) {
       return;
     }
+    prevContextRef.current = activeWorkingContext;
     if (prev && prev.path === activeWorkingContext.path) return;
     void acpPrepareSession(activeSessionId, selectedProvider, {
       workingDir: activeWorkingContext.path,
       personaId: selectedPersonaId ?? undefined,
-    }).catch((error) => {
-      console.error("Failed to update ACP session working context:", error);
-    });
+    }).catch(() => undefined);
   }, [
     activeWorkingContext,
     activeSessionId,

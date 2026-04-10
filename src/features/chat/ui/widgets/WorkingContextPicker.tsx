@@ -63,7 +63,9 @@ export function WorkingContextPicker({
 }: WorkingContextPickerProps) {
   const { t } = useTranslation("chat");
   const [open, setOpen] = useState(false);
-  const [pendingSwitch, setPendingSwitch] = useState<WorkingContext | null>(null);
+  const [pendingSwitch, setPendingSwitch] = useState<WorkingContext | null>(
+    null,
+  );
   const [switching, setSwitching] = useState(false);
 
   const worktrees = gitState?.worktrees ?? [];
@@ -85,8 +87,8 @@ export function WorkingContextPicker({
     : currentPath
       ? shortenPath(currentPath)
       : currentProjectPath
-      ? shortenPath(currentProjectPath)
-      : undefined;
+        ? shortenPath(currentProjectPath)
+        : undefined;
   const activeBranchLabel = activeBranch ?? t("contextPanel.states.detached");
   const mainWorktreePath =
     gitState?.mainWorktreePath ??
@@ -332,7 +334,10 @@ export function WorkingContextPicker({
               className={buttonVariants({ variant: "secondary" })}
               onClick={() => {
                 if (pendingSwitch?.branch) {
-                  void performCarrySwitch(pendingSwitch.path, pendingSwitch.branch);
+                  void performCarrySwitch(
+                    pendingSwitch.path,
+                    pendingSwitch.branch,
+                  );
                 }
               }}
             >
@@ -342,7 +347,10 @@ export function WorkingContextPicker({
               disabled={switching}
               onClick={() => {
                 if (pendingSwitch?.branch) {
-                  void performStashSwitch(pendingSwitch.path, pendingSwitch.branch);
+                  void performStashSwitch(
+                    pendingSwitch.path,
+                    pendingSwitch.branch,
+                  );
                 }
               }}
             >

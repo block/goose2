@@ -1,5 +1,5 @@
 import type * as React from "react";
-import { ChevronDownIcon } from "lucide-react";
+import { IconChevronDown } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 import { Button, type ButtonProps } from "@/shared/ui/button";
 import {
@@ -70,7 +70,7 @@ export function SplitButton<T extends string = string>({
             aria-label={menuTriggerLabel}
             title={menuTriggerLabel}
           >
-            <ChevronDownIcon className="size-3.5" />
+            <IconChevronDown className="size-3.5" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" sideOffset={4}>

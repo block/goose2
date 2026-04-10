@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/shared/ui/select";
 import type { WorkingContext } from "../../stores/chatSessionStore";
+import { formatErrorMessage } from "./formatError";
 import { shortenPath } from "./WorkingContextPicker";
 
 const UNSET_SELECT_VALUE = "__unset__";
@@ -57,11 +58,6 @@ function worktreePreviewPath(rootPath: string, name: string) {
   return `${parentPath}/${repoName}-worktrees/${name}`;
 }
 
-function formatErrorMessage(error: unknown, fallback: string) {
-  const message = error instanceof Error ? error.message : String(error ?? "");
-  return message.trim() || fallback;
-}
-
 export function WorkspaceCreateDialog({
   mode,
   gitState,
@@ -78,7 +74,8 @@ export function WorkspaceCreateDialog({
   const [worktreeName, setWorktreeName] = useState("");
   const [useNewBranch, setUseNewBranch] = useState(true);
   const [existingBranch, setExistingBranch] = useState("");
-  const [branchNameManuallyEdited, setBranchNameManuallyEdited] = useState(false);
+  const [branchNameManuallyEdited, setBranchNameManuallyEdited] =
+    useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -231,7 +228,9 @@ export function WorkspaceCreateDialog({
                     setBranchName(event.target.value);
                     setError(null);
                   }}
-                  placeholder={t("contextPanel.createDialog.branchNamePlaceholder")}
+                  placeholder={t(
+                    "contextPanel.createDialog.branchNamePlaceholder",
+                  )}
                 />
               </div>
 
@@ -343,7 +342,9 @@ export function WorkspaceCreateDialog({
                     <Select value={baseBranch} onValueChange={setBaseBranch}>
                       <SelectTrigger className="w-full">
                         <SelectValue
-                          placeholder={t("contextPanel.createDialog.baseBranch")}
+                          placeholder={t(
+                            "contextPanel.createDialog.baseBranch",
+                          )}
                         />
                       </SelectTrigger>
                       <SelectContent>
@@ -371,7 +372,9 @@ export function WorkspaceCreateDialog({
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue
-                        placeholder={t("contextPanel.createDialog.branchToOpen")}
+                        placeholder={t(
+                          "contextPanel.createDialog.branchToOpen",
+                        )}
                       />
                     </SelectTrigger>
                     <SelectContent>

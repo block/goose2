@@ -99,7 +99,9 @@ describe("ContextPanel", () => {
     expect(
       screen.getByRole("button", { name: /^create branch$/i }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^fetch$/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^fetch$/i }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^pull$/i })).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: /files/i }));
@@ -343,7 +345,9 @@ describe("ContextPanel", () => {
     expect(
       screen.getByRole("button", { name: /^create branch$/i }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^fetch$/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^fetch$/i }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^pull$/i })).toBeInTheDocument();
 
     await user.click(getCreateActionMenuButton());
@@ -387,7 +391,9 @@ describe("ContextPanel", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: /^pull \(3\)$/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^pull \(3\)$/i }),
+    ).toBeInTheDocument();
   });
 
   it("creates a branch from the workspace actions dialog", async () => {
@@ -401,10 +407,7 @@ describe("ContextPanel", () => {
     );
 
     await user.click(screen.getByRole("button", { name: /^create branch$/i }));
-    await user.type(
-      screen.getByLabelText("Branch name"),
-      "feature/new-branch",
-    );
+    await user.type(screen.getByLabelText("Branch name"), "feature/new-branch");
     await user.click(
       within(screen.getByRole("dialog")).getByRole("button", {
         name: /^create branch$/i,

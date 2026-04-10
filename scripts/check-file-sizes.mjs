@@ -15,6 +15,11 @@ const EXCEPTIONS = {
     justification:
       "ACP prewarm guards, project-aware working dir selection, and chat bootstrapping still live together here.",
   },
+  "src/features/chat/ui/__tests__/ContextPanel.test.tsx": {
+    limit: 550,
+    justification:
+      "Workspace widget integration tests cover branch switching, worktree creation, dirty-state dialogs, and picker interactions.",
+  },
   "src/features/sidebar/ui/Sidebar.tsx": {
     limit: 580,
     justification:
