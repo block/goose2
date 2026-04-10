@@ -481,8 +481,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           clearActiveSession(activeSessionId);
         }
       }
-      // Cmd/Ctrl+N opens new conversation screen
-      if (e.key === "n" && (e.metaKey || e.ctrlKey)) {
+      // Cmd+N opens new conversation screen
+      if (e.key === "n" && e.metaKey) {
         e.preventDefault();
         createNewTab();
       }
