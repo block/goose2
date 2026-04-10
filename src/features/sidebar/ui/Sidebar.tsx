@@ -112,6 +112,7 @@ export function Sidebar({
     ];
 
   const MAX_RECENTS = 20;
+  const validProjectIds = new Set(projects.map((project) => project.id));
 
   const projectSessions = (() => {
     type SessionItem = {
@@ -137,7 +138,7 @@ export function Sidebar({
         isRunning: isSessionRunning(runtime.chatState),
         hasUnread: runtime.hasUnread,
       };
-      if (session.projectId) {
+      if (session.projectId && validProjectIds.has(session.projectId)) {
         if (!byProject[session.projectId]) byProject[session.projectId] = [];
         byProject[session.projectId].push(item);
       } else {

@@ -15,6 +15,7 @@ export interface ProjectInfo {
   archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  artifactsDir: string;
 }
 
 export async function listProjects(): Promise<ProjectInfo[]> {

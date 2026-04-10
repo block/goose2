@@ -1,10 +1,21 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import type { Message } from "@/shared/types/messages";
 import {
   ArtifactPolicyProvider,
   useArtifactPolicyContext,
 } from "../ArtifactPolicyContext";
+
+const mockPathExists = vi.fn<(path: string) => Promise<boolean>>();
+const mockOpenPath = vi.fn<(path: string) => Promise<void>>();
+
+vi.mock("@/shared/api/system", () => ({
+  pathExists: (path: string) => mockPathExists(path),
+}));
+
+vi.mock("@tauri-apps/plugin-opener", () => ({
+  openPath: (path: string) => mockOpenPath(path),
+}));
 
 function Probe({
   readArgs,
@@ -35,8 +46,62 @@ function Probe({
   );
 }
 
+function TextFollowupProbe({
+  writeArgs,
+}: {
+  writeArgs: Record<string, unknown>;
+}) {
+  const { resolveToolCardDisplay, getAllSessionArtifacts } =
+    useArtifactPolicyContext();
+  const display = resolveToolCardDisplay(
+    writeArgs,
+    "writing markdown file about alphabet history",
+  );
+  const artifacts = getAllSessionArtifacts();
+
+  return (
+    <div>
+      <span data-testid="text-followup-role">{display.role}</span>
+      <span data-testid="text-followup-path">
+        {display.primaryCandidate?.resolvedPath ?? ""}
+      </span>
+      <span data-testid="text-followup-artifacts">
+        {artifacts.map((artifact) => artifact.resolvedPath).join(",")}
+      </span>
+    </div>
+  );
+}
+
+function FallbackProbe({
+  path = "/Users/test/.goose/projects/sample-project/artifacts/report.md",
+}: {
+  path?: string;
+}) {
+  const { pathExists, openResolvedPath } = useArtifactPolicyContext();
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={async () => {
+          const exists = await pathExists(path);
+          (window as Window & { __artifactExists?: boolean }).__artifactExists =
+            exists;
+        }}
+      >
+        Check path
+      </button>
+      <button type="button" onClick={() => void openResolvedPath(path)}>
+        Open path
+      </button>
+    </div>
+  );
+}
+
 describe("ArtifactPolicyContext", () => {
   it("computes one primary host per message and resolves tool cards by args identity", () => {
+    mockPathExists.mockReset();
+    mockOpenPath.mockReset();
     const readArgs = { path: "/Users/test/project-a/notes.md" };
     const writeArgs = {
       paths: [
@@ -104,5 +169,202 @@ describe("ArtifactPolicyContext", () => {
       Number(screen.getByTestId("write-secondary-count").textContent),
     ).toBeGreaterThan(0);
     expect(screen.getByTestId("cloned-role")).toHaveTextContent("none");
+  });
+
+  it("falls back to the home artifacts root when a project artifacts path is missing", async () => {
+    mockPathExists.mockReset();
+    mockOpenPath.mockReset();
+    mockPathExists.mockImplementation(
+      async (path: string) => path === "/Users/test/.goose/artifacts/report.md",
+    );
+
+    render(
+      <ArtifactPolicyProvider
+        messages={[]}
+        allowedRoots={[
+          "/Users/test/.goose/projects/sample-project/artifacts",
+          "/Users/test/.goose/artifacts",
+        ]}
+      >
+        <FallbackProbe />
+      </ArtifactPolicyProvider>,
+    );
+
+    screen.getByRole("button", { name: "Check path" }).click();
+    await waitFor(() => {
+      expect(
+        (window as Window & { __artifactExists?: boolean }).__artifactExists,
+      ).toBe(true);
+    });
+
+    screen.getByRole("button", { name: "Open path" }).click();
+    await waitFor(() => {
+      expect(mockOpenPath).toHaveBeenCalledWith(
+        "/Users/test/.goose/artifacts/report.md",
+      );
+    });
+  });
+
+  it("falls back from a working-dir artifacts path to the project root when the file lives there", async () => {
+    mockPathExists.mockReset();
+    mockOpenPath.mockReset();
+    mockPathExists.mockImplementation(
+      async (path: string) =>
+        path === "/Users/test/project-a/README_ENHANCED.md",
+    );
+
+    render(
+      <ArtifactPolicyProvider
+        messages={[]}
+        allowedRoots={[
+          "/Users/test/project-a/artifacts",
+          "/Users/test/project-a",
+          "/Users/test/.goose/artifacts",
+        ]}
+      >
+        <FallbackProbe path="/Users/test/project-a/artifacts/README_ENHANCED.md" />
+      </ArtifactPolicyProvider>,
+    );
+
+    screen.getByRole("button", { name: "Check path" }).click();
+    await waitFor(() => {
+      expect(
+        (window as Window & { __artifactExists?: boolean }).__artifactExists,
+      ).toBe(true);
+    });
+
+    screen.getByRole("button", { name: "Open path" }).click();
+    await waitFor(() => {
+      expect(mockOpenPath).toHaveBeenCalledWith(
+        "/Users/test/project-a/README_ENHANCED.md",
+      );
+    });
+  });
+
+  it("does not strip /artifacts/ from a parent directory in the path", async () => {
+    mockPathExists.mockReset();
+    mockOpenPath.mockReset();
+    // The file lives at the nested artifacts path — the parent `/artifacts/` should NOT be stripped
+    mockPathExists.mockImplementation(
+      async (path: string) =>
+        path === "/Users/test/artifacts/project/artifacts/README_ENHANCED.md",
+    );
+
+    render(
+      <ArtifactPolicyProvider
+        messages={[]}
+        allowedRoots={[
+          "/Users/test/artifacts/project/artifacts",
+          "/Users/test/artifacts/project",
+          "/Users/test/.goose/artifacts",
+        ]}
+      >
+        <FallbackProbe path="/Users/test/artifacts/project/artifacts/README_ENHANCED.md" />
+      </ArtifactPolicyProvider>,
+    );
+
+    screen.getByRole("button", { name: "Check path" }).click();
+    await waitFor(() => {
+      expect(
+        (window as Window & { __artifactExists?: boolean }).__artifactExists,
+      ).toBe(true);
+    });
+
+    screen.getByRole("button", { name: "Open path" }).click();
+    await waitFor(() => {
+      expect(mockOpenPath).toHaveBeenCalledWith(
+        "/Users/test/artifacts/project/artifacts/README_ENHANCED.md",
+      );
+    });
+  });
+
+  it("falls back correctly when /artifacts/ appears in a parent dir", async () => {
+    mockPathExists.mockReset();
+    mockOpenPath.mockReset();
+    // File is NOT at the artifacts path, but IS at the root-stripped path
+    mockPathExists.mockImplementation(
+      async (path: string) =>
+        path === "/Users/test/artifacts/project/README.md",
+    );
+
+    render(
+      <ArtifactPolicyProvider
+        messages={[]}
+        allowedRoots={[
+          "/Users/test/artifacts/project/artifacts",
+          "/Users/test/artifacts/project",
+          "/Users/test/.goose/artifacts",
+        ]}
+      >
+        <FallbackProbe path="/Users/test/artifacts/project/artifacts/README.md" />
+      </ArtifactPolicyProvider>,
+    );
+
+    screen.getByRole("button", { name: "Check path" }).click();
+    await waitFor(() => {
+      expect(
+        (window as Window & { __artifactExists?: boolean }).__artifactExists,
+      ).toBe(true);
+    });
+
+    screen.getByRole("button", { name: "Open path" }).click();
+    await waitFor(() => {
+      expect(mockOpenPath).toHaveBeenCalledWith(
+        "/Users/test/artifacts/project/README.md",
+      );
+    });
+  });
+
+  it("uses assistant text after a tool call to populate file actions and the Files tab", () => {
+    mockPathExists.mockReset();
+    mockOpenPath.mockReset();
+    const writeArgs = {};
+    const messages: Message[] = [
+      {
+        id: "assistant-1",
+        role: "assistant",
+        created: Date.now(),
+        metadata: { userVisible: true, agentVisible: true },
+        content: [
+          {
+            type: "toolRequest",
+            id: "tool-1",
+            name: "writing markdown file about alphabet history",
+            arguments: writeArgs,
+            status: "completed",
+          },
+          {
+            type: "toolResponse",
+            id: "tool-1",
+            name: "writing markdown file about alphabet history",
+            result: "completed",
+            isError: false,
+          },
+          {
+            type: "text",
+            text: "The file alpha.md has been created at /Users/test/.goose/artifacts/alpha.md.",
+          },
+        ],
+      },
+    ];
+
+    render(
+      <ArtifactPolicyProvider
+        messages={messages}
+        allowedRoots={["/Users/test/.goose/artifacts"]}
+      >
+        <TextFollowupProbe writeArgs={writeArgs} />
+      </ArtifactPolicyProvider>,
+    );
+
+    expect(screen.getByTestId("text-followup-role")).toHaveTextContent(
+      "primary_host",
+    );
+    expect(screen.getByTestId("text-followup-path")).toHaveTextContent(
+      "/Users/test/.goose/artifacts/alpha.md",
+    );
+    expect(screen.getByTestId("text-followup-artifacts")).toHaveTextContent(
+      "/Users/test/.goose/artifacts/alpha.md",
+    );
   });
 });

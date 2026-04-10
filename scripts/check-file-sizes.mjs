@@ -5,11 +5,6 @@ const DEFAULT_LIMIT = 500;
 
 // Add narrowly scoped exceptions here with justification
 const EXCEPTIONS = {
-  "src/app/AppShell.tsx": {
-    limit: 590,
-    justification:
-      "Temporary allowance while project creation, home/chat handoff, session-history routing, and drag-drop wiring remain in the shell.",
-  },
   "src/features/sidebar/ui/SidebarProjectsSection.tsx": {
     limit: 560,
     justification:
@@ -25,10 +20,45 @@ const EXCEPTIONS = {
     justification:
       "Search-as-you-type filtering and draft-aware sidebar highlight logic.",
   },
+  "src/app/AppShell.tsx": {
+    limit: 640,
+    justification:
+      "Shell still coordinates ACP session loading, project reassignment, and app-level chat routing.",
+  },
+  "src/features/chat/hooks/useAcpStream.ts": {
+    limit: 580,
+    justification:
+      "ACP replay, streaming, session binding, model-state event handling, and replay timeout are still centralized here.",
+  },
+  "src/features/chat/hooks/__tests__/useAcpStream.test.ts": {
+    limit: 540,
+    justification:
+      "Covers replay buffering, timeout error state, and streaming edge cases in one cohesive suite.",
+  },
+  "src/features/chat/stores/__tests__/chatSessionStore.test.ts": {
+    limit: 540,
+    justification:
+      "ACP session overlay regressions currently need one broad integration-style store suite.",
+  },
+  "src/features/chat/stores/chatSessionStore.ts": {
+    limit: 640,
+    justification:
+      "ACP-backed session overlay persistence, draft migration, and sidebar-facing session merge logic live together for now.",
+  },
+  "src-tauri/src/services/acp/manager/dispatcher.rs": {
+    limit: 520,
+    justification:
+      "ACP replay and live-stream event fan-out share one dispatcher until session event routing is split.",
+  },
   "src-tauri/src/services/acp/manager.rs": {
     limit: 630,
     justification:
       "ACP manager command dispatch loop — export/import/fork session ext_method dispatch adds boilerplate.",
+  },
+  "src-tauri/src/services/acp/manager/session_ops.rs": {
+    limit: 570,
+    justification:
+      "Session prepare/load/list logic, working-dir updates, and composite prepared-session reuse remain colocated while ACP session ownership stabilizes.",
   },
 };
 

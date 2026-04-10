@@ -96,8 +96,13 @@ function shortToolName(toolName: string): string {
 
 export function isWriteOrientedTool(toolName: string): boolean {
   const normalized = toolName.trim().toLowerCase();
-  if (/^(write|create|save|edit|update|modify|patch)\b/.test(normalized))
+  if (
+    /^(write|writing|create|creating|save|saving|edit|editing|update|updating|modify|modifying|patch|patching)\b/.test(
+      normalized,
+    )
+  ) {
     return true;
+  }
   const shortName = shortToolName(toolName);
   return (
     shortName.includes("write_file") ||
