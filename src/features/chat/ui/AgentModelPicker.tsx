@@ -104,7 +104,7 @@ function PickerItem({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm transition-colors",
+        "flex min-w-0 w-full items-center gap-2 overflow-hidden rounded-sm px-2 py-1.5 text-left text-sm transition-colors",
         "hover:bg-muted focus-visible:bg-muted focus:outline-none",
         "disabled:pointer-events-none disabled:opacity-50",
         selected && "bg-muted/60",
@@ -201,7 +201,7 @@ export function AgentModelPicker({
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="w-96 max-h-[min(24rem,50vh)] p-1"
+        className="h-[min(24rem,50vh)] w-96 overflow-hidden p-1"
         onKeyDown={(e) => {
           if (e.key === "ArrowDown" || e.key === "ArrowUp") {
             e.preventDefault();
@@ -251,121 +251,133 @@ export function AgentModelPicker({
           }
         }}
       >
-        <div className="grid grid-cols-2 gap-1 max-h-[inherit]">
-          <div data-col="agent" className="flex min-h-0 flex-col p-1">
-            <div className="shrink-0 px-2 py-1.5 text-sm font-semibold">
-              {t("toolbar.agent")}
-            </div>
-            <ScrollArea className="min-h-0 flex-1">
-              <div className="p-1 space-y-0.5">
-                {agents.map((agent) => {
-                  const isSelected = agent.id === selectedAgentId;
-
-                  return (
-                    <PickerItem
-                      key={agent.id}
-                      onClick={() => handleAgentSelect(agent.id)}
-                      selected={isSelected}
-                    >
-                      <span className="shrink-0">
-                        {getProviderIcon(agent.id, "size-4")}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate">
-                        {agent.label}
-                      </span>
-                      {isSelected ? (
-                        <IconCheck className="size-4 shrink-0 text-muted-foreground" />
-                      ) : null}
-                    </PickerItem>
-                  );
-                })}
+        <div className="grid h-full grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-1 overflow-hidden">
+          <div
+            data-col="agent"
+            className="flex min-h-0 min-w-0 overflow-hidden p-1"
+          >
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+              <div className="shrink-0 px-2 py-1.5 text-sm font-semibold">
+                {t("toolbar.agent")}
               </div>
-            </ScrollArea>
-          </div>
-          <div data-col="model" className="flex min-h-0 flex-col p-1">
-            <div className="shrink-0 px-2 py-1.5 text-sm font-semibold">
-              {t("toolbar.model")}
-            </div>
-            {groupedModels.length > 0 ? (
-              <ScrollArea className="min-h-0 flex-1">
+              <ScrollArea className="min-h-0 min-w-0 flex-1">
                 <div className="p-1 space-y-0.5">
-                  {groupedModels.map((group) => {
-                    const expanded = isGroupExpanded(group);
+                  {agents.map((agent) => {
+                    const isSelected = agent.id === selectedAgentId;
 
                     return (
-                      <div key={group.provider}>
-                        <button
-                          type="button"
-                          onClick={() => toggleGroup(group.provider)}
-                          className={cn(
-                            "flex w-full items-center gap-1.5 rounded-sm px-2 py-1.5 text-left text-sm font-medium transition-colors",
-                            "hover:bg-muted focus:bg-muted focus:outline-none",
-                          )}
-                        >
-                          <IconChevronRight
-                            className={cn(
-                              "size-3.5 shrink-0 text-muted-foreground transition-transform",
-                              expanded && "rotate-90",
-                            )}
-                          />
-                          <span className="flex-1">{group.provider}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {group.models.length}
-                          </span>
-                        </button>
-                        {expanded ? (
-                          <div className="pb-1">
-                            {group.models.map((model) => {
-                              const modelName = getModelDisplayName(model);
-
-                              return (
-                                <PickerItem
-                                  key={model.id}
-                                  onClick={() => handleModelSelect(model.id)}
-                                  selected={model.id === currentModelId}
-                                  className="justify-between pl-6"
-                                >
-                                  <div className="min-w-0 flex-1 truncate">
-                                    {modelName}
-                                  </div>
-                                  {model.id === currentModelId ? (
-                                    <IconCheck className="size-4 shrink-0 text-muted-foreground" />
-                                  ) : null}
-                                </PickerItem>
-                              );
-                            })}
-                          </div>
-                        ) : group.hasSelectedModel ? (
-                          <div className="pb-1">
-                            {group.models
-                              .filter((m) => m.id === currentModelId)
-                              .map((model) => (
-                                <PickerItem
-                                  key={model.id}
-                                  onClick={() => handleModelSelect(model.id)}
-                                  selected
-                                  className="justify-between pl-6"
-                                >
-                                  <div className="min-w-0 flex-1 truncate">
-                                    {getModelDisplayName(model)}
-                                  </div>
-                                  <IconCheck className="size-4 shrink-0 text-muted-foreground" />
-                                </PickerItem>
-                              ))}
-                          </div>
+                      <PickerItem
+                        key={agent.id}
+                        onClick={() => handleAgentSelect(agent.id)}
+                        selected={isSelected}
+                      >
+                        <span className="shrink-0">
+                          {getProviderIcon(agent.id, "size-4")}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate">
+                          {agent.label}
+                        </span>
+                        {isSelected ? (
+                          <IconCheck className="size-4 shrink-0 text-muted-foreground" />
                         ) : null}
-                      </div>
+                      </PickerItem>
                     );
                   })}
                 </div>
               </ScrollArea>
-            ) : (
-              <div className="px-2 py-2">
-                <div className="text-sm text-muted-foreground">
-                  {currentModelName ? currentModelName : t("toolbar.loading")}
-                </div>
+            </div>
+          </div>
+          <div
+            data-col="model"
+            className="flex min-h-0 min-w-0 overflow-hidden p-1"
+          >
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+              <div className="shrink-0 px-2 py-1.5 text-sm font-semibold">
+                {t("toolbar.model")}
               </div>
-            )}
+              {groupedModels.length > 0 ? (
+                <ScrollArea className="min-h-0 min-w-0 flex-1">
+                  <div className="p-1 space-y-0.5">
+                    {groupedModels.map((group) => {
+                      const expanded = isGroupExpanded(group);
+
+                      return (
+                        <div key={group.provider}>
+                          <button
+                            type="button"
+                            onClick={() => toggleGroup(group.provider)}
+                            className={cn(
+                              "flex min-w-0 w-full items-center gap-1.5 rounded-sm px-2 py-1.5 text-left text-sm font-medium transition-colors",
+                              "hover:bg-muted focus:bg-muted focus:outline-none",
+                            )}
+                          >
+                            <IconChevronRight
+                              className={cn(
+                                "size-3.5 shrink-0 text-muted-foreground transition-transform",
+                                expanded && "rotate-90",
+                              )}
+                            />
+                            <span className="min-w-0 flex-1 truncate">
+                              {group.provider}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {group.models.length}
+                            </span>
+                          </button>
+                          {expanded ? (
+                            <div className="overflow-hidden pb-1">
+                              {group.models.map((model) => {
+                                const modelName = getModelDisplayName(model);
+
+                                return (
+                                  <PickerItem
+                                    key={model.id}
+                                    onClick={() => handleModelSelect(model.id)}
+                                    selected={model.id === currentModelId}
+                                    className="justify-between pl-6"
+                                  >
+                                    <div className="min-w-0 flex-1 truncate">
+                                      {modelName}
+                                    </div>
+                                    {model.id === currentModelId ? (
+                                      <IconCheck className="size-4 shrink-0 text-muted-foreground" />
+                                    ) : null}
+                                  </PickerItem>
+                                );
+                              })}
+                            </div>
+                          ) : group.hasSelectedModel ? (
+                            <div className="overflow-hidden pb-1">
+                              {group.models
+                                .filter((m) => m.id === currentModelId)
+                                .map((model) => (
+                                  <PickerItem
+                                    key={model.id}
+                                    onClick={() => handleModelSelect(model.id)}
+                                    selected
+                                    className="justify-between pl-6"
+                                  >
+                                    <div className="min-w-0 flex-1 truncate">
+                                      {getModelDisplayName(model)}
+                                    </div>
+                                    <IconCheck className="size-4 shrink-0 text-muted-foreground" />
+                                  </PickerItem>
+                                ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              ) : (
+                <div className="px-2 py-2">
+                  <div className="text-sm text-muted-foreground">
+                    {currentModelName ? currentModelName : t("toolbar.loading")}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </PopoverContent>

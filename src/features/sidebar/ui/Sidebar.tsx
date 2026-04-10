@@ -334,7 +334,7 @@ export function Sidebar({
       )}
       style={{ width: collapsed ? 54 : width }}
     >
-      <div className="flex flex-col h-full overflow-hidden bg-background border border-border rounded-xl">
+      <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border bg-background [--muted-foreground:var(--text-subtle)]">
         <div
           className={cn(
             "flex-shrink-0 pt-3",
@@ -449,7 +449,7 @@ export function Sidebar({
                 "flex items-center w-full text-[13px] transition-colors duration-200 rounded-md",
                 "gap-2.5 p-3",
                 activeView === "home"
-                  ? "text-foreground"
+                  ? "font-medium text-foreground"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -508,7 +508,7 @@ export function Sidebar({
                     "flex items-center w-full text-[13px] transition-colors duration-200 rounded-md",
                     "gap-2.5 p-3",
                     isActive
-                      ? "text-foreground"
+                      ? "font-medium text-foreground"
                       : "text-muted-foreground hover:text-foreground",
                   )}
                   aria-current={isActive ? "page" : undefined}

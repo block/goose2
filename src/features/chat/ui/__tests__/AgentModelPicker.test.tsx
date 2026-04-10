@@ -92,6 +92,44 @@ describe("AgentModelPicker", () => {
     ).toBeInTheDocument();
   });
 
+  it("keeps long model names in constrained rows", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <AgentModelPicker
+        agents={AGENTS}
+        selectedAgentId="goose"
+        onAgentChange={vi.fn()}
+        currentModelId="databricks-gpt-5-4-mini"
+        currentModelName="databricks-gpt-5-4-mini"
+        availableModels={[
+          {
+            id: "databricks-gpt-5-4-mini",
+            name: "databricks-gpt-5-4-mini",
+            provider: "OpenAI",
+          },
+          {
+            id: "databricks-gpt-5-4-nano-preview-super-long",
+            name: "databricks-gpt-5-4-nano-preview-super-long",
+            provider: "OpenAI",
+          },
+        ]}
+        onModelChange={vi.fn()}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /choose agent and model/i }),
+    );
+
+    const longModelButton = screen.getByRole("button", {
+      name: "databricks-gpt-5-4-mini",
+    });
+
+    expect(longModelButton).toHaveClass("min-w-0");
+    expect(longModelButton).toHaveClass("overflow-hidden");
+  });
+
   it("shows only agent name when no model info is available", () => {
     render(
       <AgentModelPicker
