@@ -311,53 +311,51 @@ pub(super) async fn prepare_session_inner(
             )
             .await?
             .ok_or_else(|| format!("Failed to load Goose session '{existing_id}'"))?
+        } else if let Some(existing_id) = try_load_existing_session(
+            connection,
+            dispatcher,
+            &local_session_id,
+            &local_session_id,
+            &provider_id,
+            &working_dir,
+        )
+        .await?
+        {
+            existing_id
         } else {
-            if let Some(existing_id) = try_load_existing_session(
-                connection,
-                dispatcher,
-                &local_session_id,
-                &local_session_id,
-                &provider_id,
-                &working_dir,
-            )
-            .await?
-            {
-                existing_id
-            } else {
-                let mut request = NewSessionRequest::new(working_dir.clone());
-                if provider_id != "goose" {
-                    let mut meta = serde_json::Map::new();
-                    meta.insert(
-                        "provider".into(),
-                        serde_json::Value::String(provider_id.clone()),
-                    );
-                    request = request.meta(meta);
-                }
-
-                let response = connection
-                    .new_session(request)
-                    .await
-                    .map_err(|error| format!("Failed to create Goose session: {error:?}"))?;
-
-                let new_id = response.session_id.to_string();
-
-                dispatcher
-                    .bind_session(&new_id, &local_session_id, Some(&provider_id))
-                    .await;
-
-                if let Some(models) = &response.models {
-                    dispatcher.emit_model_state(&local_session_id, Some(&provider_id), models);
-                }
-                if let Some(options) = &response.config_options {
-                    dispatcher.emit_model_state_from_options(
-                        &local_session_id,
-                        Some(&provider_id),
-                        options,
-                    );
-                }
-
-                new_id
+            let mut request = NewSessionRequest::new(working_dir.clone());
+            if provider_id != "goose" {
+                let mut meta = serde_json::Map::new();
+                meta.insert(
+                    "provider".into(),
+                    serde_json::Value::String(provider_id.clone()),
+                );
+                request = request.meta(meta);
             }
+
+            let response = connection
+                .new_session(request)
+                .await
+                .map_err(|error| format!("Failed to create Goose session: {error:?}"))?;
+
+            let new_id = response.session_id.to_string();
+
+            dispatcher
+                .bind_session(&new_id, &local_session_id, Some(&provider_id))
+                .await;
+
+            if let Some(models) = &response.models {
+                dispatcher.emit_model_state(&local_session_id, Some(&provider_id), models);
+            }
+            if let Some(options) = &response.config_options {
+                dispatcher.emit_model_state_from_options(
+                    &local_session_id,
+                    Some(&provider_id),
+                    options,
+                );
+            }
+
+            new_id
         };
 
         Ok((
