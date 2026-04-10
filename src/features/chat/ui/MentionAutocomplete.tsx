@@ -232,7 +232,7 @@ export function MentionAutocomplete({
 }
 
 // ---------------------------------------------------------------------------
-// Avatar helper (unchanged)
+// Avatar helper
 // ---------------------------------------------------------------------------
 
 function MentionAvatar({ persona }: { persona: Persona }) {
