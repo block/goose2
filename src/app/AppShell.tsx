@@ -481,10 +481,15 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           clearActiveSession(activeSessionId);
         }
       }
+      // Cmd+N opens new conversation screen
+      if (e.key === "n" && e.metaKey) {
+        e.preventDefault();
+        createNewTab();
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [clearActiveSession]);
+  }, [clearActiveSession, createNewTab]);
 
   const activeSessionPersonaId = activeSession?.personaId;
   const handleInitialMessageConsumed = useCallback(() => {
