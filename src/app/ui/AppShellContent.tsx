@@ -32,6 +32,11 @@ interface AppShellContentProps {
   onInitialMessageConsumed: () => void;
   onRenameChat: (sessionId: string, nextTitle: string) => void;
   onSelectSession: (sessionId: string) => void;
+  onSelectSearchResult: (
+    sessionId: string,
+    messageId?: string,
+    query?: string,
+  ) => void;
   onStartChatFromProject: (project: ProjectInfo) => void;
 }
 
@@ -49,6 +54,7 @@ export function AppShellContent({
   onInitialMessageConsumed,
   onRenameChat,
   onSelectSession,
+  onSelectSearchResult,
   onStartChatFromProject,
 }: AppShellContentProps) {
   switch (activeView) {
@@ -62,6 +68,7 @@ export function AppShellContent({
       return (
         <SessionHistoryView
           onSelectSession={onSelectSession}
+          onSelectSearchResult={onSelectSearchResult}
           onRenameChat={onRenameChat}
           onArchiveChat={onArchiveChat}
         />

@@ -36,6 +36,8 @@ interface SessionCardProps {
   projectColor?: string;
   workingDir?: string;
   archivedAt?: string;
+  snippet?: string;
+  matchCount?: number;
   onSelect?: (id: string) => void;
   onRename?: (id: string, nextTitle: string) => void;
   onArchive?: (id: string) => void;
@@ -53,6 +55,8 @@ export function SessionCard({
   projectColor,
   workingDir,
   archivedAt,
+  snippet,
+  matchCount,
   onSelect,
   onRename,
   onArchive,
@@ -186,6 +190,22 @@ export function SessionCard({
           </div>
         )}
       </div>
+
+      {(snippet || matchCount) && (
+        <div className="relative z-10 mt-1 space-y-1 text-xs">
+          {snippet && (
+            <p className="line-clamp-3 text-muted-foreground">{snippet}</p>
+          )}
+          {typeof matchCount === "number" && (
+            <p className="font-medium text-foreground/80">
+              {t("search.messageMatches", {
+                count: matchCount,
+                displayCount: matchCount,
+              })}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Actions menu */}
       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>

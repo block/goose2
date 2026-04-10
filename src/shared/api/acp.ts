@@ -77,9 +77,24 @@ export interface AcpSessionInfo {
   messageCount: number;
 }
 
+export interface AcpSessionSearchResult {
+  sessionId: string;
+  snippet: string;
+  messageId: string;
+  messageRole?: "user" | "assistant" | "system";
+  matchCount: number;
+}
+
 /** List all sessions known to the goose binary. */
 export async function acpListSessions(): Promise<AcpSessionInfo[]> {
   return invoke("acp_list_sessions");
+}
+
+export async function acpSearchSessions(
+  query: string,
+  sessionIds: string[],
+): Promise<AcpSessionSearchResult[]> {
+  return invoke("acp_search_sessions", { query, sessionIds });
 }
 
 /**

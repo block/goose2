@@ -18,10 +18,16 @@
     "emptyNoMatchesHint": "Try a different search term.",
     "emptyTitle": "No sessions yet",
     "searchArchivedPlaceholder": "Search archived sessions...",
-    "searchPlaceholder": "Search sessions by title, persona, or project...",
+    "searchError": "Message search failed. Showing title, persona, and project matches only.",
+    "searchPlaceholder": "Search sessions by title, persona, project, or message content...",
+    "searching": "Searching sessions...",
     "subtitle": "Browse and search past sessions",
     "toggleArchived": "Archived",
     "title": "Session History"
+  },
+  "search": {
+    "messageMatches_one": "{{displayCount}} message match",
+    "messageMatches_other": "{{displayCount}} message matches"
   },
   "messageCount_one": "{{displayCount}} message",
   "messageCount_other": "{{displayCount}} messages"

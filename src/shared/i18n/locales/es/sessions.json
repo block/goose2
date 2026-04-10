@@ -18,10 +18,16 @@
     "emptyNoMatchesHint": "Prueba con otro término de búsqueda.",
     "emptyTitle": "Aún no hay sesiones",
     "searchArchivedPlaceholder": "Buscar sesiones archivadas...",
-    "searchPlaceholder": "Busca sesiones por título, persona o proyecto...",
+    "searchError": "La búsqueda de mensajes falló. Mostrando solo coincidencias por título, persona y proyecto.",
+    "searchPlaceholder": "Busca sesiones por título, persona, proyecto o contenido del mensaje...",
+    "searching": "Buscando sesiones...",
     "subtitle": "Explora y busca sesiones anteriores",
     "toggleArchived": "Archivadas",
     "title": "Historial de sesiones"
+  },
+  "search": {
+    "messageMatches_one": "{{displayCount}} coincidencia en mensajes",
+    "messageMatches_other": "{{displayCount}} coincidencias en mensajes"
   },
   "messageCount_one": "{{displayCount}} mensaje",
   "messageCount_other": "{{displayCount}} mensajes"
