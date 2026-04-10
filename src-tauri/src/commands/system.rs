@@ -162,7 +162,10 @@ mod tests {
 
         let joined = files.join("\n");
         assert!(joined.contains("main.ts"), "should include source files");
-        assert!(!joined.contains("node_modules"), "should respect .gitignore");
+        assert!(
+            !joined.contains("node_modules"),
+            "should respect .gitignore"
+        );
     }
 
     #[test]
