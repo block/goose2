@@ -276,7 +276,9 @@ pub fn start_test_bridge(app_handle: AppHandle) {
 
                 for line in reader.lines() {
                     let Ok(line) = line else { break };
-                    if line.trim().is_empty() { continue; }
+                    if line.trim().is_empty() {
+                        continue;
+                    }
 
                     let cmd: TestCommand = match serde_json::from_str(&line) {
                         Ok(c) => c,
