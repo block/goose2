@@ -181,16 +181,7 @@ fn extract_searchable_texts(value: &Value, role: Option<&str>) -> Vec<String> {
             .iter()
             .flat_map(|item| extract_searchable_block_text(item, role))
             .collect(),
-        Value::Object(map) => {
-            if let Some(text) = map.get("text").and_then(Value::as_str) {
-                return role
-                    .filter(|supported_role| is_searchable_role(supported_role))
-                    .and_then(|_| normalized_text(text))
-                    .into_iter()
-                    .collect();
-            }
-            Vec::new()
-        }
+        Value::Object(_) => extract_searchable_block_text(value, role),
         _ => Vec::new(),
     }
 }
@@ -383,6 +374,54 @@ mod tests {
         let result =
             search_exported_session("session-1", &exported, "tool").expect("search succeeds");
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn skips_single_object_tool_and_reasoning_blocks() {
+        let exported = serde_json::json!({
+            "conversation": [
+                {
+                    "id": "assistant-1",
+                    "role": "assistant",
+                    "content": { "type": "toolResponse", "text": "tool response text" }
+                },
+                {
+                    "id": "assistant-2",
+                    "role": "assistant",
+                    "content": { "type": "reasoning", "text": "private reasoning" }
+                }
+            ]
+        })
+        .to_string();
+
+        let tool_result =
+            search_exported_session("session-1", &exported, "tool").expect("search succeeds");
+        let reasoning_result = search_exported_session("session-1", &exported, "reasoning")
+            .expect("search succeeds");
+
+        assert!(tool_result.is_none());
+        assert!(reasoning_result.is_none());
+    }
+
+    #[test]
+    fn includes_single_object_text_blocks() {
+        let exported = serde_json::json!({
+            "conversation": [
+                {
+                    "id": "assistant-1",
+                    "role": "assistant",
+                    "content": { "type": "text", "text": "needle in a single object block" }
+                }
+            ]
+        })
+        .to_string();
+
+        let result = search_exported_session("session-1", &exported, "needle")
+            .expect("search succeeds")
+            .expect("text result");
+
+        assert_eq!(result.message_id, "assistant-1");
+        assert_eq!(result.message_role.as_deref(), Some("assistant"));
     }
 
     #[test]

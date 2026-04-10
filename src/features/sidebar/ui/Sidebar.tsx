@@ -376,7 +376,8 @@ export function Sidebar({
                 <>
                   <input
                     ref={searchInputRef}
-                    type="search"
+                    type="text"
+                    enterKeyHint="search"
                     value={sidebarSearch.query}
                     onChange={(e) => sidebarSearch.setQuery(e.target.value)}
                     onKeyDown={(e) => {
@@ -387,7 +388,7 @@ export function Sidebar({
                     }}
                     placeholder={t("search.placeholder")}
                     className={cn(
-                      "appearance-none bg-transparent border-none outline-none text-xs flex-1 min-w-0 placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none [&::-webkit-search-results-button]:appearance-none [&::-webkit-search-results-decoration]:appearance-none",
+                      "focus-override appearance-none bg-transparent border-none text-xs flex-1 min-w-0 placeholder:text-muted-foreground outline-none focus-visible:ring-0 focus-visible:ring-offset-0",
                       labelTransition,
                       labelVisible
                         ? "opacity-100 w-auto"

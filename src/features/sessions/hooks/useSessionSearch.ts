@@ -76,6 +76,7 @@ export function useSessionSearch({
       (session) => session.acpSessionId ?? session.id,
     );
     if (trimmed.length < 2 || acpSessionIds.length === 0) {
+      setIsSearching(false);
       return;
     }
 
