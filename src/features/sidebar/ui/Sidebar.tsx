@@ -280,6 +280,7 @@ export function Sidebar({
   const {
     currentRect,
     isHovering,
+    isResizing: isHighlightResizing,
     onItemMouseEnter,
     onNavMouseLeave,
     updateActiveRect,
@@ -374,9 +375,10 @@ export function Sidebar({
               style={{
                 top: currentRect.top,
                 height: currentRect.height,
-                transition: isHovering
-                  ? "top 0ms, height 0ms"
-                  : "top 200ms ease, height 200ms ease, opacity 200ms ease",
+                transition:
+                  isHovering || isHighlightResizing
+                    ? "top 0ms, height 0ms"
+                    : "top 200ms ease, height 200ms ease, opacity 200ms ease",
               }}
             />
           )}
