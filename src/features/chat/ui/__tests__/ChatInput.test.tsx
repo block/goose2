@@ -13,10 +13,10 @@ vi.mock("@/features/providers/hooks/useAgentProviderStatus", () => ({
   }),
 }));
 
-const mockListFilesForMentions = vi.fn(async () => [] as string[]);
+const mockListFilesForMentions = vi.fn<(roots: string[], maxResults?: number) => Promise<string[]>>(async () => []);
 vi.mock("@/shared/api/system", () => ({
-  listFilesForMentions: (...args: unknown[]) =>
-    mockListFilesForMentions(...args),
+  listFilesForMentions: (roots: string[], maxResults?: number) =>
+    mockListFilesForMentions(roots, maxResults),
 }));
 
 const TEST_PERSONAS: Persona[] = [
@@ -287,9 +287,10 @@ describe("ChatInput", () => {
       />,
     );
 
-    expect(mockListFilesForMentions).toHaveBeenCalledWith([
-      "/Users/wesb/dev/goose2",
-    ]);
+    expect(mockListFilesForMentions).toHaveBeenCalledWith(
+      ["/Users/wesb/dev/goose2"],
+      undefined,
+    );
 
     const input = screen.getByRole("textbox");
     await user.type(input, "@read");
