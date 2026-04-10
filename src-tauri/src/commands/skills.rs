@@ -20,17 +20,15 @@ fn validate_skill_name(name: &str) -> Result<(), String> {
             expect_alnum = true; // char after '-' must be [a-z0-9]
         } else {
             return Err(format!(
-                "Invalid skill name \"{}\". Names must be kebab-case (lowercase letters, digits, and hyphens; \
-                 must not start or end with a hyphen or contain consecutive hyphens).",
-                name
+                "Invalid skill name \"{name}\". Names must be kebab-case (lowercase letters, digits, and hyphens; \
+                 must not start or end with a hyphen or contain consecutive hyphens)."
             ));
         }
     }
     if expect_alnum {
         // name ended with '-'
         return Err(format!(
-            "Invalid skill name \"{}\". Names must not end with a hyphen.",
-            name
+            "Invalid skill name \"{name}\". Names must not end with a hyphen."
         ));
     }
     Ok(())
@@ -40,7 +38,7 @@ fn build_skill_md(name: &str, description: &str, instructions: &str) -> String {
     // Escape embedded single quotes by doubling them, then wrap in single quotes
     // to prevent YAML injection in the description field.
     let safe_desc = description.replace('\'', "''");
-    let mut md = format!("---\nname: {}\ndescription: '{}'\n---\n", name, safe_desc);
+    let mut md = format!("---\nname: {name}\ndescription: '{safe_desc}'\n---\n");
     if !instructions.is_empty() {
         md.push('\n');
         md.push_str(instructions);
@@ -55,15 +53,15 @@ pub fn create_skill(name: String, description: String, instructions: String) -> 
     let dir = skills_dir()?.join(&name);
 
     if dir.exists() {
-        return Err(format!("A skill named \"{}\" already exists", name));
+        return Err(format!("A skill named \"{name}\" already exists"));
     }
 
-    fs::create_dir_all(&dir).map_err(|e| format!("Failed to create skill directory: {}", e))?;
+    fs::create_dir_all(&dir).map_err(|e| format!("Failed to create skill directory: {e}"))?;
 
     let skill_path = dir.join("SKILL.md");
     let content = build_skill_md(&name, &description, &instructions);
 
-    fs::write(&skill_path, content).map_err(|e| format!("Failed to write SKILL.md: {}", e))?;
+    fs::write(&skill_path, content).map_err(|e| format!("Failed to write SKILL.md: {e}"))?;
 
     Ok(())
 }
@@ -77,7 +75,7 @@ pub fn list_skills() -> Result<Vec<SkillInfo>, String> {
     }
 
     let mut skills = Vec::new();
-    let entries = fs::read_dir(&dir).map_err(|e| format!("Failed to read skills dir: {}", e))?;
+    let entries = fs::read_dir(&dir).map_err(|e| format!("Failed to read skills dir: {e}"))?;
 
     for entry in entries.flatten() {
         let path = entry.path();
@@ -115,9 +113,9 @@ pub fn delete_skill(name: String) -> Result<(), String> {
     validate_skill_name(&name)?;
     let dir = skills_dir()?.join(&name);
     if !dir.exists() {
-        return Err(format!("Skill \"{}\" not found", name));
+        return Err(format!("Skill \"{name}\" not found"));
     }
-    fs::remove_dir_all(&dir).map_err(|e| format!("Failed to delete skill: {}", e))?;
+    fs::remove_dir_all(&dir).map_err(|e| format!("Failed to delete skill: {e}"))?;
     Ok(())
 }
 
@@ -192,13 +190,13 @@ pub fn update_skill(
     let dir = skills_dir()?.join(&name);
 
     if !dir.exists() {
-        return Err(format!("Skill \"{}\" not found", name));
+        return Err(format!("Skill \"{name}\" not found"));
     }
 
     let skill_path = dir.join("SKILL.md");
     let content = build_skill_md(&name, &description, &instructions);
 
-    fs::write(&skill_path, content).map_err(|e| format!("Failed to write SKILL.md: {}", e))?;
+    fs::write(&skill_path, content).map_err(|e| format!("Failed to write SKILL.md: {e}"))?;
 
     Ok(SkillInfo {
         name: name.clone(),
@@ -214,12 +212,12 @@ pub fn export_skill(name: String) -> Result<ExportSkillResult, String> {
     let dir = skills_dir()?.join(&name);
 
     if !dir.exists() {
-        return Err(format!("Skill \"{}\" not found", name));
+        return Err(format!("Skill \"{name}\" not found"));
     }
 
     let skill_md = dir.join("SKILL.md");
     let raw =
-        fs::read_to_string(&skill_md).map_err(|e| format!("Failed to read SKILL.md: {}", e))?;
+        fs::read_to_string(&skill_md).map_err(|e| format!("Failed to read SKILL.md: {e}"))?;
     let (description, instructions) = parse_frontmatter(&raw);
 
     let export = SkillExportV1 {
@@ -230,9 +228,9 @@ pub fn export_skill(name: String) -> Result<ExportSkillResult, String> {
     };
 
     let json = serde_json::to_string_pretty(&export)
-        .map_err(|e| format!("Failed to serialize skill: {}", e))?;
+        .map_err(|e| format!("Failed to serialize skill: {e}"))?;
 
-    let filename = format!("{}.skill.json", name);
+    let filename = format!("{name}.skill.json");
 
     Ok(ExportSkillResult { json, filename })
 }
@@ -246,11 +244,11 @@ pub fn import_skills(file_bytes: Vec<u8>, file_name: String) -> Result<Vec<Skill
 
     // Parse bytes as UTF-8
     let text =
-        String::from_utf8(file_bytes).map_err(|e| format!("File is not valid UTF-8: {}", e))?;
+        String::from_utf8(file_bytes).map_err(|e| format!("File is not valid UTF-8: {e}"))?;
 
     // Parse as JSON
     let value: serde_json::Value =
-        serde_json::from_str(&text).map_err(|e| format!("Invalid JSON: {}", e))?;
+        serde_json::from_str(&text).map_err(|e| format!("Invalid JSON: {e}"))?;
 
     // Validate version
     let version = value
@@ -258,7 +256,7 @@ pub fn import_skills(file_bytes: Vec<u8>, file_name: String) -> Result<Vec<Skill
         .and_then(|v| v.as_u64())
         .ok_or("Missing or invalid \"version\" field")?;
     if version != 1 {
-        return Err(format!("Unsupported skill export version: {}", version));
+        return Err(format!("Unsupported skill export version: {version}"));
     }
 
     // Extract fields
@@ -293,22 +291,22 @@ pub fn import_skills(file_bytes: Vec<u8>, file_name: String) -> Result<Vec<Skill
     let base_dir = skills_dir()?;
     let mut final_name = name.clone();
     if base_dir.join(&final_name).exists() {
-        final_name = format!("{}-imported", name);
+        final_name = format!("{name}-imported");
         // If that also exists, append a number
         let mut counter = 2u32;
         while base_dir.join(&final_name).exists() {
-            final_name = format!("{}-imported-{}", name, counter);
+            final_name = format!("{name}-imported-{counter}");
             counter += 1;
         }
     }
 
     // Create the skill on disk
     let dir = base_dir.join(&final_name);
-    fs::create_dir_all(&dir).map_err(|e| format!("Failed to create skill directory: {}", e))?;
+    fs::create_dir_all(&dir).map_err(|e| format!("Failed to create skill directory: {e}"))?;
 
     let skill_path = dir.join("SKILL.md");
     let content = build_skill_md(&final_name, &description, &instructions);
-    fs::write(&skill_path, content).map_err(|e| format!("Failed to write SKILL.md: {}", e))?;
+    fs::write(&skill_path, content).map_err(|e| format!("Failed to write SKILL.md: {e}"))?;
 
     Ok(vec![SkillInfo {
         name: final_name,

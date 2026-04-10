@@ -68,15 +68,14 @@ fn with_wait_for(selector: &str, action_js: &str) -> String {
         r#"(async function() {{
             const start = Date.now();
             while (Date.now() - start < 5000) {{
-                const el = document.querySelector("{}");
+                const el = document.querySelector("{selector}");
                 if (el) {{
-                    {}
+                    {action_js}
                 }}
                 await new Promise(r => setTimeout(r, 100));
             }}
-            return "ERROR: timeout waiting for element: {}";
-        }})()"#,
-        selector, action_js, selector
+            return "ERROR: timeout waiting for element: {selector}";
+        }})()"#
     )
 }
 
@@ -156,11 +155,10 @@ fn build_js(cmd: &TestCommand) -> String {
                     ? HTMLTextAreaElement.prototype
                     : HTMLInputElement.prototype;
                 const setter = Object.getOwnPropertyDescriptor(proto, 'value').set;
-                setter.call(el, "{}");
+                setter.call(el, "{val}");
                 el.dispatchEvent(new Event('input', {{ bubbles: true }}));
                 el.dispatchEvent(new Event('change', {{ bubbles: true }}));
-                return "filled";"#,
-                val
+                return "filled";"#
             ))
         }
 
@@ -172,8 +170,7 @@ fn build_js(cmd: &TestCommand) -> String {
         "count" => {
             let sel = cmd.selector.as_deref().unwrap_or("*");
             format!(
-                "String(document.querySelectorAll('{}').length)",
-                sel
+                "String(document.querySelectorAll('{sel}').length)"
             )
         }
 
@@ -261,7 +258,7 @@ pub fn start_test_bridge(app_handle: AppHandle) {
         let listener = match TcpListener::bind("127.0.0.1:9999") {
             Ok(l) => l,
             Err(e) => {
-                eprintln!("[test-bridge] Failed to bind: {}", e);
+                eprintln!("[test-bridge] Failed to bind: {e}");
                 return;
             }
         };
@@ -286,14 +283,14 @@ pub fn start_test_bridge(app_handle: AppHandle) {
                             let resp = TestResult {
                                 success: false,
                                 data: None,
-                                error: Some(format!("Invalid JSON: {}", e)),
+                                error: Some(format!("Invalid JSON: {e}")),
                             };
                             let _ = writeln!(stream, "{}", serde_json::to_string(&resp).unwrap());
                             continue;
                         }
                     };
 
-                    log::info!("[test-bridge] Received: {:?}", cmd);
+                    log::info!("[test-bridge] Received: {cmd:?}");
 
                     let window: WebviewWindow = match app.get_webview_window("main") {
                         Some(w) => w,
@@ -325,7 +322,7 @@ pub fn start_test_bridge(app_handle: AppHandle) {
                         let resp = TestResult {
                             success: false,
                             data: None,
-                            error: Some(format!("eval failed: {}", e)),
+                            error: Some(format!("eval failed: {e}")),
                         };
                         let _ = writeln!(stream, "{}", serde_json::to_string(&resp).unwrap());
                         continue;

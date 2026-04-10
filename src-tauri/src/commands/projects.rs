@@ -64,10 +64,10 @@ fn slugify(name: &str) -> String {
 fn find_project_by_id(id: &str) -> Result<(PathBuf, StoredProjectInfo), String> {
     let base = projects_dir()?;
     if !base.exists() {
-        return Err(format!("Project with id \"{}\" not found", id));
+        return Err(format!("Project with id \"{id}\" not found"));
     }
 
-    let entries = fs::read_dir(&base).map_err(|e| format!("Failed to read projects dir: {}", e))?;
+    let entries = fs::read_dir(&base).map_err(|e| format!("Failed to read projects dir: {e}"))?;
 
     for entry in entries.flatten() {
         let path = entry.path();
@@ -91,7 +91,7 @@ fn find_project_by_id(id: &str) -> Result<(PathBuf, StoredProjectInfo), String> 
         }
     }
 
-    Err(format!("Project with id \"{}\" not found", id))
+    Err(format!("Project with id \"{id}\" not found"))
 }
 
 fn deserialize_working_dirs<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
@@ -202,7 +202,7 @@ pub fn list_projects() -> Result<Vec<ProjectInfo>, String> {
     }
 
     let mut projects = Vec::new();
-    let entries = fs::read_dir(&dir).map_err(|e| format!("Failed to read projects dir: {}", e))?;
+    let entries = fs::read_dir(&dir).map_err(|e| format!("Failed to read projects dir: {e}"))?;
 
     for entry in entries.flatten() {
         let path = entry.path();
@@ -239,7 +239,7 @@ pub fn list_archived_projects() -> Result<Vec<ProjectInfo>, String> {
     }
 
     let mut projects = Vec::new();
-    let entries = fs::read_dir(&dir).map_err(|e| format!("Failed to read projects dir: {}", e))?;
+    let entries = fs::read_dir(&dir).map_err(|e| format!("Failed to read projects dir: {e}"))?;
 
     for entry in entries.flatten() {
         let path = entry.path();
@@ -287,7 +287,7 @@ pub fn create_project(
     if base.join(&dir_name).exists() {
         let mut counter = 2u32;
         loop {
-            dir_name = format!("{}-{}", slug, counter);
+            dir_name = format!("{slug}-{counter}");
             if !base.join(&dir_name).exists() {
                 break;
             }
@@ -304,7 +304,7 @@ pub fn create_project(
     };
 
     let dir = base.join(&dir_name);
-    fs::create_dir_all(&dir).map_err(|e| format!("Failed to create project directory: {}", e))?;
+    fs::create_dir_all(&dir).map_err(|e| format!("Failed to create project directory: {e}"))?;
 
     let now = now_timestamp();
     let stored = StoredProjectInfo {
@@ -326,8 +326,8 @@ pub fn create_project(
 
     let project_path = dir.join("project.json");
     let json = serde_json::to_string_pretty(&stored)
-        .map_err(|e| format!("Failed to serialize project: {}", e))?;
-    fs::write(&project_path, json).map_err(|e| format!("Failed to write project.json: {}", e))?;
+        .map_err(|e| format!("Failed to serialize project: {e}"))?;
+    fs::write(&project_path, json).map_err(|e| format!("Failed to write project.json: {e}"))?;
 
     Ok(project_info_from_stored(&dir, stored))
 }
@@ -371,8 +371,8 @@ pub fn update_project(
 
     let project_path = dir.join("project.json");
     let json = serde_json::to_string_pretty(&stored)
-        .map_err(|e| format!("Failed to serialize project: {}", e))?;
-    fs::write(&project_path, json).map_err(|e| format!("Failed to write project.json: {}", e))?;
+        .map_err(|e| format!("Failed to serialize project: {e}"))?;
+    fs::write(&project_path, json).map_err(|e| format!("Failed to write project.json: {e}"))?;
 
     Ok(project_info_from_stored(&dir, stored))
 }
@@ -380,7 +380,7 @@ pub fn update_project(
 #[tauri::command]
 pub fn delete_project(id: String) -> Result<(), String> {
     let (dir, _) = find_project_by_id(&id)?;
-    fs::remove_dir_all(&dir).map_err(|e| format!("Failed to delete project: {}", e))?;
+    fs::remove_dir_all(&dir).map_err(|e| format!("Failed to delete project: {e}"))?;
     Ok(())
 }
 
@@ -397,7 +397,7 @@ pub fn archive_project(id: String) -> Result<(), String> {
         return Err("Projects directory not found".to_string());
     }
 
-    let entries = fs::read_dir(&base).map_err(|e| format!("Failed to read projects dir: {}", e))?;
+    let entries = fs::read_dir(&base).map_err(|e| format!("Failed to read projects dir: {e}"))?;
 
     for entry in entries.flatten() {
         let path = entry.path();
@@ -413,14 +413,14 @@ pub fn archive_project(id: String) -> Result<(), String> {
             if info.id == id {
                 info.archived_at = Some(now_timestamp());
                 let json = serde_json::to_string_pretty(&info)
-                    .map_err(|e| format!("Failed to serialize: {}", e))?;
-                fs::write(&project_json, json).map_err(|e| format!("Failed to write: {}", e))?;
+                    .map_err(|e| format!("Failed to serialize: {e}"))?;
+                fs::write(&project_json, json).map_err(|e| format!("Failed to write: {e}"))?;
                 return Ok(());
             }
         }
     }
 
-    Err(format!("Project with id \"{}\" not found", id))
+    Err(format!("Project with id \"{id}\" not found"))
 }
 
 #[tauri::command]
@@ -430,7 +430,7 @@ pub fn restore_project(id: String) -> Result<(), String> {
         return Err("Projects directory not found".to_string());
     }
 
-    let entries = fs::read_dir(&base).map_err(|e| format!("Failed to read projects dir: {}", e))?;
+    let entries = fs::read_dir(&base).map_err(|e| format!("Failed to read projects dir: {e}"))?;
 
     for entry in entries.flatten() {
         let path = entry.path();
@@ -446,14 +446,14 @@ pub fn restore_project(id: String) -> Result<(), String> {
             if info.id == id {
                 info.archived_at = None;
                 let json = serde_json::to_string_pretty(&info)
-                    .map_err(|e| format!("Failed to serialize: {}", e))?;
-                fs::write(&project_json, json).map_err(|e| format!("Failed to write: {}", e))?;
+                    .map_err(|e| format!("Failed to serialize: {e}"))?;
+                fs::write(&project_json, json).map_err(|e| format!("Failed to write: {e}"))?;
                 return Ok(());
             }
         }
     }
 
-    Err(format!("Project with id \"{}\" not found", id))
+    Err(format!("Project with id \"{id}\" not found"))
 }
 
 #[cfg(test)]

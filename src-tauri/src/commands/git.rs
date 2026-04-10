@@ -25,7 +25,7 @@ pub struct WorktreeInfo {
 pub fn get_git_state(path: String) -> Result<GitState, String> {
     let repo_path = PathBuf::from(&path);
     if !repo_path.exists() {
-        return Err(format!("Path does not exist: {}", path));
+        return Err(format!("Path does not exist: {path}"));
     }
 
     if !is_git_repo(&repo_path)? {
@@ -79,7 +79,7 @@ fn is_git_repo(path: &Path) -> Result<bool, String> {
         .arg("--is-inside-work-tree")
         .current_dir(path)
         .output()
-        .map_err(|error| format!("Failed to run git: {}", error))?;
+        .map_err(|error| format!("Failed to run git: {error}"))?;
 
     Ok(output.status.success() && String::from_utf8_lossy(&output.stdout).trim() == "true")
 }
@@ -89,14 +89,14 @@ fn run_git_success(path: &Path, args: &[&str]) -> Result<String, String> {
         .args(args)
         .current_dir(path)
         .output()
-        .map_err(|error| format!("Failed to run git: {}", error))?;
+        .map_err(|error| format!("Failed to run git: {error}"))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
         let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
         let message = if !stderr.is_empty() { stderr } else { stdout };
         let rendered_args = args.join(" ");
-        return Err(format!("git {} failed: {}", rendered_args, message));
+        return Err(format!("git {rendered_args} failed: {message}"));
     }
 
     Ok(String::from_utf8_lossy(&output.stdout).into_owned())
