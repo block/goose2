@@ -46,13 +46,14 @@ export function ContextPanel({
     (s) => s.setActiveWorkingContext,
   );
 
+  const gitQueryPath = activeContext?.path ?? primaryWorkingDir;
   const {
     data: gitState,
     error,
     isLoading,
     isFetching,
     refetch,
-  } = useGitState(primaryWorkingDir, activeTab === "details");
+  } = useGitState(gitQueryPath, activeTab === "details");
 
   const handleContextChange = useCallback(
     (context: WorkingContext) => {

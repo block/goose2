@@ -84,6 +84,7 @@ interface ChatSessionStoreActions {
   setActiveSession: (sessionId: string | null) => void;
   setContextPanelOpen: (sessionId: string, open: boolean) => void;
   setActiveWorkingContext: (sessionId: string, context: WorkingContext) => void;
+  clearActiveWorkingContext: (sessionId: string) => void;
   setSessionModels: (sessionId: string, models: ModelOption[]) => void;
   switchSessionProvider: (
     sessionId: string,
@@ -550,6 +551,13 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
         [sessionId]: context,
       },
     }));
+  },
+
+  clearActiveWorkingContext: (sessionId) => {
+    set((state) => {
+      const { [sessionId]: _, ...rest } = state.activeWorkingContextBySession;
+      return { activeWorkingContextBySession: rest };
+    });
   },
 
   setSessionModels: (sessionId, models) => {

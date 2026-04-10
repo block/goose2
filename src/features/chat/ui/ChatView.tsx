@@ -62,6 +62,9 @@ export function ChatView({
   const activeWorkingContext = useChatSessionStore(
     (s) => s.activeWorkingContextBySession[activeSessionId],
   );
+  const clearActiveWorkingContext = useChatSessionStore(
+    (s) => s.clearActiveWorkingContext,
+  );
 
   const {
     providers,
@@ -172,6 +175,15 @@ export function ChatView({
       cancelled = true;
     };
   }, []);
+
+  const prevProjectIdRef = useRef(session?.projectId);
+  useEffect(() => {
+    const prevProjectId = prevProjectIdRef.current;
+    prevProjectIdRef.current = session?.projectId;
+    if (prevProjectId !== undefined && prevProjectId !== session?.projectId) {
+      clearActiveWorkingContext(activeSessionId);
+    }
+  }, [session?.projectId, activeSessionId, clearActiveWorkingContext]);
 
   const prevContextRef = useRef(activeWorkingContext);
   useEffect(() => {
