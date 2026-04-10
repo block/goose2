@@ -19,6 +19,27 @@ use crate::services::acp::payloads::{
     ToolResultPayload, ToolTitlePayload,
 };
 
+/// Extract the user-visible message from a potentially XML-wrapped prompt.
+///
+/// When we send messages to the goose binary we wrap them as:
+///   <persona-instructions>…</persona-instructions>
+///   <user-message>\n{text}\n</user-message>
+///
+/// The binary stores the full wrapped string in its session history.  On
+/// replay we need to show only the inner `<user-message>` content.
+fn extract_user_message(raw: &str) -> &str {
+    const OPEN: &str = "<user-message>\n";
+    const CLOSE: &str = "\n</user-message>";
+    if let Some(start) = raw.find(OPEN) {
+        let inner_start = start + OPEN.len();
+        if let Some(end) = raw[inner_start..].find(CLOSE) {
+            return &raw[inner_start..inner_start + end];
+        }
+    }
+    // No wrapper found — return as-is (backward compat with unwrapped messages).
+    raw
+}
+
 fn model_options_from_select_options(options: &SessionConfigSelectOptions) -> Vec<ModelOption> {
     match options {
         SessionConfigSelectOptions::Ungrouped(values) => values
@@ -386,13 +407,14 @@ impl Client for SessionEventDispatcher {
                         }
                     }
 
+                    let display_text = extract_user_message(&text.text);
                     let message_id = uuid::Uuid::new_v4().to_string();
                     let _ = self.app_handle.emit(
                         "acp:replay_user_message",
                         serde_json::json!({
                             "sessionId": local_session_id,
                             "messageId": message_id,
-                            "text": text.text,
+                            "text": display_text,
                         }),
                     );
                 }
@@ -500,5 +522,27 @@ impl Client for SessionEventDispatcher {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn extract_user_message_strips_xml_wrapper() {
+        let wrapped = "<persona-instructions>\nYou are a helpful assistant.\n</persona-instructions>\n\n<user-message>\nhello\n</user-message>";
+        assert_eq!(extract_user_message(wrapped), "hello");
+    }
+
+    #[test]
+    fn extract_user_message_multiline() {
+        let wrapped = "<persona-instructions>\nstuff\n</persona-instructions>\n\n<user-message>\nline one\nline two\n</user-message>";
+        assert_eq!(extract_user_message(wrapped), "line one\nline two");
+    }
+
+    #[test]
+    fn extract_user_message_no_wrapper() {
+        assert_eq!(extract_user_message("plain text"), "plain text");
     }
 }
