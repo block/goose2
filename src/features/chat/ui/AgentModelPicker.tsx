@@ -10,7 +10,6 @@ import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import { ScrollArea } from "@/shared/ui/scroll-area";
-import { Separator } from "@/shared/ui/separator";
 import {
   formatProviderLabel,
   getProviderIcon,
@@ -202,15 +201,63 @@ export function AgentModelPicker({
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="w-auto max-h-[min(24rem,50vh)] p-0"
+        className="w-96 max-h-[min(24rem,50vh)] p-1"
+        onKeyDown={(e) => {
+          if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+            e.preventDefault();
+            const col = (document.activeElement as HTMLElement)?.closest(
+              "[data-col]",
+            );
+            if (!col) return;
+            const items = Array.from(
+              col.querySelectorAll<HTMLElement>("button:not(:disabled)"),
+            );
+            const idx = items.indexOf(document.activeElement as HTMLElement);
+            const next =
+              e.key === "ArrowDown"
+                ? items[(idx + 1) % items.length]
+                : items[(idx - 1 + items.length) % items.length];
+            next?.focus();
+          } else if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+            e.preventDefault();
+            const content = e.currentTarget as HTMLElement;
+            const cols = Array.from(
+              content.querySelectorAll<HTMLElement>("[data-col]"),
+            );
+            const currentCol = (document.activeElement as HTMLElement)?.closest(
+              "[data-col]",
+            );
+            const colIdx = cols.indexOf(currentCol as HTMLElement);
+            const targetCol =
+              e.key === "ArrowRight"
+                ? cols[(colIdx + 1) % cols.length]
+                : cols[(colIdx - 1 + cols.length) % cols.length];
+            if (!targetCol) return;
+            const targetItems = Array.from(
+              targetCol.querySelectorAll<HTMLElement>("button:not(:disabled)"),
+            );
+            const currentItems = Array.from(
+              currentCol?.querySelectorAll<HTMLElement>(
+                "button:not(:disabled)",
+              ) ?? [],
+            );
+            const currentIdx = currentItems.indexOf(
+              document.activeElement as HTMLElement,
+            );
+            const target =
+              targetItems[Math.min(currentIdx, targetItems.length - 1)] ??
+              targetItems[0];
+            target?.focus();
+          }
+        }}
       >
-        <div className="flex max-h-[inherit]">
-          <div className="flex shrink-0 flex-col p-1">
+        <div className="grid grid-cols-2 gap-1 max-h-[inherit]">
+          <div data-col="agent" className="flex min-h-0 flex-col p-1">
             <div className="shrink-0 px-2 py-1.5 text-sm font-semibold">
               {t("toolbar.agent")}
             </div>
             <ScrollArea className="min-h-0 flex-1">
-              <div>
+              <div className="p-1 space-y-0.5">
                 {agents.map((agent) => {
                   const isSelected = agent.id === selectedAgentId;
 
@@ -235,14 +282,13 @@ export function AgentModelPicker({
               </div>
             </ScrollArea>
           </div>
-          <Separator orientation="vertical" className="self-stretch" />
-          <div className="flex shrink-0 flex-col p-1">
+          <div data-col="model" className="flex min-h-0 flex-col p-1">
             <div className="shrink-0 px-2 py-1.5 text-sm font-semibold">
               {t("toolbar.model")}
             </div>
             {groupedModels.length > 0 ? (
               <ScrollArea className="min-h-0 flex-1">
-                <div className="pr-3">
+                <div className="p-1 space-y-0.5">
                   {groupedModels.map((group) => {
                     const expanded = isGroupExpanded(group);
 

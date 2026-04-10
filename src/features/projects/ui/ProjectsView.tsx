@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import {
   MessageSquare,
@@ -10,6 +10,12 @@ import {
 } from "lucide-react";
 import { SearchBar } from "@/shared/ui/SearchBar";
 import { Button, buttonVariants } from "@/shared/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,87 +42,40 @@ function ProjectCardMenu({
   onDelete: (project: ProjectInfo) => void;
 }) {
   const { t } = useTranslation(["projects", "common"]);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [menuOpen]);
 
   return (
-    <div ref={menuRef} className="relative shrink-0">
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        aria-label={t("view.optionsAria", { name: project.name })}
-        aria-haspopup="true"
-        aria-expanded={menuOpen}
-        onClick={() => setMenuOpen((prev) => !prev)}
-        className="size-6 rounded-md text-muted-foreground hover:text-foreground"
-      >
-        <MoreHorizontal className="size-3.5" />
-      </Button>
-
-      {menuOpen && (
-        <div
-          role="menu"
-          className="absolute right-0 top-full z-10 mt-1 w-36 rounded-lg border border-border bg-background py-1 shadow-popover"
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          aria-label={t("view.optionsAria", { name: project.name })}
+          className="size-6 rounded-md text-muted-foreground hover:text-foreground"
         >
-          {onStartChat && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              role="menuitem"
-              onClick={() => {
-                setMenuOpen(false);
-                onStartChat(project);
-              }}
-              className="w-full justify-start"
-            >
-              <MessageSquare className="size-3.5" />
-              {t("view.startChat")}
-            </Button>
-          )}
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            role="menuitem"
-            onClick={() => {
-              setMenuOpen(false);
-              onEdit(project);
-            }}
-            className="w-full justify-start"
-          >
-            <Pencil className="size-3.5" />
-            {t("common:actions.edit")}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            role="menuitem"
-            onClick={() => {
-              setMenuOpen(false);
-              onDelete(project);
-            }}
-            className="w-full justify-start text-destructive hover:text-destructive"
-          >
-            <Trash2 className="size-3.5" />
-            {t("common:actions.delete")}
-          </Button>
-        </div>
-      )}
-    </div>
+          <MoreHorizontal className="size-3.5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" sideOffset={4}>
+        {onStartChat && (
+          <DropdownMenuItem onSelect={() => onStartChat(project)}>
+            <MessageSquare className="size-3.5" />
+            {t("view.startChat")}
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem onSelect={() => onEdit(project)}>
+          <Pencil className="size-3.5" />
+          {t("common:actions.edit")}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          variant="destructive"
+          onSelect={() => onDelete(project)}
+        >
+          <Trash2 className="size-3.5" />
+          {t("common:actions.delete")}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
