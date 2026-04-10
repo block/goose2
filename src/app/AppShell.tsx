@@ -94,8 +94,11 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             .projects.find((candidate) => candidate.id === session.projectId) ??
           null)
         : null;
-      const homeDir = await getHomeDir();
-      const workingDir = resolveEffectiveWorkingDir(project, homeDir);
+      const workingDir =
+        resolveEffectiveWorkingDir(project) ??
+        (!project
+          ? resolveEffectiveWorkingDir(null, await getHomeDir())
+          : undefined);
       await acpLoadSession(sessionId, gooseSessionId, workingDir);
       const t3 = performance.now();
       console.log(
@@ -310,8 +313,11 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             : (useProjectStore
                 .getState()
                 .projects.find((project) => project.id === projectId) ?? null);
-        const homeDir = await getHomeDir();
-        const nextWorkingDir = resolveEffectiveWorkingDir(nextProject, homeDir);
+        const nextWorkingDir =
+          resolveEffectiveWorkingDir(nextProject) ??
+          (nextProject == null
+            ? resolveEffectiveWorkingDir(null, await getHomeDir())
+            : undefined);
         if (!nextWorkingDir) {
           return;
         }

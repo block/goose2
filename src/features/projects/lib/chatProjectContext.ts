@@ -148,13 +148,16 @@ export function defaultArtifactsDir(homeDir: string): string {
  */
 export function resolveEffectiveWorkingDir(
   project: Pick<ProjectInfo, "workingDirs" | "artifactsDir"> | null | undefined,
-  homeDir: string,
+  homeDir?: string,
 ): string | undefined {
   const projectDir = resolveProjectWorkingDir(project);
   if (projectDir) {
     return projectDir;
   }
   if (project) {
+    return undefined;
+  }
+  if (!homeDir) {
     return undefined;
   }
   return defaultArtifactsDir(homeDir);

@@ -153,6 +153,15 @@ describe("chatProjectContext", () => {
   });
 
   describe("resolveEffectiveWorkingDir", () => {
+    it("returns the project working dir without requiring homeDir", () => {
+      expect(
+        resolveEffectiveWorkingDir({
+          workingDirs: ["/Users/wesb/dev/goose2"],
+          artifactsDir: "/Users/wesb/.goose/projects/goose2/artifacts",
+        }),
+      ).toBe("/Users/wesb/dev/goose2/artifacts");
+    });
+
     it("returns the project working dir when available", () => {
       expect(
         resolveEffectiveWorkingDir(
@@ -178,6 +187,10 @@ describe("chatProjectContext", () => {
       expect(resolveEffectiveWorkingDir(null, "/Users/wesb")).toBe(
         "/Users/wesb/.goose/artifacts",
       );
+    });
+
+    it("does not resolve a non-project fallback without homeDir", () => {
+      expect(resolveEffectiveWorkingDir(null)).toBeUndefined();
     });
   });
 });
