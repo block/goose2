@@ -1,8 +1,7 @@
 use tauri::Window;
 use tauri_plugin_dialog::DialogExt;
 
-use std::collections::{HashSet, VecDeque};
-use std::fs;
+use std::collections::HashSet;
 use std::path::PathBuf;
 
 const DEFAULT_FILE_MENTION_LIMIT: usize = 1500;
@@ -56,26 +55,6 @@ pub fn path_exists(path: String) -> bool {
     std::path::Path::new(&path).exists()
 }
 
-fn should_skip_dir(name: &str) -> bool {
-    if name.starts_with('.') {
-        return true;
-    }
-
-    matches!(
-        name,
-        "node_modules"
-            | "dist"
-            | "build"
-            | "target"
-            | ".next"
-            | ".nuxt"
-            | ".cache"
-            | "coverage"
-            | ".turbo"
-            | ".pnpm-store"
-    )
-}
-
 fn normalize_roots(roots: Vec<String>) -> Vec<PathBuf> {
     let mut dedup = HashSet::new();
     let mut normalized = Vec::new();
@@ -103,52 +82,34 @@ fn scan_files_for_mentions(roots: Vec<String>, max_results: Option<usize>) -> Ve
         .unwrap_or(DEFAULT_FILE_MENTION_LIMIT)
         .clamp(1, MAX_FILE_MENTION_LIMIT);
 
-    let mut queue: VecDeque<(PathBuf, usize)> =
-        roots.into_iter().map(|path| (path, 0usize)).collect();
+    let mut builder = ignore::WalkBuilder::new(&roots[0]);
+    for root in &roots[1..] {
+        builder.add(root);
+    }
+    builder
+        .max_depth(Some(MAX_SCAN_DEPTH))
+        .hidden(true) // skip hidden files/dirs
+        .git_ignore(true) // respect .gitignore
+        .git_global(true) // respect global gitignore
+        .git_exclude(true); // respect .git/info/exclude
+
     let mut seen = HashSet::new();
     let mut files = Vec::new();
 
-    while let Some((dir, depth)) = queue.pop_front() {
+    for entry in builder.build().flatten() {
         if files.len() >= limit {
             break;
         }
-
-        let Ok(entries) = fs::read_dir(&dir) else {
+        let Some(ft) = entry.file_type() else {
             continue;
         };
-
-        for entry in entries.flatten() {
-            if files.len() >= limit {
-                break;
-            }
-
-            let Ok(file_type) = entry.file_type() else {
-                continue;
-            };
-            let path = entry.path();
-
-            if file_type.is_dir() {
-                if depth >= MAX_SCAN_DEPTH {
-                    continue;
-                }
-                let name = entry.file_name();
-                let name = name.to_string_lossy();
-                if should_skip_dir(&name) {
-                    continue;
-                }
-                queue.push_back((path, depth + 1));
-                continue;
-            }
-
-            if !file_type.is_file() {
-                continue;
-            }
-
-            let path_str = path.to_string_lossy().to_string();
-            let dedup_key = path_str.to_lowercase();
-            if seen.insert(dedup_key) {
-                files.push(path_str);
-            }
+        if !ft.is_file() {
+            continue;
+        }
+        let path_str = entry.path().to_string_lossy().to_string();
+        let dedup_key = path_str.to_lowercase();
+        if seen.insert(dedup_key) {
+            files.push(path_str);
         }
     }
 
@@ -170,11 +131,23 @@ pub async fn list_files_for_mentions(
 mod tests {
     use super::scan_files_for_mentions;
     use std::fs;
+    use std::process::Command;
     use tempfile::tempdir;
 
-    #[test]
-    fn scans_project_files_and_skips_node_modules() {
+    /// Create a temp dir with `git init` so the ignore crate picks up `.gitignore`.
+    fn git_tempdir() -> tempfile::TempDir {
         let dir = tempdir().expect("tempdir");
+        Command::new("git")
+            .args(["init", "--quiet"])
+            .current_dir(dir.path())
+            .output()
+            .expect("git init");
+        dir
+    }
+
+    #[test]
+    fn respects_gitignore() {
+        let dir = git_tempdir();
         let root = dir.path();
         let src = root.join("src");
         let ignored = root.join("node_modules").join("pkg");
@@ -183,11 +156,27 @@ mod tests {
         fs::create_dir_all(&ignored).expect("ignored dir");
         fs::write(src.join("main.ts"), "export {}").expect("source file");
         fs::write(ignored.join("index.js"), "module.exports = {}").expect("ignored file");
+        fs::write(root.join(".gitignore"), "node_modules/\n").expect(".gitignore");
 
         let files = scan_files_for_mentions(vec![root.to_string_lossy().to_string()], Some(50));
 
         let joined = files.join("\n");
-        assert!(joined.contains("main.ts"));
-        assert!(!joined.contains("node_modules"));
+        assert!(joined.contains("main.ts"), "should include source files");
+        assert!(!joined.contains("node_modules"), "should respect .gitignore");
+    }
+
+    #[test]
+    fn skips_hidden_files() {
+        let dir = git_tempdir();
+        let root = dir.path();
+
+        fs::write(root.join("visible.ts"), "").expect("visible file");
+        fs::write(root.join(".hidden"), "").expect("hidden file");
+
+        let files = scan_files_for_mentions(vec![root.to_string_lossy().to_string()], Some(50));
+
+        let joined = files.join("\n");
+        assert!(joined.contains("visible.ts"));
+        assert!(!joined.contains(".hidden"));
     }
 }
