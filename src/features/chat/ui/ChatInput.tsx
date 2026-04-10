@@ -179,10 +179,11 @@ export function ChatInput({
     !disabled;
 
   const {
-    fileMentionItems,
     mentionOpen,
     mentionQuery,
     mentionSelectedIndex,
+    filteredPersonas,
+    filteredFiles,
     detectMention,
     closeMention,
     navigateMention,
@@ -381,9 +382,8 @@ export function ChatInput({
                 </div>
               )}
               <MentionAutocomplete
-                personas={personas}
-                files={fileMentionItems}
-                query={mentionQuery}
+                filteredPersonas={filteredPersonas}
+                filteredFiles={filteredFiles}
                 isOpen={mentionOpen}
                 onSelectPersona={handlePersonaMentionSelect}
                 onSelectFile={handleFileMentionSelect}

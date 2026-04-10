@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   MentionAutocomplete,
   type FileMentionItem,
+  fuzzyMatch,
 } from "../MentionAutocomplete";
 import { Popover, PopoverAnchor } from "@/shared/ui/popover";
 import type { Persona } from "@/shared/types/agents";
@@ -49,9 +50,8 @@ const FILES: FileMentionItem[] = [
 
 function renderAutocomplete(props: {
   selectedIndex?: number;
-  personas?: Persona[];
-  files?: FileMentionItem[];
-  query?: string;
+  filteredPersonas?: Persona[];
+  filteredFiles?: FileMentionItem[];
 }) {
   return render(
     <Popover open>
@@ -59,9 +59,8 @@ function renderAutocomplete(props: {
         <div />
       </PopoverAnchor>
       <MentionAutocomplete
-        personas={props.personas ?? PERSONAS}
-        files={props.files ?? FILES}
-        query={props.query ?? ""}
+        filteredPersonas={props.filteredPersonas ?? PERSONAS}
+        filteredFiles={props.filteredFiles ?? FILES}
         isOpen
         onSelectPersona={vi.fn()}
         onSelectFile={vi.fn()}
@@ -88,9 +87,8 @@ describe("MentionAutocomplete", () => {
           <div />
         </PopoverAnchor>
         <MentionAutocomplete
-          personas={PERSONAS}
-          files={FILES}
-          query=""
+          filteredPersonas={PERSONAS}
+          filteredFiles={FILES}
           isOpen
           onSelectPersona={vi.fn()}
           onSelectFile={vi.fn()}
@@ -107,9 +105,8 @@ describe("MentionAutocomplete", () => {
           <div />
         </PopoverAnchor>
         <MentionAutocomplete
-          personas={PERSONAS}
-          files={FILES}
-          query=""
+          filteredPersonas={PERSONAS}
+          filteredFiles={FILES}
           isOpen
           onSelectPersona={vi.fn()}
           onSelectFile={vi.fn()}
@@ -135,32 +132,6 @@ describe("MentionAutocomplete", () => {
     }
   });
 
-  it("filters items by query", () => {
-    renderAutocomplete({ query: "review" });
-
-    expect(screen.getByText("Reviewer")).toBeInTheDocument();
-    expect(screen.queryByText("Solo")).not.toBeInTheDocument();
-    // No files match "review"
-    expect(screen.queryByText("file0.ts")).not.toBeInTheDocument();
-  });
-
-  it("fuzzy-matches files by path subsequence", () => {
-    // "crates/sprout-acp/.rs" should match both acp.rs and config.rs
-    // via subsequence: each char appears in order in the displayPath
-    renderAutocomplete({ query: "crates/sprout-acp/.rs" });
-
-    expect(screen.getByText("acp.rs")).toBeInTheDocument();
-    expect(screen.getByText("config.rs")).toBeInTheDocument();
-    // Unrelated .ts files should not match
-    expect(screen.queryByText("file0.ts")).not.toBeInTheDocument();
-  });
-
-  it("fuzzy-matches persona names by subsequence", () => {
-    // "slo" matches "Solo" (s-o-l-o has s..l..o in order)
-    renderAutocomplete({ query: "slo" });
-    expect(screen.getByText("Solo")).toBeInTheDocument();
-  });
-
   it("returns null when not open", () => {
     const { container } = render(
       <Popover open>
@@ -168,9 +139,8 @@ describe("MentionAutocomplete", () => {
           <div />
         </PopoverAnchor>
         <MentionAutocomplete
-          personas={PERSONAS}
-          files={FILES}
-          query=""
+          filteredPersonas={PERSONAS}
+          filteredFiles={FILES}
           isOpen={false}
           onSelectPersona={vi.fn()}
           onSelectFile={vi.fn()}
@@ -179,5 +149,32 @@ describe("MentionAutocomplete", () => {
     );
 
     expect(container.querySelector("[role='listbox']")).not.toBeInTheDocument();
+  });
+});
+
+describe("fuzzyMatch", () => {
+  it("matches exact substrings", () => {
+    expect(fuzzyMatch("solo", "solo")).toBe(true);
+  });
+
+  it("matches subsequences", () => {
+    expect(fuzzyMatch("slo", "solo")).toBe(true);
+  });
+
+  it("rejects non-subsequences", () => {
+    expect(fuzzyMatch("xyz", "solo")).toBe(false);
+  });
+
+  it("matches path-style queries against file paths", () => {
+    expect(
+      fuzzyMatch("crates/sprout-acp/.rs", "crates/sprout-acp/src/acp.rs"),
+    ).toBe(true);
+    expect(
+      fuzzyMatch("crates/sprout-acp/.rs", "crates/sprout-acp/src/config.rs"),
+    ).toBe(true);
+  });
+
+  it("rejects unrelated paths", () => {
+    expect(fuzzyMatch("crates/sprout-acp/.rs", "src/file0.ts")).toBe(false);
   });
 });

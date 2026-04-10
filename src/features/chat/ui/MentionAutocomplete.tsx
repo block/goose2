@@ -12,7 +12,7 @@ import type { Persona } from "@/shared/types/agents";
 // ---------------------------------------------------------------------------
 
 /** Returns true when every character in `query` appears in `target` in order. */
-function fuzzyMatch(query: string, target: string): boolean {
+export function fuzzyMatch(query: string, target: string): boolean {
   let qi = 0;
   for (let ti = 0; ti < target.length && qi < query.length; ti++) {
     if (query[qi] === target[ti]) qi++;
@@ -43,9 +43,10 @@ export type MentionItem =
 // ---------------------------------------------------------------------------
 
 interface MentionAutocompleteProps {
-  personas: Persona[];
-  files?: FileMentionItem[];
-  query: string;
+  /** Pre-filtered personas from the hook. */
+  filteredPersonas: Persona[];
+  /** Pre-filtered files from the hook. */
+  filteredFiles?: FileMentionItem[];
   isOpen: boolean;
   onSelectPersona: (persona: Persona) => void;
   onSelectFile?: (file: FileMentionItem) => void;
@@ -54,9 +55,8 @@ interface MentionAutocompleteProps {
 }
 
 export function MentionAutocomplete({
-  personas,
-  files = [],
-  query,
+  filteredPersonas,
+  filteredFiles = [],
   isOpen,
   onSelectPersona,
   onSelectFile,
@@ -75,21 +75,6 @@ export function MentionAutocomplete({
     }
   }, [selectedIndex]);
 
-  const { filteredPersonas, filteredFiles } = useMemo(() => {
-    const q = query.toLowerCase();
-    const fp = q
-      ? personas.filter((p) => fuzzyMatch(q, p.displayName.toLowerCase()))
-      : personas;
-    const ff = q
-      ? files.filter(
-          (f) =>
-            fuzzyMatch(q, f.filename.toLowerCase()) ||
-            fuzzyMatch(q, f.displayPath.toLowerCase()),
-        )
-      : files;
-    return { filteredPersonas: fp, filteredFiles: ff };
-  }, [personas, files, query]);
-
   const items: MentionItem[] = useMemo(() => {
     const result: MentionItem[] = filteredPersonas.map((p) => ({
       type: "persona" as const,
@@ -100,12 +85,6 @@ export function MentionAutocomplete({
     }
     return result;
   }, [filteredPersonas, filteredFiles]);
-
-  // Reset index when results change
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reset on query/result changes
-  useEffect(() => {
-    setInternalIndex(0);
-  }, [items.length, query]);
 
   const handleSelect = useCallback(
     (item: MentionItem) => {
@@ -402,6 +381,8 @@ export function useMentionDetection(
     mentionQuery: mentionState.query,
     mentionStartIndex: mentionState.startIndex,
     mentionSelectedIndex: mentionState.selectedIndex,
+    filteredPersonas,
+    filteredFiles,
     detectMention,
     closeMention,
     navigateMention,

@@ -88,10 +88,17 @@ fn scan_files_for_mentions(roots: Vec<String>, max_results: Option<usize>) -> Ve
     }
     builder
         .max_depth(Some(MAX_SCAN_DEPTH))
+        .follow_links(false) // don't traverse symlinks
         .hidden(true) // skip hidden files/dirs
         .git_ignore(true) // respect .gitignore
         .git_global(true) // respect global gitignore
         .git_exclude(true); // respect .git/info/exclude
+
+    // Canonicalize roots so we can reject paths that escape via symlink targets
+    let canonical_roots: Vec<PathBuf> = roots
+        .iter()
+        .filter_map(|root| root.canonicalize().ok())
+        .collect();
 
     let mut seen = HashSet::new();
     let mut files = Vec::new();
@@ -104,6 +111,17 @@ fn scan_files_for_mentions(roots: Vec<String>, max_results: Option<usize>) -> Ve
             continue;
         };
         if !ft.is_file() {
+            continue;
+        }
+        // Reject any path that resolved outside the project roots
+        let canonical = match entry.path().canonicalize() {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+        if !canonical_roots
+            .iter()
+            .any(|root| canonical.starts_with(root))
+        {
             continue;
         }
         let path_str = entry.path().to_string_lossy().to_string();
