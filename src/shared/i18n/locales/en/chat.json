@@ -12,7 +12,32 @@
   },
   "contextPanel": {
     "actions": {
+      "chooseCreateAction": "Choose create action",
       "refreshGitStatus": "Refresh git status"
+    },
+    "createDialog": {
+      "baseBranch": "Base branch",
+      "branchDescription": "Create a new branch and switch this workspace to it.",
+      "branchError": "Failed to create branch {{branch}}.",
+      "branchName": "Branch name",
+      "branchNamePlaceholder": "feature/my-branch",
+      "branchSuccess": "Created and switched to {{branch}}.",
+      "branchTitle": "New Branch",
+      "branchToOpen": "Branch to open",
+      "cancel": "Cancel",
+      "createBranch": "Create branch",
+      "createNewBranch": "Create a new branch",
+      "createWorktree": "Create worktree",
+      "creatingBranch": "Creating branch...",
+      "creatingWorktree": "Creating worktree...",
+      "noAvailableBranches": "No branches available",
+      "worktreeDescription": "Create a separate worktree for a new or existing branch.",
+      "worktreeError": "Failed to create worktree {{worktree}}.",
+      "worktreeName": "Worktree name",
+      "worktreeNamePlaceholder": "my-worktree",
+      "worktreePath": "Folder: {{path}}",
+      "worktreeSuccess": "Created worktree {{worktree}}.",
+      "worktreeTitle": "New Worktree"
     },
     "empty": {
       "folderNotSet": "Folder not set",
@@ -40,14 +65,19 @@
       "stashSuccess": "Changes stashed and switched to {{branch}}."
     },
     "git": {
+      "fetch": "Fetch",
+      "fetchError": "Failed to fetch changes.",
+      "fetchSuccess": "Fetched latest changes.",
       "initRepo": "Initialize Git",
-      "initError": "Failed to initialize git repository."
+      "initError": "Failed to initialize git repository.",
+      "pull": "Pull",
+      "pullWithCount": "Pull ({{count}})",
+      "pullError": "Failed to pull changes.",
+      "pullSuccess": "Pulled latest changes."
     },
     "states": {
       "detached": "detached",
-      "gitLoading": "Loading git status...",
-      "uncommittedChanges_one": "{{count}} uncommitted change",
-      "uncommittedChanges_other": "{{count}} uncommitted changes"
+      "gitLoading": "Loading git status..."
     },
     "tabs": {
       "details": "Details",

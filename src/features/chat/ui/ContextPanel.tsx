@@ -2,7 +2,16 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FilesList } from "./FilesList";
 import { useGitState } from "@/shared/hooks/useGitState";
-import { initRepo, stashChanges, switchBranch } from "@/shared/api/git";
+import {
+  createBranch,
+  createWorktree,
+  fetchRepo,
+  initRepo,
+  pullRepo,
+  stashChanges,
+  switchBranch,
+} from "@/shared/api/git";
+import type { CreatedWorktree } from "@/shared/types/git";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { useChatSessionStore } from "../stores/chatSessionStore";
 import type { WorkingContext } from "../stores/chatSessionStore";
@@ -55,7 +64,7 @@ export function ContextPanel({
   const handleSwitchBranch = useCallback(
     async (path: string, branch: string) => {
       await switchBranch(path, branch);
-      await refetch();
+      await refetch().catch(() => undefined);
     },
     [refetch],
   );
@@ -64,7 +73,7 @@ export function ContextPanel({
     async (path: string, branch: string) => {
       await stashChanges(path);
       await switchBranch(path, branch);
-      await refetch();
+      await refetch().catch(() => undefined);
     },
     [refetch],
   );
@@ -72,7 +81,52 @@ export function ContextPanel({
   const handleInitRepo = useCallback(
     async (path: string) => {
       await initRepo(path);
-      await refetch();
+      await refetch().catch(() => undefined);
+    },
+    [refetch],
+  );
+
+  const handleFetch = useCallback(
+    async (path: string) => {
+      await fetchRepo(path);
+      await refetch().catch(() => undefined);
+    },
+    [refetch],
+  );
+
+  const handlePull = useCallback(
+    async (path: string) => {
+      await pullRepo(path);
+      await refetch().catch(() => undefined);
+    },
+    [refetch],
+  );
+
+  const handleCreateBranch = useCallback(
+    async (path: string, name: string, baseBranch: string) => {
+      await createBranch(path, name, baseBranch);
+      await refetch().catch(() => undefined);
+    },
+    [refetch],
+  );
+
+  const handleCreateWorktree = useCallback(
+    async (
+      path: string,
+      name: string,
+      branch: string,
+      createBranchForWorktree: boolean,
+      baseBranch?: string,
+    ): Promise<CreatedWorktree> => {
+      const createdWorktree = await createWorktree(
+        path,
+        name,
+        branch,
+        createBranchForWorktree,
+        baseBranch,
+      );
+      await refetch().catch(() => undefined);
+      return createdWorktree;
     },
     [refetch],
   );
@@ -109,6 +163,10 @@ export function ContextPanel({
             onSwitchBranch={handleSwitchBranch}
             onStashAndSwitch={handleStashAndSwitch}
             onInitRepo={handleInitRepo}
+            onFetch={handleFetch}
+            onPull={handlePull}
+            onCreateBranch={handleCreateBranch}
+            onCreateWorktree={handleCreateWorktree}
             onRefresh={() => void refetch()}
           />
           <ChangesWidget />

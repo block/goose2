@@ -12,7 +12,32 @@
   },
   "contextPanel": {
     "actions": {
+      "chooseCreateAction": "Elegir acción de creación",
       "refreshGitStatus": "Actualizar estado de git"
+    },
+    "createDialog": {
+      "baseBranch": "Rama base",
+      "branchDescription": "Crea una nueva rama y cambia este espacio de trabajo a ella.",
+      "branchError": "No se pudo crear la rama {{branch}}.",
+      "branchName": "Nombre de la rama",
+      "branchNamePlaceholder": "feature/mi-rama",
+      "branchSuccess": "Se creó y cambió a {{branch}}.",
+      "branchTitle": "Nueva rama",
+      "branchToOpen": "Rama para abrir",
+      "cancel": "Cancelar",
+      "createBranch": "Crear rama",
+      "createNewBranch": "Crear una nueva rama",
+      "createWorktree": "Crear worktree",
+      "creatingBranch": "Creando rama...",
+      "creatingWorktree": "Creando worktree...",
+      "noAvailableBranches": "No hay ramas disponibles",
+      "worktreeDescription": "Crea un worktree separado para una rama nueva o existente.",
+      "worktreeError": "No se pudo crear el worktree {{worktree}}.",
+      "worktreeName": "Nombre del worktree",
+      "worktreeNamePlaceholder": "mi-worktree",
+      "worktreePath": "Carpeta: {{path}}",
+      "worktreeSuccess": "Se creó el worktree {{worktree}}.",
+      "worktreeTitle": "Nuevo worktree"
     },
     "empty": {
       "folderNotSet": "Carpeta no configurada",
@@ -40,14 +65,19 @@
       "stashSuccess": "Cambios guardados y cambiado a {{branch}}."
     },
     "git": {
+      "fetch": "Fetch",
+      "fetchError": "No se pudieron traer los cambios.",
+      "fetchSuccess": "Se trajeron los cambios más recientes.",
       "initRepo": "Inicializar Git",
-      "initError": "Error al inicializar el repositorio git."
+      "initError": "Error al inicializar el repositorio git.",
+      "pull": "Pull",
+      "pullWithCount": "Pull ({{count}})",
+      "pullError": "No se pudieron bajar los cambios.",
+      "pullSuccess": "Se bajaron los cambios más recientes."
     },
     "states": {
       "detached": "detached",
-      "gitLoading": "Cargando estado de git...",
-      "uncommittedChanges_one": "{{count}} cambio sin confirmar",
-      "uncommittedChanges_other": "{{count}} cambios sin confirmar"
+      "gitLoading": "Cargando estado de git..."
     },
     "tabs": {
       "details": "Detalles",

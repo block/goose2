@@ -1,10 +1,11 @@
 import { useTranslation } from "react-i18next";
 import { IconFolder, IconGitBranch, IconRefresh } from "@tabler/icons-react";
+import type { CreatedWorktree, GitState } from "@/shared/types/git";
 import { Button } from "@/shared/ui/button";
 import { Spinner } from "@/shared/ui/spinner";
-import type { GitState } from "@/shared/types/git";
 import type { WorkingContext } from "../../stores/chatSessionStore";
 import { Widget } from "./Widget";
+import { WorkspaceActionsMenu } from "./WorkspaceActionsMenu";
 import { WorkingContextPicker, shortenPath } from "./WorkingContextPicker";
 
 interface WorkspaceWidgetProps {
@@ -20,6 +21,20 @@ interface WorkspaceWidgetProps {
   onSwitchBranch: (path: string, branch: string) => Promise<void>;
   onStashAndSwitch: (path: string, branch: string) => Promise<void>;
   onInitRepo: (path: string) => Promise<void>;
+  onFetch: (path: string) => Promise<void>;
+  onPull: (path: string) => Promise<void>;
+  onCreateBranch: (
+    path: string,
+    name: string,
+    baseBranch: string,
+  ) => Promise<void>;
+  onCreateWorktree: (
+    path: string,
+    name: string,
+    branch: string,
+    createBranch: boolean,
+    baseBranch?: string,
+  ) => Promise<CreatedWorktree>;
   onRefresh: () => void;
 }
 
@@ -36,6 +51,10 @@ export function WorkspaceWidget({
   onSwitchBranch,
   onStashAndSwitch,
   onInitRepo,
+  onFetch,
+  onPull,
+  onCreateBranch,
+  onCreateWorktree,
   onRefresh,
 }: WorkspaceWidgetProps) {
   const { t } = useTranslation("chat");
@@ -43,8 +62,6 @@ export function WorkspaceWidget({
 
   const gitErrorMessage =
     error instanceof Error ? error.message : t("contextPanel.errors.gitRead");
-
-  const dirtyFileCount = gitState?.dirtyFileCount ?? 0;
 
   return (
     <Widget
@@ -105,16 +122,17 @@ export function WorkspaceWidget({
               onSwitchBranch={onSwitchBranch}
               onStashAndSwitch={onStashAndSwitch}
             />
-            {dirtyFileCount > 0 ? (
-              <div className="flex items-center gap-1.5">
-                <span className="inline-block size-1.5 shrink-0 rounded-full bg-warning" />
-                <span className="text-xxs text-foreground-subtle">
-                  {t("contextPanel.states.uncommittedChanges", {
-                    count: dirtyFileCount,
-                  })}
-                </span>
-              </div>
-            ) : null}
+            <WorkspaceActionsMenu
+              currentProjectPath={primaryWorkingDir}
+              gitState={gitState}
+              activeContext={activeContext}
+              disabled={isFetching}
+              onContextChange={onContextChange}
+              onFetch={onFetch}
+              onPull={onPull}
+              onCreateBranch={onCreateBranch}
+              onCreateWorktree={onCreateWorktree}
+            />
           </div>
         ) : (
           <div className="space-y-3">

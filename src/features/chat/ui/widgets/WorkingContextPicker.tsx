@@ -82,7 +82,9 @@ export function WorkingContextPicker({
     activeContext?.branch ?? activeWorktree?.branch ?? gitState?.currentBranch;
   const activeWorktreeLabel = activeWorktree
     ? shortenPath(activeWorktree.path)
-    : currentProjectPath
+    : currentPath
+      ? shortenPath(currentPath)
+      : currentProjectPath
       ? shortenPath(currentProjectPath)
       : undefined;
   const activeBranchLabel = activeBranch ?? t("contextPanel.states.detached");

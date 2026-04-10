@@ -1,16 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as gitApi from "@/shared/api/git";
 import { ContextPanel } from "../ContextPanel";
 
 const mockUseGitState = vi.fn();
+const mockRefetch = vi.fn();
 
 vi.mock("@/shared/hooks/useGitState", () => ({
   useGitState: (...args: unknown[]) => mockUseGitState(...args),
 }));
 
 vi.mock("@/shared/api/git", () => ({
+  createBranch: vi.fn(),
+  createWorktree: vi.fn(),
+  fetchRepo: vi.fn(),
+  pullRepo: vi.fn(),
   switchBranch: vi.fn(),
   stashChanges: vi.fn(),
   initRepo: vi.fn(),
@@ -29,14 +34,22 @@ describe("ContextPanel", () => {
     screen
       .getAllByRole("button")
       .find((button) => button.textContent?.startsWith(branch));
+  const getCreateActionMenuButton = () =>
+    screen.getByRole("button", { name: /choose create action/i });
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRefetch.mockResolvedValue(undefined);
+    vi.mocked(gitApi.createWorktree).mockResolvedValue({
+      path: "/Users/test/goose2-worktrees/new-worktree",
+      branch: "new-worktree",
+    });
     mockUseGitState.mockReturnValue({
       data: {
         isGitRepo: true,
         currentBranch: "main",
         dirtyFileCount: 3,
+        incomingCommitCount: 0,
         worktrees: [
           {
             path: "/Users/test/goose2",
@@ -56,7 +69,7 @@ describe("ContextPanel", () => {
       error: null,
       isLoading: false,
       isFetching: false,
-      refetch: vi.fn(),
+      refetch: mockRefetch,
     });
   });
 
@@ -82,7 +95,12 @@ describe("ContextPanel", () => {
     expect(
       screen.getByRole("button", { name: /select worktree or branch/i }),
     ).toHaveTextContent("main");
-    expect(screen.getByText("3 uncommitted changes")).toBeInTheDocument();
+    expect(screen.queryByText("3 uncommitted changes")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^create branch$/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^fetch$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^pull$/i })).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: /files/i }));
 
@@ -95,6 +113,7 @@ describe("ContextPanel", () => {
         isGitRepo: false,
         currentBranch: null,
         dirtyFileCount: 0,
+        incomingCommitCount: 0,
         worktrees: [],
         isWorktree: false,
         mainWorktreePath: null,
@@ -103,7 +122,7 @@ describe("ContextPanel", () => {
       error: null,
       isLoading: false,
       isFetching: false,
-      refetch: vi.fn(),
+      refetch: mockRefetch,
     });
 
     render(
@@ -138,6 +157,7 @@ describe("ContextPanel", () => {
         isGitRepo: true,
         currentBranch: "feat/context-panel",
         dirtyFileCount: 0,
+        incomingCommitCount: 0,
         worktrees: [
           {
             path: "/Users/test/goose2",
@@ -157,7 +177,7 @@ describe("ContextPanel", () => {
       error: null,
       isLoading: false,
       isFetching: false,
-      refetch: vi.fn(),
+      refetch: mockRefetch,
     });
 
     render(
@@ -216,6 +236,7 @@ describe("ContextPanel", () => {
         isGitRepo: true,
         currentBranch: "feat/context-panel",
         dirtyFileCount: 0,
+        incomingCommitCount: 0,
         worktrees: [
           {
             path: "/Users/test/goose2",
@@ -235,7 +256,7 @@ describe("ContextPanel", () => {
       error: null,
       isLoading: false,
       isFetching: false,
-      refetch: vi.fn(),
+      refetch: mockRefetch,
     });
 
     render(
@@ -275,6 +296,7 @@ describe("ContextPanel", () => {
         isGitRepo: true,
         currentBranch: "main",
         dirtyFileCount: 0,
+        incomingCommitCount: 0,
         worktrees: [
           {
             path: "/Users/test/goose2",
@@ -289,7 +311,7 @@ describe("ContextPanel", () => {
       error: null,
       isLoading: false,
       isFetching: false,
-      refetch: vi.fn(),
+      refetch: mockRefetch,
     });
 
     render(
@@ -306,5 +328,213 @@ describe("ContextPanel", () => {
     expect(screen.getByText("Worktrees")).toBeInTheDocument();
     expect(screen.getByText("goose2")).toBeInTheDocument();
     expect(screen.getAllByText("main")[0]).toBeInTheDocument();
+  });
+
+  it("shows inline workspace actions and create options", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ContextPanel
+        sessionId="test-session-6"
+        projectWorkingDirs={["/Users/test/goose2"]}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /^create branch$/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^fetch$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^pull$/i })).toBeInTheDocument();
+
+    await user.click(getCreateActionMenuButton());
+
+    expect(
+      screen.getByRole("menuitem", { name: /^create branch$/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: /^create worktree$/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the incoming commit count on pull when available", () => {
+    mockUseGitState.mockReturnValue({
+      data: {
+        isGitRepo: true,
+        currentBranch: "main",
+        dirtyFileCount: 0,
+        incomingCommitCount: 3,
+        worktrees: [
+          {
+            path: "/Users/test/goose2",
+            branch: "main",
+            isMain: true,
+          },
+        ],
+        isWorktree: false,
+        mainWorktreePath: "/Users/test/goose2",
+        localBranches: ["main"],
+      },
+      error: null,
+      isLoading: false,
+      isFetching: false,
+      refetch: mockRefetch,
+    });
+
+    render(
+      <ContextPanel
+        sessionId="test-session-6b"
+        projectWorkingDirs={["/Users/test/goose2"]}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: /^pull \(3\)$/i })).toBeInTheDocument();
+  });
+
+  it("creates a branch from the workspace actions dialog", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ContextPanel
+        sessionId="test-session-7"
+        projectWorkingDirs={["/Users/test/goose2"]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /^create branch$/i }));
+    await user.type(
+      screen.getByLabelText("Branch name"),
+      "feature/new-branch",
+    );
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /^create branch$/i,
+      }),
+    );
+
+    expect(vi.mocked(gitApi.createBranch)).toHaveBeenCalledWith(
+      "/Users/test/goose2",
+      "feature/new-branch",
+      "main",
+    );
+    expect(
+      screen.getByRole("button", { name: /select worktree or branch/i }),
+    ).toHaveTextContent("feature/new-branch");
+  });
+
+  it("creates a worktree from the workspace actions dialog", async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(gitApi.createWorktree).mockResolvedValue({
+      path: "/Users/test/goose2-worktrees/new-worktree",
+      branch: "feature/new-worktree",
+    });
+
+    render(
+      <ContextPanel
+        sessionId="test-session-8"
+        projectWorkingDirs={["/Users/test/goose2"]}
+      />,
+    );
+
+    await user.click(getCreateActionMenuButton());
+    await user.click(
+      screen.getByRole("menuitem", { name: /^create worktree$/i }),
+    );
+    expect(
+      within(screen.getByRole("dialog")).getByRole("heading", {
+        name: /new worktree/i,
+      }),
+    ).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Worktree name"), "new-worktree");
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /^create worktree$/i,
+      }),
+    );
+
+    expect(vi.mocked(gitApi.createWorktree)).toHaveBeenCalledWith(
+      "/Users/test/goose2",
+      "new-worktree",
+      "new-worktree",
+      true,
+      "main",
+    );
+    expect(
+      screen.getByRole("button", { name: /select worktree or branch/i }),
+    ).toHaveTextContent("~/goose2-worktrees/new-worktree");
+    expect(
+      screen.getByRole("button", { name: /select worktree or branch/i }),
+    ).toHaveTextContent("new-worktree");
+  });
+
+  it("remembers the last selected create action on the primary button", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ContextPanel
+        sessionId="test-session-8b"
+        projectWorkingDirs={["/Users/test/goose2"]}
+      />,
+    );
+
+    await user.click(getCreateActionMenuButton());
+    await user.click(
+      screen.getByRole("menuitem", { name: /^create worktree$/i }),
+    );
+
+    expect(
+      within(screen.getByRole("dialog")).getByRole("heading", {
+        name: /new worktree/i,
+      }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /^cancel$/i,
+      }),
+    );
+
+    expect(
+      screen.getByRole("button", { name: /^create worktree$/i }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: /^create worktree$/i }),
+    );
+
+    expect(
+      within(screen.getByRole("dialog")).getByRole("heading", {
+        name: /new worktree/i,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("syncs worktree name into branch name until branch name is edited manually", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ContextPanel
+        sessionId="test-session-9"
+        projectWorkingDirs={["/Users/test/goose2"]}
+      />,
+    );
+
+    await user.click(getCreateActionMenuButton());
+    await user.click(
+      screen.getByRole("menuitem", { name: /^create worktree$/i }),
+    );
+
+    const worktreeNameInput = screen.getByLabelText("Worktree name");
+    const branchNameInput = screen.getByLabelText("Branch name");
+
+    await user.type(worktreeNameInput, "demo");
+    expect(branchNameInput).toHaveValue("demo");
+
+    await user.clear(branchNameInput);
+    await user.type(branchNameInput, "custom-branch");
+    await user.type(worktreeNameInput, "-next");
+
+    expect(worktreeNameInput).toHaveValue("demo-next");
+    expect(branchNameInput).toHaveValue("custom-branch");
   });
 });
