@@ -161,10 +161,8 @@ pub fn git_create_worktree(
     let target_path_string = target_path.to_string_lossy().to_string();
 
     if create_branch {
-        let base_branch = require_nonempty(
-            base_branch.as_deref().unwrap_or_default(),
-            "Base branch",
-        )?;
+        let base_branch =
+            require_nonempty(base_branch.as_deref().unwrap_or_default(), "Base branch")?;
         run_git_success(
             &repo_path,
             &[
@@ -179,7 +177,12 @@ pub fn git_create_worktree(
     } else {
         run_git_success(
             &repo_path,
-            &["worktree", "add", target_path_string.as_str(), branch_name.as_str()],
+            &[
+                "worktree",
+                "add",
+                target_path_string.as_str(),
+                branch_name.as_str(),
+            ],
         )?;
     }
 
@@ -255,7 +258,12 @@ fn count_lines(value: &str) -> u32 {
 
 fn count_incoming_commits(path: &Path) -> Result<u32, String> {
     let has_upstream = Command::new("git")
-        .args(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"])
+        .args([
+            "rev-parse",
+            "--abbrev-ref",
+            "--symbolic-full-name",
+            "@{upstream}",
+        ])
         .current_dir(path)
         .output()
         .map_err(|error| format!("Failed to run git: {}", error))?;
@@ -320,7 +328,9 @@ fn derive_worktree_path(main_worktree_path: &str, worktree_name: &str) -> Result
         .ok_or("Could not determine repository name")?
         .to_string_lossy()
         .to_string();
-    let repo_parent = main_root.parent().ok_or("Could not determine repository parent")?;
+    let repo_parent = main_root
+        .parent()
+        .ok_or("Could not determine repository parent")?;
     let target_path = repo_parent
         .join(format!("{}-worktrees", repo_name))
         .join(worktree_name);
@@ -397,7 +407,12 @@ fn normalize_path_string(path: &str) -> String {
 fn list_local_branches(path: &Path) -> Result<Vec<String>, String> {
     let output = run_git_success(
         path,
-        &["for-each-ref", "--sort=-committerdate", "--format=%(refname:short)", "refs/heads"],
+        &[
+            "for-each-ref",
+            "--sort=-committerdate",
+            "--format=%(refname:short)",
+            "refs/heads",
+        ],
     )?;
     Ok(output
         .lines()
