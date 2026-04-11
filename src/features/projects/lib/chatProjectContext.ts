@@ -43,16 +43,7 @@ function resolveProjectFolderPaths(
 export function getProjectArtifactRoots(
   project: Pick<ProjectInfo, "workingDirs" | "artifactsDir"> | null | undefined,
 ): string[] {
-  const workingDirs = (project?.workingDirs ?? [])
-    .map((directory) => trimValue(directory))
-    .filter((directory): directory is string => directory !== null);
-
-  if (workingDirs.length > 0) {
-    return workingDirs.map(appendArtifactsSegment);
-  }
-
-  const artifactsDir = trimValue(project?.artifactsDir);
-  return artifactsDir ? [artifactsDir] : [];
+  return resolveProjectFolderPaths(project);
 }
 
 export function getProjectFolderOption(

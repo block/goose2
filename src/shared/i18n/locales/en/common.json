@@ -71,6 +71,7 @@
   },
   "labels": {
     "assistant": "Assistant",
+    "revealInFileManager": "Reveal in Finder",
     "builtIn": "Built-in",
     "characterCount": "{{count}} chars",
     "custom": "Custom",

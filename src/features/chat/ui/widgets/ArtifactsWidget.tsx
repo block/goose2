@@ -17,12 +17,33 @@ import {
 import { Widget } from "./Widget";
 
 const CODE_EXTENSIONS = new Set([
-  ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".css", ".scss", ".html",
-  ".py", ".rb", ".rs", ".go", ".java", ".sh", ".sql", ".yaml", ".yml",
+  ".ts",
+  ".tsx",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".cjs",
+  ".css",
+  ".scss",
+  ".html",
+  ".py",
+  ".rb",
+  ".rs",
+  ".go",
+  ".java",
+  ".sh",
+  ".sql",
+  ".yaml",
+  ".yml",
 ]);
 
 const IMAGE_EXTENSIONS = new Set([
-  ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".webp",
+  ".svg",
 ]);
 
 function getArtifactIcon(artifact: SessionArtifact) {

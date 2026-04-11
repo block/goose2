@@ -5,6 +5,7 @@ import { cn } from "@/shared/lib/cn";
 import { FileContextMenu } from "@/shared/ui/file-context-menu";
 import { Spinner } from "@/shared/ui/spinner";
 import type { ChangedFile } from "@/shared/types/git";
+import { Widget } from "./Widget";
 
 function splitPath(relativePath: string) {
   const lastSlash = relativePath.lastIndexOf("/");
@@ -30,16 +31,18 @@ function ChangedFileRow({
       <button
         type="button"
         className={cn(
-        "flex w-full select-none items-center gap-2 px-3 py-1.5 text-left",
-        "transition-colors duration-100",
-        "hover:bg-muted/80",
+          "flex w-full select-none items-center gap-2 px-3 py-1.5 text-left",
+          "transition-colors duration-100",
+          "hover:bg-muted/80",
         )}
         onClick={() => onOpen(file.path)}
       >
-        <div className={cn(
-          "flex min-w-0 flex-1 items-center overflow-hidden",
-          file.status === "deleted" && "line-through opacity-60",
-        )}>
+        <div
+          className={cn(
+            "flex min-w-0 flex-1 items-center overflow-hidden",
+            file.status === "deleted" && "line-through opacity-60",
+          )}
+        >
           {dir && (
             <span className="shrink truncate text-xs text-muted-foreground">
               {dir}
@@ -82,37 +85,43 @@ export function ChangesWidget({
     );
   }, [files]);
 
-  const fileCount = files?.length ?? 0;
-  const hasChanges = fileCount > 0;
+  const hasChanges = (files?.length ?? 0) > 0;
+
+  const titleContent = (
+    <div className="flex min-w-0 items-center gap-1">
+      <span>{t("contextPanel.widgets.changes")}</span>
+      {currentBranch && (
+        <span className="flex min-w-0 items-center gap-1 font-normal text-muted-foreground">
+          <span className="shrink-0">
+            {t("contextPanel.widgets.changesOnBranch")}
+          </span>
+          <span className="min-w-0 truncate text-foreground">
+            {currentBranch}
+          </span>
+        </span>
+      )}
+    </div>
+  );
+
+  const headerAction = (
+    <div className="flex items-center gap-2">
+      {isLoading && <Spinner className="size-3" />}
+      {hasChanges && (
+        <span className="shrink-0 font-mono text-xxs tabular-nums">
+          <span className="text-text-success">+{totals.additions}</span>{" "}
+          <span className="text-text-danger">&minus;{totals.deletions}</span>
+        </span>
+      )}
+    </div>
+  );
 
   return (
-    <div className="overflow-hidden rounded-md border border-border">
-      <div className="flex h-8 items-center gap-2 bg-background-alt px-3">
-        <IconGitBranch className="size-3.5 shrink-0 text-foreground-subtle" />
-        <div className="flex min-w-0 items-center gap-1">
-          <span className="text-xs font-medium text-foreground">
-            {t("contextPanel.widgets.changes")}
-          </span>
-          {currentBranch && (
-            <span className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
-              <span className="shrink-0">on</span>
-              <span className="max-w-[120px] truncate text-foreground">
-                {currentBranch}
-              </span>
-            </span>
-          )}
-        </div>
-        <div className="flex-1" />
-        {isLoading && <Spinner className="size-3" />}
-        {hasChanges && (
-          <span className="shrink-0 font-mono text-xxs tabular-nums">
-            <span className="text-text-success">+{totals.additions}</span>
-            {" "}
-            <span className="text-text-danger">&minus;{totals.deletions}</span>
-          </span>
-        )}
-      </div>
-
+    <Widget
+      title={titleContent}
+      icon={<IconGitBranch className="size-3.5 shrink-0" />}
+      action={headerAction}
+      flush={hasChanges}
+    >
       {hasChanges ? (
         <div className="max-h-[300px] overflow-y-auto">
           {files?.map((file) => (
@@ -125,10 +134,10 @@ export function ChangesWidget({
           ))}
         </div>
       ) : (
-        <div className="px-3 py-2.5 text-xs text-foreground-subtle">
+        <p className="text-foreground-subtle">
           {t("contextPanel.empty.noChanges")}
-        </div>
+        </p>
       )}
-    </div>
+    </Widget>
   );
 }

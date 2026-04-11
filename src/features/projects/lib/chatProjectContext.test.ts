@@ -100,7 +100,7 @@ describe("chatProjectContext", () => {
     expect(getProjectFolderOption(null)).toEqual([]);
   });
 
-  it("includes working dirs as compatibility roots after artifacts folders", () => {
+  it("returns only artifact subdirectories for working dirs", () => {
     expect(
       getProjectArtifactRoots({
         workingDirs: ["/Users/wesb/dev/goose2", "/Users/wesb/dev/other"],
@@ -109,8 +109,6 @@ describe("chatProjectContext", () => {
     ).toEqual([
       "/Users/wesb/dev/goose2/artifacts",
       "/Users/wesb/dev/other/artifacts",
-      "/Users/wesb/dev/goose2",
-      "/Users/wesb/dev/other",
     ]);
   });
 
