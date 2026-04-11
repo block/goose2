@@ -21,7 +21,6 @@ import { WorkspaceWidget } from "./widgets/WorkspaceWidget";
 import { ChangesWidget } from "./widgets/ChangesWidget";
 import { ArtifactsWidget } from "./widgets/ArtifactsWidget";
 import { McpServersWidget } from "./widgets/McpServersWidget";
-import { ProcessesWidget } from "./widgets/ProcessesWidget";
 import { openPath } from "@tauri-apps/plugin-opener";
 
 interface ContextPanelProps {
@@ -220,7 +219,6 @@ export function ContextPanel({
           />
           <ArtifactsWidget />
           <McpServersWidget />
-          <ProcessesWidget />
         </div>
       </TabsContent>
 
