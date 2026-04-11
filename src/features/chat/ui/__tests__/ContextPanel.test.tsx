@@ -6,9 +6,26 @@ import { ContextPanel } from "../ContextPanel";
 
 const mockUseGitState = vi.fn();
 const mockRefetch = vi.fn();
+const mockRefetchFiles = vi.fn();
 
 vi.mock("@/shared/hooks/useGitState", () => ({
   useGitState: (...args: unknown[]) => mockUseGitState(...args),
+}));
+
+vi.mock("@/shared/hooks/useChangedFiles", () => ({
+  useChangedFiles: () => ({
+    data: [],
+    isLoading: false,
+    refetch: mockRefetchFiles,
+  }),
+}));
+
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: () => Promise.resolve(() => {}),
+}));
+
+vi.mock("@tauri-apps/plugin-opener", () => ({
+  openPath: vi.fn(),
 }));
 
 vi.mock("@/shared/api/git", () => ({
@@ -40,6 +57,7 @@ describe("ContextPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRefetch.mockResolvedValue(undefined);
+    mockRefetchFiles.mockResolvedValue(undefined);
     vi.mocked(gitApi.createWorktree).mockResolvedValue({
       path: "/Users/test/goose2-worktrees/new-worktree",
       branch: "new-worktree",
