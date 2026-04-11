@@ -37,7 +37,6 @@ pub struct ChangedFile {
     pub filename: String,
     pub directory: String,
     pub status: String,
-    pub staged: bool,
     pub additions: u32,
     pub deletions: u32,
 }
@@ -55,13 +54,9 @@ pub fn get_changed_files(path: String) -> Result<Vec<ChangedFile>, String> {
         return Ok(Vec::new());
     }
 
-    let staged_numstat =
-        run_git_success(&repo_path, &["diff", "--cached", "--numstat"]).unwrap_or_default();
-    let unstaged_numstat =
-        run_git_success(&repo_path, &["diff", "--numstat"]).unwrap_or_default();
-
-    let staged_stats = parse_numstat(&staged_numstat);
-    let unstaged_stats = parse_numstat(&unstaged_numstat);
+    let head_numstat =
+        run_git_success(&repo_path, &["diff", "HEAD", "--numstat"]).unwrap_or_default();
+    let head_stats = parse_numstat(&head_numstat);
 
     let repo_root = trim_to_option(run_git_success(
         &repo_path,
@@ -89,19 +84,12 @@ pub fn get_changed_files(path: String) -> Result<Vec<ChangedFile>, String> {
             file_path
         };
 
-        let (status, staged) = parse_status_codes(index_status, worktree_status);
+        let status = parse_status_codes(index_status, worktree_status);
 
-        let (additions, deletions) = if staged {
-            staged_stats
-                .get(&file_path)
-                .copied()
-                .unwrap_or_else(|| count_file_lines(&repo_path, &file_path))
-        } else {
-            unstaged_stats
-                .get(&file_path)
-                .copied()
-                .unwrap_or_else(|| count_file_lines(&repo_path, &file_path))
-        };
+        let (additions, deletions) = head_stats
+            .get(&file_path)
+            .copied()
+            .unwrap_or_else(|| count_file_lines(&repo_path, &file_path));
 
         let full_path = Path::new(&repo_root).join(&file_path);
         let filename = full_path
@@ -118,7 +106,6 @@ pub fn get_changed_files(path: String) -> Result<Vec<ChangedFile>, String> {
             filename,
             directory,
             status,
-            staged,
             additions,
             deletions,
         });
@@ -128,25 +115,23 @@ pub fn get_changed_files(path: String) -> Result<Vec<ChangedFile>, String> {
     Ok(files)
 }
 
-fn parse_status_codes(index: u8, worktree: u8) -> (String, bool) {
+fn parse_status_codes(index: u8, worktree: u8) -> String {
     if index == b'?' && worktree == b'?' {
-        return ("untracked".to_string(), false);
+        return "untracked".to_string();
     }
-    if index != b' ' && index != b'?' {
-        let status = match index {
-            b'A' => "added",
-            b'D' => "deleted",
-            b'R' => "renamed",
-            b'C' => "copied",
-            _ => "modified",
-        };
-        return (status.to_string(), true);
+    if index == b'A' || (index == b'?' && worktree != b'?') {
+        return "added".to_string();
     }
-    let status = match worktree {
-        b'D' => "deleted",
-        _ => "modified",
-    };
-    (status.to_string(), false)
+    if index == b'D' || worktree == b'D' {
+        return "deleted".to_string();
+    }
+    if index == b'R' {
+        return "renamed".to_string();
+    }
+    if index == b'C' {
+        return "copied".to_string();
+    }
+    "modified".to_string()
 }
 
 fn parse_numstat(output: &str) -> std::collections::HashMap<String, (u32, u32)> {
@@ -172,8 +157,17 @@ fn parse_numstat(output: &str) -> std::collections::HashMap<String, (u32, u32)> 
     map
 }
 
+const MAX_LINE_COUNT_SIZE: u64 = 1024 * 1024;
+
 fn count_file_lines(repo_path: &Path, file_path: &str) -> (u32, u32) {
     let full = repo_path.join(file_path);
+    let meta = match std::fs::metadata(&full) {
+        Ok(m) => m,
+        Err(_) => return (0, 0),
+    };
+    if meta.len() > MAX_LINE_COUNT_SIZE {
+        return (0, 0);
+    }
     match std::fs::read_to_string(&full) {
         Ok(contents) => {
             let count = contents.lines().count() as u32;

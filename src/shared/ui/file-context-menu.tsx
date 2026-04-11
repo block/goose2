@@ -7,6 +7,9 @@ import {
   ContextMenuTrigger,
 } from "@/shared/ui/context-menu";
 import { revealInFileManager } from "@/shared/lib/fileManager";
+import { getPlatform } from "@/shared/lib/platform";
+
+const revealLabel = `labels.revealInFileManager_${getPlatform()}` as const;
 
 interface FileContextMenuProps {
   filePath: string;
@@ -20,8 +23,13 @@ export function FileContextMenu({ filePath, children }: FileContextMenuProps) {
     <ContextMenu>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
       <ContextMenuContent>
+        <ContextMenuItem
+          onSelect={() => void navigator.clipboard.writeText(filePath)}
+        >
+          {t("labels.copyPath")}
+        </ContextMenuItem>
         <ContextMenuItem onSelect={() => void revealInFileManager(filePath)}>
-          {t("labels.revealInFileManager")}
+          {t(revealLabel)}
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

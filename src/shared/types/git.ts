@@ -33,7 +33,6 @@ export interface ChangedFile {
   filename: string;
   directory: string;
   status: FileStatus;
-  staged: boolean;
   additions: number;
   deletions: number;
 }

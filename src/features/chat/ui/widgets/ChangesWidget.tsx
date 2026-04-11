@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { IconGitBranch } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 import { FileContextMenu } from "@/shared/ui/file-context-menu";
+import { Skeleton } from "@/shared/ui/skeleton";
 import { Spinner } from "@/shared/ui/spinner";
 import type { ChangedFile } from "@/shared/types/git";
 import { Widget } from "./Widget";
@@ -26,35 +27,40 @@ function ChangedFileRow({
   onOpen: (path: string) => void;
 }) {
   const { dir, name } = splitPath(file.path);
-  return (
-    <FileContextMenu filePath={fullPath}>
-      <button
-        type="button"
+  const isDeleted = file.status === "deleted";
+
+  const row = (
+    <button
+      type="button"
+      disabled={isDeleted}
+      className={cn(
+        "flex w-full select-none items-center gap-2 px-3 py-1.5 text-left",
+        "transition-colors duration-100",
+        isDeleted ? "cursor-default opacity-60" : "hover:bg-muted/80",
+      )}
+      onClick={isDeleted ? undefined : () => onOpen(file.path)}
+    >
+      <div
         className={cn(
-          "flex w-full select-none items-center gap-2 px-3 py-1.5 text-left",
-          "transition-colors duration-100",
-          "hover:bg-muted/80",
+          "flex min-w-0 flex-1 items-center overflow-hidden",
+          isDeleted && "line-through",
         )}
-        onClick={() => onOpen(file.path)}
       >
-        <div
-          className={cn(
-            "flex min-w-0 flex-1 items-center overflow-hidden",
-            file.status === "deleted" && "line-through opacity-60",
-          )}
-        >
-          {dir && (
-            <span className="shrink truncate text-xs text-muted-foreground">
-              {dir}
-            </span>
-          )}
-          <span className="shrink-0 whitespace-nowrap text-xs font-medium text-foreground">
-            {name}
+        {dir && (
+          <span className="shrink truncate text-xs text-muted-foreground">
+            {dir}
           </span>
-        </div>
-      </button>
-    </FileContextMenu>
+        )}
+        <span className="shrink-0 whitespace-nowrap text-xs font-medium text-foreground">
+          {name}
+        </span>
+      </div>
+    </button>
   );
+
+  if (isDeleted) return row;
+
+  return <FileContextMenu filePath={fullPath}>{row}</FileContextMenu>;
 }
 
 interface ChangesWidgetProps {
@@ -122,11 +128,17 @@ export function ChangesWidget({
       action={headerAction}
       flush={hasChanges}
     >
-      {hasChanges ? (
+      {isLoading && !files ? (
+        <div className="space-y-2 px-3 py-2.5">
+          <Skeleton className="h-3 w-3/4" />
+          <Skeleton className="h-3 w-1/2" />
+          <Skeleton className="h-3 w-2/3" />
+        </div>
+      ) : hasChanges ? (
         <div className="max-h-[300px] overflow-y-auto">
           {files?.map((file) => (
             <ChangedFileRow
-              key={`${file.path}-${file.staged}`}
+              key={file.path}
               file={file}
               fullPath={`${repoPath}/${file.path}`}
               onOpen={onOpenFile}

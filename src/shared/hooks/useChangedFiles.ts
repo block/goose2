@@ -10,5 +10,6 @@ export function useChangedFiles(
     queryFn: () => getChangedFiles(path ?? ""),
     enabled: enabled && Boolean(path),
     staleTime: Number.POSITIVE_INFINITY,
+    refetchOnWindowFocus: true,
   });
 }

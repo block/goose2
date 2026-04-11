@@ -1,5 +1,6 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { listen } from "@tauri-apps/api/event";
 import { FilesList } from "./FilesList";
 import { useGitState } from "@/shared/hooks/useGitState";
 import { useChangedFiles } from "@/shared/hooks/useChangedFiles";
@@ -71,53 +72,60 @@ export function ContextPanel({
     [sessionId, setActiveWorkingContext],
   );
 
+  const refetchAll = useCallback(async () => {
+    await Promise.all([
+      refetch().catch(() => undefined),
+      refetchFiles().catch(() => undefined),
+    ]);
+  }, [refetch, refetchFiles]);
+
   const handleSwitchBranch = useCallback(
     async (path: string, branch: string) => {
       await switchBranch(path, branch);
-      await refetch().catch(() => undefined);
+      await refetchAll();
     },
-    [refetch],
+    [refetchAll],
   );
 
   const handleStashAndSwitch = useCallback(
     async (path: string, branch: string) => {
       await stashChanges(path);
       await switchBranch(path, branch);
-      await refetch().catch(() => undefined);
+      await refetchAll();
     },
-    [refetch],
+    [refetchAll],
   );
 
   const handleInitRepo = useCallback(
     async (path: string) => {
       await initRepo(path);
-      await refetch().catch(() => undefined);
+      await refetchAll();
     },
-    [refetch],
+    [refetchAll],
   );
 
   const handleFetch = useCallback(
     async (path: string) => {
       await fetchRepo(path);
-      await refetch().catch(() => undefined);
+      await refetchAll();
     },
-    [refetch],
+    [refetchAll],
   );
 
   const handlePull = useCallback(
     async (path: string) => {
       await pullRepo(path);
-      await refetch().catch(() => undefined);
+      await refetchAll();
     },
-    [refetch],
+    [refetchAll],
   );
 
   const handleCreateBranch = useCallback(
     async (path: string, name: string, baseBranch: string) => {
       await createBranch(path, name, baseBranch);
-      await refetch().catch(() => undefined);
+      await refetchAll();
     },
-    [refetch],
+    [refetchAll],
   );
 
   const handleCreateWorktree = useCallback(
@@ -135,10 +143,10 @@ export function ContextPanel({
         createBranchForWorktree,
         baseBranch,
       );
-      await refetch().catch(() => undefined);
+      await refetchAll();
       return createdWorktree;
     },
-    [refetch],
+    [refetchAll],
   );
 
   const handleOpenChangedFile = useCallback(
@@ -151,9 +159,19 @@ export function ContextPanel({
   );
 
   const handleRefresh = useCallback(() => {
-    void refetch();
-    void refetchFiles();
-  }, [refetch, refetchFiles]);
+    void refetchAll();
+  }, [refetchAll]);
+
+  useEffect(() => {
+    const unlisten = listen<{ sessionId: string }>("acp:done", (event) => {
+      if (event.payload.sessionId === sessionId) {
+        void refetchFiles();
+      }
+    });
+    return () => {
+      void unlisten.then((fn) => fn());
+    };
+  }, [sessionId, refetchFiles]);
 
   return (
     <Tabs
