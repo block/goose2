@@ -732,9 +732,11 @@ body,
     }
   }
 
-  [data-slot="dropdown-menu-content"],
-  [data-slot="popover-content"],
-  [data-slot="context-menu-content"] {
+  *:not(body):is(
+      [data-slot="dropdown-menu-content"],
+      [data-slot="popover-content"],
+      [data-slot="context-menu-content"]
+    ) {
     &:focus-visible {
       @apply ring-0 ring-offset-0;
     }

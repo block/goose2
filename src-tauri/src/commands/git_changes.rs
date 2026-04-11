@@ -38,7 +38,7 @@ pub fn get_changed_files(path: String) -> Result<Vec<ChangedFile>, String> {
 
         let index_status = line.as_bytes()[0];
         let worktree_status = line.as_bytes()[1];
-        let file_path = line[3..].trim().to_string();
+        let file_path = unquote_porcelain(line[3..].trim());
         let file_path = if file_path.contains(" -> ") {
             file_path
                 .split(" -> ")
@@ -95,19 +95,39 @@ fn parse_numstat(output: &str) -> std::collections::HashMap<String, (u32, u32)> 
             let additions = parts[0].parse::<u32>().unwrap_or(0);
             let deletions = parts[1].parse::<u32>().unwrap_or(0);
             let path = parts[2..].join("\t");
-            let path = if path.contains(" => ") {
-                path.split(" => ")
-                    .last()
-                    .unwrap_or(&path)
-                    .trim_end_matches('}')
-                    .to_string()
-            } else {
-                path
-            };
+            let path = expand_rename_path(&path);
             map.insert(path, (additions, deletions));
         }
     }
     map
+}
+
+fn unquote_porcelain(s: &str) -> String {
+    if s.starts_with('"') && s.ends_with('"') && s.len() >= 2 {
+        s[1..s.len() - 1].to_string()
+    } else {
+        s.to_string()
+    }
+}
+
+fn expand_rename_path(path: &str) -> String {
+    if let Some(brace_start) = path.find('{') {
+        if let Some(brace_end) = path.find('}') {
+            let prefix = &path[..brace_start];
+            let inner = &path[brace_start + 1..brace_end];
+            let suffix = &path[brace_end + 1..];
+            let new_name = inner.split(" => ").last().unwrap_or(inner);
+            return format!("{}{}{}", prefix, new_name, suffix);
+        }
+    }
+    if path.contains(" => ") {
+        path.split(" => ")
+            .last()
+            .unwrap_or(path)
+            .to_string()
+    } else {
+        path.to_string()
+    }
 }
 
 const MAX_LINE_COUNT_SIZE: u64 = 1024 * 1024;

@@ -53,6 +53,16 @@ describe("ContextPanel", () => {
       .find((button) => button.textContent?.startsWith(branch));
   const getCreateActionMenuButton = () =>
     screen.getByRole("button", { name: /choose create action/i });
+  const renderContextPanel = (
+    props: Partial<Parameters<typeof ContextPanel>[0]> = {},
+  ) =>
+    render(
+      <ContextPanel
+        sessionId="test-session"
+        projectWorkingDirs={["/Users/test/goose2"]}
+        {...props}
+      />,
+    );
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -94,14 +104,11 @@ describe("ContextPanel", () => {
   it("renders workspace details and supports switching to files tab", async () => {
     const user = userEvent.setup();
 
-    render(
-      <ContextPanel
-        sessionId="test-session-1"
-        projectName="Desktop UX"
-        projectColor="#22c55e"
-        projectWorkingDirs={["/Users/test/goose2"]}
-      />,
-    );
+    renderContextPanel({
+      sessionId: "test-session-1",
+      projectName: "Desktop UX",
+      projectColor: "#22c55e",
+    });
 
     expect(screen.getByRole("tab", { name: /details/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /files/i })).toBeInTheDocument();
@@ -145,12 +152,10 @@ describe("ContextPanel", () => {
       refetch: mockRefetch,
     });
 
-    render(
-      <ContextPanel
-        sessionId="test-session-2"
-        projectWorkingDirs={["/Users/test/not-a-repo"]}
-      />,
-    );
+    renderContextPanel({
+      sessionId: "test-session-2",
+      projectWorkingDirs: ["/Users/test/not-a-repo"],
+    });
 
     expect(
       screen.getByRole("button", { name: /initialize git/i }),
@@ -158,13 +163,10 @@ describe("ContextPanel", () => {
   });
 
   it("shows the working context picker when git repo is available", () => {
-    render(
-      <ContextPanel
-        sessionId="test-session-3"
-        projectName="Desktop UX"
-        projectWorkingDirs={["/Users/test/goose2"]}
-      />,
-    );
+    renderContextPanel({
+      sessionId: "test-session-3",
+      projectName: "Desktop UX",
+    });
 
     expect(
       screen.getByRole("button", { name: /select worktree or branch/i }),
@@ -200,12 +202,10 @@ describe("ContextPanel", () => {
       refetch: mockRefetch,
     });
 
-    render(
-      <ContextPanel
-        sessionId="test-session-4"
-        projectWorkingDirs={["/Users/test/goose2-feature"]}
-      />,
-    );
+    renderContextPanel({
+      sessionId: "test-session-4",
+      projectWorkingDirs: ["/Users/test/goose2-feature"],
+    });
 
     expect(
       screen.getByRole("button", { name: /select worktree or branch/i }),
@@ -218,12 +218,7 @@ describe("ContextPanel", () => {
   it("shows all branches on the main worktree and uses folder subtext for branch targets", async () => {
     const user = userEvent.setup();
 
-    render(
-      <ContextPanel
-        sessionId="test-session-4b"
-        projectWorkingDirs={["/Users/test/goose2"]}
-      />,
-    );
+    renderContextPanel({ sessionId: "test-session-4b" });
 
     await user.click(
       screen.getByRole("button", { name: /select worktree or branch/i }),
@@ -237,7 +232,9 @@ describe("ContextPanel", () => {
     expect(getBranchButton("dev")).toHaveTextContent("~/goose2");
     expect(getBranchButton("dev")).not.toBeDisabled();
 
-    await user.click(getBranchButton("feat/context-panel")!);
+    const featureBranchButton = getBranchButton("feat/context-panel");
+    if (!featureBranchButton) throw new Error("Missing feature branch button");
+    await user.click(featureBranchButton);
 
     expect(
       screen.getByRole("button", { name: /select worktree or branch/i }),
@@ -279,12 +276,10 @@ describe("ContextPanel", () => {
       refetch: mockRefetch,
     });
 
-    render(
-      <ContextPanel
-        sessionId="test-session-4c"
-        projectWorkingDirs={["/Users/test/goose2-feature"]}
-      />,
-    );
+    renderContextPanel({
+      sessionId: "test-session-4c",
+      projectWorkingDirs: ["/Users/test/goose2-feature"],
+    });
 
     await user.click(
       screen.getByRole("button", { name: /select worktree or branch/i }),
@@ -334,12 +329,7 @@ describe("ContextPanel", () => {
       refetch: mockRefetch,
     });
 
-    render(
-      <ContextPanel
-        sessionId="test-session-5"
-        projectWorkingDirs={["/Users/test/goose2"]}
-      />,
-    );
+    renderContextPanel({ sessionId: "test-session-5" });
 
     await user.click(
       screen.getByRole("button", { name: /select worktree or branch/i }),
@@ -353,12 +343,7 @@ describe("ContextPanel", () => {
   it("shows inline workspace actions and create options", async () => {
     const user = userEvent.setup();
 
-    render(
-      <ContextPanel
-        sessionId="test-session-6"
-        projectWorkingDirs={["/Users/test/goose2"]}
-      />,
-    );
+    renderContextPanel({ sessionId: "test-session-6" });
 
     expect(
       screen.getByRole("button", { name: /^create branch$/i }),
@@ -402,12 +387,7 @@ describe("ContextPanel", () => {
       refetch: mockRefetch,
     });
 
-    render(
-      <ContextPanel
-        sessionId="test-session-6b"
-        projectWorkingDirs={["/Users/test/goose2"]}
-      />,
-    );
+    renderContextPanel({ sessionId: "test-session-6b" });
 
     expect(
       screen.getByRole("button", { name: /^pull \(3\)$/i }),
@@ -417,12 +397,7 @@ describe("ContextPanel", () => {
   it("creates a branch from the workspace actions dialog", async () => {
     const user = userEvent.setup();
 
-    render(
-      <ContextPanel
-        sessionId="test-session-7"
-        projectWorkingDirs={["/Users/test/goose2"]}
-      />,
-    );
+    renderContextPanel({ sessionId: "test-session-7" });
 
     await user.click(screen.getByRole("button", { name: /^create branch$/i }));
     await user.type(screen.getByLabelText("Branch name"), "feature/new-branch");
@@ -450,12 +425,7 @@ describe("ContextPanel", () => {
       branch: "feature/new-worktree",
     });
 
-    render(
-      <ContextPanel
-        sessionId="test-session-8"
-        projectWorkingDirs={["/Users/test/goose2"]}
-      />,
-    );
+    renderContextPanel({ sessionId: "test-session-8" });
 
     await user.click(getCreateActionMenuButton());
     await user.click(
@@ -491,12 +461,7 @@ describe("ContextPanel", () => {
   it("remembers the last selected create action on the primary button", async () => {
     const user = userEvent.setup();
 
-    render(
-      <ContextPanel
-        sessionId="test-session-8b"
-        projectWorkingDirs={["/Users/test/goose2"]}
-      />,
-    );
+    renderContextPanel({ sessionId: "test-session-8b" });
 
     await user.click(getCreateActionMenuButton());
     await user.click(
@@ -533,12 +498,7 @@ describe("ContextPanel", () => {
   it("syncs worktree name into branch name until branch name is edited manually", async () => {
     const user = userEvent.setup();
 
-    render(
-      <ContextPanel
-        sessionId="test-session-9"
-        projectWorkingDirs={["/Users/test/goose2"]}
-      />,
-    );
+    renderContextPanel({ sessionId: "test-session-9" });
 
     await user.click(getCreateActionMenuButton());
     await user.click(
