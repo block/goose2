@@ -121,10 +121,7 @@ fn expand_rename_path(path: &str) -> String {
         }
     }
     if path.contains(" => ") {
-        path.split(" => ")
-            .last()
-            .unwrap_or(path)
-            .to_string()
+        path.split(" => ").last().unwrap_or(path).to_string()
     } else {
         path.to_string()
     }
