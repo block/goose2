@@ -192,7 +192,7 @@ pub fn git_create_worktree(
     })
 }
 
-fn is_git_repo(path: &Path) -> Result<bool, String> {
+pub(crate) fn is_git_repo(path: &Path) -> Result<bool, String> {
     let output = Command::new("git")
         .arg("rev-parse")
         .arg("--is-inside-work-tree")
@@ -203,7 +203,7 @@ fn is_git_repo(path: &Path) -> Result<bool, String> {
     Ok(output.status.success() && String::from_utf8_lossy(&output.stdout).trim() == "true")
 }
 
-fn resolve_repo_path(path: &str) -> Result<PathBuf, String> {
+pub(crate) fn resolve_repo_path(path: &str) -> Result<PathBuf, String> {
     let repo_path = PathBuf::from(path);
     if !repo_path.exists() {
         return Err(format!("Path does not exist: {}", path));
@@ -211,7 +211,7 @@ fn resolve_repo_path(path: &str) -> Result<PathBuf, String> {
     Ok(repo_path)
 }
 
-fn run_git_success(path: &Path, args: &[&str]) -> Result<String, String> {
+pub(crate) fn run_git_success(path: &Path, args: &[&str]) -> Result<String, String> {
     let output = Command::new("git")
         .args(args)
         .current_dir(path)
@@ -229,7 +229,7 @@ fn run_git_success(path: &Path, args: &[&str]) -> Result<String, String> {
     Ok(String::from_utf8_lossy(&output.stdout).into_owned())
 }
 
-fn trim_to_option(value: String) -> Option<String> {
+pub(crate) fn trim_to_option(value: String) -> Option<String> {
     let trimmed = value.trim();
     if trimmed.is_empty() {
         None

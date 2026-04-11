@@ -41,8 +41,7 @@
     },
     "empty": {
       "folderNotSet": "Carpeta no configurada",
-      "noActiveProcesses": "No hay procesos activos",
-      "noChanges": "No hay cambios",
+      "noChanges": "No hay cambios sin confirmar",
       "noProjectAssigned": "No hay proyecto asignado.",
       "noServersConfigured": "No hay servidores configurados"
     },
@@ -84,9 +83,10 @@
       "files": "Archivos"
     },
     "widgets": {
+      "artifacts": "Artefactos",
       "changes": "Cambios",
+      "changesOnBranch": "en",
       "mcpServers": "Servidores MCP",
-      "processes": "Procesos",
       "workspace": "Espacio de trabajo"
     }
   },

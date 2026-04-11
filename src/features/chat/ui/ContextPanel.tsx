@@ -1,7 +1,9 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { listen } from "@tauri-apps/api/event";
 import { FilesList } from "./FilesList";
 import { useGitState } from "@/shared/hooks/useGitState";
+import { useChangedFiles } from "@/shared/hooks/useChangedFiles";
 import {
   createBranch,
   createWorktree,
@@ -17,8 +19,9 @@ import { useChatSessionStore } from "../stores/chatSessionStore";
 import type { WorkingContext } from "../stores/chatSessionStore";
 import { WorkspaceWidget } from "./widgets/WorkspaceWidget";
 import { ChangesWidget } from "./widgets/ChangesWidget";
+import { ArtifactsWidget } from "./widgets/ArtifactsWidget";
 import { McpServersWidget } from "./widgets/McpServersWidget";
-import { ProcessesWidget } from "./widgets/ProcessesWidget";
+import { openPath } from "@tauri-apps/plugin-opener";
 
 interface ContextPanelProps {
   sessionId: string;
@@ -55,6 +58,12 @@ export function ContextPanel({
     refetch,
   } = useGitState(gitQueryPath, activeTab === "details");
 
+  const {
+    data: changedFiles,
+    isLoading: isFilesLoading,
+    refetch: refetchFiles,
+  } = useChangedFiles(gitQueryPath, activeTab === "details");
+
   const handleContextChange = useCallback(
     (context: WorkingContext) => {
       setActiveWorkingContext(sessionId, context);
@@ -62,53 +71,60 @@ export function ContextPanel({
     [sessionId, setActiveWorkingContext],
   );
 
+  const refetchAll = useCallback(async () => {
+    await Promise.all([
+      refetch().catch(() => undefined),
+      refetchFiles().catch(() => undefined),
+    ]);
+  }, [refetch, refetchFiles]);
+
   const handleSwitchBranch = useCallback(
     async (path: string, branch: string) => {
       await switchBranch(path, branch);
-      await refetch().catch(() => undefined);
+      await refetchAll();
     },
-    [refetch],
+    [refetchAll],
   );
 
   const handleStashAndSwitch = useCallback(
     async (path: string, branch: string) => {
       await stashChanges(path);
       await switchBranch(path, branch);
-      await refetch().catch(() => undefined);
+      await refetchAll();
     },
-    [refetch],
+    [refetchAll],
   );
 
   const handleInitRepo = useCallback(
     async (path: string) => {
       await initRepo(path);
-      await refetch().catch(() => undefined);
+      await refetchAll();
     },
-    [refetch],
+    [refetchAll],
   );
 
   const handleFetch = useCallback(
     async (path: string) => {
       await fetchRepo(path);
-      await refetch().catch(() => undefined);
+      await refetchAll();
     },
-    [refetch],
+    [refetchAll],
   );
 
   const handlePull = useCallback(
     async (path: string) => {
       await pullRepo(path);
-      await refetch().catch(() => undefined);
+      await refetchAll();
     },
-    [refetch],
+    [refetchAll],
   );
 
   const handleCreateBranch = useCallback(
     async (path: string, name: string, baseBranch: string) => {
       await createBranch(path, name, baseBranch);
-      await refetch().catch(() => undefined);
+      await refetchAll();
     },
-    [refetch],
+    [refetchAll],
   );
 
   const handleCreateWorktree = useCallback(
@@ -126,11 +142,35 @@ export function ContextPanel({
         createBranchForWorktree,
         baseBranch,
       );
-      await refetch().catch(() => undefined);
+      await refetchAll();
       return createdWorktree;
     },
-    [refetch],
+    [refetchAll],
   );
+
+  const handleOpenChangedFile = useCallback(
+    (filePath: string) => {
+      if (!gitQueryPath) return;
+      const fullPath = `${gitQueryPath}/${filePath}`;
+      void openPath(fullPath);
+    },
+    [gitQueryPath],
+  );
+
+  const handleRefresh = useCallback(() => {
+    void refetchAll();
+  }, [refetchAll]);
+
+  useEffect(() => {
+    const unlisten = listen<{ sessionId: string }>("acp:done", (event) => {
+      if (event.payload.sessionId === sessionId) {
+        void refetchFiles();
+      }
+    });
+    return () => {
+      void unlisten.then((fn) => fn());
+    };
+  }, [sessionId, refetchFiles]);
 
   return (
     <Tabs
@@ -168,11 +208,17 @@ export function ContextPanel({
             onPull={handlePull}
             onCreateBranch={handleCreateBranch}
             onCreateWorktree={handleCreateWorktree}
-            onRefresh={() => void refetch()}
+            onRefresh={handleRefresh}
           />
-          <ChangesWidget />
+          <ChangesWidget
+            files={changedFiles}
+            isLoading={isFilesLoading}
+            currentBranch={gitState?.currentBranch ?? null}
+            repoPath={gitQueryPath ?? ""}
+            onOpenFile={handleOpenChangedFile}
+          />
+          <ArtifactsWidget />
           <McpServersWidget />
-          <ProcessesWidget />
         </div>
       </TabsContent>
 
