@@ -19,3 +19,21 @@ export interface CreatedWorktree {
   path: string;
   branch: string;
 }
+
+export type FileStatus =
+  | "added"
+  | "modified"
+  | "deleted"
+  | "renamed"
+  | "copied"
+  | "untracked";
+
+export interface ChangedFile {
+  path: string;
+  filename: string;
+  directory: string;
+  status: FileStatus;
+  staged: boolean;
+  additions: number;
+  deletions: number;
+}

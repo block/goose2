@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FilesList } from "./FilesList";
 import { useGitState } from "@/shared/hooks/useGitState";
+import { useChangedFiles } from "@/shared/hooks/useChangedFiles";
 import {
   createBranch,
   createWorktree,
@@ -17,8 +18,10 @@ import { useChatSessionStore } from "../stores/chatSessionStore";
 import type { WorkingContext } from "../stores/chatSessionStore";
 import { WorkspaceWidget } from "./widgets/WorkspaceWidget";
 import { ChangesWidget } from "./widgets/ChangesWidget";
+import { ArtifactsWidget } from "./widgets/ArtifactsWidget";
 import { McpServersWidget } from "./widgets/McpServersWidget";
 import { ProcessesWidget } from "./widgets/ProcessesWidget";
+import { openPath } from "@tauri-apps/plugin-opener";
 
 interface ContextPanelProps {
   sessionId: string;
@@ -54,6 +57,12 @@ export function ContextPanel({
     isFetching,
     refetch,
   } = useGitState(gitQueryPath, activeTab === "details");
+
+  const {
+    data: changedFiles,
+    isLoading: isFilesLoading,
+    refetch: refetchFiles,
+  } = useChangedFiles(gitQueryPath, activeTab === "details");
 
   const handleContextChange = useCallback(
     (context: WorkingContext) => {
@@ -132,6 +141,20 @@ export function ContextPanel({
     [refetch],
   );
 
+  const handleOpenChangedFile = useCallback(
+    (filePath: string) => {
+      if (!gitQueryPath) return;
+      const fullPath = `${gitQueryPath}/${filePath}`;
+      void openPath(fullPath);
+    },
+    [gitQueryPath],
+  );
+
+  const handleRefresh = useCallback(() => {
+    void refetch();
+    void refetchFiles();
+  }, [refetch, refetchFiles]);
+
   return (
     <Tabs
       value={activeTab}
@@ -168,9 +191,16 @@ export function ContextPanel({
             onPull={handlePull}
             onCreateBranch={handleCreateBranch}
             onCreateWorktree={handleCreateWorktree}
-            onRefresh={() => void refetch()}
+            onRefresh={handleRefresh}
           />
-          <ChangesWidget />
+          <ChangesWidget
+            files={changedFiles}
+            isLoading={isFilesLoading}
+            currentBranch={gitState?.currentBranch ?? null}
+            repoPath={gitQueryPath ?? ""}
+            onOpenFile={handleOpenChangedFile}
+          />
+          <ArtifactsWidget />
           <McpServersWidget />
           <ProcessesWidget />
         </div>

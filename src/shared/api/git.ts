@@ -1,5 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { CreatedWorktree, GitState } from "@/shared/types/git";
+import type {
+  ChangedFile,
+  CreatedWorktree,
+  GitState,
+} from "@/shared/types/git";
 
 export async function getGitState(path: string): Promise<GitState> {
   return invoke("get_git_state", { path });
@@ -34,6 +38,10 @@ export async function createBranch(
   baseBranch: string,
 ): Promise<void> {
   return invoke("git_create_branch", { path, name, baseBranch });
+}
+
+export async function getChangedFiles(path: string): Promise<ChangedFile[]> {
+  return invoke("get_changed_files", { path });
 }
 
 export async function createWorktree(

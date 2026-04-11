@@ -30,6 +30,159 @@ pub struct CreatedWorktree {
     pub branch: String,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChangedFile {
+    pub path: String,
+    pub filename: String,
+    pub directory: String,
+    pub status: String,
+    pub staged: bool,
+    pub additions: u32,
+    pub deletions: u32,
+}
+
+#[tauri::command]
+pub fn get_changed_files(path: String) -> Result<Vec<ChangedFile>, String> {
+    let repo_path = resolve_repo_path(&path)?;
+
+    if !is_git_repo(&repo_path)? {
+        return Ok(Vec::new());
+    }
+
+    let status_output = run_git_success(&repo_path, &["status", "--porcelain"])?;
+    if status_output.trim().is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let staged_numstat =
+        run_git_success(&repo_path, &["diff", "--cached", "--numstat"]).unwrap_or_default();
+    let unstaged_numstat =
+        run_git_success(&repo_path, &["diff", "--numstat"]).unwrap_or_default();
+
+    let staged_stats = parse_numstat(&staged_numstat);
+    let unstaged_stats = parse_numstat(&unstaged_numstat);
+
+    let repo_root = trim_to_option(run_git_success(
+        &repo_path,
+        &["rev-parse", "--show-toplevel"],
+    )?)
+    .unwrap_or_else(|| path.clone());
+
+    let mut files: Vec<ChangedFile> = Vec::new();
+
+    for line in status_output.lines() {
+        if line.len() < 4 {
+            continue;
+        }
+
+        let index_status = line.as_bytes()[0];
+        let worktree_status = line.as_bytes()[1];
+        let file_path = line[3..].trim().to_string();
+        let file_path = if file_path.contains(" -> ") {
+            file_path
+                .split(" -> ")
+                .last()
+                .unwrap_or(&file_path)
+                .to_string()
+        } else {
+            file_path
+        };
+
+        let (status, staged) = parse_status_codes(index_status, worktree_status);
+
+        let (additions, deletions) = if staged {
+            staged_stats
+                .get(&file_path)
+                .copied()
+                .unwrap_or_else(|| count_file_lines(&repo_path, &file_path))
+        } else {
+            unstaged_stats
+                .get(&file_path)
+                .copied()
+                .unwrap_or_else(|| count_file_lines(&repo_path, &file_path))
+        };
+
+        let full_path = Path::new(&repo_root).join(&file_path);
+        let filename = full_path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| file_path.clone());
+        let directory = full_path
+            .parent()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_default();
+
+        files.push(ChangedFile {
+            path: file_path,
+            filename,
+            directory,
+            status,
+            staged,
+            additions,
+            deletions,
+        });
+    }
+
+    files.sort_by(|a, b| a.path.cmp(&b.path));
+    Ok(files)
+}
+
+fn parse_status_codes(index: u8, worktree: u8) -> (String, bool) {
+    if index == b'?' && worktree == b'?' {
+        return ("untracked".to_string(), false);
+    }
+    if index != b' ' && index != b'?' {
+        let status = match index {
+            b'A' => "added",
+            b'D' => "deleted",
+            b'R' => "renamed",
+            b'C' => "copied",
+            _ => "modified",
+        };
+        return (status.to_string(), true);
+    }
+    let status = match worktree {
+        b'D' => "deleted",
+        _ => "modified",
+    };
+    (status.to_string(), false)
+}
+
+fn parse_numstat(output: &str) -> std::collections::HashMap<String, (u32, u32)> {
+    let mut map = std::collections::HashMap::new();
+    for line in output.lines() {
+        let parts: Vec<&str> = line.split('\t').collect();
+        if parts.len() >= 3 {
+            let additions = parts[0].parse::<u32>().unwrap_or(0);
+            let deletions = parts[1].parse::<u32>().unwrap_or(0);
+            let path = parts[2..].join("\t");
+            let path = if path.contains(" => ") {
+                path.split(" => ")
+                    .last()
+                    .unwrap_or(&path)
+                    .trim_end_matches('}')
+                    .to_string()
+            } else {
+                path
+            };
+            map.insert(path, (additions, deletions));
+        }
+    }
+    map
+}
+
+fn count_file_lines(repo_path: &Path, file_path: &str) -> (u32, u32) {
+    let full = repo_path.join(file_path);
+    match std::fs::read_to_string(&full) {
+        Ok(contents) => {
+            let count = contents.lines().count() as u32;
+            (count, 0)
+        }
+        Err(_) => (0, 0),
+    }
+}
+
 #[tauri::command]
 pub fn get_git_state(path: String) -> Result<GitState, String> {
     let repo_path = PathBuf::from(&path);

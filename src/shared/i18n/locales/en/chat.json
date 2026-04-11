@@ -39,9 +39,11 @@
       "worktreeSuccess": "Created worktree {{worktree}}.",
       "worktreeTitle": "New Worktree"
     },
+    "artifactsSummary": "{{count}} file(s) created in this session",
     "empty": {
       "folderNotSet": "Folder not set",
       "noActiveProcesses": "No active processes",
+      "noArtifacts": "No outputs yet",
       "noChanges": "No changes",
       "noProjectAssigned": "No project assigned.",
       "noServersConfigured": "No servers configured"
@@ -84,6 +86,7 @@
       "files": "Files"
     },
     "widgets": {
+      "artifacts": "Artifacts",
       "changes": "Changes",
       "mcpServers": "MCP Servers",
       "processes": "Processes",

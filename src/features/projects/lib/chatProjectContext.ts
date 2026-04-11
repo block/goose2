@@ -48,7 +48,7 @@ export function getProjectArtifactRoots(
     .filter((directory): directory is string => directory !== null);
 
   if (workingDirs.length > 0) {
-    return [...workingDirs.map(appendArtifactsSegment), ...workingDirs];
+    return workingDirs.map(appendArtifactsSegment);
   }
 
   const artifactsDir = trimValue(project?.artifactsDir);

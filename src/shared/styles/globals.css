@@ -35,6 +35,7 @@
 
   --color-green-100: #a3d795;
   --color-green-200: #91cb80;
+  --color-green-300: #73b468;
 
   --color-yellow-100: #ffd966;
   --color-yellow-200: #fbcd44;
@@ -107,7 +108,7 @@
   --border-card: var(--color-gray-200);
   --border-inverse: var(--color-black);
   --border-danger: var(--color-red-200);
-  --border-success: var(--color-green-200);
+  --border-success: var(--color-green-300);
   --border-warning: var(--color-yellow-200);
   --border-info: var(--color-blue-200);
 
@@ -118,7 +119,7 @@
   --text-alt: var(--color-gray-600);
   --text-inverse: var(--color-white);
   --text-danger: var(--color-red-200);
-  --text-success: var(--color-green-200);
+  --text-success: var(--color-green-300);
   --text-warning: var(--color-yellow-200);
   --text-info: var(--color-blue-200);
 
