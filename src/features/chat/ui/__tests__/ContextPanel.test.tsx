@@ -219,7 +219,7 @@ describe("ContextPanel", () => {
     expect(getBranchButton("dev")).toHaveTextContent("~/goose2");
     expect(getBranchButton("dev")).not.toBeDisabled();
 
-    await user.click(getBranchButton("feat/context-panel"));
+    await user.click(getBranchButton("feat/context-panel")!);
 
     expect(
       screen.getByRole("button", { name: /select worktree or branch/i }),
