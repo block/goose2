@@ -73,7 +73,7 @@ pub fn run() {
             commands::doctor::run_doctor,
             commands::doctor::run_doctor_fix,
             commands::git::get_git_state,
-            commands::git::get_changed_files,
+            commands::git_changes::get_changed_files,
             commands::git::git_switch_branch,
             commands::git::git_stash,
             commands::git::git_init,

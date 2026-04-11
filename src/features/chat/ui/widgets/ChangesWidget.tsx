@@ -115,6 +115,7 @@ export function ChangesWidget({
       {hasChanges && (
         <span className="shrink-0 font-mono text-xxs tabular-nums">
           <span className="text-text-success">+{totals.additions}</span>{" "}
+          {/* i18n-check-ignore — mathematical symbol, not translatable */}
           <span className="text-text-danger">&minus;{totals.deletions}</span>
         </span>
       )}

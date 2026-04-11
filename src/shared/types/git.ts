@@ -30,8 +30,6 @@ export type FileStatus =
 
 export interface ChangedFile {
   path: string;
-  filename: string;
-  directory: string;
   status: FileStatus;
   additions: number;
   deletions: number;

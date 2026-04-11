@@ -30,153 +30,6 @@ pub struct CreatedWorktree {
     pub branch: String,
 }
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ChangedFile {
-    pub path: String,
-    pub filename: String,
-    pub directory: String,
-    pub status: String,
-    pub additions: u32,
-    pub deletions: u32,
-}
-
-#[tauri::command]
-pub fn get_changed_files(path: String) -> Result<Vec<ChangedFile>, String> {
-    let repo_path = resolve_repo_path(&path)?;
-
-    if !is_git_repo(&repo_path)? {
-        return Ok(Vec::new());
-    }
-
-    let status_output = run_git_success(&repo_path, &["status", "--porcelain"])?;
-    if status_output.trim().is_empty() {
-        return Ok(Vec::new());
-    }
-
-    let head_numstat =
-        run_git_success(&repo_path, &["diff", "HEAD", "--numstat"]).unwrap_or_default();
-    let head_stats = parse_numstat(&head_numstat);
-
-    let repo_root = trim_to_option(run_git_success(
-        &repo_path,
-        &["rev-parse", "--show-toplevel"],
-    )?)
-    .unwrap_or_else(|| path.clone());
-
-    let mut files: Vec<ChangedFile> = Vec::new();
-
-    for line in status_output.lines() {
-        if line.len() < 4 {
-            continue;
-        }
-
-        let index_status = line.as_bytes()[0];
-        let worktree_status = line.as_bytes()[1];
-        let file_path = line[3..].trim().to_string();
-        let file_path = if file_path.contains(" -> ") {
-            file_path
-                .split(" -> ")
-                .last()
-                .unwrap_or(&file_path)
-                .to_string()
-        } else {
-            file_path
-        };
-
-        let status = parse_status_codes(index_status, worktree_status);
-
-        let (additions, deletions) = head_stats
-            .get(&file_path)
-            .copied()
-            .unwrap_or_else(|| count_file_lines(&repo_path, &file_path));
-
-        let full_path = Path::new(&repo_root).join(&file_path);
-        let filename = full_path
-            .file_name()
-            .map(|n| n.to_string_lossy().to_string())
-            .unwrap_or_else(|| file_path.clone());
-        let directory = full_path
-            .parent()
-            .map(|p| p.to_string_lossy().to_string())
-            .unwrap_or_default();
-
-        files.push(ChangedFile {
-            path: file_path,
-            filename,
-            directory,
-            status,
-            additions,
-            deletions,
-        });
-    }
-
-    files.sort_by(|a, b| a.path.cmp(&b.path));
-    Ok(files)
-}
-
-fn parse_status_codes(index: u8, worktree: u8) -> String {
-    if index == b'?' && worktree == b'?' {
-        return "untracked".to_string();
-    }
-    if index == b'A' || (index == b'?' && worktree != b'?') {
-        return "added".to_string();
-    }
-    if index == b'D' || worktree == b'D' {
-        return "deleted".to_string();
-    }
-    if index == b'R' {
-        return "renamed".to_string();
-    }
-    if index == b'C' {
-        return "copied".to_string();
-    }
-    "modified".to_string()
-}
-
-fn parse_numstat(output: &str) -> std::collections::HashMap<String, (u32, u32)> {
-    let mut map = std::collections::HashMap::new();
-    for line in output.lines() {
-        let parts: Vec<&str> = line.split('\t').collect();
-        if parts.len() >= 3 {
-            let additions = parts[0].parse::<u32>().unwrap_or(0);
-            let deletions = parts[1].parse::<u32>().unwrap_or(0);
-            let path = parts[2..].join("\t");
-            let path = if path.contains(" => ") {
-                path.split(" => ")
-                    .last()
-                    .unwrap_or(&path)
-                    .trim_end_matches('}')
-                    .to_string()
-            } else {
-                path
-            };
-            map.insert(path, (additions, deletions));
-        }
-    }
-    map
-}
-
-const MAX_LINE_COUNT_SIZE: u64 = 1024 * 1024;
-
-fn count_file_lines(repo_path: &Path, file_path: &str) -> (u32, u32) {
-    let full = repo_path.join(file_path);
-    let meta = match std::fs::metadata(&full) {
-        Ok(m) => m,
-        Err(_) => return (0, 0),
-    };
-    if meta.len() > MAX_LINE_COUNT_SIZE {
-        return (0, 0);
-    }
-    match std::fs::read_to_string(&full) {
-        Ok(contents) => {
-            let count = contents.lines().count() as u32;
-            (count, 0)
-        }
-        Err(_) => (0, 0),
-    }
-}
-
 #[tauri::command]
 pub fn get_git_state(path: String) -> Result<GitState, String> {
     let repo_path = PathBuf::from(&path);
@@ -339,7 +192,7 @@ pub fn git_create_worktree(
     })
 }
 
-fn is_git_repo(path: &Path) -> Result<bool, String> {
+pub(crate) fn is_git_repo(path: &Path) -> Result<bool, String> {
     let output = Command::new("git")
         .arg("rev-parse")
         .arg("--is-inside-work-tree")
@@ -350,7 +203,7 @@ fn is_git_repo(path: &Path) -> Result<bool, String> {
     Ok(output.status.success() && String::from_utf8_lossy(&output.stdout).trim() == "true")
 }
 
-fn resolve_repo_path(path: &str) -> Result<PathBuf, String> {
+pub(crate) fn resolve_repo_path(path: &str) -> Result<PathBuf, String> {
     let repo_path = PathBuf::from(path);
     if !repo_path.exists() {
         return Err(format!("Path does not exist: {}", path));
@@ -358,7 +211,7 @@ fn resolve_repo_path(path: &str) -> Result<PathBuf, String> {
     Ok(repo_path)
 }
 
-fn run_git_success(path: &Path, args: &[&str]) -> Result<String, String> {
+pub(crate) fn run_git_success(path: &Path, args: &[&str]) -> Result<String, String> {
     let output = Command::new("git")
         .args(args)
         .current_dir(path)
@@ -376,7 +229,7 @@ fn run_git_success(path: &Path, args: &[&str]) -> Result<String, String> {
     Ok(String::from_utf8_lossy(&output.stdout).into_owned())
 }
 
-fn trim_to_option(value: String) -> Option<String> {
+pub(crate) fn trim_to_option(value: String) -> Option<String> {
     let trimmed = value.trim();
     if trimmed.is_empty() {
         None

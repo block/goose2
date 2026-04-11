@@ -116,29 +116,28 @@ export function ArtifactsWidget() {
           {verifiedArtifacts.length}
         </span>
       }
+      flush
     >
-      <div className="-mx-1 space-y-px">
-        {verifiedArtifacts.map((artifact) => {
-          const Icon = getArtifactIcon(artifact);
-          return (
-            <FileContextMenu
-              key={artifact.resolvedPath}
-              filePath={artifact.resolvedPath}
+      {verifiedArtifacts.map((artifact) => {
+        const Icon = getArtifactIcon(artifact);
+        return (
+          <FileContextMenu
+            key={artifact.resolvedPath}
+            filePath={artifact.resolvedPath}
+          >
+            <button
+              type="button"
+              className="flex w-full select-none items-center gap-2 px-3 py-1.5 text-left transition-colors duration-100 hover:bg-muted/80"
+              onClick={() => void openResolvedPath(artifact.resolvedPath)}
             >
-              <button
-                type="button"
-                className="flex w-full select-none items-center gap-2 rounded-md px-1.5 py-1 text-left transition-colors hover:bg-muted"
-                onClick={() => void openResolvedPath(artifact.resolvedPath)}
-              >
-                <Icon className="size-3.5 shrink-0 text-foreground-subtle" />
-                <span className="truncate text-xs text-foreground">
-                  {artifact.filename}
-                </span>
-              </button>
-            </FileContextMenu>
-          );
-        })}
-      </div>
+              <Icon className="size-3.5 shrink-0 text-foreground-subtle" />
+              <span className="truncate text-xs text-foreground">
+                {artifact.filename}
+              </span>
+            </button>
+          </FileContextMenu>
+        );
+      })}
     </Widget>
   );
 }

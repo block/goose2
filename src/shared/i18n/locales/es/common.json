@@ -71,6 +71,10 @@
   },
   "labels": {
     "assistant": "Asistente",
+    "copyPath": "Copiar ruta",
+    "revealInFileManager_mac": "Mostrar en Finder",
+    "revealInFileManager_windows": "Mostrar en Explorador",
+    "revealInFileManager_linux": "Mostrar en gestor de archivos",
     "builtIn": "Integrada",
     "characterCount": "{{count}} caracteres",
     "custom": "Personalizada",
