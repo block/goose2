@@ -3,6 +3,10 @@ import { useTranslation } from "react-i18next";
 import { Copy, Check, RotateCcw, Pencil, Bot, User } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { useLocaleFormatting } from "@/shared/i18n";
+import { useAgentStore } from "@/features/agents/stores/agentStore";
+import { getCatalogEntry } from "@/features/providers/providerCatalog";
+import { getProviderIcon, formatProviderLabel } from "@/shared/ui/icons/ProviderIcons";
+import { useAvatarSrc } from "@/shared/hooks/useAvatarSrc";
 import {
   MessageActions,
   MessageAction,
@@ -29,8 +33,6 @@ import type {
 
 interface MessageBubbleProps {
   message: Message;
-  agentName?: string;
-  agentAvatarUrl?: string;
   isStreaming?: boolean;
   onCopy?: () => void;
   onRetryMessage?: (messageId: string) => void;
@@ -249,8 +251,6 @@ function CopyAction({ text }: { text: string }) {
 
 export const MessageBubble = memo(function MessageBubble({
   message,
-  agentName,
-  agentAvatarUrl,
   isStreaming,
   onRetryMessage,
   onEditMessage,
@@ -259,6 +259,12 @@ export const MessageBubble = memo(function MessageBubble({
   const { formatDate } = useLocaleFormatting();
   const { role, content, created } = message;
   const { handleContentClick, pathNotice } = useArtifactLinkHandler();
+  const persona = useAgentStore((state) =>
+    message.metadata?.personaId
+      ? state.getPersonaById(message.metadata.personaId)
+      : undefined,
+  );
+  const personaAvatarUrl = useAvatarSrc(persona?.avatar);
 
   const textContent = content
     .filter((c): c is TextContent => c.type === "text")
@@ -281,7 +287,24 @@ export const MessageBubble = memo(function MessageBubble({
   }
 
   const isUser = role === "user";
-  const assistantDisplayName = message.metadata?.personaName ?? agentName;
+  const assistantProviderId = message.metadata?.providerId;
+  const assistantProviderName = assistantProviderId
+    ? (getCatalogEntry(assistantProviderId)?.displayName ??
+      formatProviderLabel(assistantProviderId))
+    : undefined;
+  const assistantDisplayName =
+    message.metadata?.personaName ?? persona?.displayName ?? assistantProviderName;
+  const assistantProviderIcon = assistantProviderId
+    ? getProviderIcon(assistantProviderId, "size-3.5")
+    : null;
+  const hidePendingAssistantShell =
+    !isUser &&
+    content.length === 0 &&
+    message.metadata?.completionStatus === "inProgress";
+
+  if (hidePendingAssistantShell) {
+    return null;
+  }
 
   return (
     <div
@@ -299,8 +322,10 @@ export const MessageBubble = memo(function MessageBubble({
         </div>
       ) : (
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent">
-          {agentAvatarUrl ? (
-            <img src={agentAvatarUrl} alt="" className="h-7 w-7 rounded-full" />
+          {personaAvatarUrl ? (
+            <img src={personaAvatarUrl} alt="" className="h-7 w-7 rounded-full" />
+          ) : assistantProviderIcon ? (
+            assistantProviderIcon
           ) : (
             <Bot size={14} className="text-muted-foreground" />
           )}

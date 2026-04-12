@@ -84,6 +84,10 @@ interface ChatStoreActions {
   getActiveMessages: () => Message[];
   getSessionRuntime: (sessionId: string) => SessionChatRuntime;
   setStreamingMessageId: (sessionId: string, id: string | null) => void;
+  setPendingAssistantProvider: (
+    sessionId: string,
+    providerId: string | null,
+  ) => void;
   appendToStreamingMessage: (
     sessionId: string,
     content: MessageContent,
@@ -210,6 +214,18 @@ export const useChatStore = create<ChatStore>((set, get) => ({
           ...(state.sessionStateById[sessionId] ??
             createInitialSessionRuntime()),
           streamingMessageId: id,
+        },
+      },
+    })),
+
+  setPendingAssistantProvider: (sessionId, pendingAssistantProviderId) =>
+    set((state) => ({
+      sessionStateById: {
+        ...state.sessionStateById,
+        [sessionId]: {
+          ...(state.sessionStateById[sessionId] ??
+            createInitialSessionRuntime()),
+          pendingAssistantProviderId,
         },
       },
     })),

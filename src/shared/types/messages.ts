@@ -112,6 +112,7 @@ export interface MessageMetadata {
   /** Persona that generated this assistant message (set on send). */
   personaId?: string;
   personaName?: string;
+  providerId?: string;
   /** Which persona this user message is addressed to. */
   targetPersonaId?: string;
   targetPersonaName?: string;

@@ -7,8 +7,6 @@ import { getTextContent, type Message } from "@/shared/types/messages";
 
 interface MessageTimelineProps {
   messages: Message[];
-  agentName?: string;
-  agentAvatarUrl?: string;
   streamingMessageId?: string | null;
   scrollTargetMessageId?: string | null;
   scrollTargetQuery?: string | null;
@@ -53,8 +51,6 @@ function formatDateSeparator(
 
 export function MessageTimeline({
   messages,
-  agentName,
-  agentAvatarUrl,
   streamingMessageId,
   scrollTargetMessageId,
   scrollTargetQuery,
@@ -71,7 +67,13 @@ export function MessageTimeline({
   const isNearBottomRef = useRef(true);
   const [pulsingMessageId, setPulsingMessageId] = useState<string | null>(null);
   const visibleMessages = messages.filter(
-    (m) => m.metadata?.userVisible !== false,
+    (m) =>
+      m.metadata?.userVisible !== false &&
+      !(
+        m.role === "assistant" &&
+        m.content.length === 0 &&
+        m.metadata?.completionStatus === "inProgress"
+      ),
   );
   const resolvedScrollTargetMessageId = useMemo(() => {
     if (scrollTargetMessageId) {
@@ -205,10 +207,6 @@ export function MessageTimeline({
               )}
               <MessageBubble
                 message={message}
-                agentName={message.role === "assistant" ? agentName : undefined}
-                agentAvatarUrl={
-                  message.role === "assistant" ? agentAvatarUrl : undefined
-                }
                 isStreaming={message.id === streamingMessageId}
                 onRetryMessage={
                   message.role === "assistant" ? onRetryMessage : undefined

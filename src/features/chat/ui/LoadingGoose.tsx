@@ -10,7 +10,6 @@ export type LoadingChatState =
   | "compacting";
 
 interface LoadingGooseProps {
-  agentName?: string;
   chatState?: LoadingChatState;
 }
 
@@ -24,16 +23,12 @@ const STATE_ICONS: Record<LoadingChatState, React.ReactNode> = {
   compacting: <AnimatedIcons className="shrink-0" cycleInterval={600} />,
 };
 
-export function LoadingGoose({
-  agentName,
-  chatState = "idle",
-}: LoadingGooseProps) {
-  const { t } = useTranslation(["chat", "common"]);
+export function LoadingGoose({ chatState = "idle" }: LoadingGooseProps) {
+  const { t } = useTranslation("chat");
   if (chatState === "idle") {
     return null;
   }
 
-  const resolvedAgentName = agentName ?? t("common:labels.goose");
   const message = t(`loading.${chatState}`);
   const icon = STATE_ICONS[chatState];
 
@@ -41,15 +36,12 @@ export function LoadingGoose({
     <div
       className="px-4 animate-in fade-in duration-300 motion-reduce:animate-none"
       role="status"
-      // i18n-check-ignore translated template expression
-      aria-label={`${resolvedAgentName} ${message}`}
+      aria-label={message}
     >
       <div className="max-w-3xl mx-auto w-full">
         <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
           {icon}
-          <span>
-            {resolvedAgentName} {message}
-          </span>
+          <span>{message}</span>
         </div>
       </div>
     </div>

@@ -85,6 +85,12 @@ interface AcpReplayCompletePayload {
   sessionId: string;
 }
 
+function getPendingAssistantProviderId(sessionId: string): string | undefined {
+  const providerId = useChatStore.getState().getSessionRuntime(sessionId)
+    .pendingAssistantProviderId;
+  return providerId ?? undefined;
+}
+
 function updateCompletionStatus(
   message: Message,
   completionStatus: MessageCompletionStatus,
@@ -199,6 +205,7 @@ export function useAcpStream(enabled: boolean): void {
         if (!active) return;
         const store = useChatStore.getState();
         const { sessionId, messageId, personaId, personaName } = event.payload;
+        const providerId = getPendingAssistantProviderId(sessionId);
 
         if (store.loadingSessionIds.has(sessionId)) {
           if (!getBufferedMessage(sessionId, messageId)) {
@@ -212,6 +219,7 @@ export function useAcpStream(enabled: boolean): void {
                 agentVisible: true,
                 personaId,
                 personaName,
+                providerId,
                 completionStatus: "inProgress",
               },
             });
@@ -227,7 +235,17 @@ export function useAcpStream(enabled: boolean): void {
           (message) => message.id === messageId,
         );
 
-        if (!existing) {
+        if (existing) {
+          store.updateMessage(sessionId, messageId, (message) => ({
+            ...message,
+            metadata: {
+              ...message.metadata,
+              personaId: message.metadata?.personaId ?? personaId,
+              personaName: message.metadata?.personaName ?? personaName,
+              providerId: message.metadata?.providerId ?? providerId,
+            },
+          }));
+        } else {
           store.addMessage(sessionId, {
             id: messageId,
             role: "assistant",
@@ -238,11 +256,13 @@ export function useAcpStream(enabled: boolean): void {
               agentVisible: true,
               personaId,
               personaName,
+              providerId,
               completionStatus: "inProgress",
             },
           });
         }
 
+        store.setPendingAssistantProvider(sessionId, null);
         store.setStreamingMessageId(sessionId, messageId);
       }),
     );
@@ -305,6 +325,7 @@ export function useAcpStream(enabled: boolean): void {
           );
           return updateCompletionStatus({ ...message, content }, "completed");
         });
+        store.setPendingAssistantProvider(sessionId, null);
         store.setStreamingMessageId(sessionId, null);
 
         store.setChatState(sessionId, "idle");
