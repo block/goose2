@@ -224,7 +224,9 @@ describe("MessageBubble", () => {
 
     expect(screen.getByText("Builder")).toBeInTheDocument();
     expect(
-      screen.queryByText((text, el) => el?.tagName === "SPAN" && text === "Codex"),
+      screen.queryByText(
+        (text, el) => el?.tagName === "SPAN" && text === "Codex",
+      ),
     ).not.toBeInTheDocument();
   });
 
@@ -265,7 +267,11 @@ describe("MessageBubble", () => {
       />,
     );
 
-    expect(screen.getByText("Codex")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        (text, el) => el?.tagName === "SPAN" && text === "Codex",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("collapses low-signal internal tool steps behind a toggle", async () => {
