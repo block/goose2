@@ -36,9 +36,9 @@ const EXCEPTIONS = {
       "ACP replay, streaming, session binding, model-state event handling, and replay timeout are still centralized here.",
   },
   "src/features/chat/hooks/__tests__/useAcpStream.test.ts": {
-    limit: 540,
+    limit: 570,
     justification:
-      "Covers replay buffering, timeout error state, and streaming edge cases in one cohesive suite.",
+      "Covers replay buffering, timeout error state, streaming edge cases, and provider identity persistence in one cohesive suite.",
   },
   "src/features/chat/stores/__tests__/chatSessionStore.test.ts": {
     limit: 540,

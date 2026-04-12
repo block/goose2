@@ -104,10 +104,8 @@
     "placeholder": "Enviar mensaje a {{agent}}, usa @ para mencionar personas"
   },
   "loading": {
-    "compacting": "está compactando la conversación...",
-    "streaming": "está trabajando en ello...",
-    "thinking": "está pensando...",
-    "waiting": "está esperando..."
+    "thinking": "Pensando...",
+    "responding": "Respondiendo..."
   },
   "mention": {
     "ariaLabel": "Sugerencias de menciones",

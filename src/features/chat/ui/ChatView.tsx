@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { AnimatePresence } from "motion/react";
 import { MessageTimeline } from "./MessageTimeline";
 import { ChatInput } from "./ChatInput";
 import type { PastedImage } from "@/shared/types/messages";
@@ -20,7 +21,6 @@ import {
   getProjectArtifactRoots,
   resolveProjectWorkingDir,
 } from "@/features/projects/lib/chatProjectContext";
-import { useAvatarSrc } from "@/shared/hooks/useAvatarSrc";
 import { getHomeDir } from "@/shared/api/system";
 import { ArtifactPolicyProvider } from "../hooks/ArtifactPolicyContext";
 import type { ModelOption } from "../types";
@@ -30,8 +30,6 @@ const EMPTY_MODELS: ModelOption[] = [];
 
 interface ChatViewProps {
   sessionId: string;
-  agentName?: string;
-  agentAvatarUrl?: string;
   initialProvider?: string;
   initialPersonaId?: string;
   initialMessage?: string;
@@ -44,8 +42,6 @@ interface ChatViewProps {
 
 export function ChatView({
   sessionId,
-  agentName = "Goose",
-  agentAvatarUrl,
   initialProvider,
   initialPersonaId,
   initialMessage,
@@ -330,9 +326,6 @@ export function ChatView({
     }
   }, [personas, selectedPersonaId]);
 
-  const displayAgentName = selectedPersona?.displayName ?? agentName;
-  const personaAvatarSrc = useAvatarSrc(selectedPersona?.avatar);
-
   const personaInfo = selectedPersona
     ? { id: selectedPersona.id, name: selectedPersona.displayName }
     : undefined;
@@ -464,19 +457,23 @@ export function ChatView({
               scrollTargetMessageId={scrollTarget?.messageId ?? null}
               scrollTargetQuery={scrollTarget?.query ?? null}
               onScrollTargetHandled={handleScrollTargetHandled}
-              agentName={displayAgentName}
-              agentAvatarUrl={personaAvatarSrc ?? agentAvatarUrl}
             />
           )}
 
-          {showIndicator && !isLoadingHistory && (
-            <LoadingGoose
-              agentName={displayAgentName}
-              chatState={
-                chatState as "thinking" | "streaming" | "waiting" | "compacting"
-              }
-            />
-          )}
+          <AnimatePresence initial={false}>
+            {showIndicator && !isLoadingHistory ? (
+              <LoadingGoose
+                key="loading-indicator"
+                chatState={
+                  chatState as
+                    | "thinking"
+                    | "streaming"
+                    | "waiting"
+                    | "compacting"
+                }
+              />
+            ) : null}
+          </AnimatePresence>
 
           <ChatInput
             onSend={handleSend}

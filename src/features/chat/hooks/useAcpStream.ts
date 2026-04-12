@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useChatStore } from "../stores/chatStore";
 import { useChatSessionStore } from "../stores/chatSessionStore";
-import type { ModelOption } from "../types";
 import { isDefaultChatTitle } from "../lib/sessionTitle";
 import type {
   Message,
@@ -16,73 +15,26 @@ import {
   getAndDeleteReplayBuffer,
   findLatestUnpairedToolRequest,
 } from "./replayBuffer";
+import type {
+  AcpMessageCreatedPayload,
+  AcpTextPayload,
+  AcpDonePayload,
+  AcpToolCallPayload,
+  AcpToolTitlePayload,
+  AcpToolResultPayload,
+  AcpSessionInfoPayload,
+  AcpSessionBoundPayload,
+  AcpModelStatePayload,
+  AcpUsageUpdatePayload,
+  AcpReplayCompletePayload,
+} from "./acpStreamTypes";
 
-// --- Event payload types ---
-
-interface AcpMessageCreatedPayload {
-  sessionId: string;
-  messageId: string;
-  personaId?: string;
-  personaName?: string;
-}
-
-interface AcpTextPayload {
-  sessionId: string;
-  messageId: string;
-  text: string;
-}
-
-interface AcpDonePayload {
-  sessionId: string;
-  messageId: string;
-}
-
-interface AcpToolCallPayload {
-  sessionId: string;
-  messageId: string;
-  toolCallId: string;
-  title: string;
-}
-
-interface AcpToolTitlePayload {
-  sessionId: string;
-  messageId: string;
-  toolCallId: string;
-  title: string;
-}
-
-interface AcpToolResultPayload {
-  sessionId: string;
-  messageId: string;
-  content: string;
-}
-
-interface AcpSessionInfoPayload {
-  sessionId: string;
-  title?: string;
-}
-
-interface AcpSessionBoundPayload {
-  sessionId: string;
-  gooseSessionId: string;
-}
-
-interface AcpModelStatePayload {
-  sessionId: string;
-  providerId?: string | null;
-  currentModelId: string;
-  currentModelName?: string;
-  availableModels: ModelOption[];
-}
-
-interface AcpUsageUpdatePayload {
-  sessionId: string;
-  used: number;
-  size: number;
-}
-
-interface AcpReplayCompletePayload {
-  sessionId: string;
+function getAssistantProviderId(sessionId: string): string | undefined {
+  const pending = useChatStore
+    .getState()
+    .getSessionRuntime(sessionId).pendingAssistantProviderId;
+  if (pending) return pending;
+  return useChatSessionStore.getState().getSession(sessionId)?.providerId;
 }
 
 function updateCompletionStatus(
@@ -199,6 +151,7 @@ export function useAcpStream(enabled: boolean): void {
         if (!active) return;
         const store = useChatStore.getState();
         const { sessionId, messageId, personaId, personaName } = event.payload;
+        const providerId = getAssistantProviderId(sessionId);
 
         if (store.loadingSessionIds.has(sessionId)) {
           if (!getBufferedMessage(sessionId, messageId)) {
@@ -212,6 +165,7 @@ export function useAcpStream(enabled: boolean): void {
                 agentVisible: true,
                 personaId,
                 personaName,
+                providerId,
                 completionStatus: "inProgress",
               },
             });
@@ -227,7 +181,17 @@ export function useAcpStream(enabled: boolean): void {
           (message) => message.id === messageId,
         );
 
-        if (!existing) {
+        if (existing) {
+          store.updateMessage(sessionId, messageId, (message) => ({
+            ...message,
+            metadata: {
+              ...message.metadata,
+              personaId: message.metadata?.personaId ?? personaId,
+              personaName: message.metadata?.personaName ?? personaName,
+              providerId: message.metadata?.providerId ?? providerId,
+            },
+          }));
+        } else {
           store.addMessage(sessionId, {
             id: messageId,
             role: "assistant",
@@ -238,11 +202,13 @@ export function useAcpStream(enabled: boolean): void {
               agentVisible: true,
               personaId,
               personaName,
+              providerId,
               completionStatus: "inProgress",
             },
           });
         }
 
+        store.setPendingAssistantProvider(sessionId, null);
         store.setStreamingMessageId(sessionId, messageId);
       }),
     );
@@ -305,6 +271,7 @@ export function useAcpStream(enabled: boolean): void {
           );
           return updateCompletionStatus({ ...message, content }, "completed");
         });
+        store.setPendingAssistantProvider(sessionId, null);
         store.setStreamingMessageId(sessionId, null);
 
         store.setChatState(sessionId, "idle");

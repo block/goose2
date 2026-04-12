@@ -1,7 +1,8 @@
-import { describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MessageBubble } from "../MessageBubble";
+import { useAgentStore } from "@/features/agents/stores/agentStore";
 import type { Message } from "@/shared/types/messages";
 
 // ── helpers ───────────────────────────────────────────────────────────
@@ -32,6 +33,10 @@ function assistantMessage(
 // ── tests ─────────────────────────────────────────────────────────────
 
 describe("MessageBubble", () => {
+  beforeEach(() => {
+    useAgentStore.setState({ personas: [] });
+  });
+
   it("renders user message with correct alignment", () => {
     const { container } = render(
       <MessageBubble message={userMessage("hey")} />,
@@ -208,29 +213,65 @@ describe("MessageBubble", () => {
     expect(screen.getByText(/thought for/i)).toBeInTheDocument();
   });
 
-  it("prefers the message persona name over the current agent name", () => {
+  it("prefers the message persona name over the provider identity", () => {
     render(
       <MessageBubble
         message={assistantMessage([{ type: "text", text: "hi" }], {
-          metadata: { personaName: "Builder" },
+          metadata: { personaName: "Builder", providerId: "codex-acp" },
         })}
-        agentName="Solo"
       />,
     );
 
     expect(screen.getByText("Builder")).toBeInTheDocument();
-    expect(screen.queryByText("Solo")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        (text, el) => el?.tagName === "SPAN" && text === "Codex",
+      ),
+    ).not.toBeInTheDocument();
   });
 
-  it("falls back to the current agent name when persona metadata is missing", () => {
+  it("does not render an assistant name when message identity metadata is missing", () => {
     render(
       <MessageBubble
         message={assistantMessage([{ type: "text", text: "hi" }])}
-        agentName="Solo"
       />,
     );
 
-    expect(screen.getByText("Solo")).toBeInTheDocument();
+    const nameSpans = screen.queryAllByText((_text, el) => {
+      if (el?.tagName !== "SPAN") return false;
+      return el.classList.contains("font-normal");
+    });
+    expect(nameSpans).toHaveLength(0);
+  });
+
+  it("uses the message provider identity for the assistant label and icon", () => {
+    render(
+      <MessageBubble
+        message={assistantMessage([{ type: "text", text: "hi" }], {
+          metadata: { providerId: "claude-acp" },
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Claude Code")).toBeInTheDocument();
+    expect(screen.getByTitle("Claude")).toBeInTheDocument();
+  });
+
+  it("renders identity for an in-progress assistant message with a provider", () => {
+    render(
+      <MessageBubble
+        message={assistantMessage([], {
+          metadata: { completionStatus: "inProgress", providerId: "codex-acp" },
+        })}
+        isStreaming
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        (text, el) => el?.tagName === "SPAN" && text === "Codex",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("collapses low-signal internal tool steps behind a toggle", async () => {
