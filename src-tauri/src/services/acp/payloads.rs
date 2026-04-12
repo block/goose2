@@ -9,6 +9,7 @@ pub(crate) struct MessageCreatedPayload {
     pub message_id: String,
     pub persona_id: Option<String>,
     pub persona_name: Option<String>,
+    pub provider_id: Option<String>,
 }
 
 /// Payload for the `acp:text` event.

@@ -25,6 +25,7 @@ enum ManagerCommand {
         local_session_id: String,
         goose_session_id: String,
         working_dir: PathBuf,
+        provider_id: Option<String>,
         response: oneshot::Sender<Result<(), String>>,
     },
     PrepareSession {
@@ -128,6 +129,7 @@ impl GooseAcpManager {
         local_session_id: String,
         goose_session_id: String,
         working_dir: PathBuf,
+        provider_id: Option<String>,
     ) -> Result<(), String> {
         let (response_tx, response_rx) = oneshot::channel();
         self.command_tx
@@ -135,6 +137,7 @@ impl GooseAcpManager {
                 local_session_id,
                 goose_session_id,
                 working_dir,
+                provider_id,
                 response: response_tx,
             })
             .map_err(|_| "Goose ACP manager is unavailable".to_string())?;

@@ -107,11 +107,13 @@ export async function acpLoadSession(
   sessionId: string,
   gooseSessionId: string,
   workingDir?: string,
+  providerId?: string,
 ): Promise<void> {
   return invoke("acp_load_session", {
     sessionId,
     gooseSessionId,
     workingDir: workingDir ?? null,
+    providerId: providerId ?? null,
   });
 }
 

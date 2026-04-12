@@ -97,7 +97,12 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         (!project
           ? resolveEffectiveWorkingDir(null, await getHomeDir())
           : undefined);
-      await acpLoadSession(sessionId, gooseSessionId, workingDir);
+      await acpLoadSession(
+        sessionId,
+        gooseSessionId,
+        workingDir,
+        session?.providerId,
+      );
       const t3 = performance.now();
       console.log(
         `[perf:load] ${sessionId.slice(0, 8)} acpLoadSession resolved in ${(t3 - t2).toFixed(1)}ms (total ${(t3 - t0).toFixed(1)}ms)`,
