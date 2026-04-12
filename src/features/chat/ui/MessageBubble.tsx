@@ -297,6 +297,10 @@ export const MessageBubble = memo(function MessageBubble({
   const assistantProviderIcon = assistantProviderId
     ? getProviderIcon(assistantProviderId, "size-3.5")
     : null;
+  const showAssistantIdentity = Boolean(
+    !isUser &&
+      (assistantDisplayName || personaAvatarUrl || assistantProviderIcon),
+  );
   const hidePendingAssistantShell =
     !isUser &&
     content.length === 0 &&
@@ -309,41 +313,44 @@ export const MessageBubble = memo(function MessageBubble({
   return (
     <div
       className={cn(
-        "group flex gap-3 px-4 py-1",
+        "group flex px-4 py-1",
         "animate-in fade-in duration-200 motion-reduce:animate-none",
-        isUser ? "flex-row-reverse ml-auto" : "flex-row",
+        isUser ? "ml-auto flex-row-reverse gap-3" : "flex-row",
       )}
       data-role={isUser ? "user-message" : "assistant-message"}
     >
-      {/* Avatar */}
       {isUser ? (
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent">
+        <div className="flex h-7 w-7 shrink-0 self-start -mt-1 items-center justify-center rounded-full bg-accent">
           <User size={14} className="text-muted-foreground" />
         </div>
-      ) : (
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent">
-          {personaAvatarUrl ? (
-            <img src={personaAvatarUrl} alt="" className="h-7 w-7 rounded-full" />
-          ) : assistantProviderIcon ? (
-            assistantProviderIcon
-          ) : (
-            <Bot size={14} className="text-muted-foreground" />
-          )}
-        </div>
-      )}
+      ) : null}
 
-      {/* Message content */}
       <div
         className={cn(
           "min-w-0 flex flex-col gap-1",
           isUser ? "max-w-[80%] items-end" : "max-w-[85%] items-start",
         )}
       >
-        {!isUser && assistantDisplayName && (
-          <span className="mb-0.5 text-xs font-medium text-muted-foreground">
-            {assistantDisplayName}
-          </span>
-        )}
+        {showAssistantIdentity ? (
+          <div className="mb-0.5 flex items-center gap-1 text-xs">
+            {personaAvatarUrl ? (
+              <img src={personaAvatarUrl} alt="" className="h-5 w-5 rounded-full" />
+            ) : assistantProviderIcon ? (
+              <span className="flex h-5 w-5 items-center justify-center">
+                {assistantProviderIcon}
+              </span>
+            ) : (
+              <span className="flex h-5 w-5 items-center justify-center">
+                <Bot size={14} className="text-muted-foreground" />
+              </span>
+            )}
+            {assistantDisplayName ? (
+              <span className="font-normal text-foreground">
+                {assistantDisplayName}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
 
         {/* biome-ignore lint/a11y/useKeyWithClickEvents: delegated link handler */}
         {/* biome-ignore lint/a11y/noStaticElementInteractions: delegated link handler */}
