@@ -51,7 +51,7 @@ export function LoadingGoose({ chatState = "idle" }: LoadingGooseProps) {
       <div className="max-w-3xl mx-auto w-full">
         <div className="py-2 text-xs text-muted-foreground">
           {shouldReduceMotion ? (
-            <span className="text-xs text-muted-foreground">{message}</span>
+            <span>{message}</span>
           ) : (
             <Shimmer
               as="span"

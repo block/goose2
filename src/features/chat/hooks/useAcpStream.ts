@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useChatStore } from "../stores/chatStore";
 import { useChatSessionStore } from "../stores/chatSessionStore";
-import type { ModelOption } from "../types";
 import { isDefaultChatTitle } from "../lib/sessionTitle";
 import type {
   Message,
@@ -16,78 +15,24 @@ import {
   getAndDeleteReplayBuffer,
   findLatestUnpairedToolRequest,
 } from "./replayBuffer";
-
-// --- Event payload types ---
-
-interface AcpMessageCreatedPayload {
-  sessionId: string;
-  messageId: string;
-  personaId?: string;
-  personaName?: string;
-}
-
-interface AcpTextPayload {
-  sessionId: string;
-  messageId: string;
-  text: string;
-}
-
-interface AcpDonePayload {
-  sessionId: string;
-  messageId: string;
-}
-
-interface AcpToolCallPayload {
-  sessionId: string;
-  messageId: string;
-  toolCallId: string;
-  title: string;
-}
-
-interface AcpToolTitlePayload {
-  sessionId: string;
-  messageId: string;
-  toolCallId: string;
-  title: string;
-}
-
-interface AcpToolResultPayload {
-  sessionId: string;
-  messageId: string;
-  content: string;
-}
-
-interface AcpSessionInfoPayload {
-  sessionId: string;
-  title?: string;
-}
-
-interface AcpSessionBoundPayload {
-  sessionId: string;
-  gooseSessionId: string;
-}
-
-interface AcpModelStatePayload {
-  sessionId: string;
-  providerId?: string | null;
-  currentModelId: string;
-  currentModelName?: string;
-  availableModels: ModelOption[];
-}
-
-interface AcpUsageUpdatePayload {
-  sessionId: string;
-  used: number;
-  size: number;
-}
-
-interface AcpReplayCompletePayload {
-  sessionId: string;
-}
+import type {
+  AcpMessageCreatedPayload,
+  AcpTextPayload,
+  AcpDonePayload,
+  AcpToolCallPayload,
+  AcpToolTitlePayload,
+  AcpToolResultPayload,
+  AcpSessionInfoPayload,
+  AcpSessionBoundPayload,
+  AcpModelStatePayload,
+  AcpUsageUpdatePayload,
+  AcpReplayCompletePayload,
+} from "./acpStreamTypes";
 
 function getAssistantProviderId(sessionId: string): string | undefined {
-  const pending = useChatStore.getState().getSessionRuntime(sessionId)
-    .pendingAssistantProviderId;
+  const pending = useChatStore
+    .getState()
+    .getSessionRuntime(sessionId).pendingAssistantProviderId;
   if (pending) return pending;
   return useChatSessionStore.getState().getSession(sessionId)?.providerId;
 }

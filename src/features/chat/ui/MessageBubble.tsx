@@ -1,11 +1,15 @@
 import { useState, memo } from "react";
 import { useTranslation } from "react-i18next";
-import { Copy, Check, RotateCcw, Pencil, Bot, User } from "lucide-react";
+import { Copy, Check, RotateCcw, Pencil, User } from "lucide-react";
+import { IconRobot } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 import { useLocaleFormatting } from "@/shared/i18n";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { getCatalogEntry } from "@/features/providers/providerCatalog";
-import { getProviderIcon, formatProviderLabel } from "@/shared/ui/icons/ProviderIcons";
+import {
+  getProviderIcon,
+  formatProviderLabel,
+} from "@/shared/ui/icons/ProviderIcons";
 import { useAvatarSrc } from "@/shared/hooks/useAvatarSrc";
 import {
   MessageActions,
@@ -293,7 +297,9 @@ export const MessageBubble = memo(function MessageBubble({
       formatProviderLabel(assistantProviderId))
     : undefined;
   const assistantDisplayName =
-    message.metadata?.personaName ?? persona?.displayName ?? assistantProviderName;
+    message.metadata?.personaName ??
+    persona?.displayName ??
+    assistantProviderName;
   const assistantProviderIcon = assistantProviderId
     ? getProviderIcon(assistantProviderId, "size-3.5")
     : null;
@@ -326,14 +332,18 @@ export const MessageBubble = memo(function MessageBubble({
         {showAssistantIdentity ? (
           <div className="mb-0.5 flex items-center gap-1 text-xs">
             {personaAvatarUrl ? (
-              <img src={personaAvatarUrl} alt="" className="h-5 w-5 rounded-full" />
+              <img
+                src={personaAvatarUrl}
+                alt=""
+                className="h-5 w-5 rounded-full"
+              />
             ) : assistantProviderIcon ? (
               <span className="flex h-5 w-5 items-center justify-center">
                 {assistantProviderIcon}
               </span>
             ) : (
               <span className="flex h-5 w-5 items-center justify-center">
-                <Bot size={14} className="text-muted-foreground" />
+                <IconRobot size={14} className="text-muted-foreground" />
               </span>
             )}
             {assistantDisplayName ? (

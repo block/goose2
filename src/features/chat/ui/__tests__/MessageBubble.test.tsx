@@ -223,15 +223,23 @@ describe("MessageBubble", () => {
     );
 
     expect(screen.getByText("Builder")).toBeInTheDocument();
-    expect(screen.queryByText("Codex")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText((text, el) => el?.tagName === "SPAN" && text === "Codex"),
+    ).not.toBeInTheDocument();
   });
 
   it("does not render an assistant name when message identity metadata is missing", () => {
-    render(<MessageBubble message={assistantMessage([{ type: "text", text: "hi" }])} />);
+    render(
+      <MessageBubble
+        message={assistantMessage([{ type: "text", text: "hi" }])}
+      />,
+    );
 
-    expect(screen.queryByText("Goose")).not.toBeInTheDocument();
-    expect(screen.queryByText("Codex")).not.toBeInTheDocument();
-    expect(screen.queryByText("Claude Code")).not.toBeInTheDocument();
+    const nameSpans = screen.queryAllByText((_text, el) => {
+      if (el?.tagName !== "SPAN") return false;
+      return el.classList.contains("font-normal");
+    });
+    expect(nameSpans).toHaveLength(0);
   });
 
   it("uses the message provider identity for the assistant label and icon", () => {
