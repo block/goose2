@@ -104,10 +104,8 @@
     "placeholder": "Message {{agent}}, @ to mention personas"
   },
   "loading": {
-    "compacting": "is compacting the conversation...",
-    "streaming": "is working on it...",
-    "thinking": "is thinking...",
-    "waiting": "is waiting..."
+    "thinking": "Thinking...",
+    "responding": "Responding..."
   },
   "mention": {
     "ariaLabel": "Mention suggestions",

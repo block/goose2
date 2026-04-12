@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { AnimatePresence } from "motion/react";
 import { MessageTimeline } from "./MessageTimeline";
 import { ChatInput } from "./ChatInput";
 import type { PastedImage } from "@/shared/types/messages";
@@ -459,13 +460,19 @@ export function ChatView({
             />
           )}
 
-          {showIndicator && !isLoadingHistory && (
-            <LoadingGoose
-              chatState={
-                chatState as "thinking" | "streaming" | "waiting" | "compacting"
-              }
-            />
-          )}
+          <AnimatePresence initial={false}>
+            {showIndicator && !isLoadingHistory ? (
+              <LoadingGoose
+                chatState={
+                  chatState as
+                    | "thinking"
+                    | "streaming"
+                    | "waiting"
+                    | "compacting"
+                }
+              />
+            ) : null}
+          </AnimatePresence>
 
           <ChatInput
             onSend={handleSend}
