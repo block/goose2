@@ -463,6 +463,7 @@ export function ChatView({
           <AnimatePresence initial={false}>
             {showIndicator && !isLoadingHistory ? (
               <LoadingGoose
+                key="loading-indicator"
                 chatState={
                   chatState as
                     | "thinking"

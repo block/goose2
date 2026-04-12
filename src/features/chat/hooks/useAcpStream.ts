@@ -85,10 +85,11 @@ interface AcpReplayCompletePayload {
   sessionId: string;
 }
 
-function getPendingAssistantProviderId(sessionId: string): string | undefined {
-  const providerId = useChatStore.getState().getSessionRuntime(sessionId)
+function getAssistantProviderId(sessionId: string): string | undefined {
+  const pending = useChatStore.getState().getSessionRuntime(sessionId)
     .pendingAssistantProviderId;
-  return providerId ?? undefined;
+  if (pending) return pending;
+  return useChatSessionStore.getState().getSession(sessionId)?.providerId;
 }
 
 function updateCompletionStatus(
@@ -205,7 +206,7 @@ export function useAcpStream(enabled: boolean): void {
         if (!active) return;
         const store = useChatStore.getState();
         const { sessionId, messageId, personaId, personaName } = event.payload;
-        const providerId = getPendingAssistantProviderId(sessionId);
+        const providerId = getAssistantProviderId(sessionId);
 
         if (store.loadingSessionIds.has(sessionId)) {
           if (!getBufferedMessage(sessionId, messageId)) {

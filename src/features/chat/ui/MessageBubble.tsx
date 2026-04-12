@@ -301,14 +301,6 @@ export const MessageBubble = memo(function MessageBubble({
     !isUser &&
       (assistantDisplayName || personaAvatarUrl || assistantProviderIcon),
   );
-  const hidePendingAssistantShell =
-    !isUser &&
-    content.length === 0 &&
-    message.metadata?.completionStatus === "inProgress";
-
-  if (hidePendingAssistantShell) {
-    return null;
-  }
 
   return (
     <div

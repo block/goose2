@@ -247,8 +247,8 @@ describe("MessageBubble", () => {
     expect(screen.getByTitle("Claude")).toBeInTheDocument();
   });
 
-  it("does not render the blank in-progress assistant placeholder", () => {
-    const { container } = render(
+  it("renders identity for an in-progress assistant message with a provider", () => {
+    render(
       <MessageBubble
         message={assistantMessage([], {
           metadata: { completionStatus: "inProgress", providerId: "codex-acp" },
@@ -257,7 +257,7 @@ describe("MessageBubble", () => {
       />,
     );
 
-    expect(container).toBeEmptyDOMElement();
+    expect(screen.getByText("Codex")).toBeInTheDocument();
   });
 
   it("collapses low-signal internal tool steps behind a toggle", async () => {

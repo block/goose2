@@ -50,17 +50,21 @@ export function LoadingGoose({ chatState = "idle" }: LoadingGooseProps) {
     >
       <div className="max-w-3xl mx-auto w-full">
         <div className="py-2 text-xs text-muted-foreground">
-          <Shimmer
-            as="span"
-            className="text-xs"
-            tone="soft"
-            delay={shouldReduceMotion ? 0 : LOADING_SHIMMER_DELAY_S}
-            duration={shouldReduceMotion ? 0 : LOADING_SHIMMER_S}
-            spread={LOADING_SHIMMER_SPREAD}
-            repeatDelay={shouldReduceMotion ? 0 : LOADING_SHIMMER_REPEAT_DELAY_S}
-          >
-            {message}
-          </Shimmer>
+          {shouldReduceMotion ? (
+            <span className="text-xs text-muted-foreground">{message}</span>
+          ) : (
+            <Shimmer
+              as="span"
+              className="text-xs"
+              tone="soft"
+              delay={LOADING_SHIMMER_DELAY_S}
+              duration={LOADING_SHIMMER_S}
+              spread={LOADING_SHIMMER_SPREAD}
+              repeatDelay={LOADING_SHIMMER_REPEAT_DELAY_S}
+            >
+              {message}
+            </Shimmer>
+          )}
         </div>
       </div>
     </motion.div>
