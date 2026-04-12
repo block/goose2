@@ -188,6 +188,7 @@ pub async fn acp_load_session(
     session_id: String,
     goose_session_id: String,
     working_dir: Option<String>,
+    provider_id: Option<String>,
 ) -> Result<(), String> {
     let current_dir = std::env::current_dir()
         .map_err(|error| format!("Failed to determine current working directory: {error}"))?;
@@ -195,7 +196,7 @@ pub async fn acp_load_session(
 
     let manager = GooseAcpManager::start(app_handle).await?;
     manager
-        .load_session(session_id, goose_session_id, working_dir)
+        .load_session(session_id, goose_session_id, working_dir, provider_id)
         .await
 }
 

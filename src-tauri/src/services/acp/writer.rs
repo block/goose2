@@ -35,6 +35,7 @@ impl TauriMessageWriter {
                 message_id: assistant_message_id.clone(),
                 persona_id: persona_id.clone(),
                 persona_name: persona_name.clone(),
+                provider_id: provider_id.clone(),
             },
         );
 

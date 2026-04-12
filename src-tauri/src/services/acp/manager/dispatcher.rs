@@ -424,6 +424,12 @@ impl Client for SessionEventDispatcher {
                     } else {
                         // Start a new assistant message
                         let new_id = uuid::Uuid::new_v4().to_string();
+                        let route_provider_id = {
+                            let routes = self.routes.lock().await;
+                            routes
+                                .get(&goose_session_id)
+                                .and_then(|r| r.provider_id.clone())
+                        };
                         let _ = self.app_handle.emit(
                             "acp:message_created",
                             MessageCreatedPayload {
@@ -431,6 +437,7 @@ impl Client for SessionEventDispatcher {
                                 message_id: new_id.clone(),
                                 persona_id: None,
                                 persona_name: None,
+                                provider_id: route_provider_id,
                             },
                         );
                         let mut routes = self.routes.lock().await;

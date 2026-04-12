@@ -24,6 +24,7 @@ interface AcpMessageCreatedPayload {
   messageId: string;
   personaId?: string;
   personaName?: string;
+  providerId?: string;
 }
 
 interface AcpTextPayload {
@@ -198,7 +199,8 @@ export function useAcpStream(enabled: boolean): void {
       listen<AcpMessageCreatedPayload>("acp:message_created", (event) => {
         if (!active) return;
         const store = useChatStore.getState();
-        const { sessionId, messageId, personaId, personaName } = event.payload;
+        const { sessionId, messageId, personaId, personaName, providerId } =
+          event.payload;
 
         if (store.loadingSessionIds.has(sessionId)) {
           if (!getBufferedMessage(sessionId, messageId)) {
@@ -212,6 +214,7 @@ export function useAcpStream(enabled: boolean): void {
                 agentVisible: true,
                 personaId,
                 personaName,
+                providerId,
                 completionStatus: "inProgress",
               },
             });
@@ -238,6 +241,7 @@ export function useAcpStream(enabled: boolean): void {
               agentVisible: true,
               personaId,
               personaName,
+              providerId,
               completionStatus: "inProgress",
             },
           });

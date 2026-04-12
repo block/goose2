@@ -60,6 +60,7 @@ pub(super) async fn dispatch_commands(
                 local_session_id,
                 goose_session_id,
                 working_dir,
+                provider_id,
                 response,
             } => {
                 let connection = Arc::clone(&connection);
@@ -73,6 +74,7 @@ pub(super) async fn dispatch_commands(
                         &local_session_id,
                         &goose_session_id,
                         working_dir,
+                        provider_id.as_deref(),
                     )
                     .await;
                     let _ = response.send(result);

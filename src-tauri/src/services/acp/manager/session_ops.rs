@@ -426,9 +426,10 @@ pub(super) async fn load_session_inner(
     local_session_id: &str,
     goose_session_id: &str,
     working_dir: PathBuf,
+    provider_id: Option<&str>,
 ) -> Result<(), String> {
     dispatcher
-        .bind_session(goose_session_id, local_session_id, None)
+        .bind_session(goose_session_id, local_session_id, provider_id)
         .await;
 
     let response = connection
