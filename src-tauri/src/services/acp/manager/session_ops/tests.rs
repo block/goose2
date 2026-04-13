@@ -3,7 +3,10 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 
+use agent_client_protocol::ContentBlock as AcpContentBlock;
+
 use super::{
+    prompt_ops::build_content_blocks,
     needs_provider_update, prepared_session_for_key, register_prepared_session_keys,
     wait_for_replay_drain, ManagerState, PreparedSession, MAX_DRAIN_ITERATIONS,
 };
@@ -174,4 +177,16 @@ async fn replay_drain_caps_iterations_on_runaway_counter() {
     // Should have stopped at the cap rather than spinning forever.
     assert_eq!(final_count, MAX_DRAIN_ITERATIONS);
     assert_eq!(poll_count.load(Ordering::SeqCst), MAX_DRAIN_ITERATIONS);
+}
+
+#[test]
+fn build_content_blocks_places_images_before_prompt_text() {
+    let blocks = build_content_blocks(
+        "Please inspect all three attachments".to_string(),
+        vec![("abc123".to_string(), "image/png".to_string())],
+    );
+
+    assert_eq!(blocks.len(), 2);
+    assert!(matches!(blocks[0], AcpContentBlock::Image(_)));
+    assert!(matches!(blocks[1], AcpContentBlock::Text(_)));
 }
