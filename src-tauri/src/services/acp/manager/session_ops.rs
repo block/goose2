@@ -447,6 +447,28 @@ pub(super) async fn load_session_inner(
         .await
         .map_err(|error| format!("Failed to load Goose session: {error:?}"))?;
 
+    // The ACP RPC layer resolves responses synchronously but dispatches
+    // notifications asynchronously via spawned tasks. After load_session
+    // returns, replay notifications may still be queued. Yield repeatedly
+    // to let the single-threaded runtime drain them before counting.
+    {
+        let mut prev_total = 0u32;
+        let mut stable_rounds = 0u8;
+        loop {
+            tokio::task::yield_now().await;
+            let counts = dispatcher.get_replay_event_counts(goose_session_id).await;
+            if counts.total == prev_total {
+                stable_rounds += 1;
+                if stable_rounds >= 3 {
+                    break;
+                }
+            } else {
+                stable_rounds = 0;
+                prev_total = counts.total;
+            }
+        }
+    }
+
     // Finalize any in-progress replay assistant message
     dispatcher.finalize_replay(goose_session_id).await;
 

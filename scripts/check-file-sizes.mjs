@@ -61,9 +61,9 @@ const EXCEPTIONS = {
       "ACP manager command dispatch loop — export/import/fork session ext_method dispatch adds boilerplate.",
   },
   "src-tauri/src/services/acp/manager/session_ops.rs": {
-    limit: 585,
+    limit: 605,
     justification:
-      "Session prepare/load/list logic, working-dir updates, replay diagnostics, and composite prepared-session reuse remain colocated while ACP session ownership stabilizes.",
+      "Session prepare/load/list logic, working-dir updates, replay diagnostics, notification drain barrier, and composite prepared-session reuse remain colocated while ACP session ownership stabilizes.",
   },
 };
 
