@@ -578,6 +578,11 @@ pub(super) async fn set_model_inner(
 /// runtime between polls so those tasks get a chance to execute, and only
 /// returns once the count has been stable for 3 consecutive yields — giving
 /// us confidence that all replay events have been dispatched.
+///
+/// A safety cap of 100 iterations prevents infinite spinning if a bug causes
+/// the counter to increment indefinitely.
+const MAX_DRAIN_ITERATIONS: u32 = 100;
+
 async fn wait_for_replay_drain<F, Fut>(mut get_count: F) -> u32
 where
     F: FnMut() -> Fut,
@@ -585,9 +590,11 @@ where
 {
     let mut prev_total = 0u32;
     let mut stable_rounds = 0u8;
+    let mut iterations = 0u32;
     loop {
         tokio::task::yield_now().await;
         let total = get_count().await;
+        iterations += 1;
         if total == prev_total {
             stable_rounds += 1;
             if stable_rounds >= 3 {
@@ -596,6 +603,13 @@ where
         } else {
             stable_rounds = 0;
             prev_total = total;
+        }
+        if iterations >= MAX_DRAIN_ITERATIONS {
+            log::warn!(
+                "wait_for_replay_drain hit iteration cap ({MAX_DRAIN_ITERATIONS}); \
+                 returning partial count {total}"
+            );
+            return total;
         }
     }
 }

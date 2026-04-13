@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use super::{
     needs_provider_update, prepared_session_for_key, register_prepared_session_keys,
-    wait_for_replay_drain, ManagerState, PreparedSession,
+    wait_for_replay_drain, ManagerState, PreparedSession, MAX_DRAIN_ITERATIONS,
 };
 use crate::services::acp::split_composite_key;
 
@@ -151,4 +151,27 @@ async fn replay_drain_resets_stability_on_late_arrival() {
 
     // Must see the late arrival, not stop at 3
     assert_eq!(final_count, 4);
+    // Verify the stability window truly reset: 3 polls to see 3, 1 poll
+    // to see the bump to 4, then 3 more polls for 4 to stabilise = 7 min.
+    assert!(
+        poll_count.load(Ordering::SeqCst) >= 7,
+        "expected at least 7 polls to confirm stability window reset, got {}",
+        poll_count.load(Ordering::SeqCst)
+    );
+}
+
+#[tokio::test]
+async fn replay_drain_caps_iterations_on_runaway_counter() {
+    // Simulate a counter that never stabilises — increments every poll.
+    let poll_count = Arc::new(AtomicU32::new(0));
+    let pc = poll_count.clone();
+    let final_count = wait_for_replay_drain(|| {
+        let pc = pc.clone();
+        async move { pc.fetch_add(1, Ordering::SeqCst) + 1 }
+    })
+    .await;
+
+    // Should have stopped at the cap rather than spinning forever.
+    assert_eq!(final_count, MAX_DRAIN_ITERATIONS);
+    assert_eq!(poll_count.load(Ordering::SeqCst), MAX_DRAIN_ITERATIONS);
 }
