@@ -427,18 +427,10 @@ pub(super) async fn load_session_inner(
     goose_session_id: &str,
     working_dir: PathBuf,
 ) -> Result<(), String> {
-    log::info!(
-        "[replay] {} loading goose session {} from {:?}",
-        &local_session_id[..8.min(local_session_id.len())],
-        &goose_session_id[..8.min(goose_session_id.len())],
-        working_dir,
-    );
-
     dispatcher
         .bind_session(goose_session_id, local_session_id, None)
         .await;
 
-    let t0 = std::time::Instant::now();
     let response = connection
         .load_session(LoadSessionRequest::new(
             goose_session_id.to_string(),
@@ -453,24 +445,13 @@ pub(super) async fn load_session_inner(
     // to let the single-threaded runtime drain them before counting.
     wait_for_replay_drain(|| async {
         dispatcher
-            .get_replay_event_counts(goose_session_id)
+            .get_replay_event_count(goose_session_id)
             .await
-            .total
     })
     .await;
 
     // Finalize any in-progress replay assistant message
     dispatcher.finalize_replay(goose_session_id).await;
-
-    let replay_counts = dispatcher.get_replay_event_counts(goose_session_id).await;
-    log::info!(
-        "[replay] {} load_session completed in {:?} — emitted {} events ({} user, {} assistant), sending replay_complete",
-        &local_session_id[..8.min(local_session_id.len())],
-        t0.elapsed(),
-        replay_counts.total,
-        replay_counts.user_messages,
-        replay_counts.assistant_messages,
-    );
 
     dispatcher.emit_replay_complete(local_session_id);
 

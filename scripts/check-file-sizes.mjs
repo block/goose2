@@ -31,9 +31,9 @@ const EXCEPTIONS = {
       "Shell still coordinates ACP session loading, project reassignment, and app-level chat routing.",
   },
   "src/features/chat/hooks/useAcpStream.ts": {
-    limit: 600,
+    limit: 580,
     justification:
-      "ACP replay, streaming, session binding, model-state event handling, replay timeout, and replay diagnostics are still centralized here.",
+      "ACP replay, streaming, session binding, model-state event handling, and replay timeout are still centralized here.",
   },
   "src/features/chat/hooks/__tests__/useAcpStream.test.ts": {
     limit: 570,
@@ -46,14 +46,14 @@ const EXCEPTIONS = {
       "ACP session overlay regressions currently need one broad integration-style store suite.",
   },
   "src/features/chat/stores/chatSessionStore.ts": {
-    limit: 650,
+    limit: 640,
     justification:
-      "ACP-backed session overlay persistence, draft migration, sidebar-facing session merge logic, and session lifecycle logging live together for now.",
+      "ACP-backed session overlay persistence, draft migration, and sidebar-facing session merge logic live together for now.",
   },
   "src-tauri/src/services/acp/manager/dispatcher.rs": {
-    limit: 570,
+    limit: 545,
     justification:
-      "ACP replay and live-stream event fan-out share one dispatcher with replay event counting until session event routing is split.",
+      "ACP replay and live-stream event fan-out share one dispatcher with replay event counting for drain stabilisation.",
   },
   "src-tauri/src/services/acp/manager.rs": {
     limit: 630,
@@ -61,9 +61,9 @@ const EXCEPTIONS = {
       "ACP manager command dispatch loop — export/import/fork session ext_method dispatch adds boilerplate.",
   },
   "src-tauri/src/services/acp/manager/session_ops.rs": {
-    limit: 625,
+    limit: 605,
     justification:
-      "Session prepare/load/list logic, working-dir updates, replay diagnostics, extracted wait_for_replay_drain helper, and composite prepared-session reuse remain colocated while ACP session ownership stabilizes.",
+      "Session prepare/load/list logic, working-dir updates, wait_for_replay_drain helper, and composite prepared-session reuse remain colocated while ACP session ownership stabilizes.",
   },
 };
 

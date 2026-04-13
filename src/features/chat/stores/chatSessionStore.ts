@@ -324,7 +324,6 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
       messageCount: 0,
       draft: true,
     };
-
     set((state) => ({ sessions: [...state.sessions, chatSession] }));
     persistDraftSessionRecord(draftSessionToRecord(chatSession));
     return chatSession;
@@ -333,7 +332,6 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
   promoteDraft: (id) => {
     const session = get().sessions.find((candidate) => candidate.id === id);
     if (!session?.draft) return;
-
     set((state) => ({
       sessions: state.sessions.map((candidate) =>
         candidate.id === id ? { ...candidate, draft: undefined } : candidate,
@@ -367,7 +365,6 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     try {
       const overlays = loadSessionMetadataOverlay();
       const acpSessions = await acpListSessions();
-
       const persistedDrafts = loadDraftSessionRecords();
       const currentDrafts = get().sessions.filter((session) => session.draft);
       const drafts = mergeDraftSessions(currentDrafts, persistedDrafts);

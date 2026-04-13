@@ -208,7 +208,6 @@ export function useChat(
             workingDir: workingDirOverride,
             personaId: effectivePersonaInfo?.id,
           });
-
           if (selectedModelId) {
             await acpSetModel(sessionId, selectedModelId);
           }
@@ -246,7 +245,6 @@ export function useChat(
           store.setChatState(sessionId, "idle");
         } else {
           const errorMessage = getErrorMessage(err);
-
           const liveStore = useChatStore.getState();
           const { streamingMessageId } = liveStore.getSessionRuntime(sessionId);
           if (streamingMessageId) {

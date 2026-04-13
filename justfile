@@ -1,5 +1,3 @@
-set dotenv-load
-
 # Default recipe
 default:
     @just --list
