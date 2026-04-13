@@ -122,7 +122,7 @@ dev:
         fi
     fi
 
-    pnpm tauri dev --config "$TAURI_CONFIG"
+    pnpm tauri dev --features app-test-driver --config "$TAURI_CONFIG"
 
 # Start the desktop app with dev config
 dev-debug:

@@ -14,7 +14,7 @@ pub fn run() {
     let acp_registry = Arc::new(AcpSessionRegistry::new());
     let acp_registry_for_exit = Arc::clone(&acp_registry);
 
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(
             tauri_plugin_log::Builder::new()
                 .level(log::LevelFilter::Debug)
@@ -32,7 +32,12 @@ pub fn run() {
         )
         .manage(PersonaStore::new())
         .manage(GooseConfig::new())
-        .manage(acp_registry)
+        .manage(acp_registry);
+
+    #[cfg(feature = "app-test-driver")]
+    let builder = builder.plugin(tauri_plugin_app_test_driver::init());
+
+    builder
         .invoke_handler(tauri::generate_handler![
             commands::agents::list_personas,
             commands::agents::create_persona,

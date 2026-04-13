@@ -22,7 +22,9 @@
     "test:e2e:smoke": "pnpm build && playwright test --project=smoke",
     "test:e2e:personas": "pnpm build && playwright test --project=personas",
     "test:e2e:skills": "pnpm build && playwright test --project=skills",
-    "test:e2e:drafts": "pnpm build && playwright test --project=drafts"
+    "test:e2e:drafts": "pnpm build && playwright test --project=drafts",
+    "test:app-e2e": "vitest run --config vitest.app-e2e.config.ts",
+    "test-driver": "tsx tests/app-e2e/lib/test-driver-cli.ts"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",
@@ -117,6 +119,7 @@
     "jsdom": "^26.1.0",
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.2",
+    "tsx": "^4.21.0",
     "typescript": "~5.9.0",
     "vite": "^7.0.4",
     "vitest": "^3.2.1"

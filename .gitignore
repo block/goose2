@@ -32,6 +32,9 @@ Thumbs.db
 playwright-report/
 test-results/
 
+# App E2E screenshots
+tests/app-e2e/screenshots/
+
 # Testing coverage
 coverage/
 
@@ -40,3 +43,6 @@ coverage/
 
 # Hermit (toolchain manager cache)
 .hermit/
+
+# Claude
+.claude
