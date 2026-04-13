@@ -21,37 +21,38 @@ struct TestResult {
 
 #[tauri::command]
 fn driver_result(state: tauri::State<'_, DriverState>, value: String) {
-    if let Ok(mut result) = state.pending_result.lock() {
-        *result = Some(value);
-    }
-    state.notify.0.lock().unwrap().take();
-    state.notify.1.notify_one();
+    let mut result = state.pending_result.lock().unwrap();
+    *result = Some(value);
+    state.signal.notify_one();
 }
 
 struct DriverState {
+    command_lock: Mutex<()>,
     pending_result: Mutex<Option<String>>,
-    notify: (Mutex<Option<()>>, std::sync::Condvar),
+    signal: std::sync::Condvar,
 }
 
 impl DriverState {
     fn new() -> Self {
         Self {
+            command_lock: Mutex::new(()),
             pending_result: Mutex::new(None),
-            notify: (Mutex::new(Some(())), std::sync::Condvar::new()),
+            signal: std::sync::Condvar::new(),
         }
     }
 
     fn wait_for_result(&self, timeout_ms: u64) -> Option<String> {
-        let (lock, cvar) = &self.notify;
-        let guard = lock.lock().unwrap();
         let timeout = std::time::Duration::from_millis(timeout_ms + 1000);
-        let _result = cvar.wait_timeout(guard, timeout).unwrap();
-        self.pending_result.lock().unwrap().take()
+        let guard = self.pending_result.lock().unwrap();
+        let (mut guard, _) = self
+            .signal
+            .wait_timeout_while(guard, timeout, |result| result.is_none())
+            .unwrap();
+        guard.take()
     }
 
     fn reset(&self) {
         *self.pending_result.lock().unwrap() = None;
-        *self.notify.0.lock().unwrap() = Some(());
     }
 }
 
@@ -343,6 +344,9 @@ fn start_server<R: Runtime>(app_handle: AppHandle<R>) {
                         }
                     };
 
+                    let state = app.state::<DriverState>();
+                    let _command_guard = state.command_lock.lock().unwrap();
+
                     #[cfg(target_os = "macos")]
                     if cmd.action == "screenshot" {
                         let path = cmd.value.as_deref().unwrap_or("screenshot.png");
@@ -351,7 +355,6 @@ fn start_server<R: Runtime>(app_handle: AppHandle<R>) {
                         continue;
                     }
 
-                    let state = app.state::<DriverState>();
                     state.reset();
 
                     let js = build_js(&cmd);
