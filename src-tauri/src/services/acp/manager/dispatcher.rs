@@ -58,6 +58,15 @@ pub(super) struct SessionRoute {
     pub(super) writer: Option<Arc<dyn MessageWriter>>,
     pub(super) canceled: bool,
     pub(super) replay_message_id: Option<String>,
+    pub(super) replay_user_messages: u32,
+    pub(super) replay_assistant_messages: u32,
+    pub(super) replay_events: u32,
+}
+
+pub(super) struct ReplayEventCounts {
+    pub(super) user_messages: u32,
+    pub(super) assistant_messages: u32,
+    pub(super) total: u32,
 }
 
 pub(super) struct SessionEventDispatcher {
@@ -94,6 +103,9 @@ impl SessionEventDispatcher {
                 writer: None,
                 canceled: false,
                 replay_message_id: None,
+                replay_user_messages: 0,
+                replay_assistant_messages: 0,
+                replay_events: 0,
             });
 
         let _ = self.app_handle.emit(
@@ -121,6 +133,9 @@ impl SessionEventDispatcher {
                 writer: Some(writer),
                 canceled: false,
                 replay_message_id: None,
+                replay_user_messages: 0,
+                replay_assistant_messages: 0,
+                replay_events: 0,
             },
         );
     }
@@ -253,6 +268,25 @@ impl SessionEventDispatcher {
                 session_id: local_session_id.to_string(),
             },
         );
+    }
+
+    pub(super) async fn get_replay_event_counts(
+        &self,
+        goose_session_id: &str,
+    ) -> ReplayEventCounts {
+        let routes = self.routes.lock().await;
+        routes
+            .get(goose_session_id)
+            .map(|r| ReplayEventCounts {
+                user_messages: r.replay_user_messages,
+                assistant_messages: r.replay_assistant_messages,
+                total: r.replay_events,
+            })
+            .unwrap_or(ReplayEventCounts {
+                user_messages: 0,
+                assistant_messages: 0,
+                total: 0,
+            })
     }
 }
 
@@ -399,6 +433,13 @@ impl Client for SessionEventDispatcher {
 
                     let display_text = extract_user_message(&text.text);
                     let message_id = uuid::Uuid::new_v4().to_string();
+                    {
+                        let mut routes = self.routes.lock().await;
+                        if let Some(route) = routes.get_mut(&goose_session_id) {
+                            route.replay_user_messages += 1;
+                            route.replay_events += 1;
+                        }
+                    }
                     let _ = self.app_handle.emit(
                         "acp:replay_user_message",
                         serde_json::json!({
@@ -436,6 +477,8 @@ impl Client for SessionEventDispatcher {
                         let mut routes = self.routes.lock().await;
                         if let Some(route) = routes.get_mut(&goose_session_id) {
                             route.replay_message_id = Some(new_id.clone());
+                            route.replay_assistant_messages += 1;
+                            route.replay_events += 1;
                         }
                         new_id
                     };

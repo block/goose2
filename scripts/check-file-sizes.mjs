@@ -31,9 +31,9 @@ const EXCEPTIONS = {
       "Shell still coordinates ACP session loading, project reassignment, and app-level chat routing.",
   },
   "src/features/chat/hooks/useAcpStream.ts": {
-    limit: 580,
+    limit: 600,
     justification:
-      "ACP replay, streaming, session binding, model-state event handling, and replay timeout are still centralized here.",
+      "ACP replay, streaming, session binding, model-state event handling, replay timeout, and replay diagnostics are still centralized here.",
   },
   "src/features/chat/hooks/__tests__/useAcpStream.test.ts": {
     limit: 570,
@@ -51,9 +51,9 @@ const EXCEPTIONS = {
       "ACP-backed session overlay persistence, draft migration, sidebar-facing session merge logic, and session lifecycle logging live together for now.",
   },
   "src-tauri/src/services/acp/manager/dispatcher.rs": {
-    limit: 520,
+    limit: 570,
     justification:
-      "ACP replay and live-stream event fan-out share one dispatcher until session event routing is split.",
+      "ACP replay and live-stream event fan-out share one dispatcher with replay event counting until session event routing is split.",
   },
   "src-tauri/src/services/acp/manager.rs": {
     limit: 630,
@@ -61,9 +61,9 @@ const EXCEPTIONS = {
       "ACP manager command dispatch loop — export/import/fork session ext_method dispatch adds boilerplate.",
   },
   "src-tauri/src/services/acp/manager/session_ops.rs": {
-    limit: 570,
+    limit: 585,
     justification:
-      "Session prepare/load/list logic, working-dir updates, and composite prepared-session reuse remain colocated while ACP session ownership stabilizes.",
+      "Session prepare/load/list logic, working-dir updates, replay diagnostics, and composite prepared-session reuse remain colocated while ACP session ownership stabilizes.",
   },
 };
 

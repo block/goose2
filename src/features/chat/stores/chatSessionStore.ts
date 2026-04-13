@@ -324,9 +324,7 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
       messageCount: 0,
       draft: true,
     };
-    console.log(
-      `[session] createDraftSession ${chatSession.id.slice(0, 8)} project=${opts?.projectId?.slice(0, 8) ?? "none"} provider=${opts?.providerId ?? "none"}`,
-    );
+
     set((state) => ({ sessions: [...state.sessions, chatSession] }));
     persistDraftSessionRecord(draftSessionToRecord(chatSession));
     return chatSession;
@@ -335,7 +333,7 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
   promoteDraft: (id) => {
     const session = get().sessions.find((candidate) => candidate.id === id);
     if (!session?.draft) return;
-    console.log(`[session] promoteDraft ${id.slice(0, 8)}`);
+
     set((state) => ({
       sessions: state.sessions.map((candidate) =>
         candidate.id === id ? { ...candidate, draft: undefined } : candidate,
@@ -369,10 +367,7 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     try {
       const overlays = loadSessionMetadataOverlay();
       const acpSessions = await acpListSessions();
-      const emptyCount = acpSessions.filter((s) => s.messageCount === 0).length;
-      console.log(
-        `[session] loadSessions: ${acpSessions.length} backend (${emptyCount} empty), ${overlays.size} overlays`,
-      );
+
       const persistedDrafts = loadDraftSessionRecords();
       const currentDrafts = get().sessions.filter((session) => session.draft);
       const drafts = mergeDraftSessions(currentDrafts, persistedDrafts);
@@ -512,9 +507,6 @@ export const useChatSessionStore = create<ChatSessionStore>((set, get) => ({
     if (!acpSessionId) return;
     const session = get().sessions.find((candidate) => candidate.id === id);
     if (!session || session.acpSessionId === acpSessionId) return;
-    console.log(
-      `[session] setSessionAcpId ${id.slice(0, 8)} → goose=${acpSessionId.slice(0, 8)} draft=${!!session.draft} msgs=${session.messageCount}`,
-    );
 
     set((state) => ({
       sessions: state.sessions.map((candidate) =>

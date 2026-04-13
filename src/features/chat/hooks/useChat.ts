@@ -204,16 +204,11 @@ export function useChat(
 
       try {
         if (wasDraft || selectedModelId) {
-          console.log(
-            `[session] acpPrepareSession ${sessionId.slice(0, 8)} (trigger=${wasDraft ? "draft-promotion" : "model-change"}, provider=${providerId}, model=${selectedModelId ?? "default"})`,
-          );
           await acpPrepareSession(sessionId, providerId, {
             workingDir: workingDirOverride,
             personaId: effectivePersonaInfo?.id,
           });
-          console.log(
-            `[session] acpPrepareSession ${sessionId.slice(0, 8)} completed — backend session created`,
-          );
+
           if (selectedModelId) {
             await acpSetModel(sessionId, selectedModelId);
           }
@@ -248,13 +243,10 @@ export function useChat(
         }
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") {
-          console.log(`[session] sendMessage ${sessionId.slice(0, 8)} aborted`);
           store.setChatState(sessionId, "idle");
         } else {
           const errorMessage = getErrorMessage(err);
-          console.log(
-            `[session] sendMessage ${sessionId.slice(0, 8)} failed (wasDraft=${wasDraft}): ${errorMessage}`,
-          );
+
           const liveStore = useChatStore.getState();
           const { streamingMessageId } = liveStore.getSessionRuntime(sessionId);
           if (streamingMessageId) {

@@ -13,6 +13,7 @@ import {
   ensureReplayBuffer,
   getBufferedMessage,
   getAndDeleteReplayBuffer,
+  getReplayBufferSize,
   findLatestUnpairedToolRequest,
 } from "./replayBuffer";
 import type {
@@ -93,20 +94,40 @@ export function useAcpStream(enabled: boolean): void {
     const replayTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
 
     const REPLAY_TIMEOUT_MS = 30_000;
+    const replayEventCounts = new Map<
+      string,
+      {
+        userMessages: number;
+        assistantMessages: number;
+        events: number;
+        t0: number;
+      }
+    >();
 
     const unsubscribeFlush = useChatStore.subscribe((state, prevState) => {
       if (!active) return;
 
-      // Start timeout for newly-loading sessions
+      // Start timeout and event counter for newly-loading sessions
       for (const sid of state.loadingSessionIds) {
         if (!prevState.loadingSessionIds.has(sid) && !replayTimeouts.has(sid)) {
+          replayEventCounts.set(sid, {
+            userMessages: 0,
+            assistantMessages: 0,
+            events: 0,
+            t0: performance.now(),
+          });
           const timer = setTimeout(() => {
             replayTimeouts.delete(sid);
             const store = useChatStore.getState();
             if (store.loadingSessionIds.has(sid)) {
+              const counts = replayEventCounts.get(sid);
+              const bufferLen = getReplayBufferSize(sid);
               console.warn(
-                `[stream] ${sid.slice(0, 8)} replay_complete not received within ${REPLAY_TIMEOUT_MS / 1000}s — showing error`,
+                `[replay] ${sid.slice(0, 8)} TIMEOUT after ${REPLAY_TIMEOUT_MS / 1000}s — ` +
+                  `received ${counts?.events ?? 0} events (${counts?.userMessages ?? 0} user, ` +
+                  `${counts?.assistantMessages ?? 0} assistant), ${bufferLen} buffered — replay_complete never arrived`,
               );
+              replayEventCounts.delete(sid);
               store.setSessionLoading(sid, false);
               store.setError(
                 sid,
@@ -128,10 +149,18 @@ export function useAcpStream(enabled: boolean): void {
           }
           const buffer = getAndDeleteReplayBuffer(sid);
           if (buffer && buffer.length > 0) {
+            const userCount = buffer.filter((m) => m.role === "user").length;
+            const assistantCount = buffer.filter(
+              (m) => m.role === "assistant",
+            ).length;
             console.log(
-              `[perf:stream] ${sid.slice(0, 8)} flushing replay buffer (${buffer.length} messages) at ${performance.now().toFixed(1)}ms`,
+              `[replay] ${sid.slice(0, 8)} flushing buffer → ${buffer.length} messages (${userCount} user, ${assistantCount} assistant) into store`,
             );
             useChatStore.getState().setMessages(sid, buffer);
+          } else {
+            console.log(
+              `[replay] ${sid.slice(0, 8)} loading finished but buffer was ${buffer ? "empty" : "missing"}`,
+            );
           }
         }
       }
@@ -140,9 +169,17 @@ export function useAcpStream(enabled: boolean): void {
     unlisteners.push(
       listen<AcpReplayCompletePayload>("acp:replay_complete", (event) => {
         if (!active) return;
-        useChatStore
-          .getState()
-          .setSessionLoading(event.payload.sessionId, false);
+        const sid = event.payload.sessionId;
+        const counts = replayEventCounts.get(sid);
+        const bufferLen = getReplayBufferSize(sid);
+        console.log(
+          `[replay] ${sid.slice(0, 8)} replay_complete received — ` +
+            `${counts?.userMessages ?? 0} user msgs, ${counts?.assistantMessages ?? 0} assistant msgs, ` +
+            `${counts?.events ?? 0} total events, ${bufferLen} buffered messages, ` +
+            `${counts ? (performance.now() - counts.t0).toFixed(0) : "?"}ms elapsed`,
+        );
+        replayEventCounts.delete(sid);
+        useChatStore.getState().setSessionLoading(sid, false);
       }),
     );
 
@@ -155,6 +192,11 @@ export function useAcpStream(enabled: boolean): void {
 
         if (store.loadingSessionIds.has(sessionId)) {
           if (!getBufferedMessage(sessionId, messageId)) {
+            const counts = replayEventCounts.get(sessionId);
+            if (counts) {
+              counts.assistantMessages++;
+              counts.events++;
+            }
             ensureReplayBuffer(sessionId).push({
               id: messageId,
               role: "assistant",
@@ -439,6 +481,11 @@ export function useAcpStream(enabled: boolean): void {
         (event) => {
           if (!active) return;
           const { sessionId, messageId, text } = event.payload;
+          const counts = replayEventCounts.get(sessionId);
+          if (counts) {
+            counts.userMessages++;
+            counts.events++;
+          }
           ensureReplayBuffer(sessionId).push({
             id: messageId,
             role: "user",
@@ -453,9 +500,7 @@ export function useAcpStream(enabled: boolean): void {
     unlisteners.push(
       listen<AcpSessionBoundPayload>("acp:session_bound", (event) => {
         if (!active) return;
-        console.log(
-          `[session] acp:session_bound ${event.payload.sessionId.slice(0, 8)} → goose=${event.payload.gooseSessionId.slice(0, 8)}`,
-        );
+
         useChatSessionStore
           .getState()
           .setSessionAcpId(

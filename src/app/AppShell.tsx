@@ -68,24 +68,22 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     const existing = useChatStore.getState().messagesBySession[sessionId];
     if (existing && existing.length > 0) {
       console.log(
-        `[perf:load] ${sessionId.slice(0, 8)} skip — already has messages`,
+        `[replay] ${sessionId.slice(0, 8)} skip — already has ${existing.length} messages in store`,
       );
       return;
     }
 
     const t0 = performance.now();
-    console.log(`[perf:load] ${sessionId.slice(0, 8)} start`);
     const store = useChatStore.getState();
     store.setSessionLoading(sessionId, true);
     try {
-      const t1 = performance.now();
       const { acpLoadSession } = await import("@/shared/api/acp");
-      const t2 = performance.now();
-      console.log(
-        `[perf:load] ${sessionId.slice(0, 8)} import took ${(t2 - t1).toFixed(1)}ms`,
-      );
       const session = useChatSessionStore.getState().getSession(sessionId);
       const gooseSessionId = session?.acpSessionId ?? sessionId;
+      const messageCount = session?.messageCount ?? "unknown";
+      console.log(
+        `[replay] ${sessionId.slice(0, 8)} loading — goose=${gooseSessionId.slice(0, 8)} messageCount=${messageCount}`,
+      );
       const project = session?.projectId
         ? (useProjectStore
             .getState()
@@ -98,16 +96,15 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           ? resolveEffectiveWorkingDir(null, await getHomeDir())
           : undefined);
       await acpLoadSession(sessionId, gooseSessionId, workingDir);
-      const t3 = performance.now();
       console.log(
-        `[perf:load] ${sessionId.slice(0, 8)} acpLoadSession resolved in ${(t3 - t2).toFixed(1)}ms (total ${(t3 - t0).toFixed(1)}ms)`,
+        `[replay] ${sessionId.slice(0, 8)} acpLoadSession resolved in ${(performance.now() - t0).toFixed(0)}ms — waiting for replay events`,
       );
     } catch (err) {
-      console.error("Failed to load session messages:", err);
-      useChatStore.getState().setSessionLoading(sessionId, false);
-      console.log(
-        `[perf:load] ${sessionId.slice(0, 8)} failed, loading=false at +${(performance.now() - t0).toFixed(1)}ms`,
+      console.error(
+        `[replay] ${sessionId.slice(0, 8)} acpLoadSession failed:`,
+        err,
       );
+      useChatStore.getState().setSessionLoading(sessionId, false);
     }
   }, []);
 

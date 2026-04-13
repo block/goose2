@@ -35,6 +35,10 @@ export function getBufferedMessage(
   return replayBuffers.get(sessionId)?.find((m) => m.id === messageId);
 }
 
+export function getReplayBufferSize(sessionId: string): number {
+  return replayBuffers.get(sessionId)?.length ?? 0;
+}
+
 export function getAndDeleteReplayBuffer(
   sessionId: string,
 ): Message[] | undefined {
