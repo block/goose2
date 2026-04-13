@@ -142,7 +142,7 @@ pub async fn list_files_for_mentions(
 ) -> Result<Vec<String>, String> {
     tokio::task::spawn_blocking(move || scan_files_for_mentions(roots, max_results))
         .await
-        .map_err(|error| format!("Failed to scan files for mentions: {error}"))
+        .map_err(|error| format!("Failed to scan files for mentions: {}", error))
 }
 
 #[cfg(test)]

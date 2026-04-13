@@ -129,7 +129,7 @@ pub fn slugify(name: &str) -> String {
 pub fn export_persona(store: State<'_, PersonaStore>, id: String) -> Result<ExportResult, String> {
     let persona = store
         .get(&id)
-        .ok_or_else(|| format!("Persona '{id}' not found"))?;
+        .ok_or_else(|| format!("Persona '{}' not found", id))?;
 
     // For export, only include URL avatars (local files aren't portable)
     let export_avatar = match &persona.avatar {
@@ -147,10 +147,10 @@ pub fn export_persona(store: State<'_, PersonaStore>, id: String) -> Result<Expo
     };
 
     let json = serde_json::to_string_pretty(&export)
-        .map_err(|e| format!("Failed to serialize persona: {e}"))?;
+        .map_err(|e| format!("Failed to serialize persona: {}", e))?;
 
     let slug = slugify(&persona.display_name);
-    let suggested_filename = format!("{slug}.persona.json");
+    let suggested_filename = format!("{}.persona.json", slug);
 
     Ok(ExportResult {
         json,
@@ -178,7 +178,7 @@ pub fn import_personas(
 
     // Parse as JSON
     let export: PersonaExportV1 =
-        serde_json::from_str(&content).map_err(|e| format!("Invalid persona JSON: {e}"))?;
+        serde_json::from_str(&content).map_err(|e| format!("Invalid persona JSON: {}", e))?;
 
     // Validate version
     if export.version != 1 {

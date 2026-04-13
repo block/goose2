@@ -117,7 +117,7 @@ fn expand_rename_path(path: &str) -> String {
             let inner = &path[brace_start + 1..brace_end];
             let suffix = &path[brace_end + 1..];
             let new_name = inner.split(" => ").last().unwrap_or(inner);
-            return format!("{prefix}{new_name}{suffix}");
+            return format!("{}{}{}", prefix, new_name, suffix);
         }
     }
     if path.contains(" => ") {

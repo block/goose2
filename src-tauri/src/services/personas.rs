@@ -106,7 +106,7 @@ impl PersonaStore {
         let entries = match std::fs::read_dir(&dir) {
             Ok(e) => e,
             Err(err) => {
-                warn!("Failed to read agents directory {dir:?}: {err}");
+                warn!("Failed to read agents directory {:?}: {}", dir, err);
                 return Vec::new();
             }
         };
@@ -120,7 +120,7 @@ impl PersonaStore {
             match Self::parse_markdown_persona(&path) {
                 Ok(persona) => personas.push(persona),
                 Err(err) => {
-                    warn!("Skipping {path:?}: {err}");
+                    warn!("Skipping {:?}: {}", path, err);
                 }
             }
         }
@@ -131,7 +131,7 @@ impl PersonaStore {
     /// Parse a single markdown file with YAML frontmatter into a Persona.
     fn parse_markdown_persona(path: &std::path::Path) -> Result<Persona, String> {
         let content =
-            std::fs::read_to_string(path).map_err(|e| format!("Failed to read file: {e}"))?;
+            std::fs::read_to_string(path).map_err(|e| format!("Failed to read file: {}", e))?;
 
         // Expect file to start with "---"
         let trimmed = content.trim_start();
@@ -148,8 +148,8 @@ impl PersonaStore {
         let yaml_str = &after_first[..end_idx];
         let body = after_first[end_idx + 4..].trim().to_string();
 
-        let frontmatter: MarkdownFrontmatter =
-            serde_yaml::from_str(yaml_str).map_err(|e| format!("Invalid frontmatter YAML: {e}"))?;
+        let frontmatter: MarkdownFrontmatter = serde_yaml::from_str(yaml_str)
+            .map_err(|e| format!("Invalid frontmatter YAML: {}", e))?;
 
         // Derive a stable ID from the filename (without extension)
         let slug = path
@@ -157,7 +157,7 @@ impl PersonaStore {
             .and_then(|s| s.to_str())
             .unwrap_or("unknown")
             .to_string();
-        let id = format!("md-{slug}");
+        let id = format!("md-{}", slug);
 
         // Use the file modification time for timestamps, fall back to now
         let mod_time = std::fs::metadata(path)
@@ -260,7 +260,7 @@ impl PersonaStore {
         let persona = personas
             .iter_mut()
             .find(|p| p.id == id)
-            .ok_or_else(|| format!("Persona '{id}' not found"))?;
+            .ok_or_else(|| format!("Persona '{}' not found", id))?;
 
         if persona.is_builtin {
             return Err("Cannot update a built-in persona".to_string());
@@ -298,7 +298,7 @@ impl PersonaStore {
         let persona = personas
             .iter()
             .find(|p| p.id == id)
-            .ok_or_else(|| format!("Persona '{id}' not found"))?;
+            .ok_or_else(|| format!("Persona '{}' not found", id))?;
 
         if persona.is_builtin {
             return Err("Cannot delete a built-in persona".to_string());
@@ -323,7 +323,7 @@ impl PersonaStore {
     pub fn save_avatar_from_path(persona_id: &str, source_path: &str) -> Result<String, String> {
         let avatars_dir = Self::avatars_dir();
         std::fs::create_dir_all(&avatars_dir)
-            .map_err(|e| format!("Failed to create avatars directory: {e}"))?;
+            .map_err(|e| format!("Failed to create avatars directory: {}", e))?;
 
         let source = std::path::Path::new(source_path);
 
@@ -334,12 +334,12 @@ impl PersonaStore {
             .unwrap_or("png")
             .to_lowercase();
 
-        let stored_name = format!("{persona_id}.{ext}");
+        let stored_name = format!("{}.{}", persona_id, ext);
         let dest = avatars_dir.join(&stored_name);
 
         // Remove any existing avatar for this persona (different extension)
         if let Ok(entries) = std::fs::read_dir(&avatars_dir) {
-            let prefix = format!("{persona_id}.");
+            let prefix = format!("{}.", persona_id);
             for entry in entries.flatten() {
                 let name = entry.file_name();
                 if let Some(name_str) = name.to_str() {
@@ -350,7 +350,7 @@ impl PersonaStore {
             }
         }
 
-        std::fs::copy(source, &dest).map_err(|e| format!("Failed to copy avatar file: {e}"))?;
+        std::fs::copy(source, &dest).map_err(|e| format!("Failed to copy avatar file: {}", e))?;
 
         Ok(stored_name)
     }
@@ -364,15 +364,15 @@ impl PersonaStore {
     ) -> Result<String, String> {
         let avatars_dir = Self::avatars_dir();
         std::fs::create_dir_all(&avatars_dir)
-            .map_err(|e| format!("Failed to create avatars directory: {e}"))?;
+            .map_err(|e| format!("Failed to create avatars directory: {}", e))?;
 
         let ext = extension.to_lowercase();
-        let stored_name = format!("{persona_id}.{ext}");
+        let stored_name = format!("{}.{}", persona_id, ext);
         let dest = avatars_dir.join(&stored_name);
 
         // Remove any existing avatar for this persona (different extension)
         if let Ok(entries) = std::fs::read_dir(&avatars_dir) {
-            let prefix = format!("{persona_id}.");
+            let prefix = format!("{}.", persona_id);
             for entry in entries.flatten() {
                 let name = entry.file_name();
                 if let Some(name_str) = name.to_str() {
@@ -383,7 +383,7 @@ impl PersonaStore {
             }
         }
 
-        std::fs::write(&dest, bytes).map_err(|e| format!("Failed to write avatar file: {e}"))?;
+        std::fs::write(&dest, bytes).map_err(|e| format!("Failed to write avatar file: {}", e))?;
 
         Ok(stored_name)
     }
