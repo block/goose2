@@ -10,6 +10,7 @@ import type {
   ChatFileAttachmentDraft,
   ChatImageAttachmentDraft,
 } from "@/shared/types/messages";
+import { getPlatform } from "@/shared/lib/platform";
 import { resizeImage } from "../lib/resizeImage";
 
 function isBlobPreview(url: string) {
@@ -26,6 +27,14 @@ function pathToPreviewUrl(path: string) {
   return typeof window !== "undefined" && window.__TAURI_INTERNALS__
     ? convertFileSrc(path)
     : path;
+}
+
+function attachmentPathKey(path?: string) {
+  if (!path) {
+    return null;
+  }
+
+  return getPlatform() === "linux" ? path : path.toLowerCase();
 }
 
 async function createImageAttachmentFromFile(
@@ -95,13 +104,13 @@ export function useChatInputAttachments() {
     setAttachments((previous) => {
       const seenPaths = new Set(
         previous
-          .map((attachment) => attachment.path?.toLowerCase())
+          .map((attachment) => attachmentPathKey(attachment.path))
           .filter((value): value is string => Boolean(value)),
       );
       const next = [...previous];
 
       for (const attachment of incoming) {
-        const pathKey = attachment.path?.toLowerCase();
+        const pathKey = attachmentPathKey(attachment.path);
         if (pathKey && seenPaths.has(pathKey)) {
           revokeAttachmentPreview(attachment);
           continue;
