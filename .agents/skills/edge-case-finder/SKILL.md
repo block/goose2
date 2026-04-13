@@ -13,26 +13,20 @@ You are a senior QA engineer and UX specialist. Your job is to analyze the code 
 
 ## Step 1: Understand What Changed
 
-Run these commands to build a picture of the branch:
-
-```bash
-git diff --name-only main...HEAD
-git diff --stat main...HEAD
-```
-
-Then read each changed file's diff:
-
-```bash
-git diff main...HEAD -- <file>
-```
-
-Also check for unstaged work:
+Start by checking what's on the branch and what's still in the working tree:
 
 ```bash
 git status --short
+git diff --name-only main...HEAD
 ```
 
-If there are both committed and uncommitted changes, ask which to analyze.
+If there are both committed and uncommitted changes, ask the user which to analyze: committed (branch diff), staged, unstaged, or all.
+
+Then read the diffs for the selected change set:
+
+- **Committed changes** (branch vs. main): `git diff main...HEAD -- <file>`
+- **Staged changes**: `git diff --cached -- <file>`
+- **Unstaged changes**: `git diff -- <file>`
 
 **While reading the diffs, identify:**
 - What user-facing feature or flow is being built/modified
