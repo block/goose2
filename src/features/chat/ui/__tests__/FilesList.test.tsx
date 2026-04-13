@@ -1,119 +1,163 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FilesList } from "../FilesList";
 
-const mockGetAllSessionArtifacts = vi.fn();
-const mockOpenResolvedPath = vi.fn();
-const mockPathExists = vi.fn();
+const { mockListDirectoryEntries, mockOpenPath, mockRevealInFileManager } =
+  vi.hoisted(() => ({
+    mockListDirectoryEntries: vi.fn(),
+    mockOpenPath: vi.fn(),
+    mockRevealInFileManager: vi.fn(),
+  }));
 
-vi.mock("../../hooks/ArtifactPolicyContext", () => ({
-  useArtifactPolicyContext: () => ({
-    getAllSessionArtifacts: mockGetAllSessionArtifacts,
-    openResolvedPath: mockOpenResolvedPath,
-    pathExists: mockPathExists,
-  }),
+vi.mock("@/shared/api/system", () => ({
+  listDirectoryEntries: mockListDirectoryEntries,
 }));
 
-const makeArtifact = (overrides: Record<string, unknown> = {}) => ({
-  resolvedPath: "/Users/test/project/src/App.tsx",
-  resolvedDirectoryPath: "/Users/test/project/src/",
-  displayPath: "~/project/src/App.tsx",
-  filename: "App.tsx",
-  directoryPath: "~/project/src/",
-  versionCount: 1,
-  lastTouchedAt: 1000,
+vi.mock("@tauri-apps/plugin-opener", () => ({
+  openPath: mockOpenPath,
+}));
+
+vi.mock("@/shared/lib/fileManager", () => ({
+  revealInFileManager: mockRevealInFileManager,
+}));
+
+const makeEntry = (overrides: Record<string, unknown> = {}) => ({
   kind: "file" as const,
-  toolName: "Write",
+  name: "README.md",
+  path: "/Users/test/project/README.md",
   ...overrides,
 });
 
 describe("FilesList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockOpenResolvedPath.mockResolvedValue(undefined);
-    mockPathExists.mockResolvedValue(true);
+    mockOpenPath.mockResolvedValue(undefined);
+    mockRevealInFileManager.mockResolvedValue(undefined);
+    mockListDirectoryEntries.mockResolvedValue([]);
   });
 
-  it("shows empty state when no artifacts", () => {
-    mockGetAllSessionArtifacts.mockReturnValue([]);
+  it("shows an empty state when no project working directories are available", () => {
     render(<FilesList />);
-    expect(screen.getByText("No files yet")).toBeInTheDocument();
+
+    expect(
+      screen.getByText(
+        "Project files are unavailable until a project with working directories is assigned.",
+      ),
+    ).toBeInTheDocument();
   });
 
-  it("renders file rows with filename and directory", async () => {
-    mockGetAllSessionArtifacts.mockReturnValue([makeArtifact()]);
-    render(<FilesList />);
+  it("renders separate top-level roots for each working directory", async () => {
+    render(
+      <FilesList
+        projectWorkingDirs={["/Users/test/goose2", "/Users/test/sprout"]}
+      />,
+    );
+
     await waitFor(() => {
-      expect(screen.getByText("App.tsx")).toBeInTheDocument();
+      expect(mockListDirectoryEntries).toHaveBeenCalledWith(
+        "/Users/test/goose2",
+      );
+      expect(mockListDirectoryEntries).toHaveBeenCalledWith(
+        "/Users/test/sprout",
+      );
     });
-    expect(screen.getByText("~/project/src/")).toBeInTheDocument();
+
+    expect(screen.getByText("goose2")).toBeInTheDocument();
+    expect(screen.getByText("sprout")).toBeInTheDocument();
   });
 
-  it("hides files that do not exist on disk", async () => {
-    mockGetAllSessionArtifacts.mockReturnValue([
-      makeArtifact({ filename: "exists.tsx", resolvedPath: "/a/exists.tsx" }),
-      makeArtifact({ filename: "gone.tsx", resolvedPath: "/a/gone.tsx" }),
-    ]);
-    mockPathExists.mockImplementation((path: string) =>
-      Promise.resolve(path === "/a/exists.tsx"),
-    );
-    render(<FilesList />);
+  it("expands folders in place without opening them externally", async () => {
+    const user = userEvent.setup();
+    mockListDirectoryEntries.mockImplementation((path: string) => {
+      if (path === "/Users/test/project") {
+        return Promise.resolve([
+          makeEntry({
+            kind: "directory",
+            name: "src",
+            path: "/Users/test/project/src",
+          }),
+        ]);
+      }
+
+      if (path === "/Users/test/project/src") {
+        return Promise.resolve([
+          makeEntry({
+            name: "App.tsx",
+            path: "/Users/test/project/src/App.tsx",
+          }),
+        ]);
+      }
+
+      return Promise.resolve([]);
+    });
+
+    render(<FilesList projectWorkingDirs={["/Users/test/project"]} />);
+
+    await screen.findByText("src");
+    await user.click(screen.getByText("src"));
+
     await waitFor(() => {
-      expect(screen.getByText("exists.tsx")).toBeInTheDocument();
+      expect(mockListDirectoryEntries).toHaveBeenCalledWith(
+        "/Users/test/project/src",
+      );
     });
-    expect(screen.queryByText("gone.tsx")).not.toBeInTheDocument();
+    expect(mockOpenPath).not.toHaveBeenCalled();
+    expect(screen.getByText("App.tsx")).toBeInTheDocument();
   });
 
-  it("calls openResolvedPath with file path when row is clicked", async () => {
+  it("opens files externally when a file is clicked", async () => {
     const user = userEvent.setup();
-    mockGetAllSessionArtifacts.mockReturnValue([makeArtifact()]);
-    render(<FilesList />);
-    await user.click(screen.getByText("App.tsx"));
-    expect(mockOpenResolvedPath).toHaveBeenCalledWith(
-      "/Users/test/project/src/App.tsx",
-    );
-  });
-
-  it("calls openResolvedPath with directory when directory path is clicked", async () => {
-    const user = userEvent.setup();
-    mockGetAllSessionArtifacts.mockReturnValue([makeArtifact()]);
-    render(<FilesList />);
-    await user.click(screen.getByText("~/project/src/"));
-    expect(mockOpenResolvedPath).toHaveBeenCalledWith(
-      "/Users/test/project/src/",
-    );
-  });
-
-  it("filters files by filename", async () => {
-    const user = userEvent.setup();
-    mockGetAllSessionArtifacts.mockReturnValue([
-      makeArtifact({ filename: "App.tsx", resolvedPath: "/a/App.tsx" }),
-      makeArtifact({ filename: "index.ts", resolvedPath: "/a/index.ts" }),
+    mockListDirectoryEntries.mockResolvedValue([
+      makeEntry({
+        name: "README.md",
+        path: "/Users/test/project/README.md",
+      }),
     ]);
-    render(<FilesList />);
 
-    const input = screen.getByPlaceholderText("Search");
-    await user.type(input, "index");
+    render(<FilesList projectWorkingDirs={["/Users/test/project"]} />);
 
-    expect(screen.queryByText("App.tsx")).not.toBeInTheDocument();
-    expect(screen.getByText("index.ts")).toBeInTheDocument();
+    await user.click(await screen.findByText("README.md"));
+
+    expect(mockOpenPath).toHaveBeenCalledWith("/Users/test/project/README.md");
   });
 
-  it("shows no matching files message when filter has no results", async () => {
+  it("supports context menu actions for folders and files", async () => {
     const user = userEvent.setup();
-    mockGetAllSessionArtifacts.mockReturnValue([makeArtifact()]);
-    render(<FilesList />);
+    mockListDirectoryEntries.mockResolvedValue([
+      makeEntry({
+        kind: "directory",
+        name: "src",
+        path: "/Users/test/project/src",
+      }),
+      makeEntry({
+        name: "README.md",
+        path: "/Users/test/project/README.md",
+      }),
+    ]);
 
-    const input = screen.getByPlaceholderText("Search");
-    await user.type(input, "nonexistent");
+    render(<FilesList projectWorkingDirs={["/Users/test/project"]} />);
 
-    expect(screen.getByText("No matching files")).toBeInTheDocument();
-  });
+    const folderLabel = await screen.findByText("src");
+    fireEvent.contextMenu(folderLabel);
+    await user.click(
+      screen.getByRole("menuitem", {
+        name: /reveal in (finder|explorer|file manager)/i,
+      }),
+    );
+    expect(mockRevealInFileManager).toHaveBeenCalledWith(
+      "/Users/test/project/src",
+    );
 
-  it("does not show search bar when no artifacts exist", () => {
-    mockGetAllSessionArtifacts.mockReturnValue([]);
-    render(<FilesList />);
-    expect(screen.queryByPlaceholderText("Search")).not.toBeInTheDocument();
+    const fileLabel = screen.getByText("README.md");
+    fireEvent.contextMenu(fileLabel);
+    await user.click(
+      screen.getByRole("menuitem", {
+        name: /reveal in (finder|explorer|file manager)/i,
+      }),
+    );
+    expect(mockRevealInFileManager).toHaveBeenCalledWith(
+      "/Users/test/project/README.md",
+    );
   });
 });

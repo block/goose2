@@ -12,11 +12,11 @@ import { getPlatform } from "@/shared/lib/platform";
 const revealLabel = `labels.revealInFileManager_${getPlatform()}` as const;
 
 interface FileContextMenuProps {
-  filePath: string;
+  path: string;
   children: ReactNode;
 }
 
-export function FileContextMenu({ filePath, children }: FileContextMenuProps) {
+export function FileContextMenu({ path, children }: FileContextMenuProps) {
   const { t } = useTranslation("common");
 
   return (
@@ -24,11 +24,11 @@ export function FileContextMenu({ filePath, children }: FileContextMenuProps) {
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuItem
-          onSelect={() => void navigator.clipboard.writeText(filePath)}
+          onSelect={() => void navigator.clipboard.writeText(path)}
         >
           {t("labels.copyPath")}
         </ContextMenuItem>
-        <ContextMenuItem onSelect={() => void revealInFileManager(filePath)}>
+        <ContextMenuItem onSelect={() => void revealInFileManager(path)}>
           {t(revealLabel)}
         </ContextMenuItem>
       </ContextMenuContent>

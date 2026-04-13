@@ -1,237 +1,288 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { openPath } from "@tauri-apps/plugin-opener";
 import {
-  File,
-  FileCode,
-  FileImage,
-  FileJson,
-  FileSpreadsheet,
-  FileText,
-  FolderOpen,
-} from "lucide-react";
-import { SearchBar } from "@/shared/ui/SearchBar";
-import {
-  useArtifactPolicyContext,
-  type SessionArtifact,
-} from "../hooks/ArtifactPolicyContext";
+  FileTree,
+  FileTreeFile,
+  FileTreeFolder,
+} from "@/shared/ui/ai-elements/file-tree";
+import { listDirectoryEntries, type FileTreeEntry } from "@/shared/api/system";
 
-const ICON_CLASS = "h-5 w-5 shrink-0 text-muted-foreground";
+interface FilesListProps {
+  projectWorkingDirs?: string[];
+}
 
-const CODE_EXTENSIONS = new Set([
-  ".ts",
-  ".tsx",
-  ".js",
-  ".jsx",
-  ".mjs",
-  ".cjs",
-  ".css",
-  ".scss",
-  ".less",
-  ".sass",
-  ".html",
-  ".htm",
-  ".xml",
-  ".svg",
-  ".py",
-  ".rb",
-  ".rs",
-  ".go",
-  ".java",
-  ".kt",
-  ".c",
-  ".cpp",
-  ".h",
-  ".hpp",
-  ".cs",
-  ".sh",
-  ".bash",
-  ".zsh",
-  ".fish",
-  ".sql",
-  ".graphql",
-  ".gql",
-  ".toml",
-  ".yaml",
-  ".yml",
-]);
+interface DirectoryState {
+  entries: FileTreeEntry[];
+  error: string | null;
+  status: "idle" | "loading" | "loaded" | "error";
+}
 
-const SPREADSHEET_EXTENSIONS = new Set([
-  ".csv",
-  ".tsv",
-  ".xlsx",
-  ".xls",
-  ".ods",
-]);
+const EMPTY_ROOTS: string[] = [];
 
-const IMAGE_EXTENSIONS = new Set([
-  ".png",
-  ".jpg",
-  ".jpeg",
-  ".gif",
-  ".webp",
-  ".ico",
-  ".bmp",
-  ".tiff",
-  ".avif",
-]);
+function basename(path: string): string {
+  const parts = path.split(/[\\/]+/).filter(Boolean);
+  return parts[parts.length - 1] ?? path;
+}
 
-function getFileIcon(artifact: SessionArtifact) {
-  if (artifact.kind === "folder") {
-    return <FolderOpen className={ICON_CLASS} />;
+function normalizeRoots(roots: string[]): string[] {
+  return Array.from(
+    new Set(roots.map((root) => root.trim()).filter((root) => root.length > 0)),
+  );
+}
+
+function TreeStatusRow({
+  destructive = false,
+  text,
+}: {
+  destructive?: boolean;
+  text: string;
+}) {
+  return (
+    <div
+      className={`px-2 py-1 text-xs ${
+        destructive ? "text-destructive" : "text-muted-foreground"
+      }`}
+    >
+      {text}
+    </div>
+  );
+}
+
+interface DirectoryNodeProps {
+  directoryStates: Record<string, DirectoryState>;
+  entry: FileTreeEntry;
+  loadDirectory: (path: string) => void;
+  t: (key: string) => string;
+}
+
+function DirectoryNode({
+  directoryStates,
+  entry,
+  loadDirectory,
+  t,
+}: DirectoryNodeProps) {
+  if (entry.kind === "file") {
+    return (
+      <FileTreeFile
+        path={entry.path}
+        name={entry.name}
+        contextMenuPath={entry.path}
+        title={entry.path}
+      />
+    );
   }
 
-  const ext = artifact.filename.includes(".")
-    ? `.${artifact.filename.split(".").pop()?.toLowerCase()}`
-    : "";
-
-  if (ext === ".json") return <FileJson className={ICON_CLASS} />;
-  if (ext === ".md" || ext === ".mdx" || ext === ".txt")
-    return <FileText className={ICON_CLASS} />;
-  if (SPREADSHEET_EXTENSIONS.has(ext))
-    return <FileSpreadsheet className={ICON_CLASS} />;
-  if (IMAGE_EXTENSIONS.has(ext)) return <FileImage className={ICON_CLASS} />;
-  if (CODE_EXTENSIONS.has(ext)) return <FileCode className={ICON_CLASS} />;
-  return <File className={ICON_CLASS} />;
-}
-
-function FileRow({
-  artifact,
-  onOpenFile,
-  onOpenDirectory,
-}: {
-  artifact: SessionArtifact;
-  onOpenFile: (path: string) => void;
-  onOpenDirectory: (path: string) => void;
-}) {
-  const { t } = useTranslation("chat");
   return (
-    <button
-      type="button"
-      className="flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-lg border border-border px-4 py-3 text-left hover:bg-muted"
-      onClick={() => onOpenFile(artifact.resolvedPath)}
+    <FileTreeFolder
+      path={entry.path}
+      name={entry.name}
+      contextMenuPath={entry.path}
+      title={entry.path}
+      toggleOnSelect
     >
-      <div className="flex shrink-0 items-center">{getFileIcon(artifact)}</div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-foreground">
-          {artifact.filename}
-        </p>
-        {/* biome-ignore lint/a11y/useKeyWithClickEvents: directory path opens containing folder */}
-        {/* biome-ignore lint/a11y/noStaticElementInteractions: interactive span inside button to handle separate click target */}
-        <span
-          className="mt-0.5 block truncate text-xs text-muted-foreground hover:underline"
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenDirectory(artifact.resolvedDirectoryPath);
-          }}
-          title={t("files.openFolder", { path: artifact.directoryPath })}
-        >
-          {artifact.directoryPath}
-        </span>
-      </div>
-    </button>
+      <DirectoryChildren
+        directoryPath={entry.path}
+        directoryStates={directoryStates}
+        loadDirectory={loadDirectory}
+        t={t}
+      />
+    </FileTreeFolder>
   );
 }
 
-export function FilesList() {
-  const { t } = useTranslation("chat");
-  const { getAllSessionArtifacts, openResolvedPath, pathExists } =
-    useArtifactPolicyContext();
-  const [filter, setFilter] = useState("");
-  const [existingPaths, setExistingPaths] = useState<Set<string> | null>(null);
-
-  const artifacts = useMemo(
-    () => getAllSessionArtifacts(),
-    [getAllSessionArtifacts],
-  );
+function DirectoryChildren({
+  directoryPath,
+  directoryStates,
+  loadDirectory,
+  t,
+}: {
+  directoryPath: string;
+  directoryStates: Record<string, DirectoryState>;
+  loadDirectory: (path: string) => void;
+  t: (key: string) => string;
+}) {
+  const state = directoryStates[directoryPath];
 
   useEffect(() => {
-    if (artifacts.length === 0) {
-      setExistingPaths((current) => {
-        if (current?.size === 0) {
-          return current;
-        }
-        return new Set<string>();
-      });
+    if (!state || state.status === "idle") {
+      loadDirectory(directoryPath);
+    }
+  }, [directoryPath, loadDirectory, state]);
+
+  if (!state || state.status === "idle" || state.status === "loading") {
+    return <TreeStatusRow text={t("files.loading")} />;
+  }
+
+  if (state.status === "error") {
+    return <TreeStatusRow destructive text={t("files.loadError")} />;
+  }
+
+  if (state.entries.length === 0) {
+    return <TreeStatusRow text={t("files.folderEmpty")} />;
+  }
+
+  return (
+    <>
+      {state.entries.map((entry) => (
+        <DirectoryNode
+          key={entry.path}
+          directoryStates={directoryStates}
+          entry={entry}
+          loadDirectory={loadDirectory}
+          t={t}
+        />
+      ))}
+    </>
+  );
+}
+
+export function FilesList({ projectWorkingDirs }: FilesListProps) {
+  const { t } = useTranslation("chat");
+  const roots = useMemo(
+    () => normalizeRoots(projectWorkingDirs ?? EMPTY_ROOTS),
+    [projectWorkingDirs],
+  );
+  const rootsKey = useMemo(() => roots.join("\n"), [roots]);
+  const [directoryStates, setDirectoryStates] = useState<
+    Record<string, DirectoryState>
+  >({});
+  const directoryStatesRef = useRef<Record<string, DirectoryState>>({});
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(
+    () => new Set(roots),
+  );
+  const [selectedPath, setSelectedPath] = useState<string>();
+  const generationRef = useRef(0);
+
+  const loadDirectory = useCallback((path: string) => {
+    const generation = generationRef.current;
+    const existing = directoryStatesRef.current[path];
+    if (
+      existing &&
+      (existing.status === "loading" || existing.status === "loaded")
+    ) {
       return;
     }
 
-    let cancelled = false;
-    const paths = artifacts.map((a) => a.resolvedPath);
-
-    Promise.all(paths.map((p) => pathExists(p).catch(() => false))).then(
-      (results) => {
-        if (cancelled) return;
-        const existing = new Set<string>();
-        for (let i = 0; i < paths.length; i++) {
-          if (results[i]) existing.add(paths[i]);
-        }
-        setExistingPaths(existing);
+    directoryStatesRef.current = {
+      ...directoryStatesRef.current,
+      [path]: {
+        entries: [],
+        error: null,
+        status: "loading",
       },
-    );
-
-    return () => {
-      cancelled = true;
     };
-  }, [artifacts, pathExists]);
+    setDirectoryStates(directoryStatesRef.current);
 
-  const verifiedArtifacts =
-    existingPaths === null
-      ? artifacts
-      : artifacts.filter((a) => existingPaths.has(a.resolvedPath));
+    void listDirectoryEntries(path)
+      .then((entries) => {
+        if (generationRef.current !== generation) {
+          return;
+        }
 
-  const filteredArtifacts = filter
-    ? verifiedArtifacts.filter((a) => {
-        const query = filter.toLowerCase();
-        return (
-          a.filename.toLowerCase().includes(query) ||
-          a.directoryPath.toLowerCase().includes(query)
-        );
+        directoryStatesRef.current = {
+          ...directoryStatesRef.current,
+          [path]: {
+            entries,
+            error: null,
+            status: "loaded",
+          },
+        };
+        setDirectoryStates(directoryStatesRef.current);
       })
-    : verifiedArtifacts;
+      .catch((error: unknown) => {
+        if (generationRef.current !== generation) {
+          return;
+        }
 
-  const handleOpenFile = (path: string) => {
-    void openResolvedPath(path);
-  };
+        directoryStatesRef.current = {
+          ...directoryStatesRef.current,
+          [path]: {
+            entries: [],
+            error: error instanceof Error ? error.message : String(error),
+            status: "error",
+          },
+        };
+        setDirectoryStates(directoryStatesRef.current);
+      });
+  }, []);
 
-  const handleOpenDirectory = (path: string) => {
-    void openResolvedPath(path);
-  };
+  useEffect(() => {
+    const nextRoots = rootsKey ? rootsKey.split("\n") : [];
+    generationRef.current += 1;
+    directoryStatesRef.current = {};
+    setDirectoryStates({});
+    setExpandedPaths(new Set(nextRoots));
+    setSelectedPath(undefined);
+  }, [rootsKey]);
 
-  if (verifiedArtifacts.length === 0) {
+  useEffect(() => {
+    const nextRoots = rootsKey ? rootsKey.split("\n") : [];
+    for (const root of nextRoots) {
+      loadDirectory(root);
+    }
+  }, [loadDirectory, rootsKey]);
+
+  const handleExpandedChange = useCallback(
+    (nextExpanded: Set<string>) => {
+      const normalizedExpanded = new Set(nextExpanded);
+      setExpandedPaths(normalizedExpanded);
+
+      for (const path of normalizedExpanded) {
+        loadDirectory(path);
+      }
+    },
+    [loadDirectory],
+  );
+
+  const handleOpenFile = useCallback((path: string) => {
+    setSelectedPath(path);
+    void openPath(path);
+  }, []);
+
+  if (roots.length === 0) {
     return (
-      <div className="flex h-32 items-center justify-center">
+      <div className="flex h-32 items-center justify-center px-4 text-center">
         <p className="text-sm text-muted-foreground">{t("files.empty")}</p>
       </div>
     );
   }
 
   return (
-    <div className="min-w-0 overflow-hidden">
-      <div className="px-3 pb-2 pt-3">
-        <SearchBar
-          value={filter}
-          onChange={setFilter}
-          placeholder={t("files.searchPlaceholder")}
-        />
-      </div>
-      {filteredArtifacts.length === 0 ? (
-        <div className="flex h-20 items-center justify-center">
-          <p className="text-sm text-muted-foreground">
-            {t("files.noMatches")}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-2 px-3 pb-3">
-          {filteredArtifacts.map((artifact) => (
-            <FileRow
-              key={artifact.resolvedPath}
-              artifact={artifact}
-              onOpenFile={handleOpenFile}
-              onOpenDirectory={handleOpenDirectory}
-            />
-          ))}
-        </div>
-      )}
+    <div className="min-w-0 px-1 pb-1 pt-1">
+      <FileTree
+        className="border-0 bg-transparent"
+        contentClassName="p-1"
+        expanded={expandedPaths}
+        onExpandedChange={handleExpandedChange}
+        onSelect={handleOpenFile}
+        selectedPath={selectedPath}
+      >
+        {roots.map((root) => {
+          const state = directoryStates[root];
+          return (
+            <FileTreeFolder
+              key={root}
+              path={root}
+              name={basename(root)}
+              contextMenuPath={root}
+              title={root}
+              toggleOnSelect
+            >
+              {state?.status === "error" ? (
+                <TreeStatusRow destructive text={t("files.rootLoadError")} />
+              ) : (
+                <DirectoryChildren
+                  directoryPath={root}
+                  directoryStates={directoryStates}
+                  loadDirectory={loadDirectory}
+                  t={t}
+                />
+              )}
+            </FileTreeFolder>
+          );
+        })}
+      </FileTree>
     </div>
   );
 }
