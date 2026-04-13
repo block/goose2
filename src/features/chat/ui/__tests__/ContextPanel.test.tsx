@@ -4,9 +4,17 @@ import userEvent from "@testing-library/user-event";
 import * as gitApi from "@/shared/api/git";
 import { ContextPanel } from "../ContextPanel";
 
-const mockUseGitState = vi.fn();
-const mockRefetch = vi.fn();
-const mockRefetchFiles = vi.fn();
+const {
+  mockUseGitState,
+  mockRefetch,
+  mockRefetchFiles,
+  mockListDirectoryEntries,
+} = vi.hoisted(() => ({
+  mockUseGitState: vi.fn(),
+  mockRefetch: vi.fn(),
+  mockRefetchFiles: vi.fn(),
+  mockListDirectoryEntries: vi.fn(),
+}));
 
 vi.mock("@/shared/hooks/useGitState", () => ({
   useGitState: (...args: unknown[]) => mockUseGitState(...args),
@@ -26,6 +34,10 @@ vi.mock("@tauri-apps/api/event", () => ({
 
 vi.mock("@tauri-apps/plugin-opener", () => ({
   openPath: vi.fn(),
+}));
+
+vi.mock("@/shared/api/system", () => ({
+  listDirectoryEntries: mockListDirectoryEntries,
 }));
 
 vi.mock("@/shared/api/git", () => ({
@@ -68,6 +80,7 @@ describe("ContextPanel", () => {
     vi.clearAllMocks();
     mockRefetch.mockResolvedValue(undefined);
     mockRefetchFiles.mockResolvedValue(undefined);
+    mockListDirectoryEntries.mockResolvedValue([]);
     vi.mocked(gitApi.createWorktree).mockResolvedValue({
       path: "/Users/test/goose2-worktrees/new-worktree",
       branch: "new-worktree",
@@ -131,7 +144,7 @@ describe("ContextPanel", () => {
 
     await user.click(screen.getByRole("tab", { name: /files/i }));
 
-    expect(screen.getByText("No files yet")).toBeInTheDocument();
+    expect(screen.getByText("goose2")).toBeInTheDocument();
   });
 
   it("shows path and init button for non-git directory", async () => {

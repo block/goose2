@@ -60,7 +60,7 @@ function ChangedFileRow({
 
   if (isDeleted) return row;
 
-  return <FileContextMenu filePath={fullPath}>{row}</FileContextMenu>;
+  return <FileContextMenu path={fullPath}>{row}</FileContextMenu>;
 }
 
 interface ChangesWidgetProps {

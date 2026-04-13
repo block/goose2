@@ -123,7 +123,7 @@ export function ArtifactsWidget() {
         return (
           <FileContextMenu
             key={artifact.resolvedPath}
-            filePath={artifact.resolvedPath}
+            path={artifact.resolvedPath}
           >
             <button
               type="button"

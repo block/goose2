@@ -91,10 +91,12 @@
     }
   },
   "files": {
-    "empty": "Aún no hay archivos",
-    "noMatches": "No hay archivos que coincidan",
+    "empty": "Los archivos del proyecto no están disponibles hasta que se asigne un proyecto con directorios de trabajo.",
+    "folderEmpty": "La carpeta está vacía",
+    "loadError": "No se pudo cargar el contenido de la carpeta.",
+    "loading": "Cargando archivos...",
     "openFolder": "Abrir carpeta: {{path}}",
-    "searchPlaceholder": "Buscar"
+    "rootLoadError": "No se pudo cargar esta carpeta."
   },
   "image": {
     "view": "Ver {{label}}"

@@ -91,10 +91,12 @@
     }
   },
   "files": {
-    "empty": "No files yet",
-    "noMatches": "No matching files",
+    "empty": "Project files are unavailable until a project with working directories is assigned.",
+    "folderEmpty": "Folder is empty",
+    "loadError": "Unable to load folder contents.",
+    "loading": "Loading files...",
     "openFolder": "Open folder: {{path}}",
-    "searchPlaceholder": "Search"
+    "rootLoadError": "Unable to load this folder."
   },
   "image": {
     "view": "View {{label}}"

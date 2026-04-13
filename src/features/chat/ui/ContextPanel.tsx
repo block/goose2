@@ -223,7 +223,7 @@ export function ContextPanel({
       </TabsContent>
 
       <TabsContent value="files" className="flex-1 overflow-y-auto">
-        <FilesList />
+        <FilesList projectWorkingDirs={projectWorkingDirs} />
       </TabsContent>
     </Tabs>
   );
