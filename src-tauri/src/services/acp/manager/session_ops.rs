@@ -443,12 +443,8 @@ pub(super) async fn load_session_inner(
     // notifications asynchronously via spawned tasks. After load_session
     // returns, replay notifications may still be queued. Yield repeatedly
     // to let the single-threaded runtime drain them before counting.
-    wait_for_replay_drain(|| async {
-        dispatcher
-            .get_replay_event_count(goose_session_id)
-            .await
-    })
-    .await;
+    wait_for_replay_drain(|| async { dispatcher.get_replay_event_count(goose_session_id).await })
+        .await;
 
     // Finalize any in-progress replay assistant message
     dispatcher.finalize_replay(goose_session_id).await;

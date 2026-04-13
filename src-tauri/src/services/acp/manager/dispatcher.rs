@@ -258,10 +258,7 @@ impl SessionEventDispatcher {
         );
     }
 
-    pub(super) async fn get_replay_event_count(
-        &self,
-        goose_session_id: &str,
-    ) -> u32 {
+    pub(super) async fn get_replay_event_count(&self, goose_session_id: &str) -> u32 {
         let routes = self.routes.lock().await;
         routes
             .get(goose_session_id)
