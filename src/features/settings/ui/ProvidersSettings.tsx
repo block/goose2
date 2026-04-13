@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/shared/ui/button";
 import { Separator } from "@/shared/ui/separator";
@@ -20,8 +20,10 @@ import type {
 function resolveStatus(
   entry: ProviderCatalogEntry,
   configuredIds: Set<string>,
+  hasModelProvider: boolean,
 ): ProviderSetupStatus {
-  if (entry.id === "goose") return "built_in";
+  if (entry.id === "goose")
+    return hasModelProvider ? "built_in" : "needs_model";
   if (entry.category === "agent") return "not_installed";
   if (configuredIds.has(entry.id)) return "connected";
   return "not_configured";
@@ -30,10 +32,11 @@ function resolveStatus(
 function toDisplayInfo(
   entries: ProviderCatalogEntry[],
   configuredIds: Set<string>,
+  hasModelProvider: boolean,
 ): ProviderDisplayInfo[] {
   return entries.map((entry) => ({
     ...entry,
-    status: resolveStatus(entry, configuredIds),
+    status: resolveStatus(entry, configuredIds, hasModelProvider),
   }));
 }
 
@@ -41,6 +44,8 @@ export function ProvidersSettings() {
   const { t } = useTranslation(["settings", "common"]);
   const [showAllModels, setShowAllModels] = useState(false);
   const [modelOrder, setModelOrder] = useState<string[] | null>(null);
+
+  const modelsSectionRef = useRef<HTMLElement>(null);
 
   const {
     configuredIds,
@@ -54,14 +59,59 @@ export function ProvidersSettings() {
     completeNativeSetup,
   } = useCredentials();
 
+  const modelProviderIds = useMemo(
+    () => new Set(getModelProviders().map((m) => m.id)),
+    [],
+  );
+
+  const hasModelProvider = useMemo(
+    () => [...configuredIds].some((id) => modelProviderIds.has(id)),
+    [configuredIds, modelProviderIds],
+  );
+
+  const scrollToModels = useCallback(() => {
+    const target = modelsSectionRef.current;
+    if (!target) return;
+
+    const container = target.closest("[class*='overflow-y']");
+    if (!container) {
+      target.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+
+    const targetTop =
+      target.getBoundingClientRect().top -
+      container.getBoundingClientRect().top +
+      container.scrollTop -
+      16;
+    const start = container.scrollTop;
+    const distance = targetTop - start;
+    const duration = 500;
+    let startTime: number | null = null;
+
+    function easeInOut(t: number) {
+      return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+    }
+
+    function step(timestamp: number) {
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      container.scrollTop = start + distance * easeInOut(progress);
+      if (progress < 1) requestAnimationFrame(step);
+    }
+
+    requestAnimationFrame(step);
+  }, []);
+
   const agents = useMemo(
-    () => toDisplayInfo(getAgentProviders(), configuredIds),
-    [configuredIds],
+    () => toDisplayInfo(getAgentProviders(), configuredIds, hasModelProvider),
+    [configuredIds, hasModelProvider],
   );
 
   const allModels = useMemo(
-    () => toDisplayInfo(getModelProviders(), configuredIds),
-    [configuredIds],
+    () => toDisplayInfo(getModelProviders(), configuredIds, hasModelProvider),
+    [configuredIds, hasModelProvider],
   );
 
   const sortedModels = useMemo(() => {
@@ -162,14 +212,20 @@ export function ProvidersSettings() {
 
         <div className="grid grid-cols-2 gap-3">
           {agents.map((agent) => (
-            <AgentProviderCard key={agent.id} provider={agent} />
+            <AgentProviderCard
+              key={agent.id}
+              provider={agent}
+              onScrollToModels={
+                agent.id === "goose" ? scrollToModels : undefined
+              }
+            />
           ))}
         </div>
       </section>
 
       <Separator className="my-6" />
 
-      <section>
+      <section ref={modelsSectionRef} className="scroll-mt-4">
         <div className="mb-3">
           <h4 className="text-sm font-semibold">
             {t("providers.models.title")}

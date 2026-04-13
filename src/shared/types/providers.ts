@@ -50,6 +50,7 @@ export interface ProviderCatalogEntry {
 export type ProviderSetupStatus =
   | "built_in"
   | "connected"
+  | "needs_model"
   | "not_installed"
   | "not_configured"
   | "installing"

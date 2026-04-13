@@ -25,9 +25,13 @@ const MAX_OUTPUT_LINES = 50;
 
 interface AgentProviderCardProps {
   provider: ProviderDisplayInfo;
+  onScrollToModels?: () => void;
 }
 
-export function AgentProviderCard({ provider }: AgentProviderCardProps) {
+export function AgentProviderCard({
+  provider,
+  onScrollToModels,
+}: AgentProviderCardProps) {
   const { t } = useTranslation(["settings", "common"]);
   const [setupPhase, setSetupPhase] = useState<SetupPhase>("idle");
   const [setupOutput, setSetupOutput] = useState<OutputLine[]>([]);
@@ -41,7 +45,9 @@ export function AgentProviderCard({ provider }: AgentProviderCardProps) {
   const unlistenRef = useRef<(() => void) | null>(null);
 
   const icon = getProviderIcon(provider.id, "size-6");
-  const isBuiltIn = provider.status === "built_in";
+  const isBuiltIn =
+    provider.status === "built_in" || provider.status === "needs_model";
+  const needsModelProvider = provider.status === "needs_model";
   const isActive = setupPhase !== "idle";
   const hasInstallCommand = !!provider.installCommand;
   const hasAuthCommand = !!provider.authCommand;
@@ -224,7 +230,7 @@ export function AgentProviderCard({ provider }: AgentProviderCardProps) {
   if (provider.showOnlyWhenInstalled && isInstalled !== true) return null;
 
   const isReady =
-    isBuiltIn ||
+    (isBuiltIn && !needsModelProvider) ||
     (isInstalled === true && !hasAuthCommand) ||
     (isInstalled === true && isAuthenticated === true);
   const needsAuth =
@@ -232,6 +238,21 @@ export function AgentProviderCard({ provider }: AgentProviderCardProps) {
   const needsInstall = isInstalled === false && hasInstallCommand;
 
   function renderStatusIndicator() {
+    if (needsModelProvider) {
+      return (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          onClick={onScrollToModels}
+          className="flex-shrink-0 text-muted-foreground"
+          aria-label={t("providers.agents.connectModelLabel")}
+        >
+          <IconPlus className="size-4" />
+        </Button>
+      );
+    }
+
     if (isBuiltIn || isReady) {
       return (
         <div className="flex h-6 flex-shrink-0 items-center">
