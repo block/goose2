@@ -453,6 +453,9 @@ export function useAcpStream(enabled: boolean): void {
     unlisteners.push(
       listen<AcpSessionBoundPayload>("acp:session_bound", (event) => {
         if (!active) return;
+        console.log(
+          `[session] acp:session_bound ${event.payload.sessionId.slice(0, 8)} → goose=${event.payload.gooseSessionId.slice(0, 8)}`,
+        );
         useChatSessionStore
           .getState()
           .setSessionAcpId(

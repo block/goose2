@@ -46,9 +46,9 @@ const EXCEPTIONS = {
       "ACP session overlay regressions currently need one broad integration-style store suite.",
   },
   "src/features/chat/stores/chatSessionStore.ts": {
-    limit: 640,
+    limit: 650,
     justification:
-      "ACP-backed session overlay persistence, draft migration, and sidebar-facing session merge logic live together for now.",
+      "ACP-backed session overlay persistence, draft migration, sidebar-facing session merge logic, and session lifecycle logging live together for now.",
   },
   "src-tauri/src/services/acp/manager/dispatcher.rs": {
     limit: 520,
