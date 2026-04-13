@@ -155,7 +155,7 @@ pub fn git_create_worktree(
 
     if let Some(parent) = target_path.parent() {
         std::fs::create_dir_all(parent)
-            .map_err(|error| format!("Failed to create worktree directory: {}", error))?;
+            .map_err(|error| format!("Failed to create worktree directory: {error}"))?;
     }
 
     let target_path_string = target_path.to_string_lossy().to_string();
@@ -206,7 +206,7 @@ pub(crate) fn is_git_repo(path: &Path) -> Result<bool, String> {
 pub(crate) fn resolve_repo_path(path: &str) -> Result<PathBuf, String> {
     let repo_path = PathBuf::from(path);
     if !repo_path.exists() {
-        return Err(format!("Path does not exist: {}", path));
+        return Err(format!("Path does not exist: {path}"));
     }
     Ok(repo_path)
 }
@@ -241,7 +241,7 @@ pub(crate) fn trim_to_option(value: String) -> Option<String> {
 fn require_nonempty(value: &str, label: &str) -> Result<String, String> {
     let trimmed = value.trim();
     if trimmed.is_empty() {
-        Err(format!("{} cannot be empty", label))
+        Err(format!("{label} cannot be empty"))
     } else {
         Ok(trimmed.to_string())
     }
@@ -266,7 +266,7 @@ fn count_incoming_commits(path: &Path) -> Result<u32, String> {
         ])
         .current_dir(path)
         .output()
-        .map_err(|error| format!("Failed to run git: {}", error))?;
+        .map_err(|error| format!("Failed to run git: {error}"))?;
 
     if !has_upstream.status.success() {
         return Ok(0);
@@ -276,7 +276,7 @@ fn count_incoming_commits(path: &Path) -> Result<u32, String> {
     let count = output
         .trim()
         .parse::<u32>()
-        .map_err(|error| format!("Failed to parse incoming commit count: {}", error))?;
+        .map_err(|error| format!("Failed to parse incoming commit count: {error}"))?;
     Ok(count)
 }
 
@@ -332,7 +332,7 @@ fn derive_worktree_path(main_worktree_path: &str, worktree_name: &str) -> Result
         .parent()
         .ok_or("Could not determine repository parent")?;
     let target_path = repo_parent
-        .join(format!("{}-worktrees", repo_name))
+        .join(format!("{repo_name}-worktrees"))
         .join(worktree_name);
 
     if target_path.exists() {
