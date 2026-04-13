@@ -6,9 +6,9 @@ use std::sync::Arc;
 use agent_client_protocol::ContentBlock as AcpContentBlock;
 
 use super::{
-    prompt_ops::build_content_blocks,
-    needs_provider_update, prepared_session_for_key, register_prepared_session_keys,
-    wait_for_replay_drain, ManagerState, PreparedSession, MAX_DRAIN_ITERATIONS,
+    needs_provider_update, prepared_session_for_key, prompt_ops::build_content_blocks,
+    register_prepared_session_keys, wait_for_replay_drain, ManagerState, PreparedSession,
+    MAX_DRAIN_ITERATIONS,
 };
 use crate::services::acp::split_composite_key;
 
