@@ -1,21 +1,21 @@
 import net from "node:net";
 
-const PORT = 9999;
+const PORT = Number(process.env.APP_TEST_DRIVER_PORT) || 9999;
 
-interface BridgeCommand {
+interface TestDriverCommand {
   action: string;
   selector?: string;
   value?: string;
   timeout?: number;
 }
 
-interface BridgeResult {
+interface TestDriverResult {
   success: boolean;
   data?: string;
   error?: string;
 }
 
-export interface Bridge {
+export interface TestDriver {
   snapshot: () => Promise<string>;
   click: (selector?: string, options?: { timeout?: number }) => Promise<string>;
   fill: (
@@ -42,39 +42,61 @@ export interface Bridge {
   close: () => void;
 }
 
-function send(socket: net.Socket, command: BridgeCommand): Promise<string> {
+function send(socket: net.Socket, command: TestDriverCommand): Promise<string> {
   return new Promise((resolve, reject) => {
     let data = "";
+
+    const cleanup = () => {
+      socket.removeListener("data", onData);
+      socket.removeListener("error", onError);
+      socket.removeListener("close", onClose);
+    };
+
     const onData = (chunk: Buffer) => {
       data += chunk.toString();
       if (data.includes("\n")) {
-        socket.removeListener("data", onData);
+        cleanup();
         try {
-          const parsed: BridgeResult = JSON.parse(data.trim());
+          const parsed: TestDriverResult = JSON.parse(data.trim());
           if (parsed.success) {
             resolve(parsed.data ?? "");
           } else {
-            reject(new Error(parsed.error || "Unknown bridge error"));
+            reject(new Error(parsed.error || "Unknown test driver error"));
           }
         } catch (_e) {
           reject(new Error(`Invalid response: ${data}`));
         }
       }
     };
+
+    const onError = (err: Error) => {
+      cleanup();
+      reject(new Error(`Test driver socket error: ${err.message}`));
+    };
+
+    const onClose = () => {
+      cleanup();
+      reject(
+        new Error("Test driver socket closed before response was received"),
+      );
+    };
+
     socket.on("data", onData);
+    socket.on("error", onError);
+    socket.on("close", onClose);
     socket.write(`${JSON.stringify(command)}\n`);
   });
 }
 
 /**
- * Create a bridge connection to the Tauri test bridge.
- * Returns an object with methods for each bridge command.
+ * Create a client connection to the Tauri app test driver.
+ * Returns an object with methods for each test driver command.
  */
-export async function createBridge({
+export async function createTestDriver({
   port = PORT,
 }: {
   port?: number;
-} = {}): Promise<Bridge> {
+} = {}): Promise<TestDriver> {
   const socket = net.createConnection({ port, host: "127.0.0.1" });
 
   await new Promise<void>((resolve, reject) => {
@@ -82,8 +104,8 @@ export async function createBridge({
     socket.on("error", (err) => {
       reject(
         new Error(
-          `Cannot connect to test bridge on port ${port}. ` +
-            `Is the Tauri app running with --features test-bridge? (${err.message})`,
+          `Cannot connect to test driver on port ${port}. ` +
+            `Is the Tauri app running with --features app-test-driver? (${err.message})`,
         ),
       );
     });

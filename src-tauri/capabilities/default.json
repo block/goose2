@@ -30,6 +30,7 @@
     "window-state:allow-save-window-state",
     "dialog:allow-open",
     "dialog:allow-save",
+    "app-test-driver:default",
     "core:webview:allow-set-webview-zoom"
   ]
 }

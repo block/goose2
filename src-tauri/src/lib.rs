@@ -1,6 +1,5 @@
 mod commands;
 mod services;
-mod test_bridge;
 mod types;
 
 use std::sync::Arc;
@@ -15,7 +14,7 @@ pub fn run() {
     let acp_registry = Arc::new(AcpSessionRegistry::new());
     let acp_registry_for_exit = Arc::clone(&acp_registry);
 
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(
             tauri_plugin_log::Builder::new()
                 .level(log::LevelFilter::Debug)
@@ -33,8 +32,12 @@ pub fn run() {
         )
         .manage(PersonaStore::new())
         .manage(GooseConfig::new())
-        .manage(acp_registry)
-        .manage(test_bridge::BridgeState::new())
+        .manage(acp_registry);
+
+    #[cfg(feature = "app-test-driver")]
+    let builder = builder.plugin(tauri_plugin_app_test_driver::init());
+
+    builder
         .invoke_handler(tauri::generate_handler![
             commands::agents::list_personas,
             commands::agents::create_persona,
@@ -98,13 +101,8 @@ pub fn run() {
             commands::system::save_exported_session_file,
             commands::system::path_exists,
             commands::system::list_files_for_mentions,
-            test_bridge::bridge_result,
         ])
-        .setup(|_app| {
-            #[cfg(feature = "test-bridge")]
-            test_bridge::start_test_bridge(_app.handle().clone());
-            Ok(())
-        })
+        .setup(|_app| Ok(()))
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(move |_app, event| {

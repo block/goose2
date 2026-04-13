@@ -18,6 +18,7 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = ["protocol-asset"] }
+tauri-plugin-app-test-driver = { path = "plugins/app-test-driver" }
 tauri-plugin-opener = "2"
 tauri-plugin-dialog = ">=2,<2.7"
 tauri-plugin-window-state = "2"
@@ -43,7 +44,6 @@ ignore = "0.4.25"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 keyring = { version = "3", features = ["apple-native"] }
-objc2-app-kit = { version = "0.3.2", features = ["NSWindow", "NSResponder"], optional = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 keyring = { version = "3", features = ["windows-native"] }
@@ -52,7 +52,7 @@ keyring = { version = "3", features = ["windows-native"] }
 keyring = { version = "3", features = ["linux-native-sync-persistent", "crypto-rust"] }
 
 [features]
-test-bridge = ["objc2-app-kit"]
+app-test-driver = []
 
 [dev-dependencies]
 tempfile = "3"

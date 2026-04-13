@@ -1,12 +1,9 @@
-#![allow(dead_code)]
-
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpListener;
 use std::sync::Mutex;
-use tauri::{AppHandle, Manager, WebviewWindow};
+use tauri::{AppHandle, Manager, Runtime, WebviewWindow};
 
-/// A command sent from the test script over TCP
 #[derive(Deserialize, Debug)]
 struct TestCommand {
     action: String,
@@ -15,7 +12,6 @@ struct TestCommand {
     timeout: Option<u64>,
 }
 
-/// The result sent back to the test script
 #[derive(Serialize)]
 struct TestResult {
     success: bool,
@@ -23,10 +19,8 @@ struct TestResult {
     error: Option<String>,
 }
 
-/// Tauri command that receives results from JS eval via invoke().
-/// The injected JS calls this command with the eval result.
 #[tauri::command]
-pub fn bridge_result(state: tauri::State<'_, BridgeState>, value: String) {
+fn driver_result(state: tauri::State<'_, DriverState>, value: String) {
     if let Ok(mut result) = state.pending_result.lock() {
         *result = Some(value);
     }
@@ -34,14 +28,13 @@ pub fn bridge_result(state: tauri::State<'_, BridgeState>, value: String) {
     state.notify.1.notify_one();
 }
 
-/// Shared state for passing results from JS back to the TCP handler
-pub struct BridgeState {
-    pub pending_result: Mutex<Option<String>>,
-    pub notify: (Mutex<Option<()>>, std::sync::Condvar),
+struct DriverState {
+    pending_result: Mutex<Option<String>>,
+    notify: (Mutex<Option<()>>, std::sync::Condvar),
 }
 
-impl BridgeState {
-    pub fn new() -> Self {
+impl DriverState {
+    fn new() -> Self {
         Self {
             pending_result: Mutex::new(None),
             notify: (Mutex::new(Some(())), std::sync::Condvar::new()),
@@ -62,7 +55,6 @@ impl BridgeState {
     }
 }
 
-/// Wrap an action in a retry loop that waits for an element to appear
 fn escape_js_string(s: &str) -> String {
     s.replace('\\', "\\\\")
         .replace('\'', "\\'")
@@ -88,7 +80,6 @@ fn with_wait_for(selector: &str, action_js: &str, timeout_ms: u64) -> String {
     )
 }
 
-/// Build the JS to execute for each command, wrapped to send result back via invoke()
 fn build_js(cmd: &TestCommand) -> String {
     let timeout_ms = cmd.timeout.unwrap_or(5000);
     let inner_js = match cmd.action.as_str() {
@@ -150,18 +141,19 @@ fn build_js(cmd: &TestCommand) -> String {
                 walk(document.body, 0);
                 return result.join('\n');
             })()
-        "#.to_string(),
-
+        "#
+        .to_string(),
         "click" => {
             let sel = cmd.selector.as_deref().unwrap_or("body");
             with_wait_for(sel, r#"el.click(); return "clicked";"#, timeout_ms)
         }
-
         "fill" => {
             let sel = cmd.selector.as_deref().unwrap_or("input");
             let val = escape_js_string(cmd.value.as_deref().unwrap_or(""));
-            with_wait_for(sel, &format!(
-                r#"const proto = el instanceof HTMLTextAreaElement
+            with_wait_for(
+                sel,
+                &format!(
+                    r#"const proto = el instanceof HTMLTextAreaElement
                     ? HTMLTextAreaElement.prototype
                     : HTMLInputElement.prototype;
                 const setter = Object.getOwnPropertyDescriptor(proto, 'value').set;
@@ -169,27 +161,30 @@ fn build_js(cmd: &TestCommand) -> String {
                 el.dispatchEvent(new Event('input', {{ bubbles: true }}));
                 el.dispatchEvent(new Event('change', {{ bubbles: true }}));
                 return "filled";"#
-            ), timeout_ms)
+                ),
+                timeout_ms,
+            )
         }
-
         "keypress" => {
             let sel = cmd.selector.as_deref().unwrap_or("body");
             let key = cmd.value.as_deref().unwrap_or("Enter");
             let escaped_key = escape_js_string(key);
-            with_wait_for(sel, &format!(
-                r#"const opts = {{ key: "{escaped_key}", code: "{escaped_key}", keyCode: "{escaped_key}" === "Enter" ? 13 : 0, bubbles: true, cancelable: true }};
+            with_wait_for(
+                sel,
+                &format!(
+                    r#"const opts = {{ key: "{escaped_key}", code: "{escaped_key}", keyCode: "{escaped_key}" === "Enter" ? 13 : 0, bubbles: true, cancelable: true }};
                 el.dispatchEvent(new KeyboardEvent('keydown', opts));
                 el.dispatchEvent(new KeyboardEvent('keypress', opts));
                 el.dispatchEvent(new KeyboardEvent('keyup', opts));
                 return "keypressed";"#
-            ), timeout_ms)
+                ),
+                timeout_ms,
+            )
         }
-
         "getText" => {
             let sel = cmd.selector.as_deref().unwrap_or("body");
             with_wait_for(sel, "return el.innerText;", timeout_ms)
         }
-
         "waitForText" => {
             let sel = cmd.selector.as_deref().unwrap_or("body");
             let text = escape_js_string(cmd.value.as_deref().unwrap_or(""));
@@ -210,25 +205,23 @@ fn build_js(cmd: &TestCommand) -> String {
                 }})()"#
             )
         }
-
         "count" => {
             let sel = cmd.selector.as_deref().unwrap_or("*");
             let escaped_sel = escape_js_string(sel);
-            format!(
-                "String(document.querySelectorAll(\"{escaped_sel}\").length)"
-            )
+            format!("String(document.querySelectorAll(\"{escaped_sel}\").length)")
         }
-
         "scroll" => {
             let direction = cmd.value.as_deref().unwrap_or("down");
             match direction {
                 "up" => "window.scrollBy(0, -window.innerHeight); 'scrolled up'".to_string(),
                 "top" => "window.scrollTo(0, 0); 'scrolled to top'".to_string(),
-                "bottom" => "window.scrollTo(0, document.body.scrollHeight); 'scrolled to bottom'".to_string(),
+                "bottom" => {
+                    "window.scrollTo(0, document.body.scrollHeight); 'scrolled to bottom'"
+                        .to_string()
+                }
                 _ => "window.scrollBy(0, window.innerHeight); 'scrolled down'".to_string(),
             }
         }
-
         _ => format!("'unknown action: {}'", cmd.action),
     };
 
@@ -237,26 +230,24 @@ fn build_js(cmd: &TestCommand) -> String {
         (async function() {{
             try {{
                 const result = await Promise.resolve({inner_js});
-                await window.__TAURI_INTERNALS__.invoke('bridge_result', {{ value: String(result) }});
+                await window.__TAURI_INTERNALS__.invoke('plugin:app-test-driver|driver_result', {{ value: String(result) }});
             }} catch(e) {{
-                await window.__TAURI_INTERNALS__.invoke('bridge_result', {{ value: 'ERROR: ' + e.message }});
+                await window.__TAURI_INTERNALS__.invoke('plugin:app-test-driver|driver_result', {{ value: 'ERROR: ' + e.message }});
             }}
         }})();
         "#
     )
 }
 
-/// Get the macOS NSWindow number for screencapture -l
-#[cfg(all(target_os = "macos", feature = "test-bridge"))]
-fn get_ns_window_number(window: &WebviewWindow) -> Option<u32> {
+#[cfg(target_os = "macos")]
+fn get_ns_window_number<R: Runtime>(window: &WebviewWindow<R>) -> Option<u32> {
     let ns_window_ptr = window.ns_window().ok()?;
     let ns_window = unsafe { &*(ns_window_ptr as *const objc2_app_kit::NSWindow) };
     Some(ns_window.windowNumber() as u32)
 }
 
-/// Take a screenshot of the app window using macOS screencapture
-#[cfg(all(target_os = "macos", feature = "test-bridge"))]
-fn take_screenshot(window: &WebviewWindow, path: &str) -> TestResult {
+#[cfg(target_os = "macos")]
+fn take_screenshot<R: Runtime>(window: &WebviewWindow<R>, path: &str) -> TestResult {
     if let Some(parent) = std::path::Path::new(path).parent() {
         let _ = std::fs::create_dir_all(parent);
     }
@@ -297,17 +288,19 @@ fn take_screenshot(window: &WebviewWindow, path: &str) -> TestResult {
     }
 }
 
-/// Start the TCP server in a background thread
-pub fn start_test_bridge(app_handle: AppHandle) {
+fn start_server<R: Runtime>(app_handle: AppHandle<R>) {
     std::thread::spawn(move || {
-        let listener = match TcpListener::bind("127.0.0.1:9999") {
+        let port =
+            std::env::var("APP_TEST_DRIVER_PORT").unwrap_or_else(|_| "9999".to_string());
+        let addr = format!("127.0.0.1:{port}");
+        let listener = match TcpListener::bind(&addr) {
             Ok(l) => l,
             Err(e) => {
-                eprintln!("[test-bridge] Failed to bind: {e}");
+                eprintln!("[app-test-driver] Failed to bind {addr}: {e}");
                 return;
             }
         };
-        log::info!("[test-bridge] Listening on 127.0.0.1:9999");
+        log::info!("[app-test-driver] Listening on {addr}");
 
         for stream in listener.incoming() {
             let Ok(mut stream) = stream else { continue };
@@ -335,9 +328,9 @@ pub fn start_test_bridge(app_handle: AppHandle) {
                         }
                     };
 
-                    log::info!("[test-bridge] Received: {cmd:?}");
+                    log::info!("[app-test-driver] Received: {cmd:?}");
 
-                    let window: WebviewWindow = match app.get_webview_window("main") {
+                    let window = match app.get_webview_window("main") {
                         Some(w) => w,
                         None => {
                             let resp = TestResult {
@@ -350,8 +343,7 @@ pub fn start_test_bridge(app_handle: AppHandle) {
                         }
                     };
 
-                    // Screenshot is handled natively, not via JS eval
-                    #[cfg(all(target_os = "macos", feature = "test-bridge"))]
+                    #[cfg(target_os = "macos")]
                     if cmd.action == "screenshot" {
                         let path = cmd.value.as_deref().unwrap_or("screenshot.png");
                         let resp = take_screenshot(&window, path);
@@ -359,7 +351,7 @@ pub fn start_test_bridge(app_handle: AppHandle) {
                         continue;
                     }
 
-                    let state = app.state::<BridgeState>();
+                    let state = app.state::<DriverState>();
                     state.reset();
 
                     let js = build_js(&cmd);
@@ -398,4 +390,15 @@ pub fn start_test_bridge(app_handle: AppHandle) {
             });
         }
     });
+}
+
+pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
+    tauri::plugin::Builder::new("app-test-driver")
+        .invoke_handler(tauri::generate_handler![driver_result])
+        .setup(|app, _api| {
+            app.manage(DriverState::new());
+            start_server(app.clone());
+            Ok(())
+        })
+        .build()
 }

@@ -1,22 +1,22 @@
 import { beforeAll, beforeEach, afterAll, onTestFailed } from "vitest";
-import { type Bridge, createBridge } from "./bridge-client";
+import { type TestDriver, createTestDriver } from "./test-driver-client";
 
 declare const __SCREENSHOT_DIR__: string;
 declare const __SCREENSHOT_ON_FAILURE__: boolean;
 
-export const useBridge = (): Bridge => {
-  let inner: Bridge;
+export const useTestDriver = (): TestDriver => {
+  let inner: TestDriver;
 
-  const bridge = new Proxy({} as Bridge, {
+  const testDriver = new Proxy({} as TestDriver, {
     get(_target, prop) {
       if (!inner)
-        throw new Error("Bridge not connected — is beforeAll running?");
-      return inner[prop as keyof Bridge];
+        throw new Error("Test driver not connected — is beforeAll running?");
+      return inner[prop as keyof TestDriver];
     },
   });
 
   beforeAll(async () => {
-    inner = await createBridge();
+    inner = await createTestDriver();
   });
 
   afterAll(() => {
@@ -37,5 +37,5 @@ export const useBridge = (): Bridge => {
     }
   });
 
-  return bridge;
+  return testDriver;
 };

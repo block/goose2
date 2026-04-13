@@ -24,7 +24,7 @@
     "test:e2e:skills": "pnpm build && playwright test --project=skills",
     "test:e2e:drafts": "pnpm build && playwright test --project=drafts",
     "test:app-e2e": "vitest run --config vitest.app-e2e.config.ts",
-    "bridge": "tsx tests/app-e2e/lib/bridge-cli.ts"
+    "test-driver": "tsx tests/app-e2e/lib/test-driver-cli.ts"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",

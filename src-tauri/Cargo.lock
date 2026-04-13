@@ -1762,12 +1762,12 @@ dependencies = [
  "ignore",
  "keyring",
  "log",
- "objc2-app-kit",
  "serde",
  "serde_json",
  "serde_yaml",
  "tauri",
  "tauri-build",
+ "tauri-plugin-app-test-driver",
  "tauri-plugin-dialog",
  "tauri-plugin-log",
  "tauri-plugin-opener",
@@ -4648,6 +4648,18 @@ dependencies = [
  "tauri-utils",
  "toml 0.9.12+spec-1.1.0",
  "walkdir",
+]
+
+[[package]]
+name = "tauri-plugin-app-test-driver"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "objc2-app-kit",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-plugin",
 ]
 
 [[package]]

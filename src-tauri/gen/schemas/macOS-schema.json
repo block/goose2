@@ -345,6 +345,24 @@
       "description": "Permission identifier",
       "oneOf": [
         {
+          "description": "Default permissions for the app test driver plugin.\n\n#### This default permission set includes:\n\n- `allow-driver-result`",
+          "type": "string",
+          "const": "app-test-driver:default",
+          "markdownDescription": "Default permissions for the app test driver plugin.\n\n#### This default permission set includes:\n\n- `allow-driver-result`"
+        },
+        {
+          "description": "Enables the driver_result command without any pre-configured scope.",
+          "type": "string",
+          "const": "app-test-driver:allow-driver-result",
+          "markdownDescription": "Enables the driver_result command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the driver_result command without any pre-configured scope.",
+          "type": "string",
+          "const": "app-test-driver:deny-driver-result",
+          "markdownDescription": "Denies the driver_result command without any pre-configured scope."
+        },
+        {
           "description": "Default core plugins set.\n#### This default permission set includes:\n\n- `core:path:default`\n- `core:event:default`\n- `core:window:default`\n- `core:webview:default`\n- `core:app:default`\n- `core:image:default`\n- `core:resources:default`\n- `core:menu:default`\n- `core:tray:default`",
           "type": "string",
           "const": "core:default",

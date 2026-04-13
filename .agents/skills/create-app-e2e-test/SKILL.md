@@ -1,46 +1,46 @@
 ---
 name: create-app-e2e-test
-description: Create app e2e tests for the Goose desktop app using the Tauri test bridge. Use when the user wants to generate, write, or verify UI tests that run against the live app.
+description: Create app e2e tests for the Goose desktop app using the Tauri app test driver. Use when the user wants to generate, write, or verify UI tests that run against the live app.
 ---
 
 # Create App E2E Test
 
-You are an AI agent that creates app e2e tests for the Goose desktop app using the Tauri test bridge.
+You are an AI agent that creates app e2e tests for the Goose desktop app using the Tauri app test driver.
 
 ## Goal
 
 Given a test scenario in natural language, you will:
 
-1. Explore the app using the test bridge CLI to discover what's on screen
+1. Explore the app using the test driver CLI to discover what's on screen
 2. Write a Vitest test file that verifies the scenario using stable selectors
 
 **Do NOT read source code to understand the UI.** Do not read `.tsx`, `.ts`, or `.css` files to find elements. Use `snapshot` to discover what is on the page — that is your only method. The one exception: read source code only when you need to add a `data-testid` attribute.
 
 ## Prerequisites
 
-The Tauri app must already be running in dev mode with the test bridge enabled.
+The Tauri app must already be running in dev mode with the app test driver enabled.
 
-## Bridge CLI
+## Test Driver CLI
 
-All exploration commands use the bridge client CLI:
+All exploration commands use the test driver client CLI:
 
 ```bash
-pnpm bridge <action> [selector] [value]
+pnpm test-driver <action> [selector] [value]
 ```
 
 Available commands:
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `snapshot` | Get a text DOM of visible elements | `pnpm bridge snapshot` |
-| `getText <selector>` | Get inner text of an element | `pnpm bridge getText "h1"` |
-| `count <selector>` | Count matching elements | `pnpm bridge count "button"` |
-| `click <selector>` | Click an element | `pnpm bridge click "button"` |
-| `fill <selector> <value>` | Fill an input/textarea | `pnpm bridge fill "textarea" "hello"` |
-| `keypress <selector> <key>` | Dispatch a keyboard event | `pnpm bridge keypress "textarea" Enter` |
-| `waitForText <text>` | Wait for text to appear in body (30s default) | `pnpm bridge waitForText "Success"` |
-| `scroll <direction>` | Scroll the page (up/down/top/bottom) | `pnpm bridge scroll down` |
-| `screenshot [path]` | Take a screenshot | `pnpm bridge screenshot test.png` |
+| `snapshot` | Get a text DOM of visible elements | `pnpm test-driver snapshot` |
+| `getText <selector>` | Get inner text of an element | `pnpm test-driver getText "h1"` |
+| `count <selector>` | Count matching elements | `pnpm test-driver count "button"` |
+| `click <selector>` | Click an element | `pnpm test-driver click "button"` |
+| `fill <selector> <value>` | Fill an input/textarea | `pnpm test-driver fill "textarea" "hello"` |
+| `keypress <selector> <key>` | Dispatch a keyboard event | `pnpm test-driver keypress "textarea" Enter` |
+| `waitForText <text>` | Wait for text to appear in body (30s default) | `pnpm test-driver waitForText "Success"` |
+| `scroll <direction>` | Scroll the page (up/down/top/bottom) | `pnpm test-driver scroll down` |
+| `screenshot [path]` | Take a screenshot | `pnpm test-driver screenshot test.png` |
 
 ### Snapshot Format
 
@@ -67,10 +67,10 @@ The `snapshot` command returns a simplified text DOM:
 
 1. Navigate to home first, then `snapshot` to see the current page state.
    ```bash
-   pnpm bridge click '[data-testid="nav-home"]'
-   pnpm bridge snapshot
+   pnpm test-driver click '[data-testid="nav-home"]'
+   pnpm test-driver snapshot
    ```
-   Tests always start from the home screen (`useBridge()` navigates home in `beforeEach`), so exploration should too.
+   Tests always start from the home screen (`useTestDriver()` navigates home in `beforeEach`), so exploration should too.
 
 2. For each element you need to interact with or verify:
    - Identify it from the snapshot (e.g., `[e3] button "Send"`)
@@ -84,49 +84,49 @@ The `snapshot` command returns a simplified text DOM:
 Example exploration session:
 ```bash
 # 1. See what's on the page
-pnpm bridge snapshot
+pnpm test-driver snapshot
 
 # 2. Pick a selector for the element you need, verify it matches exactly 1
-pnpm bridge count 'textarea[placeholder="Ask anything..."]'
+pnpm test-driver count 'textarea[placeholder="Ask anything..."]'
 
 # 3. Interact
-pnpm bridge fill 'textarea[placeholder="Ask anything..."]' "hello world"
+pnpm test-driver fill 'textarea[placeholder="Ask anything..."]' "hello world"
 
 # 4. Snapshot again to see the result
-pnpm bridge snapshot
+pnpm test-driver snapshot
 ```
 
 ### Phase 2: Write the Test
 
 Create a Vitest test file at `tests/app-e2e/<name>.test.ts`.
 
-Use `useBridge()` from `tests/app-e2e/lib/setup.ts` to get a shared bridge connection with automatic teardown and screenshot-on-failure. See `tests/app-e2e/chat.test.ts` as a reference:
+Use `useTestDriver()` from `tests/app-e2e/lib/setup.ts` to get a shared test driver connection with automatic teardown and screenshot-on-failure. See `tests/app-e2e/chat.test.ts` as a reference:
 
 ```typescript
 import { describe, it, expect } from "vitest";
-import { useBridge } from "./lib/setup";
+import { useTestDriver } from "./lib/setup";
 
 describe("<Feature>", () => {
-  const bridge = useBridge();
+  const testDriver = useTestDriver();
 
   it("does something", async () => {
-    const text = await bridge.getText('[data-testid="greeting"]');
+    const text = await testDriver.getText('[data-testid="greeting"]');
     expect(text).toContain("Good");
   });
 });
 ```
 
-Bridge API methods available in tests:
+Test driver API methods available in tests:
 
-- `bridge.snapshot()` → text DOM string
-- `bridge.getText(selector, { timeout? })` → inner text string
-- `bridge.count(selector)` → number of matching elements
-- `bridge.click(selector, { timeout? })` → clicks element
-- `bridge.fill(selector, value, { timeout? })` → fills input/textarea
-- `bridge.keypress(selector, key, { timeout? })` → dispatches keyboard event
-- `bridge.waitForText(text, { selector?, timeout? })` → waits for text to appear (default: body, 30s)
-- `bridge.scroll(direction)` → scrolls page ("up", "down", "top", "bottom")
-- `bridge.screenshot(path)` → saves screenshot
+- `testDriver.snapshot()` → text DOM string
+- `testDriver.getText(selector, { timeout? })` → inner text string
+- `testDriver.count(selector)` → number of matching elements
+- `testDriver.click(selector, { timeout? })` → clicks element
+- `testDriver.fill(selector, value, { timeout? })` → fills input/textarea
+- `testDriver.keypress(selector, key, { timeout? })` → dispatches keyboard event
+- `testDriver.waitForText(text, { selector?, timeout? })` → waits for text to appear (default: body, 30s)
+- `testDriver.scroll(direction)` → scrolls page ("up", "down", "top", "bottom")
+- `testDriver.screenshot(path)` → saves screenshot
 
 All `timeout` options default to 5 seconds. `waitForText` defaults to 30 seconds.
 
@@ -138,7 +138,7 @@ Run the test to make sure it passes:
 pnpm test:app-e2e
 ```
 
-If it fails, use the bridge CLI to re-explore. The issue could be a wrong selector, an incorrect assertion, or a bug in the app implementation.
+If it fails, use the test driver CLI to re-explore. The issue could be a wrong selector, an incorrect assertion, or a bug in the app implementation.
 
 ## Element Locating Strategy
 
@@ -167,7 +167,7 @@ For each element, find a stable selector using this priority:
 - Keep test descriptions specific: "shows time-based greeting on home screen", not "home works"
 - Always check `count` === 1 for selectors before using them in assertions
 - Do not use `snapshot` in test assertions — it's for exploration only
-- The bridge automatically waits up to 5 seconds (configurable via `{ timeout }`) for elements to appear before `click`, `fill`, `getText`, and `keypress`
+- The test driver automatically waits up to 5 seconds (configurable via `{ timeout }`) for elements to appear before `click`, `fill`, `getText`, and `keypress`
 - Use `waitForText` to wait for specific text content to appear (e.g., after submitting a form or waiting for an LLM response)
 - If the DOM updates after an action, run `snapshot` again to see the new state before writing assertions
 - Do not add comments in test files — the test descriptions and code should be self-explanatory
