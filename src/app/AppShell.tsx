@@ -67,13 +67,23 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const loadSessionMessages = useCallback(async (sessionId: string) => {
     const existing = useChatStore.getState().messagesBySession[sessionId];
     if (existing && existing.length > 0) {
+      console.log(
+        `[perf:load] ${sessionId.slice(0, 8)} skip — already has messages`,
+      );
       return;
     }
 
+    const t0 = performance.now();
+    console.log(`[perf:load] ${sessionId.slice(0, 8)} start`);
     const store = useChatStore.getState();
     store.setSessionLoading(sessionId, true);
     try {
+      const t1 = performance.now();
       const { acpLoadSession } = await import("@/shared/api/acp");
+      const t2 = performance.now();
+      console.log(
+        `[perf:load] ${sessionId.slice(0, 8)} import took ${(t2 - t1).toFixed(1)}ms`,
+      );
       const session = useChatSessionStore.getState().getSession(sessionId);
       const gooseSessionId = session?.acpSessionId ?? sessionId;
       const project = session?.projectId
@@ -88,6 +98,10 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           ? resolveEffectiveWorkingDir(null, await getHomeDir())
           : undefined);
       await acpLoadSession(sessionId, gooseSessionId, workingDir);
+      const t3 = performance.now();
+      console.log(
+        `[perf:load] ${sessionId.slice(0, 8)} acpLoadSession resolved in ${(t3 - t2).toFixed(1)}ms (total ${(t3 - t0).toFixed(1)}ms)`,
+      );
     } catch (err) {
       console.error("Failed to load session messages:", err);
       useChatStore.getState().setSessionLoading(sessionId, false);

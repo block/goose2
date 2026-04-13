@@ -146,6 +146,9 @@ export function useAcpStream(enabled: boolean): void {
     unlisteners.push(
       listen<AcpMessageCreatedPayload>("acp:message_created", (event) => {
         if (!active) return;
+        console.log(
+          `[perf:stream] ${event.payload.sessionId.slice(0, 8)} message_created mid=${event.payload.messageId.slice(0, 8)} at ${performance.now().toFixed(1)}ms`,
+        );
         const store = useChatStore.getState();
         const { sessionId, messageId, personaId, personaName } = event.payload;
         const providerId = getAssistantProviderId(sessionId);
@@ -213,6 +216,9 @@ export function useAcpStream(enabled: boolean): void {
     unlisteners.push(
       listen<AcpTextPayload>("acp:text", (event) => {
         if (!active) return;
+        console.log(
+          `[perf:stream] ${event.payload.sessionId.slice(0, 8)} text mid=${event.payload.messageId.slice(0, 8)} len=${event.payload.text.length} at ${performance.now().toFixed(1)}ms`,
+        );
         const store = useChatStore.getState();
         const { sessionId, messageId, text } = event.payload;
 
@@ -240,6 +246,9 @@ export function useAcpStream(enabled: boolean): void {
     unlisteners.push(
       listen<AcpDonePayload>("acp:done", (event) => {
         if (!active) return;
+        console.log(
+          `[perf:stream] ${event.payload.sessionId.slice(0, 8)} done mid=${event.payload.messageId.slice(0, 8)} at ${performance.now().toFixed(1)}ms`,
+        );
         const store = useChatStore.getState();
         const { sessionId, messageId } = event.payload;
         const isLoading = store.loadingSessionIds.has(sessionId);
@@ -435,6 +444,9 @@ export function useAcpStream(enabled: boolean): void {
         "acp:replay_user_message",
         (event) => {
           if (!active) return;
+          console.log(
+            `[perf:stream] ${event.payload.sessionId.slice(0, 8)} replay_user_message at ${performance.now().toFixed(1)}ms`,
+          );
           const { sessionId, messageId, text } = event.payload;
           ensureReplayBuffer(sessionId).push({
             id: messageId,
