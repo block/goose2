@@ -66,6 +66,11 @@ You are a senior engineer conducting a thorough code review. Review **only the l
 - **Light and Dark Mode Support**: Are colors working properly in both light and dark modes? No broken colors?
 - **Responsive Layout**: Does the layout work correctly at all breakpoints? No broken layout on mobile, tablet, or desktop?
 
+### Localization (i18n)
+- **New Keys**: When new translation keys are added to one locale (e.g., `en`), are all other supported locales updated too? i18next falls back gracefully, but incomplete locales should be flagged.
+- **Removed Keys**: When UI text is removed, are the corresponding translation keys removed from all locale files?
+- **Raw Strings**: Are user-facing strings wrapped in `t()` calls instead of hardcoded in JSX? Non-translatable symbols (icons, punctuation, HTML entities) are acceptable with an `i18n-check-ignore` annotation.
+
 ### Code Simplicity (DRY Principle)
 - **Duplication**: Is there any repeated code that could be extracted into functions or components?
 - **Complexity**: Are there overly complex functions that could be broken down?
@@ -77,6 +82,7 @@ You are a senior engineer conducting a thorough code review. Review **only the l
 - **Comments**: Are there unnecessary comments explaining obvious code? (Remove them)
 - **Console Logs**: Are there leftover `console.log` statements? (Remove them)
 - **Dead Code**: Is there unused code, commented-out code, or unused imports?
+- **Cross-Boundary Dead Data**: Are there struct/interface fields computed on one side of a boundary (e.g., Rust backend) but never consumed on the other (e.g., TypeScript frontend)? This wastes computation and adds noise to data contracts.
 - **Naming**: Are variable and function names clear and descriptive?
 - **Magic Numbers**: Are there magic numbers without explanation? Should they be named constants?
 

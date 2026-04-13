@@ -131,9 +131,14 @@ export function useChat(
         overridePersona?.id,
         overridePersona?.name,
       );
+      const agent = useAgentStore.getState().getActiveAgent();
+      const providerId = providerOverride ?? agent?.provider ?? "goose";
+      const systemPrompt =
+        systemPromptOverride ?? agent?.systemPrompt ?? undefined;
 
       // Ensure active session
       store.setActiveSession(sessionId);
+      store.setPendingAssistantProvider(sessionId, providerId);
 
       // Create and add user message
       const userMessage = createUserMessage(text);
@@ -198,11 +203,6 @@ export function useChat(
       streamingPersonaIdRef.current = effectivePersonaInfo?.id ?? null;
 
       try {
-        const agent = useAgentStore.getState().getActiveAgent();
-        const providerId = providerOverride ?? agent?.provider ?? "goose";
-        const systemPrompt =
-          systemPromptOverride ?? agent?.systemPrompt ?? undefined;
-
         if (wasDraft || selectedModelId) {
           await acpPrepareSession(sessionId, providerId, {
             workingDir: workingDirOverride,
@@ -269,6 +269,7 @@ export function useChat(
           store.setChatState(sessionId, "idle");
           store.setStreamingMessageId(sessionId, null);
         }
+        store.setPendingAssistantProvider(sessionId, null);
       } finally {
         abortRef.current = null;
         streamingPersonaIdRef.current = null;
@@ -295,6 +296,7 @@ export function useChat(
 
     store.setChatState(sessionId, "idle");
     store.setStreamingMessageId(sessionId, null);
+    store.setPendingAssistantProvider(sessionId, null);
     // Cancel the backend ACP session to stop orphaned streaming events
     acpCancelSession(sessionId, activePersonaId ?? undefined)
       .then((wasCancelled) => {
@@ -341,6 +343,7 @@ export function useChat(
     store.clearMessages(sessionId);
     store.setChatState(sessionId, "idle");
     store.setStreamingMessageId(sessionId, null);
+    store.setPendingAssistantProvider(sessionId, null);
   }, [sessionId, store]);
 
   const stopStreaming = stopGeneration;

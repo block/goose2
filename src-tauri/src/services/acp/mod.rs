@@ -2,11 +2,13 @@ pub(crate) mod goose_serve;
 mod manager;
 mod payloads;
 mod registry;
+mod search;
 mod writer;
 
 pub(crate) use goose_serve::resolve_goose_binary;
 pub use manager::{AcpSessionInfo, GooseAcpManager};
 pub use registry::{AcpRunningSession, AcpSessionRegistry};
+pub use search::{search_sessions_via_exports, SessionSearchResult};
 pub use writer::TauriMessageWriter;
 
 use std::path::PathBuf;

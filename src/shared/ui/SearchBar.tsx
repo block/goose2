@@ -1,3 +1,4 @@
+import type * as React from "react";
 import { Search } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { Input } from "@/shared/ui/input";
@@ -9,6 +10,8 @@ interface SearchBarProps {
   onChange: (term: string) => void;
   /** Placeholder text */
   placeholder?: string;
+  /** Optional keydown handler for the input */
+  onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
   /** Optional className for the wrapper */
   className?: string;
 }
@@ -17,6 +20,7 @@ export function SearchBar({
   value,
   onChange,
   placeholder,
+  onKeyDown,
   className,
 }: SearchBarProps) {
   return (
@@ -28,6 +32,7 @@ export function SearchBar({
         spellCheck={false}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
         placeholder={placeholder}
         className="rounded-lg bg-background pr-3 pl-9 text-sm"
       />

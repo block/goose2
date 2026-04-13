@@ -4,6 +4,7 @@ pub mod agents;
 pub mod credentials;
 pub mod doctor;
 pub mod git;
+pub mod git_changes;
 pub mod model_setup;
 pub mod projects;
 pub mod skills;

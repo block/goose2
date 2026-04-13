@@ -126,6 +126,12 @@ export function buildInitScript(options?: {
               return Promise.resolve("avatar.png");
             case "discover_acp_providers":
               return Promise.resolve([]);
+            case "list_files_for_mentions":
+              return Promise.resolve([]);
+            case "get_home_dir":
+              return Promise.resolve("/tmp/home");
+            case "path_exists":
+              return Promise.resolve(false);
 
             // ---- Fallback ----
             default:

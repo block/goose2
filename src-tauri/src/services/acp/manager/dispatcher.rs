@@ -19,6 +19,17 @@ use crate::services::acp::payloads::{
     ToolResultPayload, ToolTitlePayload,
 };
 
+fn extract_user_message(raw: &str) -> &str {
+    const OPEN: &str = "<user-message>\n";
+    const CLOSE: &str = "\n</user-message>";
+    if let Some(start) = raw.find(OPEN) {
+        let inner = start + OPEN.len();
+        if raw[inner..].ends_with(CLOSE) {
+            return &raw[inner..raw.len() - CLOSE.len()];
+        }
+    }
+    raw
+}
 fn model_options_from_select_options(options: &SessionConfigSelectOptions) -> Vec<ModelOption> {
     match options {
         SessionConfigSelectOptions::Ungrouped(values) => values
@@ -386,13 +397,14 @@ impl Client for SessionEventDispatcher {
                         }
                     }
 
+                    let display_text = extract_user_message(&text.text);
                     let message_id = uuid::Uuid::new_v4().to_string();
                     let _ = self.app_handle.emit(
                         "acp:replay_user_message",
                         serde_json::json!({
                             "sessionId": local_session_id,
                             "messageId": message_id,
-                            "text": text.text,
+                            "text": display_text,
                         }),
                     );
                 }
@@ -502,3 +514,6 @@ impl Client for SessionEventDispatcher {
         Ok(())
     }
 }
+#[cfg(test)]
+#[path = "dispatcher_tests.rs"]
+mod tests;

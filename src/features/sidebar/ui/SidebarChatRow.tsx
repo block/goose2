@@ -20,7 +20,7 @@ import { SessionActivityIndicator } from "@/shared/ui/SessionActivityIndicator";
 const INACTIVE_CHAT_ROW_CLASS =
   "text-muted-foreground hover:bg-transparent hover:text-foreground group-hover:text-foreground";
 const ACTIVE_CHAT_ROW_CLASS =
-  "text-foreground hover:bg-transparent hover:text-foreground";
+  "font-medium text-foreground hover:bg-transparent hover:text-foreground";
 
 interface SidebarChatRowProps {
   id: string;

@@ -6,10 +6,9 @@ import type { Persona } from "@/shared/types/agents";
 import { cn } from "@/shared/lib/cn";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
-import {
-  MentionAutocomplete,
-  useMentionDetection,
-} from "./MentionAutocomplete";
+import { Popover, PopoverAnchor } from "@/shared/ui/popover";
+import { MentionAutocomplete } from "./MentionAutocomplete";
+import { useMentionHandlers } from "../hooks/useMentionHandlers";
 import { ChatInputToolbar } from "./ChatInputToolbar";
 import { formatProviderLabel } from "@/shared/ui/icons/ProviderIcons";
 import { TooltipProvider } from "@/shared/ui/tooltip";
@@ -165,6 +164,12 @@ export function ChatInput({
     () => personas.find((persona) => persona.id === selectedPersonaId) ?? null,
     [personas, selectedPersonaId],
   );
+  const selectedProject = useMemo(
+    () =>
+      availableProjects.find((project) => project.id === selectedProjectId) ??
+      null,
+    [availableProjects, selectedProjectId],
+  );
   const stickyPersona = activePersona;
 
   const hasQueuedMessage = queuedMessage !== null;
@@ -175,14 +180,24 @@ export function ChatInput({
 
   const {
     mentionOpen,
-    mentionQuery,
-    mentionStartIndex,
     mentionSelectedIndex,
+    filteredPersonas,
+    filteredFiles,
     detectMention,
     closeMention,
     navigateMention,
     confirmMention,
-  } = useMentionDetection(personas);
+    handlePersonaMentionSelect,
+    handleFileMentionSelect,
+    handleMentionConfirm,
+  } = useMentionHandlers({
+    personas,
+    projectWorkingDirs: selectedProject?.workingDirs,
+    text,
+    setText,
+    textareaRef,
+    onPersonaChange,
+  });
 
   useEffect(() => {
     const el = containerRef.current;
@@ -229,36 +244,6 @@ export function ChatInput({
     }
   }, [canSend, text, images, onSend, selectedPersonaId, setText]);
 
-  const handleMentionSelect = useCallback(
-    (persona: Persona) => {
-      const before = text.slice(0, mentionStartIndex);
-      const after = text.slice(mentionStartIndex + 1 + mentionQuery.length);
-      const newText = `${before}${after}`.replace(/\s{2,}/g, " ");
-      setText(newText);
-      closeMention();
-      onPersonaChange?.(persona.id);
-
-      requestAnimationFrame(() => {
-        const ta = textareaRef.current;
-        if (ta) {
-          ta.focus();
-          ta.style.height = "auto";
-          ta.style.height = `${Math.min(ta.scrollHeight, 200)}px`;
-          const cursorPos = Math.min(before.length, newText.length);
-          ta.setSelectionRange(cursorPos, cursorPos);
-        }
-      });
-    },
-    [
-      text,
-      mentionStartIndex,
-      mentionQuery,
-      closeMention,
-      onPersonaChange,
-      setText,
-    ],
-  );
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (mentionOpen) {
       if (e.key === "Escape") {
@@ -272,10 +257,10 @@ export function ChatInput({
         return;
       }
       if (e.key === "Enter" || e.key === "Tab") {
-        const persona = confirmMention();
-        if (persona) {
+        const item = confirmMention();
+        if (item) {
           e.preventDefault();
-          handleMentionSelect(persona);
+          handleMentionConfirm(item);
           return;
         }
       }
@@ -373,124 +358,129 @@ export function ChatInput({
     <TooltipProvider delayDuration={300}>
       <div className={cn("px-4 pb-6 pt-2", className)} ref={containerRef}>
         <div className="mx-auto max-w-3xl">
-          {/* biome-ignore lint/a11y/noStaticElementInteractions: drop zone for image files */}
-          <div
-            className={cn(
-              "relative rounded-2xl border border-border bg-background px-4 pb-3 pt-4 transition-colors",
-              isImageDragOver && "bg-muted/20",
-            )}
-            onDragEnter={handleDragEnter}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            {isImageDragOver && (
-              <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-2xl border border-dashed border-border bg-background/70">
-                <Badge
-                  variant="secondary"
-                  className="px-3 py-1 text-sm shadow-sm"
-                >
-                  {t("attachments.dropToAttach")}
-                </Badge>
-              </div>
-            )}
-            <MentionAutocomplete
-              personas={personas}
-              query={mentionQuery}
-              isOpen={mentionOpen}
-              onSelect={handleMentionSelect}
-              onClose={closeMention}
-              selectedIndex={mentionSelectedIndex}
-            />
-
-            {images.length > 0 && (
-              <div className="mb-2 flex flex-wrap gap-2">
-                {images.map((img, i) => (
-                  <PastedImageThumb
-                    key={img.objectUrl}
-                    objectUrl={img.objectUrl}
-                    index={i}
-                    onRemove={removeImage}
-                  />
-                ))}
-              </div>
-            )}
-
-            {stickyPersona && (
-              <div className="mb-2 flex items-center gap-1.5">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-2.5 py-1 text-[11px] font-medium text-brand">
-                  <PersonaAvatar persona={stickyPersona} size="sm" />
-                  <span>@{stickyPersona.displayName}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    className="ml-0.5 size-auto p-0 opacity-60 hover:bg-transparent hover:opacity-100"
-                    onClick={handleClearStickyPersona}
-                    aria-label={t("persona.clearActive")}
+          <Popover open={mentionOpen}>
+            {/* biome-ignore lint/a11y/noStaticElementInteractions: drop zone for image files */}
+            <div
+              className={cn(
+                "relative rounded-2xl border border-border bg-background px-4 pb-3 pt-4 transition-colors",
+                isImageDragOver && "bg-muted/20",
+              )}
+              onDragEnter={handleDragEnter}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              {isImageDragOver && (
+                <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-2xl border border-dashed border-border bg-background/70">
+                  <Badge
+                    variant="secondary"
+                    className="px-3 py-1 text-sm shadow-sm"
                   >
-                    <X className="size-3" />
-                  </Button>
-                </span>
-              </div>
-            )}
+                    {t("attachments.dropToAttach")}
+                  </Badge>
+                </div>
+              )}
+              <MentionAutocomplete
+                filteredPersonas={filteredPersonas}
+                filteredFiles={filteredFiles}
+                isOpen={mentionOpen}
+                onSelectPersona={handlePersonaMentionSelect}
+                onSelectFile={handleFileMentionSelect}
+                onClose={closeMention}
+                selectedIndex={mentionSelectedIndex}
+              />
 
-            {queuedMessage && (
-              <div className="mb-2 flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-1.5">
-                <span className="flex-1 truncate text-xs text-muted-foreground">
-                  {t("queue.label", { text: queuedMessage.text })}
-                </span>
-                <button
-                  type="button"
-                  onClick={onDismissQueue}
-                  className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground"
-                  aria-label={t("queue.dismiss")}
-                >
-                  <X className="size-3.5" />
-                </button>
-              </div>
-            )}
+              {images.length > 0 && (
+                <div className="mb-2 flex flex-wrap gap-2">
+                  {images.map((img, i) => (
+                    <PastedImageThumb
+                      key={img.objectUrl}
+                      objectUrl={img.objectUrl}
+                      index={i}
+                      onRemove={removeImage}
+                    />
+                  ))}
+                </div>
+              )}
 
-            <textarea
-              ref={textareaRef}
-              value={text}
-              onChange={handleInput}
-              onKeyDown={handleKeyDown}
-              onPaste={handlePaste}
-              placeholder={effectivePlaceholder}
-              disabled={disabled}
-              rows={1}
-              className="mb-3 min-h-[36px] max-h-[200px] w-full resize-none bg-transparent px-1 text-[14px] leading-relaxed text-foreground placeholder:font-light placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 disabled:opacity-60"
-              aria-label={t("input.ariaLabel")}
-            />
+              {stickyPersona && (
+                <div className="mb-2 flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-2.5 py-1 text-[11px] font-medium text-brand">
+                    <PersonaAvatar persona={stickyPersona} size="sm" />
+                    <span>@{stickyPersona.displayName}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      className="ml-0.5 size-auto p-0 opacity-60 hover:bg-transparent hover:opacity-100"
+                      onClick={handleClearStickyPersona}
+                      aria-label={t("persona.clearActive")}
+                    >
+                      <X className="size-3" />
+                    </Button>
+                  </span>
+                </div>
+              )}
 
-            <ChatInputToolbar
-              personas={personas}
-              selectedPersonaId={selectedPersonaId}
-              onPersonaChange={onPersonaChange}
-              onCreatePersona={onCreatePersona}
-              providers={providers}
-              providersLoading={providersLoading}
-              selectedProvider={selectedProvider}
-              onProviderChange={(id) => onProviderChange?.(id)}
-              currentModelId={currentModelId}
-              currentModel={resolvedCurrentModel}
-              availableModels={availableModels}
-              onModelChange={onModelChange}
-              selectedProjectId={selectedProjectId}
-              availableProjects={availableProjects}
-              onProjectChange={onProjectChange}
-              onCreateProject={onCreateProject}
-              contextTokens={contextTokens}
-              contextLimit={contextLimit}
-              canSend={canSend}
-              isStreaming={isStreaming}
-              hasQueuedMessage={hasQueuedMessage}
-              onSend={handleSend}
-              onStop={onStop}
-              isCompact={isCompact}
-            />
-          </div>
+              {queuedMessage && (
+                <div className="mb-2 flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-1.5">
+                  <span className="flex-1 truncate text-xs text-muted-foreground">
+                    {t("queue.label", { text: queuedMessage.text })}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={onDismissQueue}
+                    className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground"
+                    aria-label={t("queue.dismiss")}
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </div>
+              )}
+
+              <PopoverAnchor asChild>
+                <textarea
+                  ref={textareaRef}
+                  value={text}
+                  onChange={handleInput}
+                  onKeyDown={handleKeyDown}
+                  onPaste={handlePaste}
+                  placeholder={effectivePlaceholder}
+                  disabled={disabled}
+                  rows={1}
+                  className="mb-3 min-h-[36px] max-h-[200px] w-full resize-none bg-transparent px-1 text-[14px] leading-relaxed text-foreground placeholder:font-light placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 disabled:opacity-60"
+                  aria-label={t("input.ariaLabel")}
+                />
+              </PopoverAnchor>
+
+              <ChatInputToolbar
+                personas={personas}
+                selectedPersonaId={selectedPersonaId}
+                onPersonaChange={onPersonaChange}
+                onCreatePersona={onCreatePersona}
+                providers={providers}
+                providersLoading={providersLoading}
+                selectedProvider={selectedProvider}
+                onProviderChange={(id) => onProviderChange?.(id)}
+                currentModelId={currentModelId}
+                currentModel={resolvedCurrentModel}
+                availableModels={availableModels}
+                onModelChange={onModelChange}
+                selectedProjectId={selectedProjectId}
+                availableProjects={availableProjects}
+                onProjectChange={onProjectChange}
+                onCreateProject={onCreateProject}
+                contextTokens={contextTokens}
+                contextLimit={contextLimit}
+                canSend={canSend}
+                isStreaming={isStreaming}
+                hasQueuedMessage={hasQueuedMessage}
+                onSend={handleSend}
+                onStop={onStop}
+                isCompact={isCompact}
+              />
+            </div>
+          </Popover>
         </div>
       </div>
     </TooltipProvider>

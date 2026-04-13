@@ -14,3 +14,10 @@ export async function saveExportedSessionFile(
 export async function pathExists(path: string): Promise<boolean> {
   return invoke("path_exists", { path });
 }
+
+export async function listFilesForMentions(
+  roots: string[],
+  maxResults = 1500,
+): Promise<string[]> {
+  return invoke("list_files_for_mentions", { roots, maxResults });
+}

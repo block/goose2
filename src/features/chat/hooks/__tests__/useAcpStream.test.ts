@@ -314,6 +314,9 @@ describe("useAcpStream", () => {
 
   it("creates the streaming assistant message from backend metadata", async () => {
     useChatStore.getState().setChatState(sessionId, "streaming");
+    useChatStore
+      .getState()
+      .setPendingAssistantProvider(sessionId, "claude-acp");
 
     renderHook(() => useAcpStream(true));
     await vi.waitFor(() =>
@@ -337,12 +340,45 @@ describe("useAcpStream", () => {
       metadata: {
         personaId: "persona-1",
         personaName: "Planner",
+        providerId: "claude-acp",
         completionStatus: "inProgress",
       },
     });
     expect(
       useChatStore.getState().getSessionRuntime(sessionId).streamingMessageId,
     ).toBe("msg-created");
+  });
+
+  it("keeps the original pending provider when the session provider changes before message creation", async () => {
+    useChatStore.getState().setChatState(sessionId, "streaming");
+    useChatStore
+      .getState()
+      .setPendingAssistantProvider(sessionId, "claude-acp");
+    useChatSessionStore.setState((state) => ({
+      ...state,
+      sessions: state.sessions.map((session) =>
+        session.id === sessionId
+          ? { ...session, providerId: "codex-acp" }
+          : session,
+      ),
+    }));
+
+    renderHook(() => useAcpStream(true));
+    await vi.waitFor(() =>
+      expect(listeners.get("acp:message_created")).toBeDefined(),
+    );
+
+    act(() => {
+      emit("acp:message_created", {
+        sessionId,
+        messageId: "msg-provider-lock",
+      });
+    });
+
+    const message = useChatStore.getState().messagesBySession[sessionId][0];
+    const runtime = useChatStore.getState().getSessionRuntime(sessionId);
+    expect(message.metadata?.providerId).toBe("claude-acp");
+    expect(runtime.pendingAssistantProviderId).toBeNull();
   });
 
   it("ignores late message_created events after local streaming state is cleared", async () => {

@@ -35,6 +35,7 @@ export interface SessionChatRuntime {
   chatState: ChatState;
   tokenState: TokenState;
   streamingMessageId: string | null;
+  pendingAssistantProviderId: string | null;
   error: string | null;
   hasUnread: boolean;
 }
@@ -43,6 +44,7 @@ export const INITIAL_SESSION_CHAT_RUNTIME: SessionChatRuntime = {
   chatState: "idle",
   tokenState: INITIAL_TOKEN_STATE,
   streamingMessageId: null,
+  pendingAssistantProviderId: null,
   error: null,
   hasUnread: false,
 };

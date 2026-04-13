@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { AnimatePresence } from "motion/react";
 import { MessageTimeline } from "./MessageTimeline";
 import { ChatInput } from "./ChatInput";
 import type { PastedImage } from "@/shared/types/messages";
@@ -20,7 +21,6 @@ import {
   getProjectArtifactRoots,
   resolveProjectWorkingDir,
 } from "@/features/projects/lib/chatProjectContext";
-import { useAvatarSrc } from "@/shared/hooks/useAvatarSrc";
 import { getHomeDir } from "@/shared/api/system";
 import { ArtifactPolicyProvider } from "../hooks/ArtifactPolicyContext";
 import type { ModelOption } from "../types";
@@ -30,8 +30,6 @@ const EMPTY_MODELS: ModelOption[] = [];
 
 interface ChatViewProps {
   sessionId: string;
-  agentName?: string;
-  agentAvatarUrl?: string;
   initialProvider?: string;
   initialPersonaId?: string;
   initialMessage?: string;
@@ -44,8 +42,6 @@ interface ChatViewProps {
 
 export function ChatView({
   sessionId,
-  agentName = "Goose",
-  agentAvatarUrl,
   initialProvider,
   initialPersonaId,
   initialMessage,
@@ -59,6 +55,12 @@ export function ChatView({
     (s) => s.contextPanelOpenBySession[activeSessionId] ?? false,
   );
   const setContextPanelOpen = useChatSessionStore((s) => s.setContextPanelOpen);
+  const activeWorkingContext = useChatSessionStore(
+    (s) => s.activeWorkingContextBySession[activeSessionId],
+  );
+  const clearActiveWorkingContext = useChatSessionStore(
+    (s) => s.clearActiveWorkingContext,
+  );
 
   const {
     providers,
@@ -120,11 +122,12 @@ export function ChatView({
   const projectMetadataPending = Boolean(
     session?.projectId && !resolvedProjectWorkingDir && projectsLoading,
   );
-  const effectiveWorkingDir = resolvedProjectWorkingDir
+  const defaultWorkingDir = resolvedProjectWorkingDir
     ? resolvedProjectWorkingDir
     : !session?.projectId
       ? (homeArtifactsRoot ?? undefined)
       : undefined;
+  const effectiveWorkingDir = activeWorkingContext?.path ?? defaultWorkingDir;
   const allowedArtifactRoots = useMemo(() => {
     const roots = [
       ...projectArtifactRoots.map((path) => path.trim()).filter(Boolean),
@@ -138,10 +141,19 @@ export function ChatView({
     () => buildProjectSystemPrompt(project),
     [project],
   );
+  const workingContextPrompt = useMemo(() => {
+    if (!activeWorkingContext?.branch) return undefined;
+    return `<active-working-context>\nActive branch: ${activeWorkingContext.branch}\nWorking directory: ${activeWorkingContext.path}\n</active-working-context>`;
+  }, [activeWorkingContext?.branch, activeWorkingContext?.path]);
+
   const effectiveSystemPrompt = useMemo(
     () =>
-      composeSystemPrompt(selectedPersona?.systemPrompt, projectSystemPrompt),
-    [selectedPersona?.systemPrompt, projectSystemPrompt],
+      composeSystemPrompt(
+        selectedPersona?.systemPrompt,
+        projectSystemPrompt,
+        workingContextPrompt,
+      ),
+    [selectedPersona?.systemPrompt, projectSystemPrompt, workingContextPrompt],
   );
 
   useEffect(() => {
@@ -159,6 +171,41 @@ export function ChatView({
       cancelled = true;
     };
   }, []);
+
+  const prevProjectIdRef = useRef(session?.projectId);
+  useEffect(() => {
+    const prevProjectId = prevProjectIdRef.current;
+    prevProjectIdRef.current = session?.projectId;
+    if (prevProjectId !== undefined && prevProjectId !== session?.projectId) {
+      clearActiveWorkingContext(activeSessionId);
+    }
+  }, [session?.projectId, activeSessionId, clearActiveWorkingContext]);
+
+  const prevContextRef = useRef(activeWorkingContext);
+  useEffect(() => {
+    const prev = prevContextRef.current;
+    if (
+      !activeWorkingContext ||
+      !selectedProvider ||
+      session?.draft ||
+      activeWorkingContext === prev
+    ) {
+      return;
+    }
+    prevContextRef.current = activeWorkingContext;
+    if (prev && prev.path === activeWorkingContext.path) return;
+    void acpPrepareSession(activeSessionId, selectedProvider, {
+      workingDir: activeWorkingContext.path,
+      personaId: selectedPersonaId ?? undefined,
+    }).catch(() => undefined);
+  }, [
+    activeWorkingContext,
+    activeSessionId,
+    selectedProvider,
+    selectedPersonaId,
+    session?.draft,
+  ]);
+
   const handleProviderChange = useCallback(
     (providerId: string) => {
       if (providerId === selectedProvider) {
@@ -214,27 +261,21 @@ export function ChatView({
       if (!activeSessionId || modelId === session?.modelId) {
         return;
       }
-
       const previousModelId = session?.modelId;
       const previousModelName = session?.modelName;
       const models = useChatSessionStore
         .getState()
         .getSessionModels(activeSessionId);
       const selected = models.find((m) => m.id === modelId);
-
-      // Optimistic update
       useChatSessionStore.getState().updateSession(activeSessionId, {
         modelId,
         modelName: selected?.displayName ?? selected?.name ?? modelId,
       });
-
       if (session?.draft) {
         return;
       }
-
       acpSetModel(activeSessionId, modelId).catch((error) => {
         console.error("Failed to set model:", error);
-        // Rollback to previous model on failure
         useChatSessionStore.getState().updateSession(activeSessionId, {
           modelId: previousModelId,
           modelName: previousModelName,
@@ -259,8 +300,6 @@ export function ChatView({
           handleProviderChange(matchingProvider.id);
         }
       }
-
-      // Update the active agent to match persona
       const agentStore = useAgentStore.getState();
       const matchingAgent = agentStore.agents.find(
         (a) => a.personaId === personaId,
@@ -268,8 +307,6 @@ export function ChatView({
       if (matchingAgent) {
         agentStore.setActiveAgent(matchingAgent.id);
       }
-
-      // Persist persona selection to session store
       useChatSessionStore
         .getState()
         .updateSession(activeSessionId, { personaId: personaId ?? undefined });
@@ -288,9 +325,6 @@ export function ChatView({
       setSelectedPersonaId(null);
     }
   }, [personas, selectedPersonaId]);
-
-  const displayAgentName = selectedPersona?.displayName ?? agentName;
-  const personaAvatarSrc = useAvatarSrc(selectedPersona?.avatar);
 
   const personaInfo = selectedPersona
     ? { id: selectedPersona.id, name: selectedPersona.displayName }
@@ -395,12 +429,18 @@ export function ChatView({
   const draftValue = useChatStore(
     (s) => s.draftsBySession[activeSessionId] ?? "",
   );
+  const scrollTarget = useChatStore(
+    (s) => s.scrollTargetMessageBySession[activeSessionId] ?? null,
+  );
   const handleDraftChange = useCallback(
     (text: string) => {
       useChatStore.getState().setDraft(activeSessionId, text);
     },
     [activeSessionId],
   );
+  const handleScrollTargetHandled = useCallback(() => {
+    useChatStore.getState().clearScrollTargetMessage(activeSessionId);
+  }, [activeSessionId]);
   return (
     <ArtifactPolicyProvider
       messages={messages}
@@ -414,19 +454,26 @@ export function ChatView({
             <MessageTimeline
               messages={messages}
               streamingMessageId={streamingMessageId}
-              agentName={displayAgentName}
-              agentAvatarUrl={personaAvatarSrc ?? agentAvatarUrl}
+              scrollTargetMessageId={scrollTarget?.messageId ?? null}
+              scrollTargetQuery={scrollTarget?.query ?? null}
+              onScrollTargetHandled={handleScrollTargetHandled}
             />
           )}
 
-          {showIndicator && !isLoadingHistory && (
-            <LoadingGoose
-              agentName={displayAgentName}
-              chatState={
-                chatState as "thinking" | "streaming" | "waiting" | "compacting"
-              }
-            />
-          )}
+          <AnimatePresence initial={false}>
+            {showIndicator && !isLoadingHistory ? (
+              <LoadingGoose
+                key="loading-indicator"
+                chatState={
+                  chatState as
+                    | "thinking"
+                    | "streaming"
+                    | "waiting"
+                    | "compacting"
+                }
+              />
+            ) : null}
+          </AnimatePresence>
 
           <ChatInput
             onSend={handleSend}

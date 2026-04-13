@@ -27,6 +27,9 @@ export interface TextShimmerProps {
   className?: string;
   duration?: number;
   spread?: number;
+  delay?: number;
+  repeatDelay?: number;
+  tone?: "default" | "soft";
 }
 
 const ShimmerComponent = ({
@@ -35,6 +38,9 @@ const ShimmerComponent = ({
   className,
   duration = 2,
   spread = 2,
+  delay = 0,
+  repeatDelay = 0,
+  tone = "default",
 }: TextShimmerProps) => {
   const MotionComponent = getMotionComponent(
     Component as keyof JSX.IntrinsicElements,
@@ -44,27 +50,45 @@ const ShimmerComponent = ({
     () => (children?.length ?? 0) * spread,
     [children, spread],
   );
+  const shimmerColors = useMemo(
+    () =>
+      tone === "soft"
+        ? {
+            base: "var(--color-muted-foreground)",
+            highlight:
+              "color-mix(in srgb, var(--color-foreground) 72%, var(--color-muted-foreground) 28%)",
+          }
+        : {
+            base: "var(--color-muted-foreground)",
+            highlight: "var(--color-background)",
+          },
+    [tone],
+  );
 
   return (
     <MotionComponent
       animate={{ backgroundPosition: "0% center" }}
       className={cn(
         "relative inline-block bg-[length:250%_100%,auto] bg-clip-text text-transparent",
-        "[--bg:linear-gradient(90deg,#0000_calc(50%-var(--spread)),var(--color-background),#0000_calc(50%+var(--spread)))] [background-repeat:no-repeat,padding-box]",
+        "[--bg:linear-gradient(90deg,#0000_calc(50%-var(--spread)),var(--shimmer-highlight),#0000_calc(50%+var(--spread)))] [background-repeat:no-repeat,padding-box]",
         className,
       )}
       initial={{ backgroundPosition: "100% center" }}
       style={
         {
           "--spread": `${dynamicSpread}px`,
+          "--shimmer-base": shimmerColors.base,
+          "--shimmer-highlight": shimmerColors.highlight,
           backgroundImage:
-            "var(--bg), linear-gradient(var(--color-muted-foreground), var(--color-muted-foreground))",
+            "var(--bg), linear-gradient(var(--shimmer-base), var(--shimmer-base))",
         } as CSSProperties
       }
       transition={{
+        delay,
         duration,
         ease: "linear",
         repeat: Number.POSITIVE_INFINITY,
+        repeatDelay,
       }}
     >
       {children}

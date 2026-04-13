@@ -11,9 +11,14 @@ const EXCEPTIONS = {
       "Drag-and-drop handlers plus activeProjectId highlight for draft-in-project sessions.",
   },
   "src/features/chat/ui/ChatView.tsx": {
-    limit: 520,
+    limit: 535,
     justification:
-      "ACP prewarm guards, project-aware working dir selection, and chat bootstrapping still live together here.",
+      "ACP prewarm guards, project-aware working dir selection, working context sync, and chat bootstrapping still live together here.",
+  },
+  "src/features/chat/ui/__tests__/ContextPanel.test.tsx": {
+    limit: 550,
+    justification:
+      "Workspace widget integration tests cover branch switching, worktree creation, dirty-state dialogs, and picker interactions.",
   },
   "src/features/sidebar/ui/Sidebar.tsx": {
     limit: 580,
@@ -31,9 +36,9 @@ const EXCEPTIONS = {
       "ACP replay, streaming, session binding, model-state event handling, and replay timeout are still centralized here.",
   },
   "src/features/chat/hooks/__tests__/useAcpStream.test.ts": {
-    limit: 540,
+    limit: 570,
     justification:
-      "Covers replay buffering, timeout error state, and streaming edge cases in one cohesive suite.",
+      "Covers replay buffering, timeout error state, streaming edge cases, and provider identity persistence in one cohesive suite.",
   },
   "src/features/chat/stores/__tests__/chatSessionStore.test.ts": {
     limit: 540,
