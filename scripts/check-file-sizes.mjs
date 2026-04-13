@@ -51,7 +51,7 @@ const EXCEPTIONS = {
       "ACP-backed session overlay persistence, draft migration, and sidebar-facing session merge logic live together for now.",
   },
   "src-tauri/src/services/acp/manager/dispatcher.rs": {
-    limit: 545,
+    limit: 540,
     justification:
       "ACP replay and live-stream event fan-out share one dispatcher with replay event counting for drain stabilisation.",
   },

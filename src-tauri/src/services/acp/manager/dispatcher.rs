@@ -395,7 +395,7 @@ impl Client for SessionEventDispatcher {
         match &notification.update {
             SessionUpdate::UserMessageChunk(chunk) => {
                 if let AcpContentBlock::Text(text) = &chunk.content {
-                    // Finalize any in-progress assistant message first
+                    // Finalize any in-progress assistant message and count replay event
                     {
                         let mut routes = self.routes.lock().await;
                         if let Some(route) = routes.get_mut(&goose_session_id) {
@@ -408,17 +408,12 @@ impl Client for SessionEventDispatcher {
                                     },
                                 );
                             }
+                            route.replay_events += 1;
                         }
                     }
 
                     let display_text = extract_user_message(&text.text);
                     let message_id = uuid::Uuid::new_v4().to_string();
-                    {
-                        let mut routes = self.routes.lock().await;
-                        if let Some(route) = routes.get_mut(&goose_session_id) {
-                            route.replay_events += 1;
-                        }
-                    }
                     let _ = self.app_handle.emit(
                         "acp:replay_user_message",
                         serde_json::json!({
