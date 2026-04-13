@@ -58,6 +58,7 @@ pub(super) struct SessionRoute {
     pub(super) writer: Option<Arc<dyn MessageWriter>>,
     pub(super) canceled: bool,
     pub(super) replay_message_id: Option<String>,
+    pub(super) replay_events: u32,
 }
 
 pub(super) struct SessionEventDispatcher {
@@ -94,6 +95,7 @@ impl SessionEventDispatcher {
                 writer: None,
                 canceled: false,
                 replay_message_id: None,
+                replay_events: 0,
             });
 
         let _ = self.app_handle.emit(
@@ -121,6 +123,7 @@ impl SessionEventDispatcher {
                 writer: Some(writer),
                 canceled: false,
                 replay_message_id: None,
+                replay_events: 0,
             },
         );
     }
@@ -254,6 +257,14 @@ impl SessionEventDispatcher {
             },
         );
     }
+
+    pub(super) async fn get_replay_event_count(&self, goose_session_id: &str) -> u32 {
+        let routes = self.routes.lock().await;
+        routes
+            .get(goose_session_id)
+            .map(|r| r.replay_events)
+            .unwrap_or(0)
+    }
 }
 
 fn extract_content_preview(content: &[agent_client_protocol::ToolCallContent]) -> Option<String> {
@@ -381,7 +392,7 @@ impl Client for SessionEventDispatcher {
         match &notification.update {
             SessionUpdate::UserMessageChunk(chunk) => {
                 if let AcpContentBlock::Text(text) = &chunk.content {
-                    // Finalize any in-progress assistant message first
+                    // Finalize any in-progress assistant message and count replay event
                     {
                         let mut routes = self.routes.lock().await;
                         if let Some(route) = routes.get_mut(&goose_session_id) {
@@ -394,6 +405,7 @@ impl Client for SessionEventDispatcher {
                                     },
                                 );
                             }
+                            route.replay_events += 1;
                         }
                     }
 
@@ -436,6 +448,7 @@ impl Client for SessionEventDispatcher {
                         let mut routes = self.routes.lock().await;
                         if let Some(route) = routes.get_mut(&goose_session_id) {
                             route.replay_message_id = Some(new_id.clone());
+                            route.replay_events += 1;
                         }
                         new_id
                     };

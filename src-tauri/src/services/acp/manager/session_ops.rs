@@ -439,8 +439,16 @@ pub(super) async fn load_session_inner(
         .await
         .map_err(|error| format!("Failed to load Goose session: {error:?}"))?;
 
+    // The ACP RPC layer resolves responses synchronously but dispatches
+    // notifications asynchronously via spawned tasks. After load_session
+    // returns, replay notifications may still be queued. Yield repeatedly
+    // to let the single-threaded runtime drain them before counting.
+    wait_for_replay_drain(|| async { dispatcher.get_replay_event_count(goose_session_id).await })
+        .await;
+
     // Finalize any in-progress replay assistant message
     dispatcher.finalize_replay(goose_session_id).await;
+
     dispatcher.emit_replay_complete(local_session_id);
 
     if let Some(models) = &response.models {
@@ -557,4 +565,47 @@ pub(super) async fn set_model_inner(
     }
 
     Ok(())
+}
+
+/// Yield repeatedly until an async counter stabilises for 3 consecutive rounds.
+///
+/// After `load_session` returns, the ACP RPC layer may still have spawned
+/// notification tasks that haven't run yet. This function yields to the
+/// runtime between polls so those tasks get a chance to execute, and only
+/// returns once the count has been stable for 3 consecutive yields — giving
+/// us confidence that all replay events have been dispatched.
+///
+/// A safety cap of 100 iterations prevents infinite spinning if a bug causes
+/// the counter to increment indefinitely.
+const MAX_DRAIN_ITERATIONS: u32 = 100;
+
+async fn wait_for_replay_drain<F, Fut>(mut get_count: F) -> u32
+where
+    F: FnMut() -> Fut,
+    Fut: std::future::Future<Output = u32>,
+{
+    let mut prev_total = 0u32;
+    let mut stable_rounds = 0u8;
+    let mut iterations = 0u32;
+    loop {
+        tokio::task::yield_now().await;
+        let total = get_count().await;
+        iterations += 1;
+        if total == prev_total {
+            stable_rounds += 1;
+            if stable_rounds >= 3 {
+                return total;
+            }
+        } else {
+            stable_rounds = 0;
+            prev_total = total;
+        }
+        if iterations >= MAX_DRAIN_ITERATIONS {
+            log::warn!(
+                "wait_for_replay_drain hit iteration cap ({MAX_DRAIN_ITERATIONS}); \
+                 returning partial count {total}"
+            );
+            return total;
+        }
+    }
 }

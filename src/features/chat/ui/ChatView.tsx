@@ -197,7 +197,9 @@ export function ChatView({
     void acpPrepareSession(activeSessionId, selectedProvider, {
       workingDir: activeWorkingContext.path,
       personaId: selectedPersonaId ?? undefined,
-    }).catch(() => undefined);
+    }).catch((error) => {
+      console.error("Failed to prepare ACP session:", error);
+    });
   }, [
     activeWorkingContext,
     activeSessionId,

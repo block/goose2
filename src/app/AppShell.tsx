@@ -105,9 +105,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     } catch (err) {
       console.error("Failed to load session messages:", err);
       useChatStore.getState().setSessionLoading(sessionId, false);
-      console.log(
-        `[perf:load] ${sessionId.slice(0, 8)} failed, loading=false at +${(performance.now() - t0).toFixed(1)}ms`,
-      );
     }
   }, []);
 

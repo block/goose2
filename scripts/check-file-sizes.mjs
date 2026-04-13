@@ -51,9 +51,9 @@ const EXCEPTIONS = {
       "ACP-backed session overlay persistence, draft migration, and sidebar-facing session merge logic live together for now.",
   },
   "src-tauri/src/services/acp/manager/dispatcher.rs": {
-    limit: 520,
+    limit: 540,
     justification:
-      "ACP replay and live-stream event fan-out share one dispatcher until session event routing is split.",
+      "ACP replay and live-stream event fan-out share one dispatcher with replay event counting for drain stabilisation.",
   },
   "src-tauri/src/services/acp/manager.rs": {
     limit: 630,
@@ -61,9 +61,9 @@ const EXCEPTIONS = {
       "ACP manager command dispatch loop — export/import/fork session ext_method dispatch adds boilerplate.",
   },
   "src-tauri/src/services/acp/manager/session_ops.rs": {
-    limit: 570,
+    limit: 620,
     justification:
-      "Session prepare/load/list logic, working-dir updates, and composite prepared-session reuse remain colocated while ACP session ownership stabilizes.",
+      "Session prepare/load/list logic, working-dir updates, wait_for_replay_drain helper with iteration cap, and composite prepared-session reuse remain colocated while ACP session ownership stabilizes.",
   },
 };
 
