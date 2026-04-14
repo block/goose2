@@ -11,7 +11,10 @@
   "context": {
     "closePanel": "Cerrar panel de contexto",
     "openPanel": "Abrir panel de contexto",
-    "ringAria": "Contexto: {{percent}}% usado"
+    "ringAria": "Contexto: {{percent}}% usado",
+    "popoverUsed": "Usado",
+    "popoverLimit": "Límite",
+    "popoverRemaining": "Restante"
   },
   "contextPanel": {
     "actions": {

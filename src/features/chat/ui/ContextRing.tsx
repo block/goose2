@@ -46,7 +46,7 @@ export function ContextRing({
         fill="none"
         stroke="currentColor"
         strokeWidth={2}
-        className="text-muted-foreground/30"
+        className="text-muted-foreground/5"
       />
       {/* Progress arc */}
       <circle

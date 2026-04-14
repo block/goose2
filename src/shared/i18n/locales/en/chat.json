@@ -14,7 +14,10 @@
     "ringAria": "Context: {{percent}}% used",
     "warningHigh": "Context window is {{percent}}% full. Consider compacting the conversation.",
     "warningCritical": "Context window nearly full ({{percent}}%). Compaction recommended to avoid errors.",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "popoverUsed": "Used",
+    "popoverLimit": "Limit",
+    "popoverRemaining": "Remaining"
   },
   "contextPanel": {
     "actions": {
