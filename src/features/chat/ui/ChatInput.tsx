@@ -249,9 +249,7 @@ export function ChatInput({
     setText(value);
     const cursorPosition = event.target.selectionStart ?? value.length;
     detectMention(value, cursorPosition);
-    const textarea = event.target;
-    textarea.style.height = "auto";
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
+    // Height recalc handled by useLayoutEffect([text])
   };
 
   const handlePaste = useCallback(

@@ -334,33 +334,33 @@ export const MessageBubble = memo(function MessageBubble({
     .map((c) => c.text)
     .join("\n");
 
-  // Inline edit state
-  const [editText, setEditText] = useState(textContent);
+  // Inline edit state — only allocated for user messages
+  const canEdit = role === "user";
+  const [editText, setEditText] = useState(canEdit ? textContent : "");
   const editTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Reset edit text when entering edit mode
   useEffect(() => {
-    if (isEditing) {
+    if (canEdit && isEditing) {
       setEditText(textContent);
     }
-  }, [isEditing, textContent]);
+  }, [canEdit, isEditing, textContent]);
 
-  // Auto-resize + focus the inline edit textarea
   // Auto-resize on every text change
   useLayoutEffect(() => {
     const ta = editTextareaRef.current;
-    if (isEditing && ta) {
+    if (canEdit && isEditing && ta) {
       ta.style.height = "auto";
       ta.style.height = `${Math.min(ta.scrollHeight, 300)}px`;
     }
-  }, [isEditing, editText]);
+  }, [canEdit, isEditing, editText]);
 
   // Focus only when entering edit mode, not on every keystroke
   useEffect(() => {
-    if (isEditing) {
+    if (canEdit && isEditing) {
       editTextareaRef.current?.focus();
     }
-  }, [isEditing]);
+  }, [canEdit, isEditing]);
 
   const handleEditSave = useCallback(() => {
     const trimmed = editText.trim();
@@ -555,7 +555,7 @@ export const MessageBubble = memo(function MessageBubble({
               align={isUser ? "end" : "start"}
               sideOffset={isUser ? 0 : 4}
               avoidCollisions={false}
-              className="!w-auto !border-none !bg-transparent !p-0 !shadow-none !rounded-none"
+              variant="bare"
             >
               <MessageActions>
                 {textContent && <CopyAction text={textContent} />}
