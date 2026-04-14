@@ -196,7 +196,8 @@ export function ChatInput({
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => textareaRef.current?.focus(), []);
+  // Focus textarea on mount and when entering edit mode
+  useEffect(() => textareaRef.current?.focus(), [editingMessageId]);
 
   const handleSend = useCallback(() => {
     if (!canSend) {
