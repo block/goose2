@@ -1,5 +1,5 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MessageBubble } from "../MessageBubble";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
@@ -80,7 +80,8 @@ describe("MessageBubble", () => {
     expect(screen.getByText("second block")).toBeInTheDocument();
   });
 
-  it("shows action buttons on hover (retry for assistant)", () => {
+  it("shows action buttons on hover (retry for assistant)", async () => {
+    const user = userEvent.setup();
     const onRetryMessage = vi.fn();
     render(
       <MessageBubble
@@ -88,7 +89,11 @@ describe("MessageBubble", () => {
         onRetryMessage={onRetryMessage}
       />,
     );
-    const retryBtn = screen.getByRole("button", { name: /retry/i });
+    // Hover the message content to trigger HoverCard
+    await user.hover(screen.getByText("response"));
+    const retryBtn = await waitFor(() =>
+      screen.getByRole("button", { name: /retry/i }),
+    );
     expect(retryBtn).toBeInTheDocument();
   });
 
@@ -360,5 +365,135 @@ describe("MessageBubble", () => {
 
     expect(screen.getByText("python3 create_whales.py")).toBeInTheDocument();
     expect(screen.getByText("ls -lh whales.pdf")).toBeInTheDocument();
+  });
+
+  // ── inline edit tests ─────────────────────────────────────────────
+
+  it("renders inline textarea pre-filled with message text when editing", () => {
+    render(
+      <MessageBubble
+        message={userMessage("original text")}
+        isEditing
+        onSaveEdit={vi.fn()}
+        onCancelEdit={vi.fn()}
+      />,
+    );
+    const textarea = screen.getByRole("textbox");
+    expect(textarea).toBeInTheDocument();
+    expect(textarea).toHaveValue("original text");
+  });
+
+  it("calls onSaveEdit with messageId and trimmed text on Save click", async () => {
+    const user = userEvent.setup();
+    const onSaveEdit = vi.fn();
+    render(
+      <MessageBubble
+        message={userMessage("edit me", { id: "msg-42" })}
+        isEditing
+        onSaveEdit={onSaveEdit}
+        onCancelEdit={vi.fn()}
+      />,
+    );
+    const textarea = screen.getByRole("textbox");
+    await user.clear(textarea);
+    await user.type(textarea, "updated text  ");
+    await user.click(screen.getByRole("button", { name: /save/i }));
+    expect(onSaveEdit).toHaveBeenCalledWith("msg-42", "updated text");
+  });
+
+  it("calls onCancelEdit on Cancel click", async () => {
+    const user = userEvent.setup();
+    const onCancelEdit = vi.fn();
+    render(
+      <MessageBubble
+        message={userMessage("edit me")}
+        isEditing
+        onSaveEdit={vi.fn()}
+        onCancelEdit={onCancelEdit}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: /cancel/i }));
+    expect(onCancelEdit).toHaveBeenCalled();
+  });
+
+  it("triggers save on Enter key and cancel on Escape key", async () => {
+    const user = userEvent.setup();
+    const onSaveEdit = vi.fn();
+    const onCancelEdit = vi.fn();
+    render(
+      <MessageBubble
+        message={userMessage("keyboard test", { id: "msg-kb" })}
+        isEditing
+        onSaveEdit={onSaveEdit}
+        onCancelEdit={onCancelEdit}
+      />,
+    );
+    const textarea = screen.getByRole("textbox");
+    await user.click(textarea);
+    await user.keyboard("{Enter}");
+    expect(onSaveEdit).toHaveBeenCalledWith("msg-kb", "keyboard test");
+  });
+
+  it("triggers cancel on Escape key", async () => {
+    const user = userEvent.setup();
+    const onCancelEdit = vi.fn();
+    render(
+      <MessageBubble
+        message={userMessage("escape test")}
+        isEditing
+        onSaveEdit={vi.fn()}
+        onCancelEdit={onCancelEdit}
+      />,
+    );
+    const textarea = screen.getByRole("textbox");
+    await user.click(textarea);
+    await user.keyboard("{Escape}");
+    expect(onCancelEdit).toHaveBeenCalled();
+  });
+
+  it("disables Save button when text is empty or whitespace", () => {
+    render(
+      <MessageBubble
+        message={userMessage("", { content: [{ type: "text", text: "   " }] })}
+        isEditing
+        onSaveEdit={vi.fn()}
+        onCancelEdit={vi.fn()}
+      />,
+    );
+    const saveBtn = screen.getByRole("button", { name: /save/i });
+    expect(saveBtn).toBeDisabled();
+  });
+
+  it("shows edit hint text when editing", () => {
+    render(
+      <MessageBubble
+        message={userMessage("hint test")}
+        isEditing
+        onSaveEdit={vi.fn()}
+        onCancelEdit={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByText(/will start a new conversation/i),
+    ).toBeInTheDocument();
+  });
+
+  it("calls onRetryMessage with messageId on retry button click", async () => {
+    const user = userEvent.setup();
+    const onRetryMessage = vi.fn();
+    render(
+      <MessageBubble
+        message={assistantMessage([{ type: "text", text: "retry me" }], {
+          id: "msg-retry",
+        })}
+        onRetryMessage={onRetryMessage}
+      />,
+    );
+    await user.hover(screen.getByText("retry me"));
+    const retryBtn = await waitFor(() =>
+      screen.getByRole("button", { name: /retry/i }),
+    );
+    await user.click(retryBtn);
+    expect(onRetryMessage).toHaveBeenCalledWith("msg-retry");
   });
 });
