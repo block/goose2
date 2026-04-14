@@ -553,7 +553,7 @@ export const MessageBubble = memo(function MessageBubble({
             <HoverCardContent
               side="bottom"
               align={isUser ? "end" : "start"}
-              sideOffset={0}
+              sideOffset={isUser ? 0 : 4}
               avoidCollisions={false}
               className="!w-auto !border-none !bg-transparent !p-0 !shadow-none !rounded-none"
             >
