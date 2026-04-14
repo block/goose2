@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { Pencil, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { AcpProvider } from "@/shared/api/acp";
 import type { Persona } from "@/shared/types/agents";
@@ -64,10 +64,6 @@ interface ChatInputProps {
   }) => void;
   contextTokens?: number;
   contextLimit?: number;
-  /** Message ID currently being edited (non-null = edit mode active). */
-  editingMessageId?: string | null;
-  /** Cancel edit mode — clears editing state and restores input. */
-  onCancelEdit?: () => void;
 }
 
 export function ChatInput({
@@ -98,8 +94,6 @@ export function ChatInput({
   onCreateProject,
   contextTokens = 0,
   contextLimit = 0,
-  editingMessageId = null,
-  onCancelEdit,
 }: ChatInputProps) {
   const { t } = useTranslation("chat");
   const [text, setTextRaw] = useState(initialValue);
@@ -196,8 +190,7 @@ export function ChatInput({
     return () => observer.disconnect();
   }, []);
 
-  // Focus textarea on mount and when entering edit mode
-  useEffect(() => textareaRef.current?.focus(), [editingMessageId]);
+  useEffect(() => textareaRef.current?.focus(), []);
 
   const handleSend = useCallback(() => {
     if (!canSend) {
@@ -417,23 +410,6 @@ export function ChatInput({
                     onClick={onDismissQueue}
                     className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground"
                     aria-label={t("queue.dismiss")}
-                  >
-                    <X className="size-3.5" />
-                  </button>
-                </div>
-              )}
-
-              {editingMessageId && (
-                <div className="mb-2 flex items-center gap-2 rounded-lg bg-brand/10 px-3 py-1.5">
-                  <Pencil className="size-3 shrink-0 text-brand" />
-                  <span className="flex-1 truncate text-xs text-brand">
-                    {t("edit.label")}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={onCancelEdit}
-                    className="shrink-0 rounded p-0.5 text-brand/60 hover:text-brand"
-                    aria-label={t("edit.cancel")}
                   >
                     <X className="size-3.5" />
                   </button>

@@ -1,4 +1,4 @@
-import { useState, memo } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, memo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Copy,
@@ -30,6 +30,7 @@ import {
   ReasoningTrigger,
   ReasoningContent,
 } from "@/shared/ui/ai-elements/reasoning";
+import { Button } from "@/shared/ui/button";
 import { ToolChainCards, type ToolChainItem } from "./ToolChainCards";
 import { ClickableImage } from "./ClickableImage";
 import { useArtifactLinkHandler } from "@/features/chat/hooks/useArtifactLinkHandler";
@@ -89,6 +90,9 @@ interface MessageBubbleProps {
   onCopy?: () => void;
   onRetryMessage?: (messageId: string) => void;
   onEditMessage?: (messageId: string) => void;
+  isEditing?: boolean;
+  onSaveEdit?: (messageId: string, text: string) => void;
+  onCancelEdit?: () => void;
 }
 
 interface ContentSection {
@@ -306,6 +310,9 @@ export const MessageBubble = memo(function MessageBubble({
   isStreaming,
   onRetryMessage,
   onEditMessage,
+  isEditing = false,
+  onSaveEdit,
+  onCancelEdit,
 }: MessageBubbleProps) {
   const { t } = useTranslation(["chat", "common"]);
   const { formatDate } = useLocaleFormatting();
@@ -322,6 +329,47 @@ export const MessageBubble = memo(function MessageBubble({
     .filter((c): c is TextContent => c.type === "text")
     .map((c) => c.text)
     .join("\n");
+
+  // Inline edit state
+  const [editText, setEditText] = useState(textContent);
+  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Reset edit text when entering edit mode
+  useEffect(() => {
+    if (isEditing) {
+      setEditText(textContent);
+    }
+  }, [isEditing, textContent]);
+
+  // Auto-resize + focus the inline edit textarea
+  useLayoutEffect(() => {
+    const ta = editTextareaRef.current;
+    if (isEditing && ta) {
+      ta.style.height = "auto";
+      ta.style.height = `${Math.min(ta.scrollHeight, 300)}px`;
+      ta.focus();
+    }
+  }, [isEditing, editText]);
+
+  const handleEditSave = useCallback(() => {
+    const trimmed = editText.trim();
+    if (trimmed && onSaveEdit) {
+      onSaveEdit(message.id, trimmed);
+    }
+  }, [editText, message.id, onSaveEdit]);
+
+  const handleEditKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onCancelEdit?.();
+      } else if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleEditSave();
+      }
+    },
+    [handleEditSave, onCancelEdit],
+  );
 
   if (role === "system") {
     return (
@@ -403,76 +451,110 @@ export const MessageBubble = memo(function MessageBubble({
           </div>
         ) : null}
 
-        {/* biome-ignore lint/a11y/useKeyWithClickEvents: delegated link handler */}
-        {/* biome-ignore lint/a11y/noStaticElementInteractions: delegated link handler */}
-        <div
-          className="w-full min-w-0 text-[13px] leading-relaxed"
-          onClick={handleContentClick}
-        >
-          {messageAttachments.length > 0 && (
-            <div className="mb-2 flex flex-wrap gap-2">
-              {messageAttachments.map((attachment) => (
-                <MessageAttachmentRow
-                  key={`${attachment.type}-${attachment.path ?? attachment.name}`}
-                  attachment={attachment}
-                />
-              ))}
+        {isEditing ? (
+          <div className="w-full min-w-0">
+            <textarea
+              ref={editTextareaRef}
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              onKeyDown={handleEditKeyDown}
+              rows={1}
+              className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-[13px] leading-relaxed text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+            <div className="mt-1.5 flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="default"
+                onClick={handleEditSave}
+                disabled={!editText.trim()}
+                className="h-7 px-3 text-xs"
+              >
+                {t("common:actions.save")}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={onCancelEdit}
+                className="h-7 px-3 text-xs"
+              >
+                {t("common:actions.cancel")}
+              </Button>
             </div>
-          )}
-          {groupContentSections(content).map((section, sectionIdx) => {
-            if (section.type === "toolChain") {
-              const toolItems = section.items as ToolChainItem[];
-              return <ToolChainCards key={section.key} toolItems={toolItems} />;
-            }
-            const block = section.items[0] as MessageContent;
-            return (
-              <div key={`${message.id}-${section.key}`}>
-                {renderContentBlock(
-                  block,
-                  sectionIdx,
-                  {
-                    defaultImageAlt: t("message.defaultImageAlt"),
-                    redactedThinking: t("message.redactedThinking"),
-                  },
-                  isStreaming,
-                  isUser,
-                )}
-              </div>
-            );
-          })}
-          {pathNotice && (
-            <p className="mt-2 text-xs text-destructive" role="status">
-              {pathNotice}
-            </p>
-          )}
-        </div>
+          </div>
+        ) : (
+          <>
+            {/* biome-ignore lint/a11y/useKeyWithClickEvents: delegated link handler */}
+            {/* biome-ignore lint/a11y/noStaticElementInteractions: delegated link handler */}
+            <div
+              className="w-full min-w-0 text-[13px] leading-relaxed"
+              onClick={handleContentClick}
+            >
+              {messageAttachments.length > 0 && (
+                <div className="mb-2 flex flex-wrap gap-2">
+                  {messageAttachments.map((attachment) => (
+                    <MessageAttachmentRow
+                      key={`${attachment.type}-${attachment.path ?? attachment.name}`}
+                      attachment={attachment}
+                    />
+                  ))}
+                </div>
+              )}
+              {groupContentSections(content).map((section, sectionIdx) => {
+                if (section.type === "toolChain") {
+                  const toolItems = section.items as ToolChainItem[];
+                  return <ToolChainCards key={section.key} toolItems={toolItems} />;
+                }
+                const block = section.items[0] as MessageContent;
+                return (
+                  <div key={`${message.id}-${section.key}`}>
+                    {renderContentBlock(
+                      block,
+                      sectionIdx,
+                      {
+                        defaultImageAlt: t("message.defaultImageAlt"),
+                        redactedThinking: t("message.redactedThinking"),
+                      },
+                      isStreaming,
+                      isUser,
+                    )}
+                  </div>
+                );
+              })}
+              {pathNotice && (
+                <p className="mt-2 text-xs text-destructive" role="status">
+                  {pathNotice}
+                </p>
+              )}
+            </div>
 
-        {/* Hover actions + timestamp */}
-        <MessageActions className="opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-          {textContent && <CopyAction text={textContent} />}
-          {onRetryMessage && (
-            <MessageAction
-              tooltip={t("common:actions.retry")}
-              onClick={() => onRetryMessage(message.id)}
-            >
-              <RotateCcw className="size-3.5" />
-            </MessageAction>
-          )}
-          {isUser && onEditMessage && (
-            <MessageAction
-              tooltip={t("common:actions.edit")}
-              onClick={() => onEditMessage(message.id)}
-            >
-              <Pencil className="size-3.5" />
-            </MessageAction>
-          )}
-          <span className="px-1 text-[10px] text-muted-foreground">
-            {formatDate(created, {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </span>
-        </MessageActions>
+            {/* Hover actions + timestamp */}
+            <MessageActions className="opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+              {textContent && <CopyAction text={textContent} />}
+              {onRetryMessage && (
+                <MessageAction
+                  tooltip={t("common:actions.retry")}
+                  onClick={() => onRetryMessage(message.id)}
+                >
+                  <RotateCcw className="size-3.5" />
+                </MessageAction>
+              )}
+              {isUser && onEditMessage && !isEditing && (
+                <MessageAction
+                  tooltip={t("common:actions.edit")}
+                  onClick={() => onEditMessage(message.id)}
+                >
+                  <Pencil className="size-3.5" />
+                </MessageAction>
+              )}
+              <span className="px-1 text-[10px] text-muted-foreground">
+                {formatDate(created, {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+            </MessageActions>
+          </>
+        )}
       </div>
     </div>
   );

@@ -13,6 +13,9 @@ interface MessageTimelineProps {
   onScrollTargetHandled?: (messageId: string) => void;
   onRetryMessage?: (messageId: string) => void;
   onEditMessage?: (messageId: string) => void;
+  editingMessageId?: string | null;
+  onSaveEdit?: (messageId: string, text: string) => void;
+  onCancelEdit?: () => void;
   className?: string;
 }
 
@@ -57,6 +60,9 @@ export function MessageTimeline({
   onScrollTargetHandled,
   onRetryMessage,
   onEditMessage,
+  editingMessageId = null,
+  onSaveEdit,
+  onCancelEdit,
   className,
 }: MessageTimelineProps) {
   const { t } = useTranslation("chat");
@@ -212,6 +218,9 @@ export function MessageTimeline({
                 onEditMessage={
                   message.role === "user" ? onEditMessage : undefined
                 }
+                isEditing={message.id === editingMessageId}
+                onSaveEdit={onSaveEdit}
+                onCancelEdit={onCancelEdit}
               />
             </div>
           );

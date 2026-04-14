@@ -386,28 +386,6 @@ export function ChatView({
         deferredSend.current = { text, attachments };
         return;
       }
-      // Edit mode: truncate from the edited message onward, then send.
-      // Must run before the queue check — edited sends are never queued.
-      if (editingMessageId) {
-        // Stop any active generation so the truncated history is clean
-        if (chatState !== "idle") {
-          stopStreaming();
-        }
-        const allMessages =
-          useChatStore.getState().messagesBySession[activeSessionId] ?? [];
-        const editIndex = allMessages.findIndex(
-          (m) => m.id === editingMessageId,
-        );
-        if (editIndex !== -1) {
-          useChatStore
-            .getState()
-            .setMessages(activeSessionId, allMessages.slice(0, editIndex));
-        }
-        useChatStore.getState().setEditingMessageId(activeSessionId, null);
-        sendMessage(text, undefined, attachments);
-        return;
-      }
-
       // Queue if agent is busy and no message already queued
       if (chatState !== "idle" && !queue.queuedMessage) {
         queue.enqueue(text, personaId, attachments);
@@ -425,9 +403,28 @@ export function ChatView({
       activeSessionId,
       chatState,
       queue,
-      editingMessageId,
       stopStreaming,
     ],
+  );
+
+  /** Save an inline edit: truncate history from the edited message onward, then send the new text. */
+  const handleSaveEdit = useCallback(
+    (messageId: string, text: string) => {
+      if (chatState !== "idle") {
+        stopStreaming();
+      }
+      const allMessages =
+        useChatStore.getState().messagesBySession[activeSessionId] ?? [];
+      const editIndex = allMessages.findIndex((m) => m.id === messageId);
+      if (editIndex !== -1) {
+        useChatStore
+          .getState()
+          .setMessages(activeSessionId, allMessages.slice(0, editIndex));
+      }
+      useChatStore.getState().setEditingMessageId(activeSessionId, null);
+      sendMessage(text);
+    },
+    [activeSessionId, chatState, sendMessage, stopStreaming],
   );
 
   useEffect(() => {
@@ -495,6 +492,9 @@ export function ChatView({
               onScrollTargetHandled={handleScrollTargetHandled}
               onRetryMessage={retryMessage}
               onEditMessage={editMessage}
+              editingMessageId={editingMessageId}
+              onSaveEdit={handleSaveEdit}
+              onCancelEdit={cancelEdit}
             />
           )}
 
@@ -547,8 +547,6 @@ export function ChatView({
             }
             contextTokens={tokenState.accumulatedTotal}
             contextLimit={tokenState.contextLimit}
-            editingMessageId={editingMessageId}
-            onCancelEdit={cancelEdit}
           />
         </div>
 
