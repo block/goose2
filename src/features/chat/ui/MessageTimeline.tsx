@@ -180,7 +180,7 @@ export function MessageTimeline({
       aria-label={t("timeline.ariaLabel")}
       aria-live="polite"
     >
-      <div className="mx-auto max-w-3xl py-4">
+      <div className="mx-auto max-w-3xl pt-4 pb-12">
         {visibleMessages.map((message, index) => {
           const prev = index > 0 ? visibleMessages[index - 1] : null;
           const showDateSeparator =
