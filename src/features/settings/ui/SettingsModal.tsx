@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/lib/cn";
 import { type LocalePreference, useLocale } from "@/shared/i18n";
 import { Button, buttonVariants } from "@/shared/ui/button";
+import { IconRefresh } from "@tabler/icons-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -78,6 +79,16 @@ export function SettingsModal({
   const [deletingProject, setDeletingProject] = useState<ProjectInfo | null>(
     null,
   );
+  const [restartFn, setRestartFn] = useState<(() => Promise<void>) | null>(
+    null,
+  );
+  const [restartVisible, setRestartVisible] = useState(false);
+  const restartDismissedRef = useRef(false);
+
+  const handleNeedsRestart = useCallback((restart: () => Promise<void>) => {
+    if (restartDismissedRef.current) return;
+    setRestartFn(() => restart);
+  }, []);
 
   // Trigger entrance animations after mount
   useEffect(() => {
@@ -124,6 +135,20 @@ export function SettingsModal({
     }
   };
 
+  useEffect(() => {
+    if (!restartFn) return;
+    const timer = setTimeout(() => setRestartVisible(true), 50);
+    return () => clearTimeout(timer);
+  }, [restartFn]);
+
+  useEffect(() => {
+    if (activeSection !== "providers" && restartFn) {
+      setRestartVisible(false);
+      setRestartFn(null);
+      restartDismissedRef.current = true;
+    }
+  }, [activeSection, restartFn]);
+
   // Content transition on section change
   // biome-ignore lint/correctness/useExhaustiveDependencies: activeSection triggers the transition effect intentionally
   useEffect(() => {
@@ -152,12 +177,15 @@ export function SettingsModal({
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: stopPropagation on inner container is not a meaningful interaction */}
       {/* biome-ignore lint/a11y/noStaticElementInteractions: click handler only prevents backdrop dismiss propagation */}
       <div
+        className="flex w-full max-w-3xl flex-col gap-2"
+        onClick={(e) => e.stopPropagation()}
+      >
+      <div
         className={cn(
-          "flex h-[600px] w-full max-w-3xl overflow-hidden rounded-xl border bg-background shadow-modal transition-all duration-500 ease-out",
+          "flex h-[600px] w-full overflow-hidden rounded-xl border bg-background shadow-modal transition-all duration-500 ease-out",
           isLoaded ? "opacity-100 scale-100" : "opacity-0 scale-95",
           isTransitioning ? "scale-[0.98]" : "scale-100",
         )}
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Sidebar */}
         <div
@@ -237,7 +265,9 @@ export function SettingsModal({
               }}
             >
               {activeSection === "appearance" && <AppearanceSettings />}
-              {activeSection === "providers" && <ProvidersSettings />}
+              {activeSection === "providers" && (
+                <ProvidersSettings onNeedsRestart={handleNeedsRestart} />
+              )}
               {activeSection === "doctor" && <DoctorSettings />}
               {activeSection === "general" && (
                 <div className="space-y-6">
@@ -409,6 +439,31 @@ export function SettingsModal({
             </div>
           </div>
         </div>
+      </div>
+
+      {restartFn && (
+        <div
+          className={cn(
+            "flex w-full items-center gap-3 rounded-2xl border bg-background px-4 py-2.5 shadow-modal transition-all duration-300 ease-out",
+            restartVisible
+              ? "opacity-100 translate-y-0"
+              : "opacity-0 translate-y-2",
+          )}
+        >
+          <p className="flex-1 text-sm text-muted-foreground">
+            {t("providers.restartMessage")}
+          </p>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => void restartFn()}
+          >
+            <IconRefresh className="size-3.5" />
+            {t("providers.restartButton")}
+          </Button>
+        </div>
+      )}
       </div>
 
       <AlertDialog

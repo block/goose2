@@ -96,6 +96,7 @@
   "providers": {
     "agents": {
       "connectModelLabel": "Connect a model provider for Goose",
+      "connectModelTooltip": "Connect a model provider",
       "description": "Each agent handles your requests differently. External agents bring their own models. Goose uses the model providers below.",
       "installLabel": "Install {{name}}",
       "signIn": "Sign in",
@@ -131,8 +132,8 @@
       },
       "title": "Model Providers"
     },
-    "restartButton": "Restart now",
-    "restartMessage": "Restart to apply credential changes.",
+    "restartButton": "Restart",
+    "restartMessage": "You may need to restart for changes to take effect.",
     "saved": "Saved",
     "showFewer": "Show fewer",
     "showMore": "Show {{count}} more providers",

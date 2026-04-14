@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/shared/ui/button";
 import { Separator } from "@/shared/ui/separator";
 import { Skeleton } from "@/shared/ui/skeleton";
-import { IconChevronDown, IconRefresh } from "@tabler/icons-react";
+import { IconChevronDown } from "@tabler/icons-react";
 import {
   getAgentProviders,
   getModelProviders,
@@ -40,12 +40,17 @@ function toDisplayInfo(
   }));
 }
 
-export function ProvidersSettings() {
+interface ProvidersSettingsProps {
+  onNeedsRestart?: (restart: () => Promise<void>) => void;
+}
+
+export function ProvidersSettings({ onNeedsRestart }: ProvidersSettingsProps) {
   const { t } = useTranslation(["settings", "common"]);
   const [showAllModels, setShowAllModels] = useState(false);
   const [modelOrder, setModelOrder] = useState<string[] | null>(null);
 
   const modelsSectionRef = useRef<HTMLElement>(null);
+  const scrollRafRef = useRef<number | null>(null);
 
   const {
     configuredIds,
@@ -58,6 +63,10 @@ export function ProvidersSettings() {
     restart,
     completeNativeSetup,
   } = useCredentials();
+
+  useEffect(() => {
+    if (needsRestart) onNeedsRestart?.(restart);
+  }, [needsRestart, onNeedsRestart, restart]);
 
   const modelProviderIds = useMemo(
     () => new Set(getModelProviders().map((m) => m.id)),
@@ -73,7 +82,14 @@ export function ProvidersSettings() {
     const target = modelsSectionRef.current;
     if (!target) return;
 
-    const container = target.closest("[class*='overflow-y']");
+    if (scrollRafRef.current !== null) {
+      cancelAnimationFrame(scrollRafRef.current);
+      scrollRafRef.current = null;
+    }
+
+    const container = target.closest(
+      "[class*='overflow-y-auto'], [class*='overflow-y-scroll']",
+    );
     if (!container) {
       target.scrollIntoView({ behavior: "smooth" });
       return;
@@ -89,8 +105,8 @@ export function ProvidersSettings() {
     const duration = 500;
     let startTime: number | null = null;
 
-    function easeInOut(t: number) {
-      return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+    function easeInOut(p: number) {
+      return p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2;
     }
 
     function step(timestamp: number) {
@@ -98,10 +114,14 @@ export function ProvidersSettings() {
       const elapsed = timestamp - startTime;
       const progress = Math.min(elapsed / duration, 1);
       container.scrollTop = start + distance * easeInOut(progress);
-      if (progress < 1) requestAnimationFrame(step);
+      if (progress < 1) {
+        scrollRafRef.current = requestAnimationFrame(step);
+      } else {
+        scrollRafRef.current = null;
+      }
     }
 
-    requestAnimationFrame(step);
+    scrollRafRef.current = requestAnimationFrame(step);
   }, []);
 
   const agents = useMemo(
@@ -187,16 +207,6 @@ export function ProvidersSettings() {
       <p className="mt-1 text-sm text-muted-foreground">
         {t("providers.description")}
       </p>
-
-      {needsRestart && (
-        <div className="mt-3 flex items-center gap-3 rounded-lg border border-accent bg-background-accent/30 px-3 py-2.5">
-          <p className="flex-1 text-sm">{t("providers.restartMessage")}</p>
-          <Button type="button" size="sm" onClick={() => void restart()}>
-            <IconRefresh className="size-3.5" />
-            {t("providers.restartButton")}
-          </Button>
-        </div>
-      )}
 
       <Separator className="my-4" />
 

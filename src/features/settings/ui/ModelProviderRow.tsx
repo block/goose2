@@ -64,7 +64,6 @@ export function ModelProviderRow({
   const [setupOutput, setSetupOutput] = useState<SetupOutputLine[]>([]);
   const [setupError, setSetupError] = useState("");
   const [showSavedState, setShowSavedState] = useState(false);
-  const [preserveSetupLayout, setPreserveSetupLayout] = useState(false);
   const setupLineCounter = useRef(0);
   const hasLoadedConfig = useRef(false);
   const shouldRestorePanelFocus = useRef(false);
@@ -156,7 +155,6 @@ export function ModelProviderRow({
     setEditingKey(null);
     setError("");
     setShowSavedState(false);
-    setPreserveSetupLayout(false);
 
     const unlisten = await onModelSetupOutput(provider.id, appendSetupOutput);
 
@@ -179,7 +177,6 @@ export function ModelProviderRow({
     setExpanded((current) => {
       if (current) {
         setShowSavedState(false);
-        setPreserveSetupLayout(false);
       }
       return !current;
     });
@@ -275,7 +272,6 @@ export function ModelProviderRow({
       }
       await loadConfig();
       setShowSavedState(true);
-      setPreserveSetupLayout(true);
     } catch (nextError) {
       setError(
         nextError instanceof Error ? nextError.message : "Failed to save",
@@ -291,7 +287,6 @@ export function ModelProviderRow({
       setEditingKey(null);
       setError("");
       setShowSavedState(false);
-      setPreserveSetupLayout(false);
     } catch (nextError) {
       setError(
         nextError instanceof Error ? nextError.message : "Failed to remove",
@@ -378,7 +373,7 @@ export function ModelProviderRow({
       );
     }
 
-    if (hasFields && isConnected && !preserveSetupLayout) {
+    if (hasFields && isConnected) {
       return (
         <ConnectedFieldsPanel
           panelRef={panelRef}

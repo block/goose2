@@ -6,6 +6,11 @@ import { Spinner } from "@/shared/ui/spinner";
 import { getProviderIcon } from "@/shared/ui/icons/ProviderIcons";
 import { IconCheck, IconAlertTriangle, IconPlus } from "@tabler/icons-react";
 import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/shared/ui/tooltip";
+import {
   checkAgentInstalled,
   checkAgentAuth,
   installAgent,
@@ -240,16 +245,23 @@ export function AgentProviderCard({
   function renderStatusIndicator() {
     if (needsModelProvider) {
       return (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          onClick={onScrollToModels}
-          className="flex-shrink-0 text-muted-foreground"
-          aria-label={t("providers.agents.connectModelLabel")}
-        >
-          <IconPlus className="size-4" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              onClick={onScrollToModels}
+              className="flex-shrink-0 text-muted-foreground"
+              aria-label={t("providers.agents.connectModelLabel")}
+            >
+              <IconPlus className="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="left" showArrow={false}>
+            {t("providers.agents.connectModelTooltip")}
+          </TooltipContent>
+        </Tooltip>
       );
     }
 
