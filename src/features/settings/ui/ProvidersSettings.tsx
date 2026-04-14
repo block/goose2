@@ -84,16 +84,9 @@ export function ProvidersSettings({
     [],
   );
 
-  const hasLocalProvider = useMemo(
-    () => getModelProviders().some((m) => m.setupMethod === "local"),
-    [],
-  );
-
   const hasModelProvider = useMemo(
-    () =>
-      hasLocalProvider ||
-      [...configuredIds].some((id) => modelProviderIds.has(id)),
-    [configuredIds, hasLocalProvider, modelProviderIds],
+    () => [...configuredIds].some((id) => modelProviderIds.has(id)),
+    [configuredIds, modelProviderIds],
   );
 
   const scrollToModels = useCallback(() => {
