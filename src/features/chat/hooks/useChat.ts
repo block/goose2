@@ -401,14 +401,9 @@ export function useChat(
       const target = sessionMessages.find((m) => m.id === messageId);
       if (!target || target.role !== "user") return;
 
-      // Extract the original text to pre-fill the input
-      const textContent = target.content.find((c) => c.type === "text");
-      const originalText =
-        textContent && "text" in textContent ? textContent.text : "";
-
-      // Enter edit mode — history stays intact until send
+      // Enter edit mode — history stays intact until send.
+      // The inline edit reads text directly from the message, no draft needed.
       store.setEditingMessageId(sessionId, messageId);
-      store.setDraft(sessionId, originalText);
     },
     [sessionId, store, chatState],
   );

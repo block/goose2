@@ -342,14 +342,21 @@ export const MessageBubble = memo(function MessageBubble({
   }, [isEditing, textContent]);
 
   // Auto-resize + focus the inline edit textarea
+  // Auto-resize on every text change
   useLayoutEffect(() => {
     const ta = editTextareaRef.current;
     if (isEditing && ta) {
       ta.style.height = "auto";
       ta.style.height = `${Math.min(ta.scrollHeight, 300)}px`;
-      ta.focus();
     }
   }, [isEditing, editText]);
+
+  // Focus only when entering edit mode, not on every keystroke
+  useEffect(() => {
+    if (isEditing) {
+      editTextareaRef.current?.focus();
+    }
+  }, [isEditing]);
 
   const handleEditSave = useCallback(() => {
     const trimmed = editText.trim();

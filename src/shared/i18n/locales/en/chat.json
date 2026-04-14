@@ -133,8 +133,6 @@
     "label": "Queued: {{text}}"
   },
   "edit": {
-    "label": "Editing message",
-    "cancel": "Cancel edit",
     "hint": "This will start a new conversation from this point"
   },
   "skeleton": {

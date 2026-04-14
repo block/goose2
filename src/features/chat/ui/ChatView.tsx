@@ -408,24 +408,34 @@ export function ChatView({
   );
 
   /** Save an inline edit: truncate history from the edited message onward, then send the new text. */
+  const pendingEditSend = useRef<string | null>(null);
   const handleSaveEdit = useCallback(
     (messageId: string, text: string) => {
       if (chatState !== "idle") {
         stopStreaming();
       }
-      const allMessages =
-        useChatStore.getState().messagesBySession[activeSessionId] ?? [];
+      const store = useChatStore.getState();
+      const allMessages = store.messagesBySession[activeSessionId] ?? [];
       const editIndex = allMessages.findIndex((m) => m.id === messageId);
       if (editIndex !== -1) {
-        useChatStore
-          .getState()
-          .setMessages(activeSessionId, allMessages.slice(0, editIndex));
+        store.setMessages(activeSessionId, allMessages.slice(0, editIndex));
       }
-      useChatStore.getState().setEditingMessageId(activeSessionId, null);
-      sendMessage(text);
+      store.setEditingMessageId(activeSessionId, null);
+      // Force state to idle so the next render's sendMessage won't bail
+      store.setChatState(activeSessionId, "idle");
+      // Defer send until React re-renders with fresh chatState
+      pendingEditSend.current = text;
     },
-    [activeSessionId, chatState, sendMessage, stopStreaming],
+    [activeSessionId, chatState, stopStreaming],
   );
+
+  useEffect(() => {
+    if (pendingEditSend.current && chatState === "idle") {
+      const text = pendingEditSend.current;
+      pendingEditSend.current = null;
+      sendMessage(text);
+    }
+  }, [chatState, sendMessage]);
 
   useEffect(() => {
     if (deferredSend.current && selectedPersona) {
