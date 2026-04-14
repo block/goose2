@@ -134,7 +134,8 @@
   },
   "edit": {
     "label": "Editing message",
-    "cancel": "Cancel edit"
+    "cancel": "Cancel edit",
+    "hint": "This will start a new conversation from this point"
   },
   "skeleton": {
     "loadingConversation": "Loading conversation"

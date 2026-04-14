@@ -410,11 +410,16 @@ export const MessageBubble = memo(function MessageBubble({
       className={cn(
         "group flex px-4 py-1",
         "animate-in fade-in duration-200 motion-reduce:animate-none",
-        isUser ? "ml-auto flex-row-reverse gap-3" : "flex-row",
+        isEditing
+          ? "flex-row"
+          : isUser
+            ? "ml-auto flex-row-reverse gap-3"
+            : "flex-row",
+        isEditing && "rounded-xl bg-muted/40 py-3",
       )}
       data-role={isUser ? "user-message" : "assistant-message"}
     >
-      {isUser ? (
+      {isUser && !isEditing ? (
         <div className="flex h-7 w-7 shrink-0 self-start -mt-1 items-center justify-center rounded-full bg-accent">
           <User size={14} className="text-muted-foreground" />
         </div>
@@ -423,7 +428,11 @@ export const MessageBubble = memo(function MessageBubble({
       <div
         className={cn(
           "min-w-0 flex flex-col gap-1",
-          isUser ? "max-w-[80%] items-end" : "max-w-[85%] items-start",
+          isEditing
+            ? "w-full max-w-full"
+            : isUser
+              ? "max-w-[80%] items-end"
+              : "max-w-[85%] items-start",
         )}
       >
         {showAssistantIdentity ? (
@@ -479,6 +488,9 @@ export const MessageBubble = memo(function MessageBubble({
               >
                 {t("common:actions.cancel")}
               </Button>
+              <span className="ml-auto text-[11px] text-muted-foreground">
+                {t("chat:edit.hint")}
+              </span>
             </div>
           </div>
         ) : (
