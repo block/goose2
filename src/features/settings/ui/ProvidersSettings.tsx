@@ -42,10 +42,12 @@ function toDisplayInfo(
 
 interface ProvidersSettingsProps {
   scrollContainerRef?: React.RefObject<HTMLElement | null>;
+  onNeedsRestart?: () => void;
 }
 
 export function ProvidersSettings({
   scrollContainerRef,
+  onNeedsRestart,
 }: ProvidersSettingsProps) {
   const { t } = useTranslation(["settings", "common"]);
   const [showAllModels, setShowAllModels] = useState(false);
@@ -66,20 +68,32 @@ export function ProvidersSettings({
     configuredIds,
     loading,
     saving,
+    needsRestart,
     getConfig,
     save,
     remove,
     completeNativeSetup,
   } = useCredentials();
 
+  useEffect(() => {
+    if (needsRestart) onNeedsRestart?.();
+  }, [needsRestart, onNeedsRestart]);
+
   const modelProviderIds = useMemo(
     () => new Set(getModelProviders().map((m) => m.id)),
     [],
   );
 
+  const hasLocalProvider = useMemo(
+    () => getModelProviders().some((m) => m.setupMethod === "local"),
+    [],
+  );
+
   const hasModelProvider = useMemo(
-    () => [...configuredIds].some((id) => modelProviderIds.has(id)),
-    [configuredIds, modelProviderIds],
+    () =>
+      hasLocalProvider ||
+      [...configuredIds].some((id) => modelProviderIds.has(id)),
+    [configuredIds, hasLocalProvider, modelProviderIds],
   );
 
   const scrollToModels = useCallback(() => {

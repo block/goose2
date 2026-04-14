@@ -132,6 +132,7 @@
       },
       "title": "Model Providers"
     },
+    "restartMessage": "Restart to apply credential changes.",
     "saved": "Saved",
     "showFewer": "Show fewer",
     "showMore": "Show {{count}} more providers",

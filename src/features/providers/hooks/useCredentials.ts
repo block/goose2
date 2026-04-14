@@ -12,6 +12,7 @@ interface UseCredentialsReturn {
   configuredIds: Set<string>;
   loading: boolean;
   saving: boolean;
+  needsRestart: boolean;
   getConfig: (providerId: string) => Promise<ProviderFieldValue[]>;
   save: (key: string, value: string) => Promise<void>;
   remove: (providerId: string) => Promise<void>;
@@ -22,6 +23,7 @@ export function useCredentials(): UseCredentialsReturn {
   const [statuses, setStatuses] = useState<ProviderStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [needsRestart, setNeedsRestart] = useState(false);
 
   const refreshStatuses = useCallback(async () => {
     const nextStatuses = await checkAllProviderStatus();
@@ -51,6 +53,7 @@ export function useCredentials(): UseCredentialsReturn {
       try {
         await saveProviderField(key, value);
         await refreshStatuses();
+        setNeedsRestart(true);
       } finally {
         setSaving(false);
       }
@@ -64,6 +67,7 @@ export function useCredentials(): UseCredentialsReturn {
       try {
         await deleteProviderConfig(providerId);
         await refreshStatuses();
+        setNeedsRestart(true);
       } finally {
         setSaving(false);
       }
@@ -73,12 +77,14 @@ export function useCredentials(): UseCredentialsReturn {
 
   const completeNativeSetup = useCallback(async () => {
     await refreshStatuses();
+    setNeedsRestart(true);
   }, [refreshStatuses]);
 
   return {
     configuredIds,
     loading,
     saving,
+    needsRestart,
     getConfig,
     save,
     remove,

@@ -132,6 +132,7 @@
       },
       "title": "Proveedores de modelos"
     },
+    "restartMessage": "Reinicia para aplicar los cambios de credenciales.",
     "saved": "Guardado",
     "showFewer": "Mostrar menos",
     "showMore": "Mostrar {{count}} proveedores más",
