@@ -504,7 +504,7 @@ export const MessageBubble = memo(function MessageBubble({
               <div
                 className={cn(
                   "w-full min-w-0 text-[13px] leading-relaxed",
-                  isUser && "mb-6 rounded-2xl bg-muted px-4 py-2.5",
+                  isUser && "mb-6 rounded-2xl bg-muted p-3",
                 )}
                 onClick={handleContentClick}
               >
