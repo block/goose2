@@ -132,6 +132,10 @@
     "dismiss": "Dismiss queued message",
     "label": "Queued: {{text}}"
   },
+  "edit": {
+    "label": "Editing message",
+    "cancel": "Cancel edit"
+  },
   "skeleton": {
     "loadingConversation": "Loading conversation"
   },

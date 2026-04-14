@@ -326,34 +326,98 @@ export function useChat(
       });
   }, [getStreamingPersonaId, store, sessionId]);
 
+  /** Retry from a specific message — truncates everything from that message
+   *  onward and re-sends the preceding user message. Works for both user
+   *  messages (re-send that message) and assistant messages (re-send the
+   *  user message that triggered it). */
+  const retryMessage = useCallback(
+    async (messageId: string) => {
+      // Guard: don't truncate while the agent is still responding
+      if (chatState === "streaming" || chatState === "thinking") return;
+
+      const sessionMessages = store.messagesBySession[sessionId] ?? [];
+      const targetIndex = sessionMessages.findIndex(
+        (m) => m.id === messageId,
+      );
+      if (targetIndex === -1) return;
+
+      const targetMessage = sessionMessages[targetIndex];
+
+      // Determine which user message to re-send
+      let userMessage: (typeof sessionMessages)[number] | undefined;
+      let truncateFromIndex: number;
+
+      if (targetMessage.role === "user") {
+        userMessage = targetMessage;
+        truncateFromIndex = targetIndex;
+      } else {
+        // Find the preceding user message
+        const userIndex = findLastIndex(
+          sessionMessages.slice(0, targetIndex + 1),
+          (m) => m.role === "user",
+        );
+        if (userIndex === -1) return;
+        userMessage = sessionMessages[userIndex];
+        truncateFromIndex = userIndex;
+      }
+
+      // Truncate from the user message onward (removes user msg + all responses)
+      store.setMessages(sessionId, sessionMessages.slice(0, truncateFromIndex));
+
+      const textContent = userMessage.content.find((c) => c.type === "text");
+      if (textContent && "text" in textContent) {
+        const targetPersonaId = userMessage.metadata?.targetPersonaId;
+        const targetPersonaName = userMessage.metadata?.targetPersonaName;
+        await sendMessage(
+          textContent.text,
+          targetPersonaId
+            ? { id: targetPersonaId, name: targetPersonaName }
+            : undefined,
+        );
+      }
+    },
+    [sessionId, store, sendMessage, chatState],
+  );
+
   const retryLastMessage = useCallback(async () => {
     const sessionMessages = store.messagesBySession[sessionId] ?? [];
-    // Find the last user message
     const lastUserIndex = findLastIndex(
       sessionMessages,
       (m) => m.role === "user",
     );
     if (lastUserIndex === -1) return;
+    await retryMessage(sessionMessages[lastUserIndex].id);
+  }, [sessionId, store, retryMessage]);
 
-    const lastUserMessage = sessionMessages[lastUserIndex];
+  /** Enter edit mode for a user message — non-destructive. Populates the
+   *  input draft with the original text and sets editing state. Truncation
+   *  happens only when the user actually sends (handled in ChatView). */
+  const editMessage = useCallback(
+    (messageId: string) => {
+      // Guard: don't enter edit mode while the agent is still responding
+      if (chatState === "streaming" || chatState === "thinking") return;
 
-    // Remove all messages after (and including) the last assistant response
-    const messagesToKeep = sessionMessages.slice(0, lastUserIndex);
-    store.setMessages(sessionId, messagesToKeep);
+      const sessionMessages = store.messagesBySession[sessionId] ?? [];
+      const target = sessionMessages.find((m) => m.id === messageId);
+      if (!target || target.role !== "user") return;
 
-    // Extract the text and resend
-    const textContent = lastUserMessage.content.find((c) => c.type === "text");
-    if (textContent && "text" in textContent) {
-      const targetPersonaId = lastUserMessage.metadata?.targetPersonaId;
-      const targetPersonaName = lastUserMessage.metadata?.targetPersonaName;
-      await sendMessage(
-        textContent.text,
-        targetPersonaId
-          ? { id: targetPersonaId, name: targetPersonaName }
-          : undefined,
-      );
-    }
-  }, [sessionId, store, sendMessage]);
+      // Extract the original text to pre-fill the input
+      const textContent = target.content.find((c) => c.type === "text");
+      const originalText =
+        textContent && "text" in textContent ? textContent.text : "";
+
+      // Enter edit mode — history stays intact until send
+      store.setEditingMessageId(sessionId, messageId);
+      store.setDraft(sessionId, originalText);
+    },
+    [sessionId, store, chatState],
+  );
+
+  /** Cancel edit mode — clears editing state and draft. */
+  const cancelEdit = useCallback(() => {
+    store.setEditingMessageId(sessionId, null);
+    store.clearDraft(sessionId);
+  }, [sessionId, store]);
 
   const clearChat = useCallback(() => {
     abortRef.current?.abort();
@@ -375,6 +439,10 @@ export function useChat(
     stopGeneration,
     stopStreaming,
     retryLastMessage,
+    retryMessage,
+    editMessage,
+    cancelEdit,
+    editingMessageId: store.editingMessageIdBySession[sessionId] ?? null,
     clearChat,
     isStreaming,
   };

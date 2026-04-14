@@ -72,6 +72,8 @@ interface ChatStoreState {
   isConnected: boolean;
   loadingSessionIds: Set<string>;
   scrollTargetMessageBySession: Record<string, ScrollTargetMessage | null>;
+  /** Message ID currently being edited per session (non-destructive edit mode). */
+  editingMessageIdBySession: Record<string, string | null>;
 }
 
 interface ChatStoreActions {
@@ -108,6 +110,7 @@ interface ChatStoreActions {
   dismissQueuedMessage: (sessionId: string) => void;
   setDraft: (sessionId: string, text: string) => void;
   clearDraft: (sessionId: string) => void;
+  setEditingMessageId: (sessionId: string, messageId: string | null) => void;
   setSessionLoading: (sessionId: string, loading: boolean) => void;
   setScrollTargetMessage: (
     sessionId: string,
@@ -126,6 +129,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   sessionStateById: {},
   queuedMessageBySession: {},
   draftsBySession: loadCachedDrafts(),
+  editingMessageIdBySession: {},
   activeSessionId: null,
   isConnected: false,
   loadingSessionIds: new Set<string>(),
@@ -430,6 +434,15 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     persistDrafts(get().draftsBySession);
   },
 
+  setEditingMessageId: (sessionId, messageId) => {
+    set((state) => ({
+      editingMessageIdBySession: {
+        ...state.editingMessageIdBySession,
+        [sessionId]: messageId,
+      },
+    }));
+  },
+
   // Session loading (replay)
   setSessionLoading: (sessionId, loading) =>
     set((state) => {
@@ -477,12 +490,15 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       const { [sessionId]: ____, ...remainingDrafts } = state.draftsBySession;
       const { [sessionId]: _____, ...remainingTargets } =
         state.scrollTargetMessageBySession;
+      const { [sessionId]: ______, ...remainingEditing } =
+        state.editingMessageIdBySession;
       return {
         messagesBySession: rest,
         sessionStateById: remainingSessionState,
         queuedMessageBySession: remainingQueued,
         draftsBySession: remainingDrafts,
         scrollTargetMessageBySession: remainingTargets,
+        editingMessageIdBySession: remainingEditing,
         activeSessionId:
           state.activeSessionId === sessionId ? null : state.activeSessionId,
       };

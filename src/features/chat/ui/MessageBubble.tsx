@@ -450,7 +450,7 @@ export const MessageBubble = memo(function MessageBubble({
         {/* Hover actions + timestamp */}
         <MessageActions className="opacity-0 transition-opacity duration-150 group-hover:opacity-100">
           {textContent && <CopyAction text={textContent} />}
-          {!isUser && onRetryMessage && (
+          {onRetryMessage && (
             <MessageAction
               tooltip={t("common:actions.retry")}
               onClick={() => onRetryMessage(message.id)}

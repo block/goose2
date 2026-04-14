@@ -208,9 +208,7 @@ export function MessageTimeline({
               <MessageBubble
                 message={message}
                 isStreaming={message.id === streamingMessageId}
-                onRetryMessage={
-                  message.role === "assistant" ? onRetryMessage : undefined
-                }
+                onRetryMessage={onRetryMessage}
                 onEditMessage={
                   message.role === "user" ? onEditMessage : undefined
                 }
