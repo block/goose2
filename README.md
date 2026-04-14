@@ -2,7 +2,7 @@
 
 Goose2 now lives in the main goose monorepo:
 
-**👉 https://github.com/block/goose/tree/main/ui/goose2**
+**👉 https://github.com/aaif-goose/goose/tree/main/ui/goose2**
 
 All new development, issues, and pull requests should go there.
 
@@ -13,7 +13,7 @@ Your branch was based on this repo. To move your work over:
 1. Clone the main goose repo and create a branch:
 
 ```bash
-git clone https://github.com/block/goose.git
+git clone https://github.com/aaif-goose/goose.git
 cd goose
 git checkout -b my-feature
 ```
@@ -29,5 +29,4 @@ git format-patch main..<your-branch> --stdout \
   | git am --directory=ui/goose2
 ```
 
-Open your PR against block/goose instead.
-
+Open your PR against aaif-goose/goose instead.
