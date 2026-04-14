@@ -5,7 +5,6 @@ import {
   Check,
   RotateCcw,
   Pencil,
-  User,
   FileText,
   FolderClosed,
 } from "lucide-react";
@@ -426,19 +425,13 @@ export const MessageBubble = memo(function MessageBubble({
       )}
       data-role={isUser ? "user-message" : "assistant-message"}
     >
-      {isUser && !isEditing ? (
-        <div className="flex h-7 w-7 shrink-0 self-start -mt-1 items-center justify-center rounded-full bg-accent">
-          <User size={14} className="text-muted-foreground" />
-        </div>
-      ) : null}
-
       <div
         className={cn(
           "min-w-0 flex flex-col gap-1",
           isEditing
             ? "w-full max-w-full"
             : isUser
-              ? "max-w-[80%] items-end"
+              ? "max-w-[640px] items-end"
               : "max-w-[85%] items-start",
         )}
       >
@@ -505,7 +498,10 @@ export const MessageBubble = memo(function MessageBubble({
             {/* biome-ignore lint/a11y/useKeyWithClickEvents: delegated link handler */}
             {/* biome-ignore lint/a11y/noStaticElementInteractions: delegated link handler */}
             <div
-              className="w-full min-w-0 text-[13px] leading-relaxed"
+              className={cn(
+                "w-full min-w-0 text-[13px] leading-relaxed",
+                isUser && "rounded-2xl bg-muted px-4 py-2.5",
+              )}
               onClick={handleContentClick}
             >
               {messageAttachments.length > 0 && (
