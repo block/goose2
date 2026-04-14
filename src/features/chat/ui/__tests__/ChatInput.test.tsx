@@ -375,6 +375,24 @@ describe("ChatInput", () => {
     expect(onSend).not.toHaveBeenCalled();
   });
 
+  it("re-syncs text when initialValue prop changes (cancel-then-re-edit)", () => {
+    const onSend = vi.fn();
+    const { rerender } = render(
+      <ChatInput onSend={onSend} initialValue="original message" />,
+    );
+
+    const input = screen.getByRole("textbox");
+    expect(input).toHaveValue("original message");
+
+    // Simulate cancel: parent clears initialValue
+    rerender(<ChatInput onSend={onSend} initialValue="" />);
+    expect(input).toHaveValue("");
+
+    // Simulate re-edit: parent sets initialValue again
+    rerender(<ChatInput onSend={onSend} initialValue="original message" />);
+    expect(input).toHaveValue("original message");
+  });
+
   it("keeps the selected assistant chip after sending subsequent messages", async () => {
     const onSend = vi.fn();
     const user = userEvent.setup();

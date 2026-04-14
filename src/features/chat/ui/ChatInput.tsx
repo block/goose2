@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Pencil, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -113,6 +113,27 @@ export function ChatInput({
   const [isCompact, setIsCompact] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Re-sync local text when the parent changes initialValue (e.g. cancel edit → re-edit).
+  // Guard avoids redundant state updates on every keystroke when initialValue
+  // round-trips through the store during active editing.
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (ta && ta.value !== initialValue) {
+      setTextRaw(initialValue);
+    }
+  }, [initialValue, setTextRaw]);
+
+  // Recalculate textarea height after React commits new text to the DOM.
+  // useLayoutEffect fires synchronously after DOM mutation but before paint,
+  // so scrollHeight already reflects the current value.
+  useLayoutEffect(() => {
+    const ta = textareaRef.current;
+    if (ta) {
+      ta.style.height = "auto";
+      ta.style.height = `${Math.min(ta.scrollHeight, 200)}px`;
+    }
+  }, [text]);
   const {
     attachments,
     addBrowserFiles,
