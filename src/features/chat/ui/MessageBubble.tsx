@@ -476,26 +476,24 @@ export const MessageBubble = memo(function MessageBubble({
               className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-[13px] leading-relaxed text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             />
             <div className="mt-1.5 flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="default"
-                onClick={handleEditSave}
-                disabled={!editText.trim()}
-                className="h-7 px-3 text-xs"
-              >
-                {t("common:actions.save")}
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={onCancelEdit}
-                className="h-7 px-3 text-xs"
-              >
-                {t("common:actions.cancel")}
-              </Button>
-              <span className="ml-auto text-[11px] text-muted-foreground">
+              <span className="text-[11px] text-muted-foreground">
                 {t("chat:edit.hint")}
               </span>
+              <div className="ml-auto flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={onCancelEdit}
+                >
+                  {t("common:actions.cancel")}
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={handleEditSave}
+                  disabled={!editText.trim()}
+                >
+                  {t("common:actions.save")}
+                </Button>
+              </div>
             </div>
           </div>
         ) : (
