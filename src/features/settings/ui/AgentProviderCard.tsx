@@ -5,11 +5,7 @@ import { Button } from "@/shared/ui/button";
 import { Spinner } from "@/shared/ui/spinner";
 import { getProviderIcon } from "@/shared/ui/icons/ProviderIcons";
 import { IconCheck, IconAlertTriangle, IconPlus } from "@tabler/icons-react";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/shared/ui/tooltip";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/shared/ui/tooltip";
 import {
   checkAgentInstalled,
   checkAgentAuth,

@@ -95,16 +95,18 @@
   },
   "providers": {
     "agents": {
-      "description": "Los agentes manejan tus solicitudes usando sus propias herramientas y modelos",
+      "connectModelLabel": "Conectar un proveedor de modelos para Goose",
+      "connectModelTooltip": "Conectar un proveedor de modelos",
+      "description": "Cada agente maneja tus solicitudes de manera diferente. Los agentes externos traen sus propios modelos. Goose usa los proveedores de modelos de abajo.",
       "installLabel": "Instalar {{name}}",
       "signIn": "Iniciar sesión",
       "signInLabel": "Iniciar sesión en {{name}}",
-      "title": "Agentes"
+      "title": "Proveedores de agentes"
     },
-    "description": "Conecta agentes y modelos de IA para usar con Goose",
+    "description": "Conecta un agente para comenzar. Goose usa los proveedores de modelos de abajo; otros agentes traen los suyos.",
     "disconnect": "Desconectar",
     "models": {
-      "description": "Modelos de IA que alimentan a Goose. Expande un proveedor para revisar lo que necesita. Conectar inicia sesión con una cuenta existente, mientras que Configurar guarda claves API u otros ajustes del proveedor.",
+      "description": "Conecta un proveedor de modelos para alimentar al agente Goose. Necesitas al menos uno conectado para usar Goose.",
       "notSet": "No configurado",
       "setup": {
         "connected": {
@@ -128,7 +130,7 @@
           "oauthTerminal": "Ejecuta `goose configure` en tu terminal para terminar de iniciar sesión."
         }
       },
-      "title": "Modelos"
+      "title": "Proveedores de modelos"
     },
     "saved": "Guardado",
     "showFewer": "Mostrar menos",

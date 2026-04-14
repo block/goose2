@@ -239,9 +239,7 @@ export function SettingsModal({
             >
               {activeSection === "appearance" && <AppearanceSettings />}
               {activeSection === "providers" && (
-                <ProvidersSettings
-                  scrollContainerRef={contentScrollRef}
-                />
+                <ProvidersSettings scrollContainerRef={contentScrollRef} />
               )}
               {activeSection === "doctor" && <DoctorSettings />}
               {activeSection === "general" && (

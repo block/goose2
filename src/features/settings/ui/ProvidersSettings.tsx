@@ -91,18 +91,18 @@ export function ProvidersSettings({
       scrollRafRef.current = null;
     }
 
-    const container = scrollContainerRef?.current;
-    if (!container) {
+    const scrollEl = scrollContainerRef?.current;
+    if (!scrollEl) {
       target.scrollIntoView({ behavior: "smooth" });
       return;
     }
 
     const targetTop =
       target.getBoundingClientRect().top -
-      container.getBoundingClientRect().top +
-      container.scrollTop -
+      scrollEl.getBoundingClientRect().top +
+      scrollEl.scrollTop -
       16;
-    const start = container.scrollTop;
+    const start = scrollEl.scrollTop;
     const distance = targetTop - start;
     const duration = 500;
     let startTime: number | null = null;
@@ -111,17 +111,17 @@ export function ProvidersSettings({
       return p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2;
     }
 
-    function step(timestamp: number) {
+    const step = (timestamp: number) => {
       if (!startTime) startTime = timestamp;
       const elapsed = timestamp - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      container.scrollTop = start + distance * easeInOut(progress);
+      scrollEl.scrollTop = start + distance * easeInOut(progress);
       if (progress < 1) {
         scrollRafRef.current = requestAnimationFrame(step);
       } else {
         scrollRafRef.current = null;
       }
-    }
+    };
 
     scrollRafRef.current = requestAnimationFrame(step);
   }, [scrollContainerRef]);
