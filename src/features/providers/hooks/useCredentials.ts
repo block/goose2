@@ -5,7 +5,6 @@ import {
   deleteProviderConfig,
   type ProviderStatus,
   checkAllProviderStatus,
-  restartApp,
 } from "@/features/providers/api/credentials";
 import type { ProviderFieldValue } from "@/shared/types/providers";
 
@@ -17,7 +16,6 @@ interface UseCredentialsReturn {
   getConfig: (providerId: string) => Promise<ProviderFieldValue[]>;
   save: (key: string, value: string) => Promise<void>;
   remove: (providerId: string) => Promise<void>;
-  restart: () => Promise<void>;
   completeNativeSetup: () => Promise<void>;
 }
 
@@ -77,10 +75,6 @@ export function useCredentials(): UseCredentialsReturn {
     [refreshStatuses],
   );
 
-  const restart = useCallback(async () => {
-    await restartApp();
-  }, []);
-
   const completeNativeSetup = useCallback(async () => {
     await refreshStatuses();
     setNeedsRestart(true);
@@ -94,7 +88,6 @@ export function useCredentials(): UseCredentialsReturn {
     getConfig,
     save,
     remove,
-    restart,
     completeNativeSetup,
   };
 }

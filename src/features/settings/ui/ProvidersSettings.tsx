@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/shared/ui/button";
 import { Separator } from "@/shared/ui/separator";
 import { Skeleton } from "@/shared/ui/skeleton";
-import { IconChevronDown, IconRefresh } from "@tabler/icons-react";
+import { IconChevronDown } from "@tabler/icons-react";
 import {
   getAgentProviders,
   getModelProviders,
@@ -20,8 +20,10 @@ import type {
 function resolveStatus(
   entry: ProviderCatalogEntry,
   configuredIds: Set<string>,
+  hasModelProvider: boolean,
 ): ProviderSetupStatus {
-  if (entry.id === "goose") return "built_in";
+  if (entry.id === "goose")
+    return hasModelProvider ? "built_in" : "needs_model";
   if (entry.category === "agent") return "not_installed";
   if (configuredIds.has(entry.id)) return "connected";
   return "not_configured";
@@ -30,17 +32,37 @@ function resolveStatus(
 function toDisplayInfo(
   entries: ProviderCatalogEntry[],
   configuredIds: Set<string>,
+  hasModelProvider: boolean,
 ): ProviderDisplayInfo[] {
   return entries.map((entry) => ({
     ...entry,
-    status: resolveStatus(entry, configuredIds),
+    status: resolveStatus(entry, configuredIds, hasModelProvider),
   }));
 }
 
-export function ProvidersSettings() {
+interface ProvidersSettingsProps {
+  scrollContainerRef?: React.RefObject<HTMLElement | null>;
+  onNeedsRestart?: () => void;
+}
+
+export function ProvidersSettings({
+  scrollContainerRef,
+  onNeedsRestart,
+}: ProvidersSettingsProps) {
   const { t } = useTranslation(["settings", "common"]);
   const [showAllModels, setShowAllModels] = useState(false);
   const [modelOrder, setModelOrder] = useState<string[] | null>(null);
+
+  const modelsSectionRef = useRef<HTMLElement>(null);
+  const scrollRafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (scrollRafRef.current !== null) {
+        cancelAnimationFrame(scrollRafRef.current);
+      }
+    };
+  }, []);
 
   const {
     configuredIds,
@@ -50,18 +72,75 @@ export function ProvidersSettings() {
     getConfig,
     save,
     remove,
-    restart,
     completeNativeSetup,
   } = useCredentials();
 
+  useEffect(() => {
+    if (needsRestart) onNeedsRestart?.();
+  }, [needsRestart, onNeedsRestart]);
+
+  const modelProviderIds = useMemo(
+    () => new Set(getModelProviders().map((m) => m.id)),
+    [],
+  );
+
+  const hasModelProvider = useMemo(
+    () => [...configuredIds].some((id) => modelProviderIds.has(id)),
+    [configuredIds, modelProviderIds],
+  );
+
+  const scrollToModels = useCallback(() => {
+    const target = modelsSectionRef.current;
+    if (!target) return;
+
+    if (scrollRafRef.current !== null) {
+      cancelAnimationFrame(scrollRafRef.current);
+      scrollRafRef.current = null;
+    }
+
+    const scrollEl = scrollContainerRef?.current;
+    if (!scrollEl) {
+      target.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+
+    const targetTop =
+      target.getBoundingClientRect().top -
+      scrollEl.getBoundingClientRect().top +
+      scrollEl.scrollTop -
+      16;
+    const start = scrollEl.scrollTop;
+    const distance = targetTop - start;
+    const duration = 500;
+    let startTime: number | null = null;
+
+    function easeInOut(p: number) {
+      return p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2;
+    }
+
+    const step = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      scrollEl.scrollTop = start + distance * easeInOut(progress);
+      if (progress < 1) {
+        scrollRafRef.current = requestAnimationFrame(step);
+      } else {
+        scrollRafRef.current = null;
+      }
+    };
+
+    scrollRafRef.current = requestAnimationFrame(step);
+  }, [scrollContainerRef]);
+
   const agents = useMemo(
-    () => toDisplayInfo(getAgentProviders(), configuredIds),
-    [configuredIds],
+    () => toDisplayInfo(getAgentProviders(), configuredIds, hasModelProvider),
+    [configuredIds, hasModelProvider],
   );
 
   const allModels = useMemo(
-    () => toDisplayInfo(getModelProviders(), configuredIds),
-    [configuredIds],
+    () => toDisplayInfo(getModelProviders(), configuredIds, hasModelProvider),
+    [configuredIds, hasModelProvider],
   );
 
   const sortedModels = useMemo(() => {
@@ -138,16 +217,6 @@ export function ProvidersSettings() {
         {t("providers.description")}
       </p>
 
-      {needsRestart && (
-        <div className="mt-3 flex items-center gap-3 rounded-lg border border-accent bg-background-accent/30 px-3 py-2.5">
-          <p className="flex-1 text-sm">{t("providers.restartMessage")}</p>
-          <Button type="button" size="sm" onClick={() => void restart()}>
-            <IconRefresh className="size-3.5" />
-            {t("providers.restartButton")}
-          </Button>
-        </div>
-      )}
-
       <Separator className="my-4" />
 
       <section>
@@ -162,14 +231,20 @@ export function ProvidersSettings() {
 
         <div className="grid grid-cols-2 gap-3">
           {agents.map((agent) => (
-            <AgentProviderCard key={agent.id} provider={agent} />
+            <AgentProviderCard
+              key={agent.id}
+              provider={agent}
+              onScrollToModels={
+                agent.id === "goose" ? scrollToModels : undefined
+              }
+            />
           ))}
         </div>
       </section>
 
       <Separator className="my-6" />
 
-      <section>
+      <section ref={modelsSectionRef} className="scroll-mt-4">
         <div className="mb-3">
           <h4 className="text-sm font-semibold">
             {t("providers.models.title")}

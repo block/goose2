@@ -95,16 +95,18 @@
   },
   "providers": {
     "agents": {
-      "description": "Agents handle your requests using their own tools and models",
+      "connectModelLabel": "Connect a model provider for Goose",
+      "connectModelTooltip": "Connect a model provider",
+      "description": "Each agent handles your requests differently. External agents bring their own models. Goose uses the model providers below.",
       "installLabel": "Install {{name}}",
       "signIn": "Sign in",
       "signInLabel": "Sign in to {{name}}",
-      "title": "Agents"
+      "title": "Agent Providers"
     },
-    "description": "Connect agents and AI models to use with Goose",
+    "description": "Connect an agent to get started. Goose uses the model providers below; other agents bring their own.",
     "disconnect": "Disconnect",
     "models": {
-      "description": "AI models that power Goose. Expand a provider to review what it needs. Connect signs in with an existing account, while Set up saves API keys or other provider settings.",
+      "description": "Connect a model provider to power the Goose agent. You need at least one connected to use Goose.",
       "notSet": "Not set",
       "setup": {
         "connected": {
@@ -128,9 +130,8 @@
           "oauthTerminal": "Run `goose configure` in your terminal to finish sign-in."
         }
       },
-      "title": "Models"
+      "title": "Model Providers"
     },
-    "restartButton": "Restart now",
     "restartMessage": "Restart to apply credential changes.",
     "saved": "Saved",
     "showFewer": "Show fewer",
