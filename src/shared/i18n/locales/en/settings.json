@@ -132,8 +132,6 @@
       },
       "title": "Model Providers"
     },
-    "restartButton": "Restart",
-    "restartMessage": "You may need to restart for changes to take effect.",
     "saved": "Saved",
     "showFewer": "Show fewer",
     "showMore": "Show {{count}} more providers",

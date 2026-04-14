@@ -243,7 +243,7 @@ export function AgentProviderCard({
   const needsInstall = isInstalled === false && hasInstallCommand;
 
   function renderStatusIndicator() {
-    if (needsModelProvider) {
+    if (needsModelProvider && onScrollToModels) {
       return (
         <Tooltip>
           <TooltipTrigger asChild>

@@ -41,10 +41,12 @@ function toDisplayInfo(
 }
 
 interface ProvidersSettingsProps {
-  onNeedsRestart?: (restart: () => Promise<void>) => void;
+  scrollContainerRef?: React.RefObject<HTMLElement | null>;
 }
 
-export function ProvidersSettings({ onNeedsRestart }: ProvidersSettingsProps) {
+export function ProvidersSettings({
+  scrollContainerRef,
+}: ProvidersSettingsProps) {
   const { t } = useTranslation(["settings", "common"]);
   const [showAllModels, setShowAllModels] = useState(false);
   const [modelOrder, setModelOrder] = useState<string[] | null>(null);
@@ -52,21 +54,23 @@ export function ProvidersSettings({ onNeedsRestart }: ProvidersSettingsProps) {
   const modelsSectionRef = useRef<HTMLElement>(null);
   const scrollRafRef = useRef<number | null>(null);
 
+  useEffect(() => {
+    return () => {
+      if (scrollRafRef.current !== null) {
+        cancelAnimationFrame(scrollRafRef.current);
+      }
+    };
+  }, []);
+
   const {
     configuredIds,
     loading,
     saving,
-    needsRestart,
     getConfig,
     save,
     remove,
-    restart,
     completeNativeSetup,
   } = useCredentials();
-
-  useEffect(() => {
-    if (needsRestart) onNeedsRestart?.(restart);
-  }, [needsRestart, onNeedsRestart, restart]);
 
   const modelProviderIds = useMemo(
     () => new Set(getModelProviders().map((m) => m.id)),
@@ -87,9 +91,7 @@ export function ProvidersSettings({ onNeedsRestart }: ProvidersSettingsProps) {
       scrollRafRef.current = null;
     }
 
-    const container = target.closest(
-      "[class*='overflow-y-auto'], [class*='overflow-y-scroll']",
-    );
+    const container = scrollContainerRef?.current;
     if (!container) {
       target.scrollIntoView({ behavior: "smooth" });
       return;
@@ -122,7 +124,7 @@ export function ProvidersSettings({ onNeedsRestart }: ProvidersSettingsProps) {
     }
 
     scrollRafRef.current = requestAnimationFrame(step);
-  }, []);
+  }, [scrollContainerRef]);
 
   const agents = useMemo(
     () => toDisplayInfo(getAgentProviders(), configuredIds, hasModelProvider),
