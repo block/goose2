@@ -554,7 +554,8 @@ export const MessageBubble = memo(function MessageBubble({
               side="bottom"
               align={isUser ? "end" : "start"}
               sideOffset={0}
-              className="!w-auto !border-none !bg-transparent !p-0 !shadow-none !rounded-none !animate-none"
+              avoidCollisions={false}
+              className="!w-auto !border-none !bg-transparent !p-0 !shadow-none !rounded-none"
             >
               <MessageActions>
                 {textContent && <CopyAction text={textContent} />}
