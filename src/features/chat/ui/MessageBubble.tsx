@@ -506,7 +506,7 @@ export const MessageBubble = memo(function MessageBubble({
               <div
                 className={cn(
                   "w-full min-w-0 text-[13px] leading-relaxed",
-                  isUser && "rounded-2xl bg-muted px-4 py-2.5",
+                  isUser && "mb-6 rounded-2xl bg-muted px-4 py-2.5",
                 )}
                 onClick={handleContentClick}
               >
@@ -554,7 +554,7 @@ export const MessageBubble = memo(function MessageBubble({
               side="bottom"
               align={isUser ? "end" : "start"}
               sideOffset={0}
-              className="w-auto border-none bg-transparent p-0 shadow-none"
+              className="!w-auto !border-none !bg-transparent !p-0 !shadow-none !rounded-none !animate-none"
             >
               <MessageActions>
                 {textContent && <CopyAction text={textContent} />}
