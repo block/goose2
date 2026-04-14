@@ -172,6 +172,6 @@
     "pathOutsideRoots": "La ruta está fuera de las raíces permitidas de proyecto/artefactos."
   },
   "edit": {
-    "hint": "Esto iniciará una nueva conversación desde este punto"
+    "hint": "Las respuestas a continuación serán reemplazadas"
   }
 }

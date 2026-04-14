@@ -133,7 +133,7 @@
     "label": "Queued: {{text}}"
   },
   "edit": {
-    "hint": "This will start a new conversation from this point"
+    "hint": "Responses below will be replaced"
   },
   "skeleton": {
     "loadingConversation": "Loading conversation"

@@ -474,7 +474,7 @@ describe("MessageBubble", () => {
       />,
     );
     expect(
-      screen.getByText(/will start a new conversation/i),
+      screen.getByText(/responses below will be replaced/i),
     ).toBeInTheDocument();
   });
 
