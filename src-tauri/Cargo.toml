@@ -39,7 +39,7 @@ async-trait = "0.1"
 agent-client-protocol = { version = "0.10.4", features = ["unstable_session_fork"] }
 tokio-tungstenite = "0.21.0"
 acp-client = { git = "https://github.com/block/builderbot", rev = "db184d20cb48e0c90bbd3fea4a4a871fc9d8a6ad" }
-doctor = { git = "https://github.com/block/builderbot", rev = "8e1c3ec145edc0df5f04b4427cfd758378036862" }
+doctor = { git = "https://github.com/block/builderbot", rev = "128202735d5ad445822dcc4b2a3480994b629132" }
 ignore = "0.4.25"
 base64 = "0.22"
 mime_guess = "2"
