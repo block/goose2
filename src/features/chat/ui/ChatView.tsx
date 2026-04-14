@@ -417,9 +417,12 @@ export function ChatView({
       const store = useChatStore.getState();
       const allMessages = store.messagesBySession[activeSessionId] ?? [];
       const editIndex = allMessages.findIndex((m) => m.id === messageId);
-      if (editIndex !== -1) {
-        store.setMessages(activeSessionId, allMessages.slice(0, editIndex));
+      if (editIndex === -1) {
+        // Message vanished — bail to avoid appending to untruncated history
+        store.setEditingMessageId(activeSessionId, null);
+        return;
       }
+      store.setMessages(activeSessionId, allMessages.slice(0, editIndex));
       store.setEditingMessageId(activeSessionId, null);
       // Force state to idle so the next render's sendMessage won't bail
       store.setChatState(activeSessionId, "idle");
